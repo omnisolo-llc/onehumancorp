@@ -160,6 +160,16 @@ describe('HelpChat Component', () => {
     expect(screen.queryByRole('button', { name: 'Clear chat' })).not.toBeInTheDocument();
   });
 
+  it('opens the chat interface when open-help-chat event is dispatched', () => {
+    render(<HelpChat />);
+    expect(screen.queryByRole('heading', { name: 'Ask AI Help' })).not.toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('open-help-chat'));
+    });
+
+    expect(screen.getByRole('heading', { name: 'Ask AI Help' })).toBeInTheDocument();
+  });
 });
 
 describe('HelpChat accessibility', () => {

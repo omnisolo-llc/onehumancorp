@@ -85,7 +85,7 @@ impl GitCheckpointer {
         )
     }
 
-    fn scratchpad_file_path(&self, thread_id: &str) -> PathBuf {
+    pub fn scratchpad_file_path(&self, thread_id: &str) -> PathBuf {
         self.repo_path
             .join(format!(".scratchpad_{}.json", thread_id))
     }
@@ -537,14 +537,25 @@ impl CheckpointSaver for PgCheckpointer {
     }
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
-        // For PgCheckpointer, restoring a checkpoint verifies it exists.
-        let row_opt = sqlx::query("SELECT 1 FROM swarm_checkpoints WHERE checkpoint_id = $1")
+        // Fetch the target checkpoint's thread_id and created_at timestamp
+        let row_opt = sqlx::query("SELECT thread_id, created_at FROM swarm_checkpoints WHERE checkpoint_id = $1")
             .bind(checkpoint_id)
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
 
-        if row_opt.is_some() {
+        if let Some(row) = row_opt {
+            let thread_id: String = row.get("thread_id");
+            let target_time: DateTime<Utc> = row.get("created_at");
+
+            // Delete all checkpoints for this thread that were created AFTER the target checkpoint
+            sqlx::query("DELETE FROM swarm_checkpoints WHERE thread_id = $1 AND created_at > $2")
+                .bind(thread_id)
+                .bind(target_time)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
             Ok(())
         } else {
             Err(format!(
@@ -645,6 +656,77 @@ mod tests {
         let decompressed_json = decompress_data(raw_json).unwrap();
         assert_eq!(raw_json, decompressed_json.as_slice());
     }
+
+    #[tokio::test]
+    async fn test_pg_checkpointer_restore() {
+        // Fallback testing if Postgres is unavailable
+        let pool = match sqlx::postgres::PgPoolOptions::new()
+            .connect("postgres://postgres:postgres@localhost/postgres")
+            .await
+        {
+            Ok(p) => p,
+            Err(_) => {
+                return;
+            }
+        };
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS swarm_checkpoints (thread_id TEXT, checkpoint_id TEXT, parent_id TEXT, checkpoint BYTEA, metadata BYTEA, created_at TIMESTAMPTZ, PRIMARY KEY (thread_id, checkpoint_id))").execute(&pool).await;
+
+        // Clean up previous runs
+        let _ = sqlx::query("DELETE FROM swarm_checkpoints WHERE thread_id = 'thread-restore-1'").execute(&pool).await;
+
+        let saver = PgCheckpointer::new(pool.clone());
+
+        let t1 = chrono::Utc::now() - chrono::Duration::hours(3);
+        let t2 = chrono::Utc::now() - chrono::Duration::hours(2);
+        let t3 = chrono::Utc::now() - chrono::Duration::hours(1);
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-restore-1".to_string(),
+            checkpoint_id: "cp-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"step": 1}),
+            metadata: serde_json::json!({}),
+            created_at: t1,
+        };
+
+        let cp2 = Checkpoint {
+            thread_id: "thread-restore-1".to_string(),
+            checkpoint_id: "cp-2".to_string(),
+            parent_id: Some("cp-1".to_string()),
+            data: serde_json::json!({"step": 2}),
+            metadata: serde_json::json!({}),
+            created_at: t2,
+        };
+
+        let cp3 = Checkpoint {
+            thread_id: "thread-restore-1".to_string(),
+            checkpoint_id: "cp-3".to_string(),
+            parent_id: Some("cp-2".to_string()),
+            data: serde_json::json!({"step": 3}),
+            metadata: serde_json::json!({}),
+            created_at: t3,
+        };
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+        saver.put_checkpoint(cp2.clone()).await.unwrap();
+        saver.put_checkpoint(cp3.clone()).await.unwrap();
+
+        // Ensure all 3 exist
+        let all = saver.list_checkpoints("thread-restore-1").await.unwrap();
+        assert_eq!(all.len(), 3);
+
+        // Restore to middle one
+        saver.restore_checkpoint("cp-2").await.unwrap();
+
+        // Verify that cp-3 is gone, but cp-2 and cp-1 remain
+        let after = saver.list_checkpoints("thread-restore-1").await.unwrap();
+        assert_eq!(after.len(), 2);
+        assert!(after.iter().any(|c| c.checkpoint_id == "cp-1"));
+        assert!(after.iter().any(|c| c.checkpoint_id == "cp-2"));
+        assert!(!after.iter().any(|c| c.checkpoint_id == "cp-3"));
+    }
+
     #[tokio::test]
     async fn test_pg_checkpointer_save_and_load() {
         // Fallback testing if Postgres is unavailable

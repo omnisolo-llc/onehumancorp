@@ -24,6 +24,8 @@ pub struct OfflineSyncRequest {
 
 #[derive(Serialize)]
 pub struct OfflineSyncResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pending_reconciliation: Option<Vec<serde_json::Value>>,
     pub success: bool,
     pub failed_count: i32,
 }
@@ -41,14 +43,14 @@ pub async fn offline_sync_handler(
     if tenant_id.is_empty() {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(OfflineSyncResponse { success: false, failed_count: 0 }),
+            Json(OfflineSyncResponse { success: false, failed_count: 0, pending_reconciliation: None }),
         ).into_response();
     }
 
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>> = Vec::new();
+    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>>> = Vec::new();
     for mutation in &payload.mutations {
         let mutation = mutation.clone();
         let cache_clone = cache.clone();
@@ -69,9 +71,10 @@ pub async fn offline_sync_handler(
                         .unwrap_or((0,));
 
                     if exists.0 > 0 {
-                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", mutation_id);
+                        let redacted_mutation_id = ::server_telemetry::redact_interface_pii(serde_json::Value::String(mutation_id.clone()));
+                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", redacted_mutation_id.as_str().unwrap_or("")); // pii-safe
                         let _ = db_tx.rollback().await;
-                        return Ok(());
+                        return Ok(None);
                     }
 
                     let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
@@ -93,8 +96,8 @@ pub async fn offline_sync_handler(
                 .execute(&mut *db_tx)
                 .await;
                 db_tx.commit().await.unwrap();
-                Ok(())
-            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
+                Ok(None)
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>>);
             continue;
         }
 
@@ -111,9 +114,10 @@ pub async fn offline_sync_handler(
                         .unwrap_or((0,));
 
                     if exists.0 > 0 {
-                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", mutation_id);
+                        let redacted_mutation_id = ::server_telemetry::redact_interface_pii(serde_json::Value::String(mutation_id.clone()));
+                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", redacted_mutation_id.as_str().unwrap_or("")); // pii-safe
                         let _ = db_tx.rollback().await;
-                        return Ok(());
+                        return Ok(None);
                     }
 
                     let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
@@ -136,8 +140,8 @@ pub async fn offline_sync_handler(
                     e.to_string()
                 })?;
                 db_tx.commit().await.map_err(|e| e.to_string())?;
-                Ok(())
-            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
+                Ok(None)
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>>);
             continue;
         }
 
@@ -173,9 +177,10 @@ pub async fn offline_sync_handler(
                     .unwrap_or((0,));
 
                 if exists.0 > 0 {
-                    tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", mutation_id);
+                    let redacted_mutation_id = ::server_telemetry::redact_interface_pii(serde_json::Value::String(mutation_id.clone()));
+                        tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", redacted_mutation_id.as_str().unwrap_or("")); // pii-safe
                     let _ = db_tx.rollback().await;
-                    return Ok(());
+                    return Ok(None);
                 }
 
                 let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
@@ -314,7 +319,17 @@ pub async fn offline_sync_handler(
                         }).to_string().into_bytes(),
                     };
                     let _ = mesh_clone.publish("mesh:inventory:updated", event).await;
-                    Ok(())
+                    if is_conflict {
+                        let conflict_payload_val = serde_json::json!({
+                            "transaction_id": mutation.transaction_id,
+                            "product_id": mutation.product_id,
+                            "shortage": mutation.quantity_deducted - stock,
+                            "timestamp": mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339())
+                        });
+                        Ok(Some(conflict_payload_val))
+                    } else {
+                        Ok(None)
+                    }
                 }
                 Ok(None) => {
                     tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id_clone); // pii-safe
@@ -326,15 +341,27 @@ pub async fn offline_sync_handler(
                     Err("Database error".to_string())
                 }
             }
-        }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>>);
     }
     let results = futures::future::join_all(futures).await;
 
-    let failed_count = results.into_iter().filter(|r| r.is_err()).count() as i32;
+    let failed_count = results.iter().filter(|r| r.is_err()).count() as i32;
+    let mut pending_reconciliation = Vec::new();
+    for res in results {
+        if let Ok(Some(conflict)) = res {
+            pending_reconciliation.push(conflict);
+        }
+    }
+
+    let pending_reconciliation = if pending_reconciliation.is_empty() {
+        None
+    } else {
+        Some(pending_reconciliation)
+    };
 
     (
         StatusCode::OK,
-        Json(OfflineSyncResponse { success: true, failed_count }),
+        Json(OfflineSyncResponse { success: true, failed_count, pending_reconciliation }),
     ).into_response()
 }
 

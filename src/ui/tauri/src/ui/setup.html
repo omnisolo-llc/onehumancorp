@@ -74,7 +74,7 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
-        border-radius: 16px;
+        border-radius: 8px;
         min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
@@ -854,13 +854,14 @@
         }
       }
 
-            @media (max-width: 375px) {
+      @media (max-width: 375px) {
         .container { padding: 16px; margin: 0; width: 100vw; max-width: 100vw; box-sizing: border-box; overflow-x: hidden; height: auto; max-height: 100vh; border-radius: 16px; overflow-y: auto; border: none; }
-        .context-card { padding: 12px; min-height: 44px; }
+        .context-card { padding: 12px; min-height: 44px; border-radius: 16px; }
         .work-context-cards { grid-template-columns: 1fr; }
         .radio-group { grid-template-columns: 1fr; } /* Added if it was a grid */
         .stepper {
-          gap: 4px;
+          gap: 8px;
+          padding: 0 10px;
         }
         .step-indicator {
           width: 8px;
@@ -870,11 +871,18 @@
           transform: scale(1.2);
         }
         .radio-option {
-        min-height: 44px;
-        min-width: 44px;
-        box-sizing: border-box;
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
           padding: 8px 12px;
           font-size: 14px;
+          border-radius: 16px;
+        }
+        button, input, select, textarea {
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
+          border-radius: 8px;
         }
         h1 {
           font-size: 20px;
@@ -883,12 +891,12 @@
           font-size: 13px;
         }
         .persona-chip {
-        min-height: 44px;
-        min-width: 44px;
-        box-sizing: border-box;
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
           padding: 6px 12px;
           font-size: 12px;
-          min-height: 44px;
+          border-radius: 16px;
         }
       }
 
@@ -1048,7 +1056,7 @@
 
 
       <!-- Step 0: Initial Screen -->
-      <div class="step active" id="step-initial">
+      <div class="step" id="step-initial">
         <div style="width: 64px; height: 64px; background: rgba(0, 102, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
           <svg style="width: 32px; height: 32px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -1066,9 +1074,7 @@
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
-        </button>
+
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
@@ -1105,10 +1111,8 @@
       </div>
 
       <!-- Step Chat: Conversational Build -->
-      <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
-        </button>
+      <div class="step active" id="step-chat">
+
         <h1>Setup Assistant</h1>
         <p>Talk to our AI to build your business.</p>
 
@@ -1116,11 +1120,18 @@
             <div class="chat-message assistant"><div class="chat-sender">Assistant</div><div class="chat-bubble">What do you do? (e.g. I make custom vegan cakes in Austin)</div></div>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 16px;">
-            <div style="display: flex; gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 10px; position: relative;">
+            <div id="chat-image-container" style="display: none; width: 100%;">
+                <input type="url" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" inputmode="url" autocomplete="url" enterkeyhint="next" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 16px;">
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" id="chat-upload-btn" class="glassmorphism" style="width: 44px; height: 44px; min-width: 44px; border-radius: 16px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 102, 255, 0.1); color: #0066FF;" onclick="document.getElementById('chat-image-container').style.display = document.getElementById('chat-image-container').style.display === 'none' ? 'block' : 'none';">
+                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </button>
                 <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." enterkeyhint="send" style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 16px;">
-                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 16px;">Send</button>
+                <button id="chat-send-btn" data-testid="chat-send-btn" class="glassmorphism" style="width: 44px; height: 44px; min-width: 44px; border-radius: 16px; padding: 0; display: flex; align-items: center; justify-content: center; background: #0066FF; color: white;">
+                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </button>
             </div>
         </div>
       </div>
@@ -1298,9 +1309,9 @@
         <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" enterkeyhint="next" />
         <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
 
-        <div style="position: relative; width: 100%;">
-          <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" enterkeyhint="next" style="padding-right: 40px;" />
-          <button type="button" id="toggle-password-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #555;">
+        <div style="position: relative; width: 100%; margin-bottom: 20px; display: flex; align-items: center;">
+          <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" enterkeyhint="next" style="padding-right: 44px !important; margin-bottom: 0; flex: 1;" />
+          <button type="button" id="toggle-password-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 0; height: 100%; width: 44px; background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; color: #555; box-shadow: none; min-width: auto !important; min-height: auto !important; z-index: 10;">
             <svg id="eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
               <circle cx="12" cy="12" r="3"></circle>
@@ -1571,17 +1582,24 @@
                 populateForm();
             }
         })
-        .catch(err => console.error('Failed to load cross-device state:', err));
-      }
-
-
-      if (state.step === undefined || state.step === 0) {
-         goToStep('step-initial');
-      } else {
-         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
-         if (state.step < steps.length) {
-            goToStep(steps[state.step]);
-         }
+        .catch(err => console.error('Failed to load cross-device state:', err))
+        .finally(() => {
+            if (!state.step) {
+                const stored = localStorage.getItem('onboardingState');
+                if (stored) {
+                    state = { ...state, ...JSON.parse(stored) };
+                    populateForm();
+                }
+            }
+            if (state.step === undefined || state.step === 0) {
+               goToStep('step-initial');
+            } else {
+               const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
+               if (state.step < steps.length) {
+                  goToStep(steps[state.step]);
+               }
+            }
+        });
       }
 
             // Clear name error on typing if valid
@@ -1742,9 +1760,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-categories') {
               if (inputs.categories.value.trim() === '') {
                   errors.categories.style.display = 'block';
+                  inputs.categories.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.categories.style.display = 'none';
+                  inputs.categories.style.borderColor = '';
                   state.categories = inputs.categories.value.trim();
               }
           }
@@ -1755,25 +1775,29 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   isValid = false;
               } else {
                   errors.name.style.display = 'none';
-                  inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  inputs.name.style.borderColor = '';
                   state.businessName = inputs.name.value.trim();
                   state.tagline = inputs.tagline.value.trim();
               }
           }
           else if (stepId === 'step-assistant') {
               if (inputs.assistantName.value.trim() === '') {
-                  errors.assistantName.style.display = 'block'; inputs.assistantName.style.borderColor = '#FF3B30';
+                  errors.assistantName.style.display = 'block';
+                  inputs.assistantName.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
-                  errors.assistantName.style.display = 'none'; inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  errors.assistantName.style.display = 'none';
+                  inputs.assistantName.style.borderColor = '';
                   state.assistantName = inputs.assistantName.value.trim();
               }
 
               if (!inputs.assistantTone.value) {
                   errors.assistantTone.style.display = 'block';
+                  inputs.assistantTone.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.assistantTone.style.display = 'none';
+                  inputs.assistantTone.style.borderColor = '';
                   state.assistantTone = inputs.assistantTone.value;
               }
           }
@@ -1789,7 +1813,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   stepValid = false;
               } else {
                   errors.adminEmail.style.display = 'none';
-                  inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  inputs.adminEmail.style.borderColor = '';
               }
 
               if (passVal === '' || passVal.length < 8 || !/\d/.test(passVal)) {
@@ -1799,7 +1823,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   stepValid = false;
               } else {
                   errors.adminPassword.style.display = 'none';
-                  inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  inputs.adminPassword.style.borderColor = '';
               }
 
               if (stepValid) {
@@ -1812,9 +1836,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-offer') {
               if (inputs.firstOffer.value.trim() === '') {
                   errors.firstOffer.style.display = 'block';
+                  inputs.firstOffer.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.firstOffer.style.display = 'none';
+                  inputs.firstOffer.style.borderColor = '';
                   state.first_offer = inputs.firstOffer.value.trim();
               }
           }
@@ -1822,9 +1848,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-domain') {
               if (inputs.domainName.value.trim().length < 3) {
                   errors.domainName.style.display = 'block';
+                  inputs.domainName.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.domainName.style.display = 'none';
+                  inputs.domainName.style.borderColor = '';
                   state.domain = inputs.domainName.value.trim();
               }
           }
@@ -1832,9 +1860,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-template') {
               if (inputs.templateSelection.value === '') {
                   errors.templateSelection.style.display = 'block';
+                  inputs.templateSelection.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.templateSelection.style.display = 'none';
+                  inputs.templateSelection.style.borderColor = '';
                   state.templateSelection = inputs.templateSelection.value;
               }
           }
@@ -2070,7 +2100,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
               const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant', 'X-User-ID': localStorage.getItem('user_id') || 'e2e-admin-user' },
                   body: JSON.stringify({ messages: chatHistory })
               });
 
@@ -2120,22 +2150,54 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
 
                   window.pendingOnboardingReq = req;
-                  const approvalDetails = document.getElementById('approval-details');
-                  if (approvalDetails) {
-                      let productsHtml = '';
-                      if (req.initial_products && req.initial_products.length > 0) {
-                          productsHtml = req.initial_products.map(p => `<li>${p.name} - ${p.price}</li>`).join('');
-                      } else {
-                          productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
-                      }
+                  let productsHtml = '';
+                  if (req.initial_products && req.initial_products.length > 0) {
+                      productsHtml = req.initial_products.map(p => `<li>${p.name} - ${p.price}</li>`).join('');
+                  } else {
+                      productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
+                  }
 
-                      approvalDetails.innerHTML = `
+                  const summaryCard = document.createElement('div');
+                  summaryCard.className = 'glassmorphism';
+                  summaryCard.style.cssText = 'position: absolute; bottom: 0; left: 0; right: 0; padding: 24px; border-radius: 24px 24px 0 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(210%); box-shadow: 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; border-top: 1px solid rgba(255, 255, 255, 0.6);';
+
+                  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                      summaryCard.style.background = 'rgba(22, 22, 26, 0.85)';
+                      summaryCard.style.borderTop = '1px solid rgba(255, 255, 255, 0.1)';
+                      summaryCard.style.color = '#F5F5F7';
+                  }
+
+                  summaryCard.innerHTML = `
+                      <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h2>
+                      <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
                           <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
                           <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
-                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul>${productsHtml}</ul></div>
-                      `;
-                  }
-                  await goToStep('step-approval');
+                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
+                      </div>
+                      <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 16px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
+                  `;
+
+                  document.getElementById('step-chat').style.position = 'relative';
+                  document.getElementById('step-chat').style.overflow = 'hidden';
+                  document.getElementById('step-chat').appendChild(summaryCard);
+
+                  // Trigger slide up
+                  requestAnimationFrame(() => {
+                      summaryCard.style.transform = 'translateY(0)';
+                  });
+
+                  document.getElementById('approve-publish-btn-chat').addEventListener('click', async () => {
+                      const btn = document.getElementById('approve-publish-btn-chat');
+                      btn.disabled = true;
+                      btn.innerHTML = '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
+
+                      const approvePublishBtn = document.getElementById('approve-publish-btn');
+                      if (approvePublishBtn) {
+                         approvePublishBtn.click();
+                      }
+                  });
+                  // Scroll to bottom
+                  chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
               }
           } catch (e) {
               chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -2235,7 +2297,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
       if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
 
-      if (generateStorefrontBtn) {
+            if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
               const bioInput = instantBioInputEl.value;
               const imageUrlInput = document.getElementById("instant-image-url");
@@ -2261,14 +2323,52 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
               try {
                   const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
-                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
-                  const userIdStr = localStorage.getItem('user_id') || 'e2e-admin-user';
+                  const res = await fetch(`${backendUrl}/api/v1/growth/zero-click-builder/generate`, {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'X-Tenant-ID': 'e2e-tenant',
+                          'X-User-ID': 'e2e-admin-user'
+                      },
+                      body: JSON.stringify({ prompt: bioInput + (imageUrl ? " " + imageUrl : "") })
+                  });
 
-                  let intakeData = null;
+                  if (!res.ok) {
+                      const errData = await res.json().catch(()=>({}));
+                      throw new Error(errData.error || errData.message || 'Failed to generate storefront');
+                  }
 
-                  if (window.__TAURI__ && window.__TAURI__.core) {
-                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput, imageUrl: imageUrl || undefined });
-                  } else {
+                  const data = await res.json();
+
+                  if (data.organization_id) {
+                      localStorage.setItem('tenant_id', data.organization_id);
+                      localStorage.setItem('tenant', data.organization_id);
+                  }
+                  if (data.user_id) {
+                      localStorage.setItem('user_id', data.user_id);
+                  }
+
+                  localStorage.removeItem('onboardingState');
+                  localStorage.setItem('has_onboarded', 'true');
+
+                  setTimeout(() => {
+                    window.location.href = "success.html";
+                  }, 1500);
+
+              } catch (err) {
+                  console.error(err);
+                  goToStep('step-instant');
+                  const errorMsg = err.message || "Network Error: Failed to fetch";
+                  instantErrorEl.innerText = errorMsg;
+                  instantErrorEl.style.display = 'block';
+                  instantErrorEl.style.color = '#FF3B30';
+                  instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+                  instantBioInputEl.style.borderColor = '#FF3B30';
+                  generateStorefrontBtn.disabled = false;
+                  generateStorefrontBtn.innerText = "Next";
+              }
+          });
+      } else {
                      const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
                          method: 'POST',
                          headers: {

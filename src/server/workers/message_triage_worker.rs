@@ -15,6 +15,7 @@ impl MessageTriageWorker {
 
     pub fn start(self: Arc<Self>) {
         tokio::spawn(async move {
+            tracing::info!("Starting MessageTriageWorker for Agentic Work Triage feature...");
             loop {
                 match self.poll().await {
                     Ok(true) => {
@@ -414,7 +415,8 @@ Output JSON format:
                                 let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
                                 _lock_conn = Some(conn);
                             } else {
-                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redis_lock_key);
+                                let redacted_redis_lock_key = ::server_telemetry::redact_interface_pii(serde_json::Value::String(redis_lock_key.clone()));
+                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redacted_redis_lock_key.as_str().unwrap_or("")); // pii-safe
                             }
                         }
                     }
@@ -541,7 +543,8 @@ Output JSON format:
                                 let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
                                 _lock_conn = Some(conn);
                             } else {
-                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redis_lock_key);
+                                let redacted_redis_lock_key = ::server_telemetry::redact_interface_pii(serde_json::Value::String(redis_lock_key.clone()));
+                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redacted_redis_lock_key.as_str().unwrap_or("")); // pii-safe
                             }
                         }
                     }
