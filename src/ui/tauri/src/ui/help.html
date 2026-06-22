@@ -378,7 +378,7 @@
 
       <div class="header-card">
         <h1>In-App Help Center</h1>
-        <input type="text" id="search-input" placeholder="Search for help articles and videos..." data-tooltip="Search for articles, videos, and guides" />
+        <input type="text" id="search-input" data-tooltip-id="help-search-tooltip" placeholder="Search for help articles and videos..." data-tooltip="Search for articles, videos, and guides" />
       </div>
 
       <div id="content-area">
@@ -464,7 +464,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const t = e.target;
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
-            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip'));
         }
     });
 
@@ -478,7 +479,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
+            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -504,7 +506,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip'));
             }, 500); // 500ms long press
         }
     });
@@ -785,7 +788,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip], [id]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
+            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
             if (text) {
                 showTooltip(e, text);
             }
@@ -803,7 +807,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
+            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -1337,7 +1342,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip], [id]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
+            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
             if (text) {
                 showTooltip(e, text);
             }
@@ -1355,7 +1361,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
+            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
