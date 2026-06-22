@@ -1360,6 +1360,12 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya Smith"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleStartOnboarding();
+                          }
+                        }}
                         className={`w-full p-3 sm:p-4 border ${validationErrors.adminName ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                         inputMode="text"
                         enterKeyHint="next"
@@ -1387,6 +1393,12 @@ export default function OnboardingWizard() {
                       }
                     }}
                     placeholder="you@example.com"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleStartOnboarding();
+                          }
+                        }}
                     className={`w-full p-3 sm:p-4 border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}
@@ -1410,6 +1422,12 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="••••••••"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleStartOnboarding();
+                          }
+                        }}
                         className={`w-full p-3 sm:p-4 border ${validationErrors.adminPassword ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                       />
                       {validationErrors.adminPassword && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminPassword}</p>}
