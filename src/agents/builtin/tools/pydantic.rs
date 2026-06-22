@@ -52,10 +52,14 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
                 // Add the original payload snippet for context
                 let args_str = match serde_json::to_string(&args) {
                     Ok(s) => {
-                        let char_count = s.chars().count();
-                        if char_count > 100 {
-                            let truncated: String = s.chars().take(100).collect();
-                            format!("{}...", truncated)
+                        // Optimize payload truncation to use efficient byte-slice boundary checks
+                        const MAX_LEN: usize = 100;
+                        if s.len() > MAX_LEN {
+                            let mut end = MAX_LEN;
+                            while !s.is_char_boundary(end) {
+                                end -= 1;
+                            }
+                            format!("{}...", &s[..end])
                         } else {
                             s
                         }
@@ -77,6 +81,20 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
                     }));
                 } else if err_str.contains("invalid type") {
                     let hint = "There is a type mismatch. Ensure strings are quoted, numbers are not quoted, and arrays/objects are formatted correctly as JSON.";
+                    detailed_instruction = Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
+                        instr.push_str("\nHint: ");
+                        instr.push_str(hint);
+                        instr
+                    }));
+                } else if err_str.contains("invalid value: null") || err_str.contains("invalid type: null") {
+                    let hint = "A null value was provided where a non-null value is required. Please check your schema requirements.";
+                    detailed_instruction = Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
+                        instr.push_str("\nHint: ");
+                        instr.push_str(hint);
+                        instr
+                    }));
+                } else if err_str.contains("unknown variant") {
+                    let hint = "An unrecognized enum variant was provided. Please ensure the string precisely matches one of the allowed options.";
                     detailed_instruction = Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
                         instr.push_str("\nHint: ");
                         instr.push_str(hint);
@@ -177,6 +195,79 @@ mod tests {
             assert!(msg.len() < 500); // Ensures the error message didn't blow up
         } else {
             panic!("Expected LlmRecoverable error with truncated snippet");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pydantic_adapter_failure_long_snippet_multibyte() {
+        let adapter = PydanticAdapter::new(MyExecutor);
+        // "🦀" is 4 bytes. 26 * 4 = 104 bytes. Truncation at 100 should fall back correctly.
+        let long_string = "🦀".repeat(26);
+        let result = adapter
+            .execute(serde_json::json!({ "foo": long_string, "bar": "not a number" }))
+            .await;
+        assert!(result.is_err());
+
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+            assert!(msg.contains("..."));
+            // The un-truncated string shouldn't appear
+            assert!(!msg.contains(&"🦀".repeat(26)));
+        } else {
+            panic!("Expected LlmRecoverable error with truncated multibyte snippet");
+        }
+    }
+
+    #[derive(Deserialize)]
+    struct ComplexArgs {
+        foo: Option<String>,
+        #[serde(rename = "type")]
+        type_: TypeEnum,
+    }
+
+    #[derive(Deserialize)]
+    enum TypeEnum {
+        Alpha,
+        Beta,
+    }
+
+    struct ComplexExecutor;
+    #[async_trait::async_trait]
+    impl PydanticToolExecutor<ComplexArgs> for ComplexExecutor {
+        async fn execute_typed(&self, _args: ComplexArgs) -> Result<String, ToolError> {
+            Ok("ok".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pydantic_adapter_failure_null_value() {
+        let adapter = PydanticAdapter::new(ComplexExecutor);
+        let result = adapter
+            .execute(serde_json::json!({ "foo": "test", "type": serde_json::Value::Null }))
+            .await;
+
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("invalid type: null"));
+            assert!(msg.contains("A null value was provided where a non-null value is required."));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pydantic_adapter_failure_unknown_variant() {
+        let adapter = PydanticAdapter::new(ComplexExecutor);
+        let result = adapter
+            .execute(serde_json::json!({ "foo": "test", "type": "Gamma" }))
+            .await;
+
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("unknown variant"));
+            assert!(msg.contains("An unrecognized enum variant was provided."));
+        } else {
+            panic!("Expected LlmRecoverable error about unknown variant");
         }
     }
 

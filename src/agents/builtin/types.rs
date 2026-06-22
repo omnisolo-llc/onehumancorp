@@ -241,10 +241,15 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
         msg_content.clone()
     };
 
+    // Inject exact line and column data to provide the LLM with pinpoint error location
+    let line = e.line();
+    let column = e.column();
+    let precise_msg = format!("{} at line {}, column {}", extended_msg_content, line, column);
+
     let mut pydantic_json_obj = serde_json::json!({
         "type": error_type,
-        "loc": ["data"],
-        "msg": extended_msg_content,
+        "loc": ["data", format!("line_{}", line), format!("col_{}", column)],
+        "msg": precise_msg,
     });
 
     if args_str.is_some() {
@@ -310,18 +315,22 @@ mod tests {
         let msg_syntax = format_pydantic_error(&err_syntax, Some("{ bad json }"), None);
         assert!(msg_syntax.contains("Validation Error (Pydantic-first tool schema)"));
         assert!(msg_syntax.contains("JSON syntax error"));
+        assert!(msg_syntax.contains("line 1, column"));
         // assert!(msg_syntax.contains("Provided arguments snippet: { bad json }"));
 
         // Test EOF error
         let err_eof = serde_json::from_str::<Dummy>("{\"_field\": 12").unwrap_err();
         let msg_eof = format_pydantic_error(&err_eof, None, None);
         assert!(msg_eof.contains("Incomplete JSON structure (unexpected EOF)"));
+        assert!(msg_eof.contains("line 1, column"));
         assert!(!msg_eof.contains("Provided arguments snippet"));
 
         // Test semantic/data error
         let err_semantic = serde_json::from_str::<Dummy>("{\"_field\": \"string instead of int\"}").unwrap_err();
         let msg_semantic = format_pydantic_error(&err_semantic, Some("{\"_field\": \"string instead of int\"}"), None);
         assert!(msg_semantic.contains("Semantic validation failed"));
+        assert!(msg_semantic.contains("line 1, column"));
+        assert!(msg_semantic.contains("line_1"));
     }
 
     #[test]
