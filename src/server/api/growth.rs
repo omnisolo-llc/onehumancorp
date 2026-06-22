@@ -2948,7 +2948,7 @@ pub async fn handle_zero_click_generate(
 }
 
 pub async fn handle_embed_widget(
-    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<EmbedWidgetQuery>
 ) -> axum::response::Html<String> {
     let tenant = query.tenant_id.unwrap_or_else(|| "default-tenant".to_string());
@@ -3180,7 +3180,7 @@ pub struct GeneratePromoResponse {
 }
 
 pub async fn handle_promo_generate(
-    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     axum::Json(req): axum::Json<GeneratePromoRequest>,
 ) -> impl axum::response::IntoResponse {
     let occasion_raw = req.occasion.unwrap_or_else(|| "Winter Wonderland".to_string());
