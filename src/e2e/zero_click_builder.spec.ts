@@ -47,5 +47,8 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     // Click the launch button to verify redirect
     await launchBtn.click();
     await expect(page).toHaveURL(/\/dashboard/);
+
+    // Verify seeded task shows up in the Unified Agent Feed
+    await expect(page.getByText('Follow up with new leads')).toBeVisible({ timeout: 15000 });
   });
 });
