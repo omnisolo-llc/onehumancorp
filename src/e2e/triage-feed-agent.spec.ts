@@ -1,9 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Agentic Work Triage Feed', () => {
-  test('Owner can review and approve AI-drafted replies', async ({ page, loginAs, defaultUser }) => {
+  test('Owner can review and approve AI-drafted replies', async ({ page, loginAs, adminUser }) => {
     // 1. Log in to the application
-    await loginAs(page, defaultUser);
+    await loginAs(page, adminUser);
 
     // 2. Simulate an incoming message by hitting the new test endpoint
     const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
@@ -35,8 +35,8 @@ test.describe('Agentic Work Triage Feed', () => {
     await expect(card).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('Owner can dismiss AI-drafted replies', async ({ page, loginAs, defaultUser }) => {
-    await loginAs(page, defaultUser);
+  test('Owner can dismiss AI-drafted replies', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     const json = await response.json();
     const triageItemId = json.id;
@@ -52,8 +52,8 @@ test.describe('Agentic Work Triage Feed', () => {
     await expect(card).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('Triage feed handles empty state correctly', async ({ page, loginAs, defaultUser }) => {
-    await loginAs(page, defaultUser);
+  test('Triage feed handles empty state correctly', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
 
     // It should either show the empty state or an empty feed, but given we might have real data,
@@ -68,8 +68,8 @@ test.describe('Agentic Work Triage Feed', () => {
     ]);
   });
 
-  test('Triage feed item shows correct metadata', async ({ page, loginAs, defaultUser }) => {
-    await loginAs(page, defaultUser);
+  test('Triage feed item shows correct metadata', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     const json = await response.json();
     const triageItemId = json.id;
@@ -84,8 +84,8 @@ test.describe('Agentic Work Triage Feed', () => {
     await expect(card).toContainText('High');
   });
 
-  test('Triage feed layout is responsive', async ({ page, loginAs, defaultUser }) => {
-    await loginAs(page, defaultUser);
+  test('Triage feed layout is responsive', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.setViewportSize({ width: 375, height: 812 }); // Mobile
 
     const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);

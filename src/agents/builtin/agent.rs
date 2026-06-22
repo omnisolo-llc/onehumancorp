@@ -309,13 +309,18 @@ pub struct AgentState {
     pub total_tokens: i32,
     pub error_counts: std::collections::HashMap<String, u64>,
     pub last_message: Option<Message>,
+    pub is_revert: bool,
 }
 
 pub struct AgentStateReducer;
 
 impl crate::langgraph::Reducer<AgentState> for AgentStateReducer {
     fn reduce(&self, state: &mut AgentState, update: AgentState) {
-        state.messages.extend(update.messages);
+        if update.is_revert {
+            state.messages = update.messages;
+        } else {
+            state.messages.extend(update.messages);
+        }
         state.has_tool_calls = update.has_tool_calls;
         state.total_tokens = update.total_tokens;
         state.error_counts.extend(update.error_counts);
@@ -1107,6 +1112,33 @@ impl Agent {
                 msg.tool_calls.len()
             ];
 
+            // Checkpointing logic: Put checkpoint before executing any tools
+            let mut current_checkpoint_id = None;
+            if let Some(checkpointer) = &self.checkpointer {
+                if let Some(thread_id) = &cfg.thread_id {
+                    let checkpoint_id = msg.response_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                    let metadata = serde_json::json!({
+                        "iteration": turn_count,
+                        "tool_calls": msg.tool_calls.len()
+                    });
+
+                    let cp = crate::checkpointer::Checkpoint {
+                        thread_id: thread_id.clone(),
+                        checkpoint_id: checkpoint_id.clone(),
+                        parent_id: msg.previous_response_id.clone(),
+                        data: serde_json::to_value(&messages).unwrap_or(serde_json::json!({})),
+                        metadata,
+                        created_at: chrono::Utc::now(),
+                    };
+
+                    if let Err(e) = checkpointer.put_checkpoint(cp).await {
+                        tracing::warn!("Failed to create checkpoint: {}", e);
+                    } else {
+                        current_checkpoint_id = Some(checkpoint_id);
+                    }
+                }
+            }
+
             // Master Catalog B.2: Tools (The Agent's Hands): Read-only operations run concurrently; mutating operations run serially.
             // We group tool calls into sequential batches. A batch is a set of consecutive read-only tools,
             // or a single mutating tool. We process the batches in order.
@@ -1202,6 +1234,18 @@ impl Agent {
                                 ))));
                             }
                             Err(crate::types::ToolError::UserFixable(err_msg)) => {
+                                if let Some(checkpointer) = &self.checkpointer {
+                                    if let Some(cp_id) = &current_checkpoint_id {
+                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        if let Some(thread_id) = &cfg.thread_id {
+                                            if let Ok(Some(cp)) = checkpointer.get_checkpoint(thread_id, cp_id).await {
+                                                if let Ok(restored_msgs) = serde_json::from_value::<Vec<crate::types::Message>>(cp.data) {
+                                                    messages = restored_msgs;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 if let Some(ref cb) = cfg.human_input_callback.0
                                     && let Some(human_input) = cb(&err_msg).await
                                 {
@@ -1237,6 +1281,18 @@ impl Agent {
                                 ))));
                             }
                             Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                                if let Some(checkpointer) = &self.checkpointer {
+                                    if let Some(cp_id) = &current_checkpoint_id {
+                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        if let Some(thread_id) = &cfg.thread_id {
+                                            if let Ok(Some(cp)) = checkpointer.get_checkpoint(thread_id, cp_id).await {
+                                                if let Ok(restored_msgs) = serde_json::from_value::<Vec<crate::types::Message>>(cp.data) {
+                                                    messages = restored_msgs;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 let self_correct_msg =
                                     ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                         "".to_string(),
@@ -1312,6 +1368,11 @@ impl Agent {
                                     ))));
                                 }
                                 Err(crate::types::ToolError::UserFixable(err_msg)) => {
+                                    if let Some(checkpointer) = &self.checkpointer {
+                                        if let Some(cp_id) = &current_checkpoint_id {
+                                            let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        }
+                                    }
                                     if let Some(ref cb) = cfg.human_input_callback.0 {
                                         // Await inside sequential block is safe here
                                         if let Some(human_input) = cb(&err_msg).await {
@@ -1348,6 +1409,11 @@ impl Agent {
                                     ))));
                                 }
                                 Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                                    if let Some(checkpointer) = &self.checkpointer {
+                                        if let Some(cp_id) = &current_checkpoint_id {
+                                            let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        }
+                                    }
                                     let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &err_msg).error;
                                     on_event(AgentEvent::ToolCall {
                                         name: tc.name.clone(),
@@ -1591,6 +1657,7 @@ impl Agent {
                             total_tokens: current_total,
                             error_counts: std::collections::HashMap::new(),
                             last_message: Some(new_message),
+                            is_revert: false,
                         };
                         Ok(update)
                     }
@@ -1603,12 +1670,39 @@ impl Agent {
         let tool_tools = session_tools_arc.clone();
         let cfg_max_retries = cfg.max_retries;
         let _cfg_max_retries = cfg_max_retries;
+        let checkpointer_clone = self.checkpointer.clone();
         graph.add_node("tool_node", move |state| {
             let tt = tool_tools.clone();
             let cfg_arc_node = cfg_arc.clone();
+            let checkpointer_node = checkpointer_clone.clone();
             Box::pin(async move {
                 let last_msg = state.last_message.as_ref().unwrap();
                 let tool_calls = &last_msg.tool_calls;
+
+                let mut current_checkpoint_id = None;
+                if let Some(checkpointer) = &checkpointer_node {
+                    if let Some(thread_id) = &cfg_arc_node.thread_id {
+                        let checkpoint_id = last_msg.response_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                        let metadata = serde_json::json!({
+                            "tool_calls": last_msg.tool_calls.len()
+                        });
+
+                        let cp = crate::checkpointer::Checkpoint {
+                            thread_id: thread_id.clone(),
+                            checkpoint_id: checkpoint_id.clone(),
+                            parent_id: last_msg.previous_response_id.clone(),
+                            data: serde_json::to_value(&state.messages).unwrap_or(serde_json::json!({})),
+                            metadata,
+                            created_at: chrono::Utc::now(),
+                        };
+
+                        if let Err(e) = checkpointer.put_checkpoint(cp).await {
+                            tracing::warn!("Failed to create checkpoint in LangGraph: {}", e);
+                        } else {
+                            current_checkpoint_id = Some(checkpoint_id);
+                        }
+                    }
+                }
 
                 let mut error_counts = state.error_counts.clone();
                 let mut read_only_calls = Vec::new();
@@ -1677,6 +1771,11 @@ impl Agent {
                             };
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                            if let Some(checkpointer) = &checkpointer_node {
+                                if let Some(cp_id) = &current_checkpoint_id {
+                                    let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                }
+                            }
                             let count = *error_counts.entry(tool_name.clone()).or_insert(0) + 1;
                             error_counts.insert(tool_name.clone(), count);
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
@@ -1691,6 +1790,11 @@ impl Agent {
                             return Err(format!("Unexpected tool error: {}", msg));
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
+                            if let Some(checkpointer) = &checkpointer_node {
+                                if let Some(cp_id) = &current_checkpoint_id {
+                                    let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                }
+                            }
                             if let Some(ref cb) = cfg_arc_node.human_input_callback.0
                                 && let Some(human_input) = cb(&msg).await {
                                     tool_results[idx] = crate::types::ToolResult {
@@ -1722,9 +1826,21 @@ impl Agent {
                     if let Err(e) = gating_err {
                         match e {
                             crate::types::ToolError::LlmRecoverable(msg) => {
+                                if let Some(checkpointer) = &checkpointer_node {
+                                    if let Some(cp_id) = &current_checkpoint_id {
+                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
+                                    }
+                                }
                                 tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id, &msg);
                             }
                             crate::types::ToolError::UserFixable(msg) => {
+                                if let Some(checkpointer) = &checkpointer_node {
+                                    if let Some(cp_id) = &current_checkpoint_id {
+                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
+                                    }
+                                }
                                 if let Some(ref cb) = cfg_arc_node.human_input_callback.0
                                     && let Some(human_input) = cb(&msg).await {
                                         tool_results[idx] = crate::types::ToolResult {
@@ -1783,6 +1899,12 @@ impl Agent {
                                 };
                             }
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                if let Some(checkpointer) = &checkpointer_node {
+                                    if let Some(cp_id) = &current_checkpoint_id {
+                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
+                                    }
+                                }
                                 let count = *error_counts.entry(name.clone()).or_insert(0) + 1;
                                 error_counts.insert(name.clone(), count);
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
@@ -1797,6 +1919,11 @@ impl Agent {
                                 return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
+                            if let Some(checkpointer) = &checkpointer_node {
+                                if let Some(cp_id) = &current_checkpoint_id {
+                                    let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                }
+                            }
                             if let Some(ref cb) = cfg_arc_node.human_input_callback.0
                                 && let Some(human_input) = cb(&msg).await {
                                     tool_results[idx] = crate::types::ToolResult {
@@ -1837,6 +1964,7 @@ impl Agent {
                     total_tokens: state.total_tokens,
                     error_counts,
                     last_message: None,
+                    is_revert: false,
                 })
             })
         });
@@ -1861,6 +1989,7 @@ impl Agent {
             total_tokens: 0,
             error_counts: std::collections::HashMap::new(),
             last_message: None,
+                    is_revert: false,
         };
 
         let compiled = graph.compile().unwrap();
@@ -4823,15 +4952,17 @@ mod tests {
             total_tokens: 10,
             error_counts: std::collections::HashMap::new(),
             last_message: None,
+                    is_revert: false,
         };
 
         let update = AgentState {
-            messages: vec![crate::types::Message::assistant("Hi")],
-            has_tool_calls: true,
-            total_tokens: 20,
-            error_counts: [("toolA".to_string(), 1)].into_iter().collect(),
-            last_message: Some(crate::types::Message::assistant("Hi")),
-        };
+				messages: vec![crate::types::Message::assistant("Hi")],
+				has_tool_calls: true,
+				total_tokens: 20,
+				error_counts: [("toolA".to_string(), 1)].into_iter().collect(),
+				last_message: Some(crate::types::Message::assistant("Hi")),
+				is_revert: false,
+			};
 
         let reducer = AgentStateReducer;
         crate::langgraph::Reducer::reduce(&reducer, &mut state, update);

@@ -1419,7 +1419,7 @@ mod tests {
 
 #[cfg(test)]
 mod additional_chaos_tests {
-    use super::*;
+    // using super is not needed
 
     #[tokio::test]
     async fn test_chaos_simulate_sql_sync_lag() {
