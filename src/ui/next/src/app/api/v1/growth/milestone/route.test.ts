@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { GET } from './route';
 
 describe('GET /api/v1/growth/milestone', () => {
@@ -8,7 +8,17 @@ describe('GET /api/v1/growth/milestone', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns milestone data if tenant_id is provided', async () => {
+  it('returns backend data if tenant_id is provided', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        title: "100th Order Delivered! 🎉",
+        subtitle: "You're growing fast. Share your success to unlock $50 in OHC credits.",
+        shareText: "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
+        reward: "$50 Credit"
+      }),
+    });
+
     const req = new Request('http://localhost/api/v1/growth/milestone?tenant_id=my-store');
     const res = await GET(req);
     expect(res.status).toBe(200);

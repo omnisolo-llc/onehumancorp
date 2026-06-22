@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import MilestonesPage from './page';
+import MilestoneAlertsPage from './page';
 import * as navigation from 'next/navigation';
 
 vi.mock('next/navigation', () => ({
@@ -12,7 +12,7 @@ vi.mock('../components/PoweredByOHC', () => ({
   PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
 }));
 
-describe('MilestonesPage', () => {
+describe('MilestoneAlertsPage', () => {
   const mockPush = vi.fn();
 
   beforeEach(() => {
@@ -41,7 +41,7 @@ describe('MilestonesPage', () => {
 
   it('renders milestones list correctly', async () => {
     await act(async () => {
-      render(<MilestonesPage />);
+      render(<MilestoneAlertsPage />);
     });
 
     expect(screen.getByText('Your Achievements')).toBeDefined();
@@ -50,7 +50,7 @@ describe('MilestonesPage', () => {
 
   it('shows card preview and embed generator after clicking a milestone', async () => {
     await act(async () => {
-      render(<MilestonesPage />);
+      render(<MilestoneAlertsPage />);
     });
 
     const milestoneTitle = screen.getByText('First Sale!');
@@ -72,7 +72,7 @@ describe('MilestonesPage', () => {
 
   it('contains the invite a friend CTA and navigates to referrals', async () => {
     await act(async () => {
-      render(<MilestonesPage />);
+      render(<MilestoneAlertsPage />);
     });
 
     const milestoneTitle = screen.getByText('First Sale!');
@@ -94,7 +94,7 @@ describe('MilestonesPage', () => {
 
   it('contains WhatsApp and Facebook share buttons', async () => {
     await act(async () => {
-      render(<MilestonesPage />);
+      render(<MilestoneAlertsPage />);
     });
 
     const milestoneTitle = screen.getByText('First Sale!');
@@ -113,7 +113,7 @@ describe('MilestonesPage', () => {
 
   it('renders the PoweredByOHC component', async () => {
     await act(async () => {
-      render(<MilestonesPage />);
+      render(<MilestoneAlertsPage />);
     });
 
     expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
