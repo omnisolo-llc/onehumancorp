@@ -750,6 +750,9 @@ pub async fn bench_hybrid_latency() {
     println!("3. API Response Time (Dashboard Snapshot)");
     bench_api_response_time().await;
 
+    println!("4.5. AI Token Efficiency");
+    bench_ai_token_efficiency().await;
+
     println!("4. Billing API Response Time (Parallel Execution Optimization verified, Hybrid Cache)");
     bench_billing_api_response_time().await;
 
@@ -836,6 +839,59 @@ pub async fn bench_crm_opportunities_latency() {
     } else {
         println!("  - list_opportunities_handler (Parallel Execution Optimization verified, Hybrid Cache)");
     }
+}
+
+pub async fn bench_ai_token_efficiency() {
+    println!("Benchmarking AI Token Efficiency...");
+
+    let test_data = "This is a repeatedly seen string block that appears over and over again in system prompts to guide the AI on what to do and how to act for this specific tenant.";
+
+    // First call (cache miss)
+    let start_1 = std::time::Instant::now();
+    let reduced_1 = ::server_pricing::compression::reduce_tokens(test_data);
+    let duration_1 = start_1.elapsed();
+
+    // Second call (cache hit)
+    let start_2 = std::time::Instant::now();
+    let reduced_2 = ::server_pricing::compression::reduce_tokens(test_data);
+    let duration_2 = start_2.elapsed();
+
+    assert_eq!(reduced_1, reduced_2);
+
+    println!("  - reduce_tokens first call (Miss): {:?}", duration_1);
+    println!("  - reduce_tokens second call (Hit): {:?}", duration_2);
+    if duration_2 < duration_1 {
+        println!("    (AI Token Efficiency verified: cache reduced execution time)");
+    }
+
+    // Verify Anomaly Tracking
+    let config = ::server_pricing::calculator::CostConfig {
+        cost_per_input_token: 0.001,
+        cost_per_output_token: 0.002,
+        ..Default::default()
+    };
+    let auditor = crate::services::billing::auditor::CostAuditor::new(config);
+
+    let mut event = crate::services::billing::auditor::AuditEvent {
+        agent_id: "agent1".to_string(),
+        tenant_id: "test_tenant".to_string(),
+        input_tokens: 10,
+        output_tokens: 5,
+        cached_input_tokens: 0,
+        local_embedding_tokens: 0,
+    };
+
+    auditor.record_event(event.clone());
+    auditor.record_event(event.clone());
+    auditor.record_event(event.clone());
+
+    event.input_tokens = 5000;
+    event.output_tokens = 1000;
+    auditor.record_event(event.clone());
+
+    let anomalies = auditor.get_tenant_anomalies("test_tenant");
+    assert_eq!(anomalies.len(), 1);
+    println!("  - Anomaly tracking verified: {} anomaly recorded", anomalies.len());
 }
 
 pub async fn bench_billing_api_response_time() {
