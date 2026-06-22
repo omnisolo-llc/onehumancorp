@@ -8,7 +8,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
   test('successfully completes the wizard with drafting and instant image url', async ({ page }) => {
     // Step 1: Initial Intro
-    await expect(page.locator('h1').first()).toContainText('10-Minute Setup Wizard');
+    await expect(page.locator('h2').first()).toContainText('10-Minute Setup Wizard');
     await page.getByRole('button', { name: 'Instant Build' }).click();
 
     // Step Instant
