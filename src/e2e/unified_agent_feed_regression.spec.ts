@@ -34,7 +34,7 @@ test.describe('Unified Agent Feed Additional Regression Tests', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Assuming .app-list-item or similar holds feed items, or glassmorphism
-    const feedContainer = page.locator('#triage-queue').first();
+    const feedContainer = page.locator('section[aria-label="Unified Agent Feed"] > div.flex-col').first();
     await expect(feedContainer).toBeVisible();
 
     const flexDirection = await feedContainer.evaluate(el => window.getComputedStyle(el).flexDirection);
