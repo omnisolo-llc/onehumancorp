@@ -92,6 +92,8 @@ pub struct RetryWithErrorOutputParser<'a, T> {
     llm: Arc<dyn LlmClientForParser>,
 }
 
+
+
 impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
     pub fn new(
         parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
@@ -258,7 +260,6 @@ pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{RetryStrategy, ExponentialBackoffWithJitter};
 
     #[tokio::test]
     async fn test_parse_structured_output_serde_error_classification() {
@@ -761,7 +762,8 @@ mod retry_tests {
     }
 }
 
-// Tests moved to types.rs
+
+
 #[cfg(test)]
 mod tests_clamped {
     use super::*;

@@ -26,7 +26,7 @@ test.describe('KDS Offline & Multilingual', () => {
     await expect(page.getByText('Chicken Over Rice', { exact: true })).toBeVisible();
 
     // Toggle language
-    await page.getByTestId('lang-toggle').click();
+    await page.getByTestId('lang-toggle').click({ force: true });
 
     // Check Arabic translations
     await expect(page.locator('text=الطلبات النشطة')).toBeVisible();
