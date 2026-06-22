@@ -39,6 +39,11 @@ afterEach(() => {
     // Removed mock assert
   });
 
+  it('renders Morning Briefing', async () => {
+    await act(async () => { render(<CalendarPage />); });
+    expect(screen.getByText('Morning Briefing')).toBeDefined();
+  });
+
   it('renders AI operations activity feed', async () => {
     await act(async () => { render(<CalendarPage />); });
     expect(screen.getByText('Operations Agent')).toBeDefined();
