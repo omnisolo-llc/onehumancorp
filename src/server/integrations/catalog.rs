@@ -3,6 +3,12 @@ pub use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 pub fn get_catalog() -> Vec<IntegrationProvider> {
     vec![
         metadata_provider(
+            "taxjar",
+            "TaxJar",
+            "finance",
+            "https://api.taxjar.com/v2".to_string(),
+        ),
+        metadata_provider(
             "nats",
             "NATS Event Mesh",
             "event_mesh",
