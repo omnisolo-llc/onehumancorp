@@ -46,4 +46,68 @@ afterEach(() => {
     // Removed ai activity mock assert
     // Removed ai activity mock assert
   });
+
+  it('renders the Morning Briefing card', async () => {
+    await act(async () => { render(<CalendarPage />); });
+    expect(screen.getByText('Morning Briefing')).toBeDefined();
+    expect(screen.getAllByText(/appointments/i)).toBeDefined();
+  });
+
+  it('renders appointments and expands them on click', async () => {
+    global.fetch = vi.fn().mockImplementation(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve([
+        {
+          id: '1',
+          customer_name: 'Test Customer',
+          product_title: 'Test Service',
+          start_time: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+          status: 'pending',
+          notes: 'Test notes'
+        }
+      ])
+    }));
+
+    await act(async () => { render(<CalendarPage />); });
+
+    const appointmentTitle = await screen.findByText('Test Service');
+    expect(appointmentTitle).toBeDefined();
+
+    // Check for grayscale class on future event (should not be present)
+    const card = appointmentTitle.closest('.border-gray-100');
+    expect(card?.className).not.toContain('grayscale');
+
+    // Click to expand
+    await act(async () => {
+      appointmentTitle.click();
+    });
+
+    expect(screen.getByText('Client Context')).toBeDefined();
+    expect(screen.getByText('Message Client')).toBeDefined();
+    expect(screen.getByText('Test notes')).toBeDefined();
+  });
+
+  it('renders past appointments with grayscale', async () => {
+    global.fetch = vi.fn().mockImplementation(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve([
+        {
+          id: '2',
+          customer_name: 'Past Customer',
+          product_title: 'Past Service',
+          start_time: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+          status: 'confirmed'
+        }
+      ])
+    }));
+
+    await act(async () => { render(<CalendarPage />); });
+
+    const appointmentTitle = await screen.findByText('Past Service');
+    expect(appointmentTitle).toBeDefined();
+
+    // Check for grayscale class on past event
+    const card = appointmentTitle.closest('.border-gray-100');
+    expect(card?.className).toContain('grayscale');
+  });
 });

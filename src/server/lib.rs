@@ -3022,6 +3022,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "translated_from_language": row.get::<String, _>("translated_from_language"),
                     "generated_response": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                     "created_at": created_at_str,
                 })
             }).collect();
@@ -3238,6 +3239,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "sender_id": row.get::<String, _>("sender_id"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -3253,6 +3255,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                             "original_content": row.get::<String, _>("original_content"),
                             "draft_reply": row.get::<String, _>("draft_reply"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "sender_id": row.get::<String, _>("sender_id"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -3269,6 +3272,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "sender_id": row.get::<String, _>("sender_id"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -3284,6 +3288,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                             "original_content": row.get::<String, _>("original_content"),
                             "draft_reply": row.get::<String, _>("draft_reply"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "sender_id": row.get::<String, _>("sender_id"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -4150,6 +4155,7 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             "id": row.get::<String, _>("id"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                         })
                     }).collect())
             } else {
@@ -4162,6 +4168,7 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             "customer_name": row.get::<String, _>("customer_name"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "created_at": row.get::<String, _>("created_at")
                         })
                     }).collect())
@@ -4177,6 +4184,7 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             "id": row.get::<String, _>("id"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                         })
                     }).collect())
             } else {
@@ -4189,6 +4197,7 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             "customer_name": row.get::<String, _>("customer_name"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "created_at": row.get::<String, _>("created_at")
                         })
                     }).collect())
@@ -4396,6 +4405,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "created_at": row.get::<String, _>("created_at")
                         })
                     }).collect())
@@ -4412,6 +4422,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                             "translated_from_language": row.get::<String, _>("translated_from_language"),
                             "generated_response": row.get::<String, _>("draft_reply"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "sender_id": row.get::<String, _>("sender_id"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -4428,6 +4439,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                             "id": row.get::<String, _>("id"),
                             "source": row.get::<String, _>("source"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "created_at": row.get::<String, _>("created_at")
                         })
                     }).collect())
@@ -4444,6 +4456,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
                             "translated_from_language": row.get::<String, _>("translated_from_language"),
                             "generated_response": row.get::<String, _>("draft_reply"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "sender_id": row.get::<String, _>("sender_id"),
                             "created_at": row.get::<String, _>("created_at")
                         })
@@ -4530,6 +4543,7 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str, mo
                             "department": row.get::<String, _>("department"),
                             "description": row.get::<String, _>("description"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "action_risk": row.get::<String, _>("action_risk")
                         })
                     }).collect())
@@ -4545,6 +4559,7 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str, mo
                             "department": row.get::<String, _>("department"),
                             "description": row.get::<String, _>("description"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "action_risk": row.get::<String, _>("action_risk"),
                             "payload": row.get::<Option<serde_json::Value>, _>("payload")
                         })
@@ -4564,6 +4579,7 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str, mo
                             "department": row.get::<String, _>("department"),
                             "description": row.get::<String, _>("description"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "action_risk": row.get::<String, _>("action_risk")
                         })
                     }).collect())
@@ -4579,6 +4595,7 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str, mo
                             "department": row.get::<String, _>("department"),
                             "description": row.get::<String, _>("description"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "action_risk": row.get::<String, _>("action_risk"),
                             "payload": row.get::<Option<String>, _>("payload").and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
                         })
@@ -5332,6 +5349,7 @@ async fn list_ui_orders_handler(
                             "id": row.get::<String, _>("id"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                         })
                     } else {
                                             serde_json::json!({
@@ -5339,6 +5357,7 @@ async fn list_ui_orders_handler(
                             "customer_name": row.get::<String, _>("customer_name"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "created_at": row.get::<String, _>("created_at"),
                         })
                     }
@@ -5361,6 +5380,7 @@ async fn list_ui_orders_handler(
                             "id": row.get::<String, _>("id"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                         })
                     } else {
                                             serde_json::json!({
@@ -5368,6 +5388,7 @@ async fn list_ui_orders_handler(
                             "customer_name": row.get::<String, _>("customer_name"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                             "created_at": row.get::<String, _>("created_at"),
                         })
                     }
@@ -5395,7 +5416,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
     match &db.store {
         crate::db::DbStore::Postgres => {
             match sqlx::query(
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status, COALESCE(b.notes, '') AS notes \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
@@ -5410,6 +5431,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                         })
                     } else {
                         serde_json::json!({
@@ -5420,6 +5442,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                             "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                         })
                     }
                 }).collect::<Vec<_>>()),
@@ -5428,7 +5451,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
         }
         crate::db::DbStore::Sqlite(pool) => {
             match sqlx::query(
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status, COALESCE(b.notes, '') AS notes \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
                  LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
@@ -5443,6 +5466,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                         })
                     } else {
                         serde_json::json!({
@@ -5453,6 +5477,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                             "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
                             "end_time": row.try_get::<String, _>("end_time").unwrap_or_default(),
                             "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                         })
                     }
                 }).collect::<Vec<_>>()),
@@ -5567,6 +5592,7 @@ async fn list_ui_inbox_handler(
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
                                 "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
                         } else {
@@ -5578,6 +5604,7 @@ async fn list_ui_inbox_handler(
                                 "translated_from_language": row.get::<String, _>("translated_from_language"),
                                 "generated_response": row.get::<String, _>("draft_reply"),
                                 "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
                         }
@@ -5620,6 +5647,7 @@ async fn list_ui_inbox_handler(
                                 "id": row.get::<String, _>("id"),
                                 "source": row.get::<String, _>("source"),
                                 "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
                         } else {
@@ -5631,6 +5659,7 @@ async fn list_ui_inbox_handler(
                                 "translated_from_language": row.get::<String, _>("translated_from_language"),
                                 "generated_response": row.get::<String, _>("draft_reply"),
                                 "status": row.get::<String, _>("status"),
+                            "notes": row.try_get::<String, _>("notes").unwrap_or_default(),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
                         }
