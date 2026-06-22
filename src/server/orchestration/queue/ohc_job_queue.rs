@@ -142,8 +142,7 @@ impl OHCJobQueue {
         .map_err(|e| e.to_string())?;
 
         let stagnant_result = sqlx::query(
-            "UPDATE ohc_job_queue
-             SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP
+            "DELETE FROM ohc_job_queue
              WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
         )
         .execute(&mut *tx)

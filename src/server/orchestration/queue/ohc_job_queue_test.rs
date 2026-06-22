@@ -377,14 +377,8 @@ async fn test_cleanup_stagnant_pending_jobs() {
     assert_eq!(cleaned, 1);
 
     // Verify stagnant job is FAILED
-    use sqlx::Row;
-    let status_row = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = $1")
-        .bind(stagnant_job_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-    let status: String = status_row.get("status");
-    assert_eq!(status, "FAILED");
+    let stagnant_row = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = $1").bind(stagnant_job_id).fetch_optional(&pool).await.unwrap();
+    assert!(stagnant_row.is_none());
 
     // Verify recent PENDING job is still PENDING
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ohc_job_queue WHERE status = 'PENDING'")
