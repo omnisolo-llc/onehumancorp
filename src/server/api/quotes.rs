@@ -64,10 +64,10 @@ pub struct QuoteLineItemRequest {
 
 async fn create_quote(
     State(pool): State<PgPool>,
-    Json(payload): Json<CreateQuoteRequest>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<CreateQuoteRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = auth_info.organization_id.unwrap_or_else(|| "default".to_string());
+    let tenant_id = auth_info.org_id.clone();
     let quote_id = Uuid::new_v4();
 
     let mut tx = match pool.begin().await {

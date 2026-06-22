@@ -65,10 +65,10 @@ pub fn router() -> Router<AppState> {
 async fn get_invoice(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    axum::extract::Query(query): axum::extract::Query<GetInvoiceQuery>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    axum::extract::Query(query): axum::extract::Query<GetInvoiceQuery>,
 ) -> impl IntoResponse {
-    let tenant_id = auth_info.organization_id.unwrap_or_else(|| "default".to_string());
+    let tenant_id = auth_info.org_id.clone();
     let repo = LedgerRepository::new(state.db);
     match repo.get_invoice(&tenant_id, &id).await {
         Ok(Some(invoice)) => (StatusCode::OK, Json(invoice)).into_response(),
@@ -79,10 +79,10 @@ async fn get_invoice(
 
 async fn create_invoice_draft(
     State(state): State<AppState>,
-    Json(payload): Json<CreateInvoiceDraftRequest>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<CreateInvoiceDraftRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = auth_info.organization_id.unwrap_or_else(|| "default".to_string());
+    let tenant_id = auth_info.org_id.clone();
     let repo = LedgerRepository::new(state.db);
 
     let invoice_id = Uuid::new_v4().to_string();
@@ -128,10 +128,10 @@ async fn create_invoice_draft(
 async fn update_invoice_status(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(payload): Json<UpdateInvoiceStatusRequest>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<UpdateInvoiceStatusRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = auth_info.organization_id.unwrap_or_else(|| "default".to_string());
+    let tenant_id = auth_info.org_id.clone();
     let repo = LedgerRepository::new(state.db);
     match repo.update_invoice_status(&tenant_id, &id, &payload.status).await {
         Ok(_) => StatusCode::OK.into_response(),
@@ -141,10 +141,10 @@ async fn update_invoice_status(
 
 async fn apply_payment(
     State(state): State<AppState>,
-    Json(payload): Json<ApplyPaymentRequest>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<ApplyPaymentRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = auth_info.organization_id.unwrap_or_else(|| "default".to_string());
+    let tenant_id = auth_info.org_id.clone();
     let repo = LedgerRepository::new(state.db);
     let event = PaymentEvent {
         id: Uuid::new_v4().to_string(),
@@ -167,7 +167,7 @@ async fn get_ledger_entries(
     Path(_tenant_id): Path<String>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
-    let tenant_id = auth_info.organization_id.unwrap_or_else(|| "default".to_string());
+    let tenant_id = auth_info.org_id.clone();
     let repo = LedgerRepository::new(state.db);
     match repo.get_ledger_entries(&tenant_id).await {
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
