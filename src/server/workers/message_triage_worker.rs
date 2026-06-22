@@ -15,6 +15,7 @@ impl MessageTriageWorker {
 
     pub fn start(self: Arc<Self>) {
         tokio::spawn(async move {
+            tracing::info!("Starting MessageTriageWorker for Agentic Work Triage feature...");
             loop {
                 match self.poll().await {
                     Ok(true) => {
