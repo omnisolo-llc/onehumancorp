@@ -5,8 +5,9 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, ToolExecutor, pydantic::{PydanticAdapter, PydanticToolExecutor}};
 use server_ohc::agent::service::{McpServerConfig, McpTransportType};
+use serde::Deserialize;
 
 // Simulated MCP Client Gateway
 struct McpGatewayClient {
@@ -42,16 +43,19 @@ impl McpGatewayClient {
 }
 
 
+#[derive(Deserialize)]
+struct McpDiscoverArgs {
+    query: String,
+}
+
 struct McpDynamicDiscoveryExecutor {
     gateway: Arc<McpGatewayClient>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for McpDynamicDiscoveryExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let query = args["query"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("mcp_discover: query is required".to_string()))?;
+impl PydanticToolExecutor<McpDiscoverArgs> for McpDynamicDiscoveryExecutor {
+    async fn execute_typed(&self, args: McpDiscoverArgs) -> Result<String, ToolError> {
+        let query = &args.query;
 
         match self.gateway.discover_tools(query).await {
             Ok(tools) => {
@@ -85,25 +89,33 @@ pub fn mcp_discover_tool(gateway_url: String) -> Tool {
             },
             "required": ["query"]
         }),
-        execute: Arc::new(McpDynamicDiscoveryExecutor {
+        execute: Arc::new(PydanticAdapter::new(McpDynamicDiscoveryExecutor {
             gateway: Arc::new(McpGatewayClient::new(gateway_url))
-        }),
+        })),
     }
 }
 
+
+#[derive(Deserialize)]
+struct McpInvokeArgs {
+    tool_name: String,
+    #[serde(default = "default_invoke_args")]
+    arguments: Value,
+}
+
+fn default_invoke_args() -> Value {
+    serde_json::json!({})
+}
 
 struct McpDynamicInvokeExecutor {
     gateway: Arc<McpGatewayClient>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for McpDynamicInvokeExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let tool_name = args["tool_name"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("mcp_invoke: tool_name is required".to_string()))?;
-
-        let tool_args = args.get("arguments").cloned().unwrap_or(json!({}));
+impl PydanticToolExecutor<McpInvokeArgs> for McpDynamicInvokeExecutor {
+    async fn execute_typed(&self, args: McpInvokeArgs) -> Result<String, ToolError> {
+        let tool_name = &args.tool_name;
+        let tool_args = args.arguments;
 
         match self.gateway.invoke_tool(tool_name, tool_args).await {
             Ok(res) => Ok(res),
@@ -131,9 +143,9 @@ pub fn mcp_invoke_tool(gateway_url: String) -> Tool {
             },
             "required": ["tool_name", "arguments"]
         }),
-        execute: Arc::new(McpDynamicInvokeExecutor {
+        execute: Arc::new(PydanticAdapter::new(McpDynamicInvokeExecutor {
             gateway: Arc::new(McpGatewayClient::new(gateway_url))
-        }),
+        })),
     }
 }
 
