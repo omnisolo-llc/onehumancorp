@@ -253,14 +253,14 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let result = server.list_steps(task_id).await;
-            let resp = JsonRpcResponse {
+            let json_resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id.clone(),
                 result: Some(result),
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&resp).unwrap_or_default();
+            return serde_json::to_string(&json_resp).unwrap_or_default();
         } else if req.method == "am_search_agents" {
             let marketplace = crate::marketplace::Marketplace::new();
             let query = req
