@@ -231,12 +231,29 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
     let msg_content = format!("{}", e);
     let snippet = args_str.unwrap_or("null");
 
-    let pydantic_json = serde_json::json!([{
+    let extended_msg_content = if e.is_data() {
+        format!("Semantic validation failed: {}", msg_content)
+    } else if e.is_syntax() {
+        format!("JSON syntax error: {}", msg_content)
+    } else if e.is_eof() {
+        format!("Incomplete JSON structure (unexpected EOF): {}", msg_content)
+    } else {
+        msg_content.clone()
+    };
+
+    let mut pydantic_json_obj = serde_json::json!({
         "type": error_type,
         "loc": ["data"],
-        "msg": msg_content,
-        "input": snippet
-    }]);
+        "msg": extended_msg_content,
+    });
+
+    if args_str.is_some() {
+        pydantic_json_obj.as_object_mut().unwrap().insert("input".to_string(), serde_json::Value::String(snippet.to_string()));
+    } else {
+        pydantic_json_obj.as_object_mut().unwrap().insert("input".to_string(), serde_json::Value::String("null".to_string()));
+    }
+
+    let pydantic_json = serde_json::json!([pydantic_json_obj]);
 
     let mut msg = format!(
         "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}",
