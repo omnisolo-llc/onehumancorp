@@ -43,7 +43,7 @@ export default function ZeroClickBuilderPage() {
     }, 1500);
 
     try {
-      const response = await fetch('/api/v1/growth/zero-click-builder/generate', {
+      const response = await fetch('/api/v1/builder/zero-click-builder/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })
@@ -88,7 +88,7 @@ export default function ZeroClickBuilderPage() {
         </div>
 
         {!generatedStore ? (
-          <div className="glassmorphism p-8 mb-8 relative overflow-hidden">
+          <div className="glassmorphism backdrop-blur-[20px] saturate-200 p-8 mb-8 relative overflow-hidden">
             {isGenerating && (
               <div className="absolute inset-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center">
                 <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
@@ -119,14 +119,14 @@ export default function ZeroClickBuilderPage() {
               <button
                 type="submit"
                 disabled={isGenerating || !prompt.trim()}
-                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-xl font-semibold text-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-sm hover:shadow-md"
+                className="w-full min-h-[44px] min-w-[44px] flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-xl font-semibold text-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-sm hover:shadow-md"
               >
                 <span>🚀</span> Generate My Business
               </button>
             </form>
           </div>
         ) : (
-          <div className="glassmorphism p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="glassmorphism backdrop-blur-[20px] saturate-200 p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full mb-4">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
