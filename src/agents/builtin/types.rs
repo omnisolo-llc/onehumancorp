@@ -405,3 +405,89 @@ mod tests_custom {
         assert!(!msg_semantic.contains("Please strictly follow the tool's JSON schema and try again."));
     }
 }
+
+pub trait RetryStrategy: Send + Sync {
+    fn next_backoff(&self, attempt: usize) -> std::time::Duration;
+}
+
+pub struct ExponentialBackoffWithJitter {
+    base_ms: u64,
+    jitter_max_ms: u64,
+}
+
+impl Default for ExponentialBackoffWithJitter {
+    fn default() -> Self {
+        Self {
+            base_ms: 500,
+            jitter_max_ms: 100,
+        }
+    }
+}
+
+impl ExponentialBackoffWithJitter {
+    pub fn new(base_ms: u64, jitter_max_ms: u64) -> Self {
+        Self {
+            base_ms,
+            jitter_max_ms,
+        }
+    }
+}
+
+impl RetryStrategy for ExponentialBackoffWithJitter {
+    fn next_backoff(&self, attempt: usize) -> std::time::Duration {
+        let base_backoff = self.base_ms * (1 << attempt);
+        use rand::Rng;
+        let jitter = if self.jitter_max_ms > 0 {
+            rand::thread_rng().gen_range(0..self.jitter_max_ms)
+        } else {
+            0
+        };
+        std::time::Duration::from_millis(base_backoff + jitter)
+    }
+}
+
+#[cfg(test)]
+mod exponential_backoff_tests {
+    use super::*;
+
+    #[test]
+    fn test_exponential_backoff_with_jitter() {
+        let strategy = ExponentialBackoffWithJitter::new(10, 50);
+
+        for attempt in 0..5 {
+            let backoff = strategy.next_backoff(attempt);
+            let base_backoff = 10 * (1 << attempt);
+            let min_expected = base_backoff;
+            let max_expected = base_backoff + 50 - 1;
+
+            assert!(
+                backoff.as_millis() as u64 >= min_expected,
+                "Backoff {} ms is less than min expected {}",
+                backoff.as_millis(),
+                min_expected
+            );
+            assert!(
+                backoff.as_millis() as u64 <= max_expected,
+                "Backoff {} ms is greater than max expected {}",
+                backoff.as_millis(),
+                max_expected
+            );
+        }
+    }
+
+    #[test]
+    fn test_exponential_backoff_no_jitter() {
+        let strategy = ExponentialBackoffWithJitter::new(10, 0);
+
+        for attempt in 0..5 {
+            let backoff = strategy.next_backoff(attempt);
+            let expected = 10 * (1 << attempt);
+
+            assert_eq!(
+                backoff.as_millis() as u64,
+                expected,
+                "Backoff with 0 jitter should be exactly the base backoff"
+            );
+        }
+    }
+}

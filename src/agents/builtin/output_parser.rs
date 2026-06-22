@@ -1,5 +1,5 @@
 /// Master Catalog B.6. Output Parsing
-use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
+use crate::types::{ChatRequest, ChatResponse, Message, ToolError, RetryStrategy, ExponentialBackoffWithJitter};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
@@ -90,46 +90,6 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
 pub struct RetryWithErrorOutputParser<'a, T> {
     parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
     llm: Arc<dyn LlmClientForParser>,
-}
-
-pub trait RetryStrategy: Send + Sync {
-    fn next_backoff(&self, attempt: usize) -> std::time::Duration;
-}
-
-pub struct ExponentialBackoffWithJitter {
-    base_ms: u64,
-    jitter_max_ms: u64,
-}
-
-impl Default for ExponentialBackoffWithJitter {
-    fn default() -> Self {
-        Self {
-            base_ms: 500,
-            jitter_max_ms: 100,
-        }
-    }
-}
-
-impl ExponentialBackoffWithJitter {
-    pub fn new(base_ms: u64, jitter_max_ms: u64) -> Self {
-        Self {
-            base_ms,
-            jitter_max_ms,
-        }
-    }
-}
-
-impl RetryStrategy for ExponentialBackoffWithJitter {
-    fn next_backoff(&self, attempt: usize) -> std::time::Duration {
-        let base_backoff = self.base_ms * (1 << attempt);
-        use rand::Rng;
-        let jitter = if self.jitter_max_ms > 0 {
-            rand::thread_rng().gen_range(0..self.jitter_max_ms)
-        } else {
-            0
-        };
-        std::time::Duration::from_millis(base_backoff + jitter)
-    }
 }
 
 impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
@@ -298,6 +258,7 @@ pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::{RetryStrategy, ExponentialBackoffWithJitter};
 
     #[tokio::test]
     async fn test_parse_structured_output_serde_error_classification() {
@@ -800,52 +761,7 @@ mod retry_tests {
     }
 }
 
-#[cfg(test)]
-mod exponential_backoff_tests {
-    use super::*;
-
-    #[test]
-    fn test_exponential_backoff_with_jitter() {
-        let strategy = ExponentialBackoffWithJitter::new(10, 50);
-
-        for attempt in 0..5 {
-            let backoff = strategy.next_backoff(attempt);
-            let base_backoff = 10 * (1 << attempt);
-            let min_expected = base_backoff;
-            let max_expected = base_backoff + 50 - 1;
-
-            assert!(
-                backoff.as_millis() as u64 >= min_expected,
-                "Backoff {} ms is less than min expected {}",
-                backoff.as_millis(),
-                min_expected
-            );
-            assert!(
-                backoff.as_millis() as u64 <= max_expected,
-                "Backoff {} ms is greater than max expected {}",
-                backoff.as_millis(),
-                max_expected
-            );
-        }
-    }
-
-    #[test]
-    fn test_exponential_backoff_no_jitter() {
-        let strategy = ExponentialBackoffWithJitter::new(10, 0);
-
-        for attempt in 0..5 {
-            let backoff = strategy.next_backoff(attempt);
-            let expected = 10 * (1 << attempt);
-
-            assert_eq!(
-                backoff.as_millis() as u64,
-                expected,
-                "Backoff with 0 jitter should be exactly the base backoff"
-            );
-        }
-    }
-}
-
+// Tests moved to types.rs
 #[cfg(test)]
 mod tests_clamped {
     use super::*;

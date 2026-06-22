@@ -1,7 +1,7 @@
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
 /// Master Catalog B.8. Error Handling (Compounding Error Prevention)
-use tokio::time::Duration;
+
 use tracing::{error, info, warn};
 
 pub struct ToolExecutionEngine;
@@ -37,10 +37,8 @@ impl ToolExecutionEngine {
                     // 1) Transient errors: orchestrator should retry with backoff.
                     if retry_count < max_retries {
                         retry_count += 1;
-                        let base_backoff = 500 * (1 << retry_count);
-                        use rand::Rng;
-                        let jitter = rand::thread_rng().gen_range(0..100);
-                        let backoff = Duration::from_millis((base_backoff as u64) + jitter);
+                        let backoff_strategy = crate::types::ExponentialBackoffWithJitter::default();
+                        let backoff = crate::types::RetryStrategy::next_backoff(&backoff_strategy, retry_count);
                         warn!(
                             "Transient error executing '{}', retrying {}/{} after {}ms...",
                             tool.name,
