@@ -3,7 +3,7 @@ import * as path from 'path';
 import { test, expect } from '@playwright/test';
 test.describe('OHC Setup Wizard Flow', () => {
   test('should complete the interactive setup wizard flow smoothly on desktop', async ({ page }) => {
-    const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -43,7 +43,10 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
     // Offer step
     await page.getByTestId('first-offer').fill('Chocolate Cake');
-    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-domain"]').click();
+    // Domain step
+    await page.getByTestId('domain-name').fill('test-bakery');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-template"]').click();
     // Template step
     await page.getByTestId('template-selection').selectOption('Modern', { force: true });
     // Make sure finish btn is visible before interacting
@@ -76,7 +79,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.route('**/api/tooltips', async route => {
       await route.fulfill({ status: 200, body: JSON.stringify({}) });
     });
-    const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -96,7 +99,7 @@ test.describe('OHC Setup Wizard Flow', () => {
   });
 });
   test('should auto-save progress and clear it on success', async ({ page }) => {
-    const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -128,7 +131,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     await expect(page.getByTestId('business-name')).toHaveValue('AutoSave Bakery');
   });
   test('should show submit error if start fails', async ({ page }) => {
-    const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: htmlContent });
@@ -168,7 +171,7 @@ test.describe('OHC Setup Wizard Flow', () => {
   });
 test.describe('OHC Setup Wizard Form Configuration', () => {
   test.beforeEach(async ({ page }) => {
-      const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
+      const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
       await page.route('**/setup.html', async route => {
           const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
           await route.fulfill({ contentType: 'text/html', body: content });
