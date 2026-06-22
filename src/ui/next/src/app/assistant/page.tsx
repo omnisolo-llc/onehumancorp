@@ -167,6 +167,14 @@ export default function AssistantPage() {
   useEffect(() => {
     let mounted = true;
 
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const panel = urlParams.get('panel');
+      if (panel) {
+        setSection(panel as Section);
+      }
+    }
+
     async function loadTasks() {
       try {
         const response = await fetch('/api/assistant/tasks');
@@ -640,6 +648,9 @@ function ResourcePage({
   const [agentNameInput, setAgentNameInput] = useState('');
   const [customConnector, setCustomConnector] = useState('');
   const [customSkill, setCustomSkill] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [obsMaskingEnabled, setObsMaskingEnabled] = useState(data?.observationMasking ?? false);
 
   const blocks = resourceBlocks(data, config.rootKeys);
 
@@ -698,16 +709,70 @@ function ResourcePage({
       )}
 
       {section === 'system' && (
-        <div className={styles.inlineForm}>
-          <input aria-label="Assistant name" value={agentNameInput} onChange={(event) => setAgentNameInput(event.target.value)} className={styles.input} placeholder="Assistant name" />
-          <button
-            type="button"
-            className={styles.smallButton}
-            disabled={!agentNameInput.trim()}
-            onClick={() => onAction(section, { agentName: agentNameInput.trim() })}
-          >
-            Save Name
-          </button>
+        <div className={styles.resourceStack}>
+          <h2>System & Safety</h2>
+          {toastMessage && (
+            <div className={styles.resultItem} role="status" style={{ marginBottom: '1rem' }}>
+              {toastMessage}
+            </div>
+          )}
+          <div className={styles.featureGridTwo}>
+            <div className={styles.featureCard}>
+              <div className={styles.cardTitle}>Assistant Name</div>
+              <div className={styles.inlineForm} style={{ marginTop: '1rem' }}>
+                <input aria-label="Assistant name" value={agentNameInput} onChange={(event) => setAgentNameInput(event.target.value)} className={styles.input} placeholder="Assistant name" />
+                <button
+                  type="button"
+                  className={styles.smallButton}
+                  disabled={!agentNameInput.trim()}
+                  onClick={() => onAction(section, { agentName: agentNameInput.trim() })}
+                >
+                  Save Name
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '2rem' }}>
+            <button
+              type="button"
+              className={styles.smallButton}
+              onClick={() => setShowAdvanced(!showAdvanced)}
+            >
+              {showAdvanced ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
+            </button>
+          </div>
+
+          {showAdvanced && (
+            <div className={styles.featureGridTwo} style={{ marginTop: '1rem' }}>
+              <div className={styles.featureCard}>
+                <div className={`${styles.cardTitle} cardTitle`}>Observation Masking</div>
+                <p className={styles.cardDescription}>
+                  Automatically trims older technical logs so the assistant doesn't get confused over time.
+                </p>
+                <div className={styles.inlineForm} style={{ marginTop: '1rem', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={obsMaskingEnabled}
+                      onChange={(e) => setObsMaskingEnabled(e.target.checked)}
+                    />
+                    Enable Memory Trimming
+                  </label>
+                  <button
+                    type="button"
+                    className={styles.smallButton}
+                    onClick={() => {
+                      onAction(section, { observationMasking: obsMaskingEnabled });
+                      setToastMessage('UI settings saved');
+                    }}
+                  >
+                    Save UI Settings
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
