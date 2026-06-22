@@ -7,7 +7,7 @@ test('Cost Soft Limit friendly prompt shows', async ({ page, loginAs, unlimitedA
   await page.goto('/cost-dashboard', { waitUntil: 'load' });
 
   // Wait for a core UI element proving the page actually mounted
-  await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 25000 });
+  await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 25000 });
 
   // We cannot easily assert the limit reached text without a specific tenant setup in DB.
   // But we must at least assert that the plan page loads fully for the E2E.

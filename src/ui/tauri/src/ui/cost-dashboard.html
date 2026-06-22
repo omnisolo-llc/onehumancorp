@@ -298,7 +298,7 @@
                 </svg>
                 <div>
                     <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #92400e;">Soft Limit Approaching</h3>
-                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Your projected monthly cost is exceeding your typical baseline. Soft Limit Approaching. Consider reviewing your agent usage or upgrading your tier for better bulk rates.</p>
+                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Your projected monthly cost is reaching your plan's soft limit. Soft Limit Approaching. Keep your business momentum with a higher tier for better bulk rates!</p>
                 </div>
             </div>
 
@@ -504,7 +504,7 @@
 
                 if (costData.budget_health_alert) {
                     document.getElementById('budget-health-alert').style.display = 'flex';
-                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Soft Limit Approaching. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
+                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is reaching your plan's soft limit. Soft Limit Approaching. Keep your business momentum with a higher tier for better bulk rates!`;
                 } else {
                     document.getElementById('budget-health-alert').style.display = 'none';
                 }
