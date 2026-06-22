@@ -1488,18 +1488,44 @@ initWalkthrough();
                     payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
                     timestamp: new Date(m.timestamp || Date.now()).toISOString()
                 });
-            } else if (m.type === "inventory_toggle") {
+            } else if (m.type === "inventory_toggle" || m.type === "TOGGLE_SOLD_OUT") {
                 generalMutations.push({
                     transaction_id: m.id,
-                    product_id: m.id.replace("e2e-product-", ""),
-                    quantity_deducted: 1,
+                    product_id: m.product_id || m.id.replace("e2e-product-", ""),
+                    quantity_deducted: m.quantity || 1,
                     amount: null,
                     payment_method: null,
                     payment_intent_id: null,
                     currency: null
                 });
+            } else if (m.type === "CRDT_MUTATION") {
+                generalMutations.push({
+                    transaction_id: m.id,
+                    product_id: m.payload.entity_id || "",
+                    quantity_deducted: 0,
+                    amount: null,
+                    payment_method: null,
+                    payment_intent_id: null,
+                    currency: null,
+                    mutation_type: "CRDT_MUTATION",
+                    payload: JSON.stringify(m.payload),
+                    client_mutation_id: m.id,
+                    timestamp: m.timestamp || new Date().toISOString()
+                });
             } else {
-                generalMutations.push(m);
+                generalMutations.push({
+                    transaction_id: m.id,
+                    product_id: "",
+                    quantity_deducted: 0,
+                    amount: null,
+                    payment_method: null,
+                    payment_intent_id: null,
+                    currency: null,
+                    mutation_type: m.type,
+                    payload: typeof m.payload === "string" ? m.payload : JSON.stringify(m.payload),
+                    client_mutation_id: m.id,
+                    timestamp: m.timestamp || new Date().toISOString()
+                });
             }
         });
 
@@ -1529,17 +1555,10 @@ initWalkthrough();
 
         if (generalMutations.length > 0) {
             try {
-                const deltas = generalMutations.map(m => ({
-                    id: crypto.randomUUID(),
-                    entity_id: m.product_id || m.transaction_id || "general",
-                    data: JSON.stringify(m),
-                    updated_at: new Date().toISOString()
-                }));
-
-                const res = await fetch("/api/v1/sync/mcp-deltas", {
+                const res = await fetch("/api/v1/sync/offline", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ tenant_id: tenantId, deltas: deltas })
+                    body: JSON.stringify({ mutations: generalMutations })
                 });
                 if (!res.ok) allOk = false;
             } catch(e) {

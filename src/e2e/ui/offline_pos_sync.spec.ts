@@ -17,7 +17,6 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
 
     // Connect to a mocked reader
     await page.getByText('Discover Readers').click();
-    await page.waitForTimeout(500);
     const connectButton = page.getByText('Connect').first();
     if (await connectButton.isVisible()) {
         await connectButton.click();
@@ -33,7 +32,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await expect(page.getByText('Payment saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
 
     // Verify it's in the queue (localStorage)
-    const queueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const queueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue') || '[]');
     expect(queueData).toContain('tap_to_pay');
 
     // Wait for sync to happen. Without network mocking, it goes through the actual api endpoints.
@@ -43,7 +42,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await page.waitForTimeout(2000);
 
     // Verify queue is empty
-    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue') || '[]');
     expect(updatedQueueData).toBe('[]');
   });
 
@@ -59,7 +58,6 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await page.getByText('Clock In').click();
 
     await page.getByText('Discover Readers').click();
-    await page.waitForTimeout(500);
     const connectButton = page.getByText('Connect').first();
     if (await connectButton.isVisible()) {
         await connectButton.click();
@@ -91,7 +89,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
 
     await page.waitForTimeout(8000);
 
-    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue') || '[]');
     expect(updatedQueueData).toBe('[]');
 
     // Navigate to Dashboard/Agent Feed

@@ -79,7 +79,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     // and the application logic will remove the items from the queue.
 
     await page.evaluate(() => {
-        window.dispatchEvent(new Event('online'));
+        window.dispatchEvent(new Event('online')); window.dispatchEvent(new Event('ohc_queue_updated'));
     });
 
     // Wait for the sync to complete and the queue to hide.
@@ -88,7 +88,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
 
   });
 
-  test('should push CRDT deltas correctly via mcp-deltas endpoint', async ({ page, context }) => {
+  test('should push CRDT deltas correctly via offline endpoint', async ({ page, context }) => {
     await page.goto('/');
     await context.setOffline(true);
 
@@ -104,12 +104,12 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     });
 
     const mcpDeltasPromise = page.waitForRequest(request =>
-      request.url().includes('/api/v1/sync/mcp-deltas') && request.method() === 'POST'
+      request.url().includes('/api/v1/sync/offline') && request.method() === 'POST'
     );
 
     await context.setOffline(false);
     await page.evaluate(() => {
-        window.dispatchEvent(new Event('online'));
+        window.dispatchEvent(new Event('online')); window.dispatchEvent(new Event('ohc_queue_updated'));
     });
 
     const mcpReq = await mcpDeltasPromise;

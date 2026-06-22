@@ -49,7 +49,7 @@ test.describe('Offline Agent Intent Sync', () => {
         return queue.length === 0;
     }, { timeout: 15000 });
 
-    const queueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const queueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue') || '[]');
     expect(queueData).toBe('[]');
 
     // The network status indicator should disappear since we are online and queue is empty

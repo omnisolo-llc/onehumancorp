@@ -98,6 +98,25 @@ pub async fn offline_sync_handler(
             continue;
         }
 
+        if mutation.mutation_type.as_deref() == Some("CRDT_MUTATION") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
+                let _ = sqlx::query(
+                    "INSERT INTO crdt_deltas (id, tenant_id, entity_id, delta_payload) VALUES ($1, $2, $3, $4::jsonb)"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(&mutation.product_id)
+                .bind(mutation.payload.unwrap_or_else(|| "{}".to_string()))
+                .execute(&mut *db_tx)
+                .await
+                .map_err(|e| e.to_string())?;
+                db_tx.commit().await.map_err(|e| e.to_string())?;
+                Ok(())
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>);
+            continue;
+        }
+
         if mutation.mutation_type.as_deref() == Some("agent_intent") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
