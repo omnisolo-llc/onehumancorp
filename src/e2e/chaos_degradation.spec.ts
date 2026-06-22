@@ -18,18 +18,39 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
           timestamp: new Date().toISOString()
         }
       }));
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
+      return new Promise((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if (db.objectStoreNames.contains('actions')) {
+                const tx = db.transaction('actions', 'readwrite');
+                tx.objectStore('actions').put({
         type: 'inventory_toggle',
         id: 'e2e-product-123',
         timestamp: new Date().toISOString()
       });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                tx.oncomplete = () => resolve(true);
+            } else {
+                resolve(true);
+            }
+        };
+        req.onerror = () => resolve(true);
+    });
       window.dispatchEvent(new Event('storage'));
     });
 
     const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+      return new Promise((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('actions')) return resolve([]);
+            const tx = db.transaction('actions', 'readonly');
+            const reqAll = tx.objectStore('actions').getAll();
+            reqAll.onsuccess = () => resolve(reqAll.result);
+        };
+        req.onerror = () => resolve([]);
+    });
     });
 
     expect(queueData.length).toBeGreaterThan(0);
@@ -47,8 +68,13 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     });
 
     await page.evaluate(() => {
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
+      return new Promise((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if (db.objectStoreNames.contains('actions')) {
+                const tx = db.transaction('actions', 'readwrite');
+                tx.objectStore('actions').put({
         type: 'tap_to_pay',
         id: 'e2e-txn-pos-123',
         amount: 500,
@@ -56,12 +82,28 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
         product_id: 'e2e-prod-x',
         timestamp: new Date().toISOString()
       });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                tx.oncomplete = () => resolve(true);
+            } else {
+                resolve(true);
+            }
+        };
+        req.onerror = () => resolve(true);
+    });
       window.dispatchEvent(new Event('storage'));
     });
 
     const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+      return new Promise((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('actions')) return resolve([]);
+            const tx = db.transaction('actions', 'readonly');
+            const reqAll = tx.objectStore('actions').getAll();
+            reqAll.onsuccess = () => resolve(reqAll.result);
+        };
+        req.onerror = () => resolve([]);
+    });
     });
 
     const tapToPayTxns = queueData.filter((q: any) => q.type === 'tap_to_pay');
@@ -78,19 +120,40 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     });
 
     await page.evaluate(() => {
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
+      return new Promise((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if (db.objectStoreNames.contains('actions')) {
+                const tx = db.transaction('actions', 'readwrite');
+                tx.objectStore('actions').put({
         type: 'draft_quote',
         id: 'e2e-draft-456',
         notes: '{"custom": "quote data"}',
         timestamp: new Date().toISOString()
       });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                tx.oncomplete = () => resolve(true);
+            } else {
+                resolve(true);
+            }
+        };
+        req.onerror = () => resolve(true);
+    });
       window.dispatchEvent(new Event('storage'));
     });
 
     const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+      return new Promise((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('actions')) return resolve([]);
+            const tx = db.transaction('actions', 'readonly');
+            const reqAll = tx.objectStore('actions').getAll();
+            reqAll.onsuccess = () => resolve(reqAll.result);
+        };
+        req.onerror = () => resolve([]);
+    });
     });
 
     const draftQuotes = queueData.filter((q: any) => q.type === 'draft_quote');
@@ -125,13 +188,24 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
 
     // 1. Add item to queue
     await page.evaluate(() => {
-      const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-      queue.push({
+      return new Promise((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if (db.objectStoreNames.contains('actions')) {
+                const tx = db.transaction('actions', 'readwrite');
+                tx.objectStore('actions').put({
         type: 'inventory_toggle',
         id: 'e2e-product-789',
         timestamp: new Date().toISOString()
       });
-      localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                tx.oncomplete = () => resolve(true);
+            } else {
+                resolve(true);
+            }
+        };
+        req.onerror = () => resolve(true);
+    });
     });
 
     // 2. Trigger online event manually to force SyncManager to sync
@@ -146,7 +220,17 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
     expect(syncOfflineCalled).toBe(true);
 
     const queueData = await page.evaluate(() => {
-      return JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+      return new Promise((resolve) => {
+        const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+        req.onsuccess = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('actions')) return resolve([]);
+            const tx = db.transaction('actions', 'readonly');
+            const reqAll = tx.objectStore('actions').getAll();
+            reqAll.onsuccess = () => resolve(reqAll.result);
+        };
+        req.onerror = () => resolve([]);
+    });
     });
 
     expect(queueData.length).toBe(0);

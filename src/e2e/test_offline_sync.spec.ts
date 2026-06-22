@@ -42,14 +42,19 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
              `;
              document.body.appendChild(card);
              document.getElementById('sold-out-toggle-e2e-product-falafel').addEventListener('click', () => {
-                 let queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-                 queue.push({
-                     id: 'e2e-product-falafel',
-                     type: 'TOGGLE_SOLD_OUT',
-                     payload: { item_id: 'e2e-product-falafel', is_sold_out: true },
-                     timestamp: new Date().toISOString()
-                 });
-                 localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                 const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+                 req.onsuccess = (e) => {
+                     const db = (e.target as IDBOpenDBRequest).result;
+                     if (db.objectStoreNames.contains('actions')) {
+                         const tx = db.transaction('actions', 'readwrite');
+                         tx.objectStore('actions').put({
+                             id: 'e2e-product-falafel',
+                             type: 'TOGGLE_SOLD_OUT',
+                             payload: { item_id: 'e2e-product-falafel', is_sold_out: true },
+                             timestamp: new Date().getTime()
+                         });
+                     }
+                 };
              });
         }
         let q = document.getElementById('queue-dashboard');
@@ -92,15 +97,26 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     await page.goto('/');
     await context.setOffline(true);
 
-    await page.evaluate(() => {
-        let queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        queue.push({
-            id: 'crdt-test-1',
-            type: 'CRDT_MUTATION',
-            payload: { entity_id: 'task-test', data: { status: 'completed' } },
-            timestamp: new Date().toISOString()
+    await page.evaluate(async () => {
+        return new Promise((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (db.objectStoreNames.contains('actions')) {
+                    const tx = db.transaction('actions', 'readwrite');
+                    tx.objectStore('actions').put({
+                        id: 'crdt-test-1',
+                        type: 'CRDT_MUTATION',
+                        payload: { entity_id: 'task-test', data: { status: 'completed' } },
+                        timestamp: new Date().getTime()
+                    });
+                    tx.oncomplete = () => resolve(true);
+                } else {
+                    resolve(true);
+                }
+            };
+            req.onerror = () => resolve(true);
         });
-        localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
     });
 
     const mcpDeltasPromise = page.waitForRequest(request =>
@@ -122,9 +138,18 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
     expect(postData.deltas[0].data).toContain('completed');
 
     // Wait for the sync to clear the queue
-    await page.waitForFunction(() => {
-        const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        return queue.length === 0;
+    await page.waitForFunction(async () => {
+        return new Promise((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) return resolve(true);
+                const tx = db.transaction('actions', 'readonly');
+                const reqAll = tx.objectStore('actions').getAll();
+                reqAll.onsuccess = () => resolve(reqAll.result.length === 0);
+            };
+            req.onerror = () => resolve(false);
+        });
     }, { timeout: 15000 });
   });
 

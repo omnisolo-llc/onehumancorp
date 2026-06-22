@@ -32,8 +32,20 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     // Should show offline success
     await expect(page.getByText('Payment saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
 
-    // Verify it's in the queue (localStorage)
-    const queueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    // Verify it's in the queue (IndexedDB)
+    const queueData = await page.evaluate(async () => {
+        return new Promise<string>((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) return resolve('[]');
+                const tx = db.transaction('actions', 'readonly');
+                const reqAll = tx.objectStore('actions').getAll();
+                reqAll.onsuccess = () => resolve(JSON.stringify(reqAll.result));
+            };
+            req.onerror = () => resolve('[]');
+        });
+    });
     expect(queueData).toContain('tap_to_pay');
 
     // Wait for sync to happen. Without network mocking, it goes through the actual api endpoints.
@@ -43,7 +55,19 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await page.waitForTimeout(2000);
 
     // Verify queue is empty
-    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
+    const updatedQueueData = await page.evaluate(async () => {
+        return new Promise<string>((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) return resolve('[]');
+                const tx = db.transaction('actions', 'readonly');
+                const reqAll = tx.objectStore('actions').getAll();
+                reqAll.onsuccess = () => resolve(JSON.stringify(reqAll.result));
+            };
+            req.onerror = () => resolve('[]');
+        });
+    });
     expect(updatedQueueData).toBe('[]');
   });
 
@@ -72,14 +96,27 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await page.getByText('Charge $50.00').click();
     await expect(page.getByText('Payment saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
 
-    // Modify the quantity in local storage to force a conflict since the UI doesn't allow changing quantity
-    await page.evaluate(() => {
-        const queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
-        if (queue.length > 0) {
-            queue[0].quantity = 100; // Force conflict
-            queue[0].product_id = 'prod_123';
-            localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-        }
+    // Modify the quantity in IndexedDB to force a conflict since the UI doesn't allow changing quantity
+    await page.evaluate(async () => {
+        return new Promise((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) return resolve(true);
+                const tx = db.transaction('actions', 'readwrite');
+                const store = tx.objectStore('actions');
+                const reqAll = store.getAll();
+                reqAll.onsuccess = () => {
+                    const queue = reqAll.result;
+                    if (queue.length > 0) {
+                        queue[0].quantity = 100; // Force conflict
+                        queue[0].product_id = 'prod_123';
+                        store.put(queue[0]);
+                    }
+                };
+                tx.oncomplete = () => resolve(true);
+            };
+        });
     });
 
     // Go online to trigger sync
@@ -91,8 +128,20 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
 
     await page.waitForTimeout(8000);
 
-    const updatedQueueData = await page.evaluate(() => localStorage.getItem('ohc_offline_queue'));
-    expect(updatedQueueData).toBe('[]');
+    const updatedQueueData2 = await page.evaluate(async () => {
+        return new Promise<string>((resolve) => {
+            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            req.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('actions')) return resolve('[]');
+                const tx = db.transaction('actions', 'readonly');
+                const reqAll = tx.objectStore('actions').getAll();
+                reqAll.onsuccess = () => resolve(JSON.stringify(reqAll.result));
+            };
+            req.onerror = () => resolve('[]');
+        });
+    });
+    expect(updatedQueueData2).toBe('[]');
 
     // Navigate to Dashboard/Agent Feed
     await page.goto('/dashboard');
