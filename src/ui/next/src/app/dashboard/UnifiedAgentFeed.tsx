@@ -190,7 +190,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
           unifiedData = await unifiedRes.json();
         } else {
-          fetchTriage();
+          if (!unifiedData?.triage || unifiedData.triage.length === 0) fetchTriage(); else setTriageItems(unifiedData.triage);
         }
 
         if (mounted) {
@@ -949,10 +949,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Schedule"
+                        aria-label="Schedule Posts"
                         data-testid="approve-social-post"
                       >
-                        Approve & Schedule
+                        Schedule Posts
                       </button>
                       <button
                         onClick={() => handleDecision(approval.id, false)}

@@ -58,41 +58,28 @@ export default function CostDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  const handleDownloadInvoice = async () => {
+  const handleManageBilling = async () => {
     try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/billing/download-invoice', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            setActionMessage('Invoice download is ready for your current billing period.');
-        } else {
-            setActionMessage('Failed to download invoice.');
-        }
-    } catch (e) {
-        setActionMessage('An error occurred while downloading invoice.');
-    }
-  };
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/billing/create-billing-portal-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+      });
 
-  const handleCancelSubscription = async () => {
-    if (!window.confirm("Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing cycle.")) {
-        return;
-    }
-    setActionMessage('Cancellation review started. Confirm account ownership before changing subscription status.');
-    try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/billing/cancel-subscription', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            setActionMessage('Subscription canceled successfully.');
-        } else {
-            setActionMessage('Failed to cancel subscription.');
-        }
-    } catch (e) {
-        setActionMessage('An error occurred while canceling subscription.');
+      if (!response.ok) {
+        throw new Error('Failed to create billing portal session');
+      }
+
+      const session = await response.json();
+      if (session.url) {
+        window.location.href = session.url;
+      }
+    } catch (error) {
+      console.error('Error initiating billing portal:', error);
+      setActionMessage('Failed to initiate billing portal. Please try again.');
     }
   };
 
@@ -200,16 +187,10 @@ export default function CostDashboardPage() {
               </div>
               <div className="mt-6 flex flex-col md:flex-row gap-4">
                   <button
-                      onClick={handleDownloadInvoice}
-                      className="px-4 py-2 bg-white/70 dark:bg-zinc-800 backdrop-blur-xl border border-teal-200 text-[#0f766e] dark:text-[#6ac5bd] rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center hover:bg-teal-50/20"
+                      onClick={handleManageBilling}
+                      className="px-6 py-2 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm flex items-center justify-center"
                   >
-                      Download Invoice
-                  </button>
-                  <button
-                      onClick={handleCancelSubscription}
-                      className="px-4 py-2 bg-red-50/60 backdrop-blur-lg border border-red-100/50 text-red-600 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center hover:bg-red-100"
-                  >
-                      Cancel Subscription
+                      Manage Billing
                   </button>
               </div>
               {actionMessage && (

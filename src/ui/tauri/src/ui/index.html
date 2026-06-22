@@ -103,16 +103,60 @@
     </style>
   </head>
   <body>
-    <div class="container glassmorphism">
+    <div class="container glassmorphism" id="main-view">
       <h1>Welcome to OHC</h1>
       <p>Let's get your workspace set up.</p>
-      <button id="start-btn">Start Onboarding</button>
+      <button id="start-btn" style="margin-bottom: 10px;">Start Onboarding</button>
+      <button id="instant-build-btn" style="background-color: transparent; color: #0066FF; border: 1px solid #0066FF; box-shadow: none;">Instant Build</button>
     </div>
+
+    <div class="container glassmorphism" id="instant-build-view" style="display: none;">
+      <h1>Instant Build</h1>
+      <p>Tell us about your business concept.</p>
+      <textarea id="instant-bio" class="glassmorphism-input" placeholder="e.g. I bake and sell custom cupcakes..." style="width: 100%; height: 100px; padding: 12px; margin-bottom: 20px; box-sizing: border-box; resize: none; font-family: inherit; font-size: 14px; border: 1px solid rgba(0, 0, 0, 0.1); background: rgba(255, 255, 255, 0.5);"></textarea>
+      <button id="generate-storefront-btn">Generate Storefront</button>
+    </div>
+
+    <div class="container glassmorphism" id="loading-view" style="display: none;">
+      <h1 id="loading-title">Building...</h1>
+      <p id="step-provisioning" style="opacity: 0; transition: opacity 0.5s;">Provisioning resources...</p>
+    </div>
+
     <script>
       const startBtn = document.getElementById('start-btn');
+      const instantBuildBtn = document.getElementById('instant-build-btn');
+      const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+
+      const mainView = document.getElementById('main-view');
+      const instantBuildView = document.getElementById('instant-build-view');
+      const loadingView = document.getElementById('loading-view');
+      const stepProvisioning = document.getElementById('step-provisioning');
+
       if (startBtn) {
         startBtn.addEventListener('click', () => {
            window.location.href = "setup.html";
+        });
+      }
+
+      if (instantBuildBtn) {
+        instantBuildBtn.addEventListener('click', () => {
+          mainView.style.display = 'none';
+          instantBuildView.style.display = 'block';
+        });
+      }
+
+      if (generateStorefrontBtn) {
+        generateStorefrontBtn.addEventListener('click', () => {
+          instantBuildView.style.display = 'none';
+          loadingView.style.display = 'block';
+
+          setTimeout(() => {
+            stepProvisioning.style.opacity = '1';
+          }, 100);
+
+          setTimeout(() => {
+            window.location.href = "dashboard.html";
+          }, 1500);
         });
       }
     </script>

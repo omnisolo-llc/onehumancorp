@@ -223,8 +223,10 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         current_req.messages.push(msg.clone());
                         let detailed_error = if parse_error_msg.contains("Validation Error") {
                             parse_error_msg.clone()
+                        } else if parse_error_msg.contains("Semantic validation failed") {
+                            parse_error_msg.clone()
                         } else {
-                            // Extract snippet of arguments to feed back
+                            // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
                             let args_snippet = msg.tool_calls.first().map(|tc| tc.arguments.to_string());
                             crate::types::format_pydantic_error_string(&parse_error_msg, args_snippet.as_deref(), None)
                         };

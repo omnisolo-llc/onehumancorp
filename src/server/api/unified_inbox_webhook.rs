@@ -212,7 +212,7 @@ pub async fn get_unified_feed(
 
     let mut feed_items: Vec<UnifiedFeedItem> = vec![];
 
-    let mut threads_res_mapped: Result<Vec<UnifiedThread>, sqlx::Error> = Ok(vec![]);
+    let threads_res_mapped: Result<Vec<UnifiedThread>, sqlx::Error>;
     match &state.db.store {
         crate::db::DbStore::Postgres => {
             let res = sqlx::query("SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_threads WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")

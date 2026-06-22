@@ -132,6 +132,21 @@ Output JSON format:
 
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
+            // Use OmniContextRouter
+            let router = crate::orchestration::router::OmniContextRouter::new();
+            let msg = crate::orchestration::router::InboundMessage {
+                source: source.to_string(),
+                sender: sender_id.to_string(),
+                content: customer_message.to_string(),
+            };
+
+            let _omni_result = router.route_and_synthesize(&msg).await.unwrap_or(crate::orchestration::router::DraftReply {
+                final_draft: "Thanks for reaching out! We will review this and get back to you soon.".to_string(),
+                operations_context: None,
+                sales_context: None,
+                customer_context: None,
+            });
+
             let mut extracted = serde_json::json!({
                 "priority": "Medium",
                 "feature_type": "general",
@@ -196,8 +211,24 @@ Output JSON format:
             let priority = extracted.get("priority").and_then(|v| v.as_str()).unwrap_or("Medium");
             let feature_type = extracted.get("feature_type").and_then(|v| v.as_str()).unwrap_or("general");
             let context_summary = extracted.get("context_summary").and_then(|v| v.as_str()).unwrap_or("Customer inquiry");
+
+            // Integrate OmniContextRouter here to get the drafted action payload with sub-agent context
+            let router = crate::orchestration::router::OmniContextRouter::new();
+            let msg = crate::orchestration::router::InboundMessage {
+                source: source.to_string(),
+                sender: sender_id.to_string(),
+                content: customer_message.to_string(),
+            };
+            let omni_result = router.route_and_synthesize(&msg).await.unwrap_or(crate::orchestration::router::DraftReply {
+                final_draft: "Thanks for reaching out! We will review this and get back to you soon.".to_string(),
+                operations_context: None,
+                sales_context: None,
+                customer_context: None,
+            });
+
             let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
-            let action_payload = extracted.get("action_payload").and_then(|v| v.as_str()).unwrap_or("Thanks for reaching out! We will review this and get back to you soon.");
+            let action_payload_str = omni_result.final_draft;
+            let action_payload = action_payload_str.as_str();
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
             let mut event_source = source.to_string();
@@ -370,6 +401,58 @@ Output JSON format:
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
 
+
+
+                    // Implement proper Redis locking to prevent race conditions during thread/triage updates
+                    let redis_lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
+                    let mut _lock_conn = None;
+                    if let Some(client) = crate::get_redis_client() {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            use redis::AsyncCommands;
+                            let lock_acquired: Result<bool, _> = conn.set_nx(&redis_lock_key, "locked").await;
+                            if let Ok(true) = lock_acquired {
+                                let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
+                                _lock_conn = Some(conn);
+                            } else {
+                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redis_lock_key);
+                            }
+                        }
+                    }
+
+                    // Insert into triage_items and triage_proposed_actions to satisfy Unified Work Triage Feed
+                    let triage_item_id = format!("triage-{}", Uuid::new_v4());
+                    let action_id = format!("act-{}", Uuid::new_v4());
+
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
+                    )
+                    .bind(&triage_item_id)
+                    .bind(&tenant_id)
+                    .bind(customer_id_val)
+                    .bind(&event_source)
+                    .bind(&priority)
+                    .bind(&context_summary)
+                    .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert triage_items: {}", e);
+                    }
+
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
+                    )
+                    .bind(&action_id)
+                    .bind(&triage_item_id)
+                    .bind(&tenant_id)
+                    .bind(&action_type)
+                    .bind(&action_payload)
+                    .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert triage_proposed_actions: {}", e);
+                    }
+
+                    if let Some(mut conn) = _lock_conn {
+                        use redis::AsyncCommands;
+                        let _: Result<(), _> = conn.del(&redis_lock_key).await;
+                    }
+
                     if let Err(e) = sqlx::query(
                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
                     )
@@ -390,7 +473,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
@@ -445,6 +528,58 @@ Output JSON format:
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
 
+
+
+                    // Implement proper Redis locking to prevent race conditions during thread/triage updates
+                    let redis_lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
+                    let mut _lock_conn = None;
+                    if let Some(client) = crate::get_redis_client() {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            use redis::AsyncCommands;
+                            let lock_acquired: Result<bool, _> = conn.set_nx(&redis_lock_key, "locked").await;
+                            if let Ok(true) = lock_acquired {
+                                let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
+                                _lock_conn = Some(conn);
+                            } else {
+                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redis_lock_key);
+                            }
+                        }
+                    }
+
+                    // Insert into triage_items and triage_proposed_actions for Sqlite
+                    let triage_item_id = format!("triage-{}", Uuid::new_v4());
+                    let action_id = format!("act-{}", Uuid::new_v4());
+
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+                    )
+                    .bind(&triage_item_id)
+                    .bind(&tenant_id)
+                    .bind(customer_id_val)
+                    .bind(&event_source)
+                    .bind(&priority)
+                    .bind(&context_summary)
+                    .execute(sqlite_pool).await {
+                        tracing::error!("Failed to insert triage_items (Sqlite): {}", e);
+                    }
+
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+                    )
+                    .bind(&action_id)
+                    .bind(&triage_item_id)
+                    .bind(&tenant_id)
+                    .bind(&action_type)
+                    .bind(&action_payload)
+                    .execute(sqlite_pool).await {
+                        tracing::error!("Failed to insert triage_proposed_actions (Sqlite): {}", e);
+                    }
+
+                    if let Some(mut conn) = _lock_conn {
+                        use redis::AsyncCommands;
+                        let _: Result<(), _> = conn.del(&redis_lock_key).await;
+                    }
+
                     if let Err(e) = sqlx::query(
                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                     )
@@ -465,7 +600,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
                     }).to_string())
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);

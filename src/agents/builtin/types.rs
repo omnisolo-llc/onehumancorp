@@ -227,21 +227,39 @@ impl std::fmt::Display for PermissionArchitecture {
 
 /// Centralized Pydantic-first tool schema error formatter.
 pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, custom_instruction: Option<&str>) -> String {
-    let detail = if e.is_data() {
-        // Feed precise JSON validation mismatch details for self-correction
-        format!("Semantic validation failed: {}", e)
+    let error_type = if e.is_data() { "type_error" } else if e.is_syntax() { "syntax_error" } else if e.is_eof() { "eof_error" } else { "unknown_error" };
+    let msg_content = format!("{}", e);
+    let snippet = args_str.unwrap_or("null");
+
+    let extended_msg_content = if e.is_data() {
+        format!("Semantic validation failed: {}", msg_content)
     } else if e.is_syntax() {
-        format!("JSON syntax error at line {}, column {}: {}", e.line(), e.column(), e)
+        format!("JSON syntax error: {}", msg_content)
     } else if e.is_eof() {
-        format!("Incomplete JSON structure (unexpected EOF): {}", e)
+        format!("Incomplete JSON structure (unexpected EOF): {}", msg_content)
     } else {
-        format!("{}", e)
+        msg_content.clone()
     };
 
-    let mut msg = format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}", detail);
-    if let Some(snippet) = args_str {
-        msg.push_str(&format!("\nProvided arguments snippet: {}", snippet));
+    let mut pydantic_json_obj = serde_json::json!({
+        "type": error_type,
+        "loc": ["data"],
+        "msg": extended_msg_content,
+    });
+
+    if args_str.is_some() {
+        pydantic_json_obj.as_object_mut().unwrap().insert("input".to_string(), serde_json::Value::String(snippet.to_string()));
+    } else {
+        pydantic_json_obj.as_object_mut().unwrap().insert("input".to_string(), serde_json::Value::String("null".to_string()));
     }
+
+    let pydantic_json = serde_json::json!([pydantic_json_obj]);
+
+    let mut msg = format!(
+        "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}",
+        serde_json::to_string_pretty(&pydantic_json).unwrap_or_else(|_| msg_content)
+    );
+
     if let Some(instruction) = custom_instruction {
         msg.push_str(&format!("\n{}", instruction));
     } else {
@@ -253,13 +271,19 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
 /// A version of format_pydantic_error that takes a string message instead of a serde_json::Error.
 /// Used when validation fails via manual checks rather than serde deserialization.
 pub fn format_pydantic_error_string(error_msg: &str, args_str: Option<&str>, custom_instruction: Option<&str>) -> String {
+    let snippet = args_str.unwrap_or("null");
+    let pydantic_json = serde_json::json!([{
+        "type": "value_error",
+        "loc": ["data"],
+        "msg": error_msg,
+        "input": snippet
+    }]);
+
     let mut msg = format!(
-        "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Semantic validation failed: {}",
-        error_msg
+        "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}",
+        serde_json::to_string_pretty(&pydantic_json).unwrap_or_else(|_| error_msg.to_string())
     );
-    if let Some(snippet) = args_str {
-        msg.push_str(&format!("\nProvided arguments snippet: {}", snippet));
-    }
+
     if let Some(instruction) = custom_instruction {
         msg.push_str(&format!("\n{}", instruction));
     } else {

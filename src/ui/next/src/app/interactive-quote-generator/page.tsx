@@ -21,7 +21,8 @@ export default function InteractiveQuoteGeneratorPage() {
   }, []);
 
   const generatedLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/quote-calculator?tenant=${tenant}&service=${encodeURIComponent(serviceName)}&basePrice=${encodeURIComponent(basePrice.toString())}&unitName=${encodeURIComponent(unitName)}&pricePerUnit=${encodeURIComponent(pricePerUnit.toString())}&theme=${theme}`;
-  const iframeCode = `<iframe src="${generatedLink}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);"></iframe>`;
+  const iframeCode = `<iframe src="${generatedLink}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);"></iframe>
+<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color:#6b7280;text-decoration:none;font-weight:600;font-family:sans-serif;">⚡ Powered by OHC</a></div>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(iframeCode);
