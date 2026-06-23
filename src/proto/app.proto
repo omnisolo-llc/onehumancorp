@@ -441,3 +441,100 @@ message CreateUnifiedBookingResponse {
     UnifiedBooking booking = 2;
     string error = 3;
 }
+
+// Loyalty & Referral Loop
+
+message LoyaltyEvent {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  string event_type = 4;
+  int32 event_points = 5;
+  string source = 6;
+  string reference_id = 7;
+  string metadata = 8;
+  int64 created_at_unix = 9;
+}
+
+message ReferralLink {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  string link_code = 4;
+  string campaign_name = 5;
+  bool is_active = 6;
+  int64 created_at_unix = 7;
+  int64 updated_at_unix = 8;
+}
+
+message LoyaltySettings {
+  string tenant_id = 1;
+  bool is_enabled = 2;
+  int32 reward_threshold_points = 3;
+  string reward_type = 4;
+  double reward_value = 5;
+}
+
+message CustomerIdentity {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  string channel = 4;
+  string channel_identity = 5;
+  int64 created_at_unix = 6;
+}
+
+message Customer {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string email = 4;
+  string phone = 5;
+  int32 loyalty_score = 6; // Dynamic calculated field based on events
+  string referral_code = 7;
+  int64 created_at_unix = 8;
+  int64 updated_at_unix = 9;
+}
+
+message GetCustomerLoyaltyStatusRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+}
+
+message GetCustomerLoyaltyStatusResponse {
+  Customer customer = 1;
+  repeated LoyaltyEvent recent_events = 2;
+  ReferralLink referral_link = 3;
+  LoyaltySettings settings = 4;
+}
+
+message GenerateReferralLinkRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string campaign_name = 3;
+}
+
+message GenerateReferralLinkResponse {
+  ReferralLink referral_link = 1;
+}
+
+message RecordLoyaltyEventRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string event_type = 3;
+  int32 event_points = 4;
+  string source = 5;
+  string reference_id = 6;
+  string metadata = 7;
+}
+
+message RecordLoyaltyEventResponse {
+  LoyaltyEvent event = 1;
+  int32 new_loyalty_score = 2;
+}
+
+service LoyaltyService {
+  rpc GetCustomerLoyaltyStatus(GetCustomerLoyaltyStatusRequest) returns (GetCustomerLoyaltyStatusResponse);
+  rpc GenerateReferralLink(GenerateReferralLinkRequest) returns (GenerateReferralLinkResponse);
+  rpc RecordLoyaltyEvent(RecordLoyaltyEventRequest) returns (RecordLoyaltyEventResponse);
+}

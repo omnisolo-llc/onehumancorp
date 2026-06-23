@@ -287,3 +287,214 @@ pub async fn record_transaction(
 
     Ok(())
 }
+
+// New Handlers based on AI-Driven Omnichannel Loyalty & Referral Loop Architecture
+
+pub async fn record_loyalty_event(
+    pool: &PgPool,
+    tenant_id: &str,
+    customer_id: &str,
+    event_type: &str,
+    event_points: i32,
+    source: &str,
+    reference_id: Option<&str>,
+    metadata: Option<JsonValue>,
+    orchestrator: Option<Arc<DepartmentOrchestrator>>,
+) -> Result<(String, i32), String> {
+
+    let parsed_customer_id = Uuid::parse_str(customer_id).map_err(|_| "Invalid customer ID format".to_string())?;
+
+    let event_id = Uuid::new_v4();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO loyalty_events (id, tenant_id, customer_id, event_type, event_points, source, reference_id, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        "#,
+        event_id,
+        tenant_id,
+        parsed_customer_id,
+        event_type,
+        event_points,
+        source,
+        reference_id,
+        metadata
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| format!("Failed to insert loyalty event: {}", e))?;
+
+    // Dynamically calculate score
+    let score_record = sqlx::query!(
+        r#"
+        SELECT COALESCE(SUM(event_points), 0) as score
+        FROM loyalty_events
+        WHERE customer_id = $1 AND tenant_id = $2
+        "#,
+        parsed_customer_id,
+        tenant_id
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| format!("Failed to calculate loyalty score: {}", e))?;
+
+    let new_score = score_record.score.unwrap_or(0) as i32;
+
+    if let Some(orch) = orchestrator {
+        let payload = serde_json::json!({
+            "customer_id": customer_id,
+            "event_type": event_type,
+            "event_points": event_points,
+            "source": source,
+            "new_loyalty_score": new_score
+        });
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            event_type: "loyalty.event_recorded".to_string(),
+            payload,
+        };
+
+        let orch_clone = orch.clone();
+        tokio::spawn(async move {
+            let _ = orch_clone.dispatch_event(event).await;
+        });
+    }
+
+    Ok((event_id.to_string(), new_score))
+}
+
+pub async fn generate_referral_link(
+    pool: &PgPool,
+    tenant_id: &str,
+    customer_id: &str,
+    campaign_name: Option<&str>,
+) -> Result<(String, String), String> {
+    let parsed_customer_id = Uuid::parse_str(customer_id).map_err(|_| "Invalid customer ID format".to_string())?;
+
+    let id = Uuid::new_v4();
+    let link_code = Uuid::new_v4().simple().to_string().chars().take(8).collect::<String>();
+
+    sqlx::query!(
+        r#"
+        INSERT INTO referral_links (id, tenant_id, customer_id, link_code, campaign_name)
+        VALUES ($1, $2, $3, $4, $5)
+        "#,
+        id,
+        tenant_id,
+        parsed_customer_id,
+        link_code,
+        campaign_name
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| format!("Failed to create referral link: {}", e))?;
+
+    Ok((id.to_string(), link_code))
+}
+
+pub async fn get_customer_loyalty_status(
+    pool: &PgPool,
+    tenant_id: &str,
+    customer_id: &str,
+) -> Result<JsonValue, String> {
+    let parsed_customer_id = Uuid::parse_str(customer_id).map_err(|_| "Invalid customer ID format".to_string())?;
+
+    let customer = sqlx::query!(
+        r#"
+        SELECT id, name, email, referral_code
+        FROM customers
+        WHERE id = $1 AND tenant_id = $2
+        "#,
+        parsed_customer_id,
+        tenant_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| format!("Failed to fetch customer: {}", e))?;
+
+    let recent_events = sqlx::query!(
+        r#"
+        SELECT id, event_type, event_points, created_at
+        FROM loyalty_events
+        WHERE customer_id = $1 AND tenant_id = $2
+        ORDER BY created_at DESC LIMIT 10
+        "#,
+        parsed_customer_id,
+        tenant_id
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("Failed to fetch loyalty events: {}", e))?;
+
+    let score_record = sqlx::query!(
+        r#"
+        SELECT COALESCE(SUM(event_points), 0) as score
+        FROM loyalty_events
+        WHERE customer_id = $1 AND tenant_id = $2
+        "#,
+        parsed_customer_id,
+        tenant_id
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| format!("Failed to calculate loyalty score: {}", e))?;
+
+    let loyalty_score = score_record.score.unwrap_or(0) as i32;
+
+    let referral_link = sqlx::query!(
+        r#"
+        SELECT id, link_code, campaign_name
+        FROM referral_links
+        WHERE customer_id = $1 AND tenant_id = $2 AND is_active = true
+        ORDER BY created_at DESC LIMIT 1
+        "#,
+        parsed_customer_id,
+        tenant_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| format!("Failed to fetch referral link: {}", e))?;
+
+    let settings = sqlx::query!(
+        r#"
+        SELECT is_enabled, reward_threshold_points, reward_type, reward_value
+        FROM loyalty_settings
+        WHERE tenant_id = $1
+        "#,
+        tenant_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| format!("Failed to fetch loyalty settings: {}", e))?;
+
+    let events_json: Vec<JsonValue> = recent_events.into_iter().map(|e| {
+        serde_json::json!({
+            "id": e.id.to_string(),
+            "event_type": e.event_type,
+            "event_points": e.event_points,
+        })
+    }).collect();
+
+    Ok(serde_json::json!({
+        "customer": customer.map(|c| serde_json::json!({
+            "id": c.id.to_string(),
+            "name": c.name,
+            "loyalty_score": loyalty_score,
+            "referral_code": c.referral_code
+        })),
+        "recent_events": events_json,
+        "referral_link": referral_link.map(|rl| serde_json::json!({
+            "id": rl.id.to_string(),
+            "link_code": rl.link_code,
+            "campaign_name": rl.campaign_name
+        })),
+        "settings": settings.map(|s| serde_json::json!({
+            "is_enabled": s.is_enabled,
+            "reward_threshold_points": s.reward_threshold_points,
+            "reward_type": s.reward_type,
+            "reward_value": s.reward_value
+        }))
+    }))
+}
