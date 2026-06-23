@@ -192,6 +192,7 @@ rust_library(
         "@crates//:sqlx",
         "@crates//:temp-env",
         "@crates//:tempfile",
+        "@crates//:tower",
         "@crates//:tokio",
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",

@@ -1,7 +1,7 @@
 use uuid::Uuid;
+use serde_json::json;
 
 pub struct InventoryService {
-
     redis_client: Option<redis::Client>,
 }
 
@@ -72,13 +72,15 @@ impl InventoryService {
                     "reason": "Lock contention on limited item"
                 }).to_string();
 
-                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                if let Err(e) = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)
                     .bind(&payload)
                     .execute(&pool)
-                    .await;
+                    .await {
+                        tracing::error!("Failed to request reorder: {}", e);
+                    }
 
                 return Ok(ReserveResult {
                     success: false,
@@ -99,7 +101,9 @@ impl InventoryService {
 
                     if let Some(stock) = current_stock {
                         if stock < quantity {
-                            tx.rollback().await;
+                            if let Err(e) = tx.rollback().await {
+                                tracing::error!("Failed to rollback: {}", e);
+                            }
                             let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| {
                                 tracing::error!("Redis unlock error: {}", e);
                                 e
@@ -110,12 +114,14 @@ impl InventoryService {
                                 error_message: format!("Insufficient inventory. Available: {}", stock)
                             });
                         } else {
-                            sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
+                            if let Err(e) = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
                                 .bind(quantity)
                                 .bind(product_id)
                                 .bind(tenant_id)
                                 .execute(&mut *tx)
-                                .await;
+                                .await {
+                                    tracing::error!("Failed to reserve inventory: {}", e);
+                                }
                         }
                     } else {
                         let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
@@ -127,7 +133,9 @@ impl InventoryService {
 
                         if let Some(f_stock) = fallback_stock {
                             if f_stock < quantity {
-                                tx.rollback().await;
+                                if let Err(e) = tx.rollback().await {
+                                    tracing::error!("Failed to rollback: {}", e);
+                                }
                                 let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| {
                                     tracing::error!("Redis unlock error: {}", e);
                                     e
@@ -138,15 +146,19 @@ impl InventoryService {
                                     error_message: format!("Insufficient inventory. Available: {}", f_stock)
                                 });
                             } else {
-                                sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
+                                if let Err(e) = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(tenant_id)
                                     .execute(&mut *tx)
-                                    .await;
+                                    .await {
+                                        tracing::error!("Failed to reserve inventory (fallback): {}", e);
+                                    }
                             }
                         } else {
-                            tx.rollback().await;
+                            if let Err(e) = tx.rollback().await {
+                                tracing::error!("Failed to rollback: {}", e);
+                            }
                             let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.map_err(|e| {
                                 tracing::error!("Redis unlock error: {}", e);
                                 e
@@ -158,7 +170,9 @@ impl InventoryService {
                             });
                         }
                     }
-                    let _ = tx.commit().await;
+                    if let Err(e) = tx.commit().await {
+                        tracing::error!("Failed to commit: {}", e);
+                    }
 
                     // Publish to Redis Pub/Sub for Real-Time Sync
                     if let Some(_) = &self.redis_client {
@@ -252,13 +266,17 @@ impl InventoryService {
             let pool = crate::db::get_pool();
             if let Ok(mut tx) = pool.begin().await {
                 if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
-                    sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
+                    if let Err(e) = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(quantity)
                         .bind(product_id)
                         .bind(tenant_id)
                         .execute(&mut *tx)
-                        .await;
-                    let _ = tx.commit().await;
+                        .await {
+                            tracing::error!("Failed to release inventory: {}", e);
+                        }
+                    if let Err(e) = tx.commit().await {
+                        tracing::error!("Failed to commit release: {}", e);
+                    }
                 }
             }
 
@@ -356,12 +374,14 @@ impl InventoryService {
                 "remaining_stock": new_stock
             }).to_string();
 
-            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'InventoryUpdated', $3::jsonb, 'PENDING')")
+            if let Err(e) = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'InventoryUpdated', $3::jsonb, 'PENDING')")
                 .bind(event_id)
                 .bind(tenant_id)
                 .bind(&event_payload)
                 .execute(&mut *tx)
-                .await;
+                .await {
+                    tracing::error!("Failed to update inventory tasks: {}", e);
+                }
 
             let payload_str = serde_json::json!({
                 "product_id": product_id,
@@ -370,12 +390,14 @@ impl InventoryService {
                 "lock_id": lock_id,
             }).to_string();
 
-            sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
+            if let Err(e) = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
                 .bind(Uuid::new_v4().to_string())
                 .bind(tenant_id)
                 .bind(&payload_str)
                 .execute(&mut *tx)
-                .await;
+                .await {
+                    tracing::error!("Failed to log inventory deduction: {}", e);
+                }
 
             if new_stock <= 5 {
                 let product_title: String = sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
@@ -403,12 +425,14 @@ impl InventoryService {
                     "message": message
                 }).to_string();
 
-                sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+                if let Err(e) = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                     .bind(job_id)
                     .bind(tenant_id)
                     .bind(&job_payload)
                     .execute(&mut *tx)
-                    .await;
+                    .await {
+                        tracing::error!("Failed to trigger low stock alert: {}", e);
+                    }
 
                 // Directly notify Operations Agent for real-time monitoring as per Step 3
                 tracing::info!("Real-time stock level monitored: {} drops below threshold. Triggered LowStockAlert for Operations Agent.", product_id);
@@ -429,13 +453,15 @@ impl InventoryService {
                     "requires_owner_approval": true
                 }).to_string();
 
-                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'PredictiveReorder', 'Pending', 0.98, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                if let Err(e) = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'PredictiveReorder', 'Pending', 0.98, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)
                     .bind(&action_payload)
                     .execute(&mut *tx)
-                    .await;
+                    .await {
+                        tracing::error!("Failed to trigger predictive reorder: {}", e);
+                    }
 
                 // Also publish to Agent Feed for high-vibrancy UI visibility
                 let feed_id = Uuid::new_v4().to_string();
@@ -445,13 +471,15 @@ impl InventoryService {
                     "feature_type": "predictive_inventory",
                     "product_id": product_id
                 });
-                sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, 'inventory_service', $3, $4, 'PENDING_APPROVAL')")
+                if let Err(e) = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, 'inventory_service', $3, $4, 'PENDING_APPROVAL')")
                     .bind(&feed_id)
                     .bind(tenant_id)
                     .bind(&serde_json::to_value(&action_payload).unwrap_or_default())
                     .bind(&feed_payload)
-                    .execute(&mut *tx)
-                    .await;
+                     .execute(&mut *tx)
+                     .await {
+                         tracing::error!("Failed to create agent feed item: {}", e);
+                     }
             }
         } else {
             let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
@@ -461,7 +489,9 @@ impl InventoryService {
                 .await
                 .map_err(|e| e.to_string())?;
 
-            tx.rollback().await;
+            if let Err(e) = tx.rollback().await {
+                tracing::error!("Failed to rollback: {}", e);
+            }
 
             if let Some(stock) = current_stock {
                 return Ok(CommitResult {
@@ -531,7 +561,7 @@ mod tests {
         let tenant_id = "test_predictive_tenant";
         let product_id = "test_predictive_product";
 
-        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count, available_quantity, locked_quantity, type) VALUES ($1, $2, 'Predictive Item', 10, 10, 0, 'physical') ON CONFLICT DO NOTHING")
+        let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count, available_quantity, locked_quantity, type) VALUES ($1, $2, 'Predictive Item', 10, 10, 0, 'physical') ON CONFLICT DO NOTHING")
             .bind(product_id)
             .bind(tenant_id)
             .execute(&pool)
@@ -578,13 +608,13 @@ mod tests {
         let tenant_id = "test_inventory_tenant";
         let product_id = "test_product_concurrent";
 
-        sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product', 10, 10) ON CONFLICT DO NOTHING")
+        let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product', 10, 10) ON CONFLICT DO NOTHING")
             .bind(product_id)
             .bind(tenant_id)
             .execute(&pool)
             .await;
 
-        sqlx::query("UPDATE products SET inventory_count = 10, available_quantity = 10, locked_quantity = 0 WHERE id = $1 AND tenant_id = $2")
+        let _ = sqlx::query("UPDATE products SET inventory_count = 10, available_quantity = 10, locked_quantity = 0 WHERE id = $1 AND tenant_id = $2")
             .bind(product_id)
             .bind(tenant_id)
             .execute(&pool)
