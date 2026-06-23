@@ -51,7 +51,17 @@ pub fn reduce_tokens(data: &str) -> String {
 
     let reduced = data.split_whitespace()
         .filter(|word| {
-            !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
+            // Optimization: Iterate over stop words directly. No allocation.
+            let len = word.len();
+            if len == 0 || len > 5 {
+                return true; // None of our stop words are > 5 chars (longest is 'about')
+            }
+            !STOP_WORDS.iter().any(|&stop_word| {
+                if stop_word.len() != len {
+                    return false;
+                }
+                word.eq_ignore_ascii_case(stop_word)
+            })
         })
         .fold(String::with_capacity(data.len()), |mut acc, w| {
             if !acc.is_empty() {
