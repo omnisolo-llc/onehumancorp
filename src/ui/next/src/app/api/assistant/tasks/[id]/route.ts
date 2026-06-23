@@ -1,13 +1,8 @@
-import { NextResponse } from 'next/server';
-import { mutateTask } from '../../store';
+import { proxyBackendPut } from "../../../ui/backendProxy";
+import { NextRequest } from "next/server";
 
-export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  const payload = await request.json().catch(() => null);
-  try {
-    const result = mutateTask((await context.params).id, payload?.action || '', payload || {});
-    if ('deletedTask' in result) return NextResponse.json(result);
-    return NextResponse.json({ task: result });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'task could not be updated' }, { status: 400 });
-  }
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const p = await context.params;
+  const id = p.id;
+  return proxyBackendPut(req, `/api/assistant/tasks/${id}`);
 }

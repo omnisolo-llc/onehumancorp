@@ -1,27 +1,17 @@
 import { NextResponse, NextRequest } from 'next/server';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ articleId: string }> }
-) {
-  const articleId = (await params).articleId;
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+export async function GET(request: NextRequest, context: { params: Promise<{ articleId: string }> }) {
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+    const p = await context.params;
 
-  try {
-    const res = await fetch(`${backendUrl}/api/help/${articleId}`).catch(() => null);
-
-    if (res && res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
+    try {
+        const res = await fetch(`${backendUrl}/api/help/${p.articleId}`);
+        if (!res.ok) {
+             return NextResponse.json({ error: 'Article not found' }, { status: 404 });
+        }
+        const data = await res.json();
+        return NextResponse.json(data);
+    } catch (error) {
+        return NextResponse.json({ error: 'Article not found' }, { status: 404 });
     }
-
-    if (res && res.status === 404) {
-       return NextResponse.json({ error: "Article not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ error: "Article not found" }, { status: 404 });
-  } catch (e) {
-    if (process.env.NODE_ENV !== "test") console.error("Failed to fetch article from backend:", e);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
 }
