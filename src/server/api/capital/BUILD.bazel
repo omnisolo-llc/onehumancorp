@@ -1,0 +1,32 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files(
+    [
+        "mod.rs",
+        "funding_api.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "server_api_capital",
+    srcs = [
+        "mod.rs",
+        "funding_api.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+
+
+
+        "//src/proto:funding_prost",
+        "//src/proto:funding_tonic",
+
+        "//src/server/services/capital:server_services_capital",
+        "@crates//:sqlx",
+        "@crates//:tonic",
+        "@crates//:tokio",
+    ],
+)
