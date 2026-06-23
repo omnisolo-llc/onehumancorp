@@ -158,6 +158,15 @@ pub struct AgentRunConfig {
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub enable_openai_3_hook_guardrails: bool,
+    pub openai_input_max_length: usize,
+    pub openai_input_require_patterns: Vec<String>,
+    pub openai_input_deny_patterns: Vec<String>,
+    pub openai_output_min_length: usize,
+    pub openai_output_require_json: bool,
+    pub openai_output_deny_patterns: Vec<String>,
+    pub openai_tool_allowed_tools: Vec<String>,
+    pub openai_tool_block_args: Vec<String>,
 }
 
 impl AgentRunConfig {
@@ -180,6 +189,34 @@ impl AgentRunConfig {
             registry
                 .tool_guardrails
                 .push(std::sync::Arc::new(anthropic_gater));
+            self.guardrails = Some(registry);
+        }
+    }
+
+    pub fn apply_openai_guardrails(&mut self) {
+        if self.enable_openai_3_hook_guardrails {
+            let mut registry = self.guardrails.take().unwrap_or_default();
+
+            let input_validator = crate::guardrails::openai_hooks::OpenAiInputValidator::new(
+                self.openai_input_max_length,
+                self.openai_input_require_patterns.clone(),
+                self.openai_input_deny_patterns.clone(),
+            );
+            registry.input_guardrails.push(std::sync::Arc::new(input_validator));
+
+            let output_auditor = crate::guardrails::openai_hooks::OpenAiOutputAuditor::new(
+                self.openai_output_min_length,
+                self.openai_output_require_json,
+                self.openai_output_deny_patterns.clone(),
+            );
+            registry.output_guardrails.push(std::sync::Arc::new(output_auditor));
+
+            let tool_enforcer = crate::guardrails::openai_hooks::OpenAiToolPolicyEnforcer::new(
+                self.openai_tool_allowed_tools.clone(),
+                self.openai_tool_block_args.clone(),
+            );
+            registry.tool_guardrails.push(std::sync::Arc::new(tool_enforcer));
+
             self.guardrails = Some(registry);
         }
     }
@@ -249,6 +286,15 @@ impl Default for AgentRunConfig {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: crate::types::PermissionArchitecture::default(),
             manually_approved_tool_calls: vec![],
+            enable_openai_3_hook_guardrails: false,
+            openai_input_max_length: 1000000,
+            openai_input_require_patterns: vec![],
+            openai_input_deny_patterns: vec![],
+            openai_output_min_length: 0,
+            openai_output_require_json: false,
+            openai_output_deny_patterns: vec![],
+            openai_tool_allowed_tools: vec![],
+            openai_tool_block_args: vec![],
         }
     }
 }
@@ -386,6 +432,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
 
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = active_cfg_cloned.workspace_path {
@@ -748,6 +795,7 @@ impl Agent {
 
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
 
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = active_cfg_cloned.workspace_path {
@@ -1472,6 +1520,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         tracing::info!("Executing via Actor-model message passing");
@@ -1550,6 +1599,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
@@ -2056,6 +2106,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
@@ -2136,6 +2187,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         let timeout_duration = agent_task_timeout();
@@ -2794,6 +2846,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         let mut final_cfg = cfg.clone();
@@ -3044,6 +3097,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         let mut self_with_memory = self;
@@ -4812,6 +4866,48 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn test_openai_3_hook_guardrails_integration() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_openai_3_hook_guardrails = true;
+        cfg.openai_input_deny_patterns = vec!["DANGEROUS_INPUT".to_string()];
+        cfg.openai_output_require_json = true;
+        cfg.openai_tool_block_args = vec!["/etc/shadow".to_string()];
+
+        cfg.apply_openai_guardrails();
+
+        let registry = cfg.guardrails.expect("Guardrails should be initialized");
+
+        // Input guardrail test
+        assert!(registry.check_input("Normal input").is_ok());
+        let res_in = registry.check_input("This is DANGEROUS_INPUT!");
+        assert!(res_in.is_err());
+        assert!(res_in.unwrap_err().contains("contains denied pattern"));
+
+        // Output guardrail test
+        assert!(registry.check_output(r#"{"status": "ok"}"#).is_ok());
+        let res_out = registry.check_output("Just a plain text string");
+        assert!(res_out.is_err());
+        assert!(res_out.unwrap_err().contains("valid JSON object"));
+
+        // Tool guardrail test
+        let safe_tc = crate::types::ToolCall {
+            id: "1".to_string(),
+            name: "read_file".to_string(),
+            arguments: serde_json::json!({"path": "normal.txt"}),
+        };
+        assert!(registry.check_tool(&safe_tc).is_ok());
+
+        let unsafe_tc = crate::types::ToolCall {
+            id: "2".to_string(),
+            name: "read_file".to_string(),
+            arguments: serde_json::json!({"path": "/etc/shadow"}),
+        };
+        let res_tool = registry.check_tool(&unsafe_tc);
+        assert!(res_tool.is_err());
+        assert!(res_tool.unwrap_err().contains("contain blocked pattern"));
+    }
 
     #[tokio::test]
     async fn test_state_management_lightweight_chaining() {
