@@ -6735,8 +6735,9 @@ async fn create_ui_bom_item_handler(
     }
 
     // Start Cache Invalidator Service
+    let invalidator_pool = db.pool.clone();
     tokio::spawn(async move {
-        crate::services::cache_invalidator::start_cache_invalidator().await;
+        crate::services::cache_invalidator::start_cache_invalidator(invalidator_pool).await;
     });
 
     // Start Temp File Cleanup Background Task
