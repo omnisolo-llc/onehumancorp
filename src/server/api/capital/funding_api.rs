@@ -1,11 +1,11 @@
 use tonic::{Request, Response, Status};
-use fundingpb::{
+use funding_proto::{
     funding_service_server::FundingService,
     ListFundingOpportunitiesRequest, ListFundingOpportunitiesResponse,
     ApproveFundingOpportunityRequest, ApproveFundingOpportunityResponse,
     FundingOpportunity as ProtoFundingOpportunity,
 };
-use server_services_capital::funding_engine::FundingEngine;
+use server_services_capital::FundingEngine;
 use std::sync::Arc;
 use sqlx::PgPool;
 
