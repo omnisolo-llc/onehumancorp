@@ -8,6 +8,8 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 use std::sync::RwLock;
 use std::sync::Arc;
 use ::server_common::Claims;
@@ -43,9 +45,148 @@ pub struct ExecuteActionRequest {
     pub action: String, // e.g. "print_label", "mark_ready", "hand_off"
 }
 
-struct AppState {
+pub struct AppState {
     orders: RwLock<Vec<Order>>,
     pool: sqlx::PgPool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShippoTrackingUpdate {
+    pub tracking_number: String,
+    pub tracking_status: String,
+}
+
+pub fn parse_shippo_tracking_webhook(payload: &Value) -> Result<ShippoTrackingUpdate, String> {
+    let event = find_string_by_key(payload, &["event"])
+        .ok_or_else(|| "Shippo webhook missing event".to_string())?;
+
+    if event != "track_updated" {
+        return Err(format!("Ignoring Shippo webhook event: {}", event));
+    }
+
+    let data = payload.get("data").ok_or_else(|| "Shippo webhook missing data".to_string())?;
+
+    let tracking_number = find_string_by_key(data, &["tracking_number"])
+        .ok_or_else(|| "Shippo webhook missing tracking_number".to_string())?;
+
+    let tracking_status = find_nested_object_string(data, &["tracking_status"], &["status"])
+        .or_else(|| find_string_by_key(data, &["tracking_status"]))
+        .ok_or_else(|| "Shippo webhook missing tracking_status".to_string())?;
+
+    Ok(ShippoTrackingUpdate {
+        tracking_number,
+        tracking_status,
+    })
+}
+
+pub async fn persist_shippo_tracking_update(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+    update: &ShippoTrackingUpdate,
+) -> Result<u64, String> {
+    let mut tx = pool.begin().await.map_err(|err| err.to_string())?;
+    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+        .await
+        .map_err(|err| err.to_string())?;
+
+    let result = sqlx::query(
+        "UPDATE delivery_tasks
+         SET provider = 'shippo',
+             status = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE organization_id = $1
+           AND (provider_delivery_id = $3 OR order_id = $3)",
+    )
+    .bind(tenant_id)
+    .bind(&update.tracking_status)
+    .bind(&update.tracking_number)
+    .execute(&mut *tx)
+    .await
+    .map_err(|err| err.to_string())?;
+
+    tx.commit().await.map_err(|err| err.to_string())?;
+    Ok(result.rows_affected())
+}
+
+fn apply_shippo_tracking_update_to_queue(
+    state: &Arc<AppState>,
+    tenant_id: &str,
+    update: &ShippoTrackingUpdate,
+) {
+    if let Ok(mut orders) = state.orders.write() {
+        for order in orders.iter_mut() {
+            if order.organization_id == tenant_id
+                && (order.id == update.tracking_number
+                    || order.provider_delivery_id.as_deref() == Some(update.tracking_number.as_str()))
+            {
+                order.status = if update.tracking_status == "DELIVERED" {
+                    "Delivered".to_string()
+                } else if update.tracking_status == "TRANSIT" {
+                    "Shipped".to_string()
+                } else {
+                    order.status.clone()
+                };
+            }
+        }
+    }
+}
+
+pub async fn shippo_webhook(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> impl IntoResponse {
+    let secret = std::env::var("SHIPPO_WEBHOOK_SECRET").unwrap_or_default();
+    if !secret.is_empty() {
+        let sig = headers.get("x-shippo-signature").and_then(|v| v.to_str().ok()).unwrap_or_default();
+        type HmacSha256 = Hmac<Sha256>;
+        let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
+        mac.update(&body);
+        if mac.verify_slice(hex::decode(sig).unwrap_or_default().as_slice()).is_err() {
+            return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "invalid signature"}))).into_response();
+        }
+    }
+
+    let payload: Value = match serde_json::from_slice(&body) {
+        Ok(v) => v,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "invalid json"}))).into_response(),
+    };
+
+    let update = match parse_shippo_tracking_webhook(&payload) {
+        Ok(update) => update,
+        Err(err) => {
+            if err.starts_with("Ignoring") {
+                return (StatusCode::OK, Json(serde_json::json!({"success": true, "message": err}))).into_response();
+            }
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": err}))).into_response();
+        }
+    };
+
+    let tenant_id = match sqlx::query("SELECT organization_id FROM delivery_tasks WHERE provider = 'shippo' AND (provider_delivery_id = $1 OR order_id = $1)")
+        .bind(&update.tracking_number)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(Some(row)) => {
+            use sqlx::Row;
+            row.get::<String, _>("organization_id")
+        },
+        _ => {
+            return (StatusCode::NOT_FOUND, Json(serde_json::json!({"error": "order not found"}))).into_response();
+        }
+    };
+
+    match persist_shippo_tracking_update(&state.pool, &tenant_id, &update).await {
+        Ok(_) => {
+            apply_shippo_tracking_update_to_queue(&state, &tenant_id, &update);
+            (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
+        }
+        Err(err) => (
+            StatusCode::BAD_GATEWAY,
+            Json(serde_json::json!({"error": err})),
+        )
+            .into_response(),
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -154,6 +295,7 @@ where
         .route("/rates", post(fetch_rates))
         .route("/label", post(purchase_label))
         .route("/webhook/doordash", post(doordash_webhook))
+        .route("/webhook/shippo", post(shippo_webhook))
         .with_state(state)
 }
 
@@ -235,6 +377,7 @@ async fn purchase_label(
         if order.id == payload.order_id && order.organization_id == tenant_id {
             if order.fulfillment_mode == "Shipping" {
                 order.status = "Shipped".to_string();
+                order.provider_delivery_id = Some(label.tracking_number.clone());
             }
             break;
         }
@@ -566,6 +709,56 @@ fn find_location(value: &Value) -> Result<(Option<f64>, Option<f64>), String> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+
+    #[test]
+    fn parses_shippo_tracking_webhook_with_valid_data() {
+        let payload = json!({
+            "event": "track_updated",
+            "data": {
+                "tracking_number": "9499907123456123456781",
+                "tracking_status": {
+                    "status": "DELIVERED"
+                }
+            }
+        });
+
+        let update = parse_shippo_tracking_webhook(&payload).expect("valid Shippo tracking payload");
+
+        assert_eq!(update.tracking_number, "9499907123456123456781");
+        assert_eq!(update.tracking_status, "DELIVERED");
+    }
+
+    #[test]
+    fn rejects_shippo_tracking_webhook_without_tracking_number() {
+        let payload = json!({
+            "event": "track_updated",
+            "data": {
+                "tracking_status": {
+                    "status": "DELIVERED"
+                }
+            }
+        });
+
+        let err = parse_shippo_tracking_webhook(&payload).unwrap_err();
+
+        assert!(err.contains("tracking_number"));
+    }
+
+    #[test]
+    fn ignores_shippo_webhook_wrong_event() {
+        let payload = json!({
+            "event": "transaction_created",
+            "data": {
+                "tracking_number": "123"
+            }
+        });
+
+        let err = parse_shippo_tracking_webhook(&payload).unwrap_err();
+
+        assert!(err.starts_with("Ignoring Shippo webhook event: transaction_created"));
+    }
 
     #[test]
     fn parses_doordash_tracking_webhook_with_dasher_coordinates() {
