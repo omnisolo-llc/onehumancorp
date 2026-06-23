@@ -507,8 +507,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: Option<f64> = row.try_get("total_cost").unwrap_or_default();
-                    let amount: f64 = amount.unwrap_or(0.0);
+                    let amount: f64 = row.try_get("total_cost").unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
@@ -583,8 +582,7 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
                     let status: String = row.try_get("status").unwrap_or_default();
-                    let amount: Option<f64> = row.try_get("total_cost").unwrap_or_default();
-                    let amount: f64 = amount.unwrap_or(0.0);
+                    let amount: f64 = row.try_get("total_cost").unwrap_or_default();
                     results.push(SearchResult {
                         id: id.clone(),
                         entity_type: "order".to_string(),
