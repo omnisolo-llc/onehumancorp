@@ -25,14 +25,14 @@ describe('ZeroClickBuilderPage', () => {
     render(<ZeroClickBuilderPage />);
     expect(screen.getByText('Zero-Click Business Generator')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/I am a home baker/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Generate Store/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Generate My Business/i })).toBeDisabled();
   });
 
   it('enables the button when prompt is entered', () => {
     render(<ZeroClickBuilderPage />);
     const textarea = screen.getByPlaceholderText(/I am a home baker/i);
     fireEvent.change(textarea, { target: { value: 'I sell custom sneakers' } });
-    expect(screen.getByRole('button', { name: /Generate Store/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Generate My Business/i })).toBeEnabled();
   });
 
   it('submits the form and displays the result', async () => {
@@ -53,7 +53,7 @@ describe('ZeroClickBuilderPage', () => {
     const textarea = screen.getByPlaceholderText(/I am a home baker/i);
     fireEvent.change(textarea, { target: { value: 'I sell custom sneakers' } });
 
-    const button = screen.getByRole('button', { name: /Generate Store/i });
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
     fireEvent.click(button);
 
     // Should show loading state
@@ -81,7 +81,7 @@ describe('ZeroClickBuilderPage', () => {
     render(<ZeroClickBuilderPage />);
     const textarea = screen.getByPlaceholderText(/I am a home baker/i);
     fireEvent.change(textarea, { target: { value: 'I sell custom sneakers' } });
-    fireEvent.click(screen.getByRole('button', { name: /Generate Store/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Generate My Business/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Your business is live!')).toBeInTheDocument();
@@ -106,7 +106,7 @@ describe('ZeroClickBuilderPage', () => {
     render(<ZeroClickBuilderPage />);
     const textarea = screen.getByPlaceholderText(/I am a home baker/i);
     fireEvent.change(textarea, { target: { value: 'I sell custom sneakers' } });
-    fireEvent.click(screen.getByRole('button', { name: /Generate Store/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Generate My Business/i }));
     await waitFor(() => expect(screen.getByText('Your business is live!')).toBeInTheDocument(), { timeout: 3000 });
     fireEvent.click(screen.getByRole('button', { name: /Share on X/i }));
     expect(mockOpen).toHaveBeenCalled();
