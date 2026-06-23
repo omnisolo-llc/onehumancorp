@@ -19,9 +19,77 @@ use tokio::sync::Mutex;
 static SYNC_BROADCAST: OnceLock<broadcast::Sender<String>> = OnceLock::new();
 static REDIS_SUBSCRIBED: OnceLock<Arc<Mutex<bool>>> = OnceLock::new();
 
+use axum::routing::post;
+
 pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/ws", get(ws_sync_handler))
+}
+
+pub fn router_with_pool<S: Clone + Send + Sync + 'static>() -> Router<sqlx::PgPool> {
+    Router::new()
+        .route("/power_sync_pull", post(power_sync_pull_handler))
+        .route("/power_sync_push", post(power_sync_push_handler))
+}
+
+pub async fn power_sync_pull_handler(
+    State(pool): State<sqlx::PgPool>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let mut tonic_request = tonic::Request::new(::server_ohc::orchestration::PowerSyncPullRequest {});
+
+    if let Ok(metadata_value) = spiffe_id_str.parse() {
+        tonic_request.metadata_mut().insert("x-spiffe-id", metadata_value);
+    }
+
+    let service = crate::services::sync::service::MySyncService::new(pool);
+    match service.power_sync_pull(tonic_request).await {
+        Ok(resp) => {
+            let inner = resp.into_inner();
+            (StatusCode::OK, axum::Json(serde_json::from_str::<serde_json::Value>(&inner.payload).unwrap_or_else(|_| serde_json::json!([])))).into_response()
+        },
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
+                "status": "error",
+                "message": e.message(),
+            }))).into_response()
+        }
+    }
+}
+
+pub async fn power_sync_push_handler(
+    State(pool): State<sqlx::PgPool>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let payload_str = serde_json::to_string(&payload.get("payload").unwrap_or(&payload)).unwrap_or_else(|_| "[]".to_string());
+
+    let mut tonic_request = tonic::Request::new(::server_ohc::orchestration::PowerSyncPushRequest {
+        payload: payload_str,
+    });
+
+    if let Ok(metadata_value) = spiffe_id_str.parse() {
+        tonic_request.metadata_mut().insert("x-spiffe-id", metadata_value);
+    }
+
+    let service = crate::services::sync::service::MySyncService::new(pool);
+    match service.power_sync_push(tonic_request).await {
+        Ok(resp) => {
+            let inner = resp.into_inner();
+            (StatusCode::OK, axum::Json(serde_json::json!({
+                "status": inner.status,
+            }))).into_response()
+        },
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
+                "status": "error",
+                "message": e.message(),
+            }))).into_response()
+        }
+    }
 }
 
 #[derive(serde::Deserialize)]
