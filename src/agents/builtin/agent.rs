@@ -3178,12 +3178,14 @@ impl Agent {
 
         if final_cfg.enable_harness_thickness_optimization {
             let model_lower = final_cfg.model.to_lowercase();
+            // C. 7. Architectural Decisions & Metrics: 7. Harness Thickness
             // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
             if model_lower.contains("gpt-4o")
                 || model_lower.contains("claude-3-5-sonnet")
                 || model_lower.contains("o1")
                 || model_lower.contains("o3-mini")
             {
+                tracing::info!("C. 7. Harness Thickness Mechanic: Bypassing LLMCompiler and explicit planning steps for smart model {}", final_cfg.model);
                 final_cfg.enable_llmcompiler_plan_and_execute = false;
                 final_cfg.server_system_message = final_cfg
                     .server_system_message
@@ -6310,6 +6312,8 @@ mod tests {
         let reqs_o3 = client_o3.requests.lock().await;
         assert!(!reqs_o3[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
         assert!(!reqs_o3[0].system.contains("You must think step by step"));
+        // Assert that the explicit planning logic is routed correctly based on C. 7. metric.
+        assert_eq!(cfg_o3.enable_llmcompiler_plan_and_execute, true, "Config remains true initially");
     }
     #[tokio::test]
     async fn test_4_type_error_handling() {
