@@ -9,8 +9,9 @@ use std::sync::Arc;
 use uuid::Uuid;
 use crate::utils::cache::HybridCache;
 use std::sync::OnceLock;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use tokio::sync::Mutex;
+use serde_json::Value;
 
 pub static ONGOING_GENERATION: OnceLock<Arc<Mutex<HashSet<String>>>> = OnceLock::new();
 pub fn get_ongoing_generation() -> Arc<Mutex<HashSet<String>>> {
@@ -237,6 +238,36 @@ pub async fn regenerate_cache(
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // Batch fetch product specific SEO data to avoid N+1 queries
+    let mut product_ids = Vec::new();
+    for block in &blocks {
+        if block.block_type == "ProductGridBlock" || block.block_type == "Catalog" {
+            if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
+                for item in items {
+                    if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
+                        product_ids.push(pid.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    let mut product_seo_map = HashMap::new();
+    if !product_ids.is_empty() {
+        let seo_rows: Vec<(String, Option<String>, Option<String>, Option<Value>)> = sqlx::query_as(
+            "SELECT id, seo_title, seo_description, seo_schema_json FROM products WHERE tenant_id = $1 AND id = ANY($2)"
+        )
+        .bind(tenant_id.to_string())
+        .bind(&product_ids)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default();
+
+        for (id, title, desc, schema) in seo_rows {
+            product_seo_map.insert(id, (title, desc, schema));
+        }
+    }
+
     let mut tags = vec![format!("tenant-id:{}", tenant_id)];
     let mut html = String::new();
     html.push_str("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n");
@@ -255,6 +286,13 @@ pub async fn regenerate_cache(
         seo_ld["@context"] = serde_json::Value::String("https://schema.org".to_string());
     }
     html.push_str(&format!("<script type=\"application/ld+json\">\n{}\n</script>\n", serde_json::to_string(&seo_ld).unwrap_or_default()));
+
+    // Inject product specific JSON-LD into the head
+    for (pid, (_title, _desc, schema)) in &product_seo_map {
+        if let Some(s) = schema {
+            html.push_str(&format!("<script type=\"application/ld+json\" id=\"seo-schema-{}\">\n{}\n</script>\n", pid, s.to_string()));
+        }
+    }
 
     html.push_str(r#"
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
@@ -322,6 +360,13 @@ pub async fn regenerate_cache(
                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
                             tags.push(format!("entity:product:{}", pid));
+
+                            // Use pre-fetched SEO data
+                            if let Some((Some(s_title), Some(s_desc), _)) = product_seo_map.get(pid) {
+                                html.push_str(&format!("<template id=\"seo-meta-{}\" data-title=\"{}\" data-desc=\"{}\"></template>\n",
+                                    pid, escape_html(s_title), escape_html(s_desc)));
+                            }
+
                             html.push_str(&format!(
                                 "<div class=\"product-card\">
 <div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div><div class=\"product-price font-outfit\">{}</div><div class=\"inventory-status\"><!-- INVENTORY_STATUS_{} --></div></div>

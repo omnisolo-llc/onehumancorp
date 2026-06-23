@@ -239,8 +239,8 @@ impl Department for MarketingAgent {
         vec![
             "tenant.insight.trending".to_string(),
             "tenant.product.created".to_string(),
+            "tenant.product.updated".to_string(),
             "tenant.job.completed".to_string(),
-            "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
             "tenant.website.updated".to_string(),
             "loyalty.points_awarded".to_string(),
@@ -292,9 +292,21 @@ impl Department for MarketingAgent {
                     }
                 }
             }
+
+            // Trigger Agentic SEO Pre-rendering action for product updates
+            let payload = serde_json::json!({
+                "product_id": product_id,
+            });
+            let _ = self.orchestrator()?.execute_action(
+                DepartmentType::Marketing,
+                "Trigger Agentic SEO Pre-rendering".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                payload,
+            ).await;
         }
 
-        if event.event_type == "tenant.website.updated" || event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
+        if event.event_type == "tenant.website.updated" {
             let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
             let payload = serde_json::json!({
                 "site_id": site_id,
@@ -317,6 +329,10 @@ impl Department for MarketingAgent {
                                 }
                             }
                         }
+
+                        // Invalidate edge cache for the entire tenant
+                        let cache = crate::builder::edge::get_edge_cache();
+                        cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
                     }
                 });
             }

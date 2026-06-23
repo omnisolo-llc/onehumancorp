@@ -2,6 +2,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 use super::db;
 use std::time::Duration;
+use crate::builder::edge::{get_edge_cache, regenerate_cache};
 
 #[test]
 fn test_site_structure_query_uses_single_join_for_pages_and_blocks() {
@@ -85,6 +86,56 @@ async fn test_builder_db_crud() {
 
     // Clean up
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+}
+
+#[tokio::test]
+async fn test_edge_seo_injection() {
+    let (pool, tenant_id) = match setup_db().await {
+        Some(v) => v,
+        None => return,
+    };
+
+    let site = match db::create_site(&pool, tenant_id, Some("seo-test.com".to_string())).await {
+        Ok(s) => s,
+        Err(_) => return,
+    };
+    let page = db::create_page(&pool, tenant_id, site.id, "/".to_string(), "SEO Home".to_string()).await.unwrap();
+
+    let product_id = "prod-123";
+    let seo_title = "Amazing Product SEO Title";
+
+    // Explicitly update products table with SEO metadata
+    let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, seo_title, seo_description, seo_schema_json) VALUES ($1, $2, $3, $4, $5, $6)")
+        .bind(product_id)
+        .bind(tenant_id.to_string())
+        .bind("Amazing Product")
+        .bind(seo_title)
+        .bind("Amazing Product SEO Description")
+        .bind(serde_json::json!({"@type": "Product", "name": "Amazing Product"}))
+        .execute(&pool)
+        .await;
+
+    let _ = db::create_block(&pool, tenant_id, page.id, "ProductGridBlock".to_string(), serde_json::json!({
+        "items": [
+            {
+                "product_id": product_id,
+                "name": "Amazing Product",
+                "price": "$10.00"
+            }
+        ]
+    }), 0).await.unwrap();
+
+    let cache = get_edge_cache();
+    let cache_key = format!("edge_site_{}_{}_en-US", tenant_id, site.id);
+
+    let (html, _) = regenerate_cache(pool.clone(), tenant_id, site.id, cache_key.clone(), cache.clone()).await.unwrap();
+
+    assert!(html.contains(seo_title));
+    assert!(html.contains(&format!("id=\"seo-{}\"", product_id)));
+
+    // Clean up
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
+    let _ = sqlx::query("DELETE FROM products WHERE id = $1 AND tenant_id = $2").bind(product_id).bind(tenant_id.to_string()).execute(&pool).await;
 }
 
 #[tokio::test]
