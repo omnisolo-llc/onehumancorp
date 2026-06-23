@@ -27,10 +27,35 @@ impl Department for OperationsAgent {
             "inventory.sync.conflict".to_string(),
             "tenant.inventory.updated".to_string(),
             "pos_sales".to_string(),
-        ]
+
+            "tenant.pricing.updated".to_string(),]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let cache = crate::builder::edge::get_edge_cache();
+            cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+            if !product_id.is_empty() {
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+            }
+
+            // Pre-warm (regenerate) cache in background
+            if let Ok(tenant_uuid) = uuid::Uuid::parse_str(&event.tenant_id) {
+                let pool = crate::db::get_pool();
+                let cache_clone = cache.clone();
+                tokio::spawn(async move {
+                    if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_uuid).await {
+                        if let Some(site) = sites.first() {
+                            let site_id = site.id;
+                            let cache_key = format!("edge_site_{}_{}", tenant_uuid, site_id);
+                            let _ = crate::builder::edge::regenerate_cache(pool.clone(), tenant_uuid, site_id, cache_key, cache_clone).await;
+                        }
+                    }
+                });
+            }
+        }
+
         if event.event_type == "POS_SALE_COMPLETED" {
             tracing::info!("Operations Agent: Handling POS sale completion for tenant {}", event.tenant_id);
             return Ok(());

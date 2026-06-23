@@ -176,7 +176,7 @@ async fn regenerate_storefront_product(
                     if let Some(start) = html.find("<title>") {
                         if let Some(end) = html[start..].find("</title>") {
                             let end = start + end + "</title>".len();
-                            html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">", crate::builder::edge::escape_html(&seo_title), crate::builder::edge::escape_html(&seo_title)));
+                            html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">", seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
                         }
                     }
                 }
@@ -185,10 +185,10 @@ async fn regenerate_storefront_product(
                     if let Some(start) = html.find("<meta name=\"description\"") {
                         if let Some(end) = html[start..].find(">") {
                             let end = start + end + ">".len();
-                            html.replace_range(start..end, &format!("<meta name=\"description\" content=\"{}\">", crate::builder::edge::escape_html(&seo_desc)));
+                            html.replace_range(start..end, &format!("<meta name=\"description\" content=\"{}\">", seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
                         }
                     } else if let Some(head_end) = html.find("</head>") {
-                        html.insert_str(head_end, &format!("<meta name=\"description\" content=\"{}\">\n", crate::builder::edge::escape_html(&seo_desc)));
+                        html.insert_str(head_end, &format!("<meta name=\"description\" content=\"{}\">\n", seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
                     }
                 }
 
