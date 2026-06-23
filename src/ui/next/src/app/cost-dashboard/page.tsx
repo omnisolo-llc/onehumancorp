@@ -200,7 +200,7 @@ export default function CostDashboardPage() {
                       </div>
                   )}
               </div>
-              {data?.department_tier_usage?.current_plan !== 'Free' && (
+              {myPlanData?.current_plan !== 'Free' && (
                   <div className="mt-6 flex flex-col md:flex-row gap-4">
                       <button
                           id="manage-billing-btn"
