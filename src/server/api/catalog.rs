@@ -48,6 +48,14 @@ pub struct CreateProductResponse {
     pub message: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct UpdateProductRequest {
+    pub id: String,
+    pub name: Option<String>,
+    pub price: Option<String>,
+    pub description: Option<String>,
+}
+
 #[derive(Serialize)]
 pub struct ErrorResponse {
     pub error: String,
@@ -357,10 +365,118 @@ async fn handle_generate_offering(
     (axum::http::StatusCode::OK, Json(response_json)).into_response()
 }
 
+async fn handle_update_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(payload): Json<UpdateProductRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: format!("Failed to connect to database: {}", e),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    if let Some(price) = &payload.price {
+        let price_cents = (price.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
+        if let Err(e) = sqlx::query("UPDATE products SET price = $1, price_cents = $2 WHERE id = $3 AND tenant_id = $4")
+            .bind(price)
+            .bind(price_cents)
+            .bind(&payload.id)
+            .bind(&tenant_id)
+            .execute(&mut *conn)
+            .await
+        {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: format!("Failed to update product price: {}", e),
+                }),
+            )
+                .into_response();
+        }
+    }
+
+    if let Some(name) = &payload.name {
+        if let Err(e) = sqlx::query("UPDATE products SET title = $1 WHERE id = $2 AND tenant_id = $3")
+            .bind(name)
+            .bind(&payload.id)
+            .bind(&tenant_id)
+            .execute(&mut *conn)
+            .await
+        {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: format!("Failed to update product title: {}", e),
+                }),
+            )
+                .into_response();
+        }
+    }
+
+    if let Some(desc) = &payload.description {
+        if let Err(e) = sqlx::query("UPDATE products SET description = $1 WHERE id = $2 AND tenant_id = $3")
+            .bind(desc)
+            .bind(&payload.id)
+            .bind(&tenant_id)
+            .execute(&mut *conn)
+            .await
+        {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: format!("Failed to update product description: {}", e),
+                }),
+            )
+                .into_response();
+        }
+    }
+
+    // Emit ProductUpdated event to trigger cache invalidation
+    let event_payload = serde_json::json!({
+        "product_id": payload.id,
+        "organization_id": tenant_id,
+        "new_price": payload.price.clone().unwrap_or_default(),
+    });
+    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        agent_id: "system".to_string(),
+        action: "ProductUpdated".to_string(),
+        status: "success".to_string(),
+        payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+    let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
+
+    (
+        StatusCode::OK,
+        Json(CreateProductResponse {
+            success: true,
+            message: Some(format!("Updated product {}", payload.id)),
+        }),
+    )
+        .into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/products", get(handle_get_products))
         .route("/product", post(handle_create_product))
+        .route("/product/update", post(handle_update_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
 }

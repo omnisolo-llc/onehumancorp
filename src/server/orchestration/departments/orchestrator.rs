@@ -1085,6 +1085,21 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await;
 
+                                // Emit ProductUpdated event to trigger cache invalidation
+                                let event_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "organization_id": tenant_id,
+                                    "new_price": new_price,
+                                });
+                                let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                    agent_id: "system".to_string(),
+                                    action: "ProductUpdated".to_string(),
+                                    status: "success".to_string(),
+                                    payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+                                    msg_id: uuid::Uuid::new_v4().to_string(),
+                                };
+                                let _ = self.mesh.publish("products_inbox", serde_json::to_vec(&event).unwrap_or_default()).await;
+
                                 // Dispatch simulated reorder to job queue
                                 let job_id = uuid::Uuid::new_v4().to_string();
                                 let reorder_quantity = payload.get("suggested_reorder_quantity").and_then(|v| v.as_i64()).unwrap_or(50);
@@ -1138,6 +1153,21 @@ impl DepartmentOrchestrator {
                                     let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
                                     return Err(format!("Failed to activate smart pricing discount: {}", e));
                                 }
+
+                                // Emit ProductUpdated event to trigger cache invalidation
+                                let event_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "organization_id": tenant_id,
+                                    "new_price": new_price,
+                                });
+                                let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                    agent_id: "system".to_string(),
+                                    action: "ProductUpdated".to_string(),
+                                    status: "success".to_string(),
+                                    payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+                                    msg_id: uuid::Uuid::new_v4().to_string(),
+                                };
+                                let _ = self.mesh.publish("products_inbox", serde_json::to_vec(&event).unwrap_or_default()).await;
                             } else if let DbStore::Sqlite(pool) = &self.db.store {
                                 if let Err(e) = sqlx::query("UPDATE products SET price = ?, price_cents = ? WHERE id = ? AND tenant_id = ?")
                                     .bind(new_price)

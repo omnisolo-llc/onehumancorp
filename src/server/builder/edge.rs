@@ -277,6 +277,8 @@ pub async fn regenerate_cache(
         @media (prefers-color-scheme: dark) { .product-desc { color: #999; } }
         .btn { background: #0071E3; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; }
         .btn:active { transform: scale(0.96); }
+        .sticky-bottom-bar { position: sticky; bottom: 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); padding: 16px; border-top: 1px solid rgba(0,0,0,0.1); width: 100%; box-sizing: border-box; text-align: center; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; margin-top: auto; z-index: 10; }
+        @media (prefers-color-scheme: dark) { .sticky-bottom-bar { background: rgba(22, 22, 26, 0.85); border-top: 1px solid rgba(255,255,255,0.1); } }
         .service-block h3 { margin: 0 0 16px 0; }
         .testimonial { font-style: italic; color: #555; margin-bottom: 8px; }
         @media (prefers-color-scheme: dark) { .testimonial { color: #bbb; } }
@@ -358,8 +360,11 @@ pub async fn regenerate_cache(
     }
 
     html.push_str(r#"
-        <div class="block" style="text-align: center; font-size: 12px; color: #888;">
+        <div class="block" style="text-align: center; font-size: 12px; color: #888; padding-bottom: 80px;">
             ⚡ Powered by OHC
+        </div>
+        <div class="sticky-bottom-bar">
+            <button class="btn" style="width: 100%; font-size: 16px; padding: 14px;">Request Custom Order / Book Now</button>
         </div>
     </div>
     </body>
