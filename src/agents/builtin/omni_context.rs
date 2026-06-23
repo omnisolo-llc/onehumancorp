@@ -20,18 +20,16 @@ impl OmniContextRouter {
     /// Returns the content with the [SYSTEM GROUNDING] prefix.
     pub fn get_system_grounding(&self) -> Option<String> {
         let agents_path = self.context_root.join("AGENTS.md");
-        if agents_path.exists() {
-            if let Ok(content) = fs::read_to_string(&agents_path) {
+        if agents_path.exists()
+            && let Ok(content) = fs::read_to_string(&agents_path) {
                 return Some(format!("[SYSTEM GROUNDING]\n{}", content));
             }
-        }
 
         let claude_path = self.context_root.join("CLAUDE.md");
-        if claude_path.exists() {
-            if let Ok(content) = fs::read_to_string(&claude_path) {
+        if claude_path.exists()
+            && let Ok(content) = fs::read_to_string(&claude_path) {
                 return Some(format!("[SYSTEM GROUNDING]\n{}", content));
             }
-        }
 
         None
     }

@@ -291,7 +291,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                             || parse_error_msg.contains("Semantic validation failed")
                             || parse_error_msg.contains("Expected native tool_calls")
                             || parse_error_msg.contains("Missing required 'data' parameter")
-                            || parse_error_msg.contains("Failed to parse arguments")
+                            || parse_error_msg.contains("Pydantic-first schema validation failed") || parse_error_msg.contains("Failed to parse arguments")
                         {
                             return Err(ToolError::LlmRecoverable(parse_error_msg));
                         } else {
@@ -305,9 +305,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
                     if !msg.tool_calls.is_empty() {
                         current_req.messages.push(msg.clone());
-                        let detailed_error = if parse_error_msg.contains("Validation Error") {
-                            parse_error_msg.clone()
-                        } else if parse_error_msg.contains("Semantic validation failed") {
+                        let detailed_error = if parse_error_msg.contains("Validation Error") || parse_error_msg.contains("Semantic validation failed") {
                             parse_error_msg.clone()
                         } else {
                             // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
@@ -617,7 +615,7 @@ mod tests {
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(
-                msg.contains("Failed to parse arguments")
+                msg.contains("Pydantic-first schema validation failed") || msg.contains("Failed to parse arguments")
                     || msg.contains("Output parsing failed after"),
                 "msg was: {}",
                 msg
@@ -709,10 +707,10 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         match result {
-            Err(ToolError::Unexpected(msg)) => {
-                assert!(msg.contains("Output parsing failed after 2 retries"));
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Expected native tool_calls API object, but got plain text. Please use the"));
             }
-            _ => panic!("Expected Unexpected error for exhaustion"),
+            _ => panic!("Expected LlmRecoverable error for exhaustion"),
         }
     }
 
