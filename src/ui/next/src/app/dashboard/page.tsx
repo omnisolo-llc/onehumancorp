@@ -26,6 +26,7 @@ import { ReviewFeedCard } from './ReviewFeedCard';
 
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
+import { GrowBusinessCard } from "./GrowBusinessCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
@@ -554,7 +555,8 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        <PromoterCard />
+        <GrowBusinessCard />
+          <PromoterCard />
 
         {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
              <ReviewFeedCard

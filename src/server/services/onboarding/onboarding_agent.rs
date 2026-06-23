@@ -506,7 +506,7 @@ Your response:",
                     .bind(topic);
                 let pool = pool.clone();
                 topic_futures.push(tokio::spawn(async move {
-                    query.execute(&pool).await;
+                    if let Err(e) = query.execute(&pool).await { tracing::error!("Failed to subscribe agent: {}", e); }
                 }));
             }
             futures::future::join_all(topic_futures).await;
@@ -524,7 +524,7 @@ Your response:",
                 })).unwrap_or_default(),
                 msg_id: uuid::Uuid::new_v4().to_string(),
             };
-            hub_clone.publish_teammate_event("promoter_inbox".to_string(), storefront_event);
+            if let Err(e) = hub_clone.publish_teammate_event("promoter_inbox".to_string(), storefront_event) { tracing::error!("Failed to publish storefront event: {}", e); }
 
             let policy_event = ::server_ohc::orchestration::TeammateMeshEvent {
                 agent_id: "system".to_string(),
@@ -536,7 +536,7 @@ Your response:",
                 })).unwrap_or_default(),
                 msg_id: uuid::Uuid::new_v4().to_string(),
             };
-            hub_clone.publish_teammate_event("protector_inbox".to_string(), policy_event);
+            if let Err(e) = hub_clone.publish_teammate_event("protector_inbox".to_string(), policy_event) { tracing::error!("Failed to publish policy event: {}", e); }
 
             // Zero-Touch Onboarding: Trigger Stripe Connect Initialization
             let stripe_event = ::server_ohc::orchestration::TeammateMeshEvent {
@@ -550,7 +550,7 @@ Your response:",
                 })).unwrap_or_default(),
                 msg_id: uuid::Uuid::new_v4().to_string(),
             };
-            hub_clone.publish_teammate_event("accountant_inbox".to_string(), stripe_event);
+            if let Err(e) = hub_clone.publish_teammate_event("accountant_inbox".to_string(), stripe_event) { tracing::error!("Failed to publish stripe event: {}", e); }
 
 
             // Schedule the weekly health report via the internal task queue for The Advisor
@@ -734,7 +734,7 @@ Your response:",
             msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
-        self.hub.publish_teammate_event("products_inbox".to_string(), event);
+        if let Err(e) = self.hub.publish_teammate_event("products_inbox".to_string(), event) { tracing::error!("Failed to publish product event: {}", e); }
 
         Ok(())
     }

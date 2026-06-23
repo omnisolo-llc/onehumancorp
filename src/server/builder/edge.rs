@@ -259,28 +259,44 @@ pub async fn regenerate_cache(
     html.push_str(r#"
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
         body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: #f5f5f7; color: #1D1D1F; display: flex; flex-direction: column; align-items: center; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glass-container { width: 100%; max-width: 375px; min-height: 100dvh; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); margin: 20px auto; overflow: hidden; display: flex; flex-direction: column; }
+        .glass-container { width: 100%; max-width: 375px; min-height: 100dvh; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); margin: 20px auto; overflow: hidden; display: flex; flex-direction: column; animation: fadeIn 0.4s ease-out forwards; }
         @media (prefers-color-scheme: dark) { body { background: #000; color: #F5F5F7; } .glass-container { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); } }
-        .block { padding: 24px; border-bottom: 1px solid rgba(150,150,150,0.1); }
+        .block { padding: 24px; border-bottom: 1px solid rgba(150,150,150,0.1); animation: fadeIn 0.5s ease-out both; opacity: 0; }
+        .block:nth-child(1) { animation-delay: 0.1s; }
+        .block:nth-child(2) { animation-delay: 0.2s; }
+        .block:nth-child(3) { animation-delay: 0.3s; }
+        .block:nth-child(4) { animation-delay: 0.4s; }
+        .block:nth-child(5) { animation-delay: 0.5s; }
         .block:last-child { border-bottom: none; }
         .hero-title { font-size: 28px; font-weight: 700; margin: 0 0 8px 0; }
         .hero-subtitle { font-size: 16px; color: #666; margin: 0; }
         @media (prefers-color-scheme: dark) { .hero-subtitle { color: #aaa; } }
         .product-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
-        .product-card { background: rgba(255, 255, 255, 0.5); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
-        @media (prefers-color-scheme: dark) { .product-card { background: rgba(50, 50, 55, 0.5); } }
-        .product-name { font-weight: 600; font-size: 16px; margin: 0; }
+        .product-card { background: rgba(255, 255, 255, 0.5); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); cursor: pointer; border: 1px solid transparent; }
+        .product-card:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 10px 20px rgba(0,0,0,0.08); border-color: rgba(0,102,255,0.3); }
+        .product-card:active { transform: translateY(0) scale(0.98); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        @media (prefers-color-scheme: dark) { .product-card { background: rgba(50, 50, 55, 0.5); } .product-card:hover { border-color: rgba(0,102,255,0.5); } }
+        .product-name { font-weight: 600; font-size: 16px; margin: 0; transition: color 0.2s; }
+        .product-card:hover .product-name { color: #0066FF; }
         .product-price { font-weight: 700; color: #0071E3; font-size: 16px; }
         .product-desc { font-size: 14px; color: #555; margin-top: 4px; }
         @media (prefers-color-scheme: dark) { .product-desc { color: #999; } }
-        .btn { background: #0071E3; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; }
-        .btn:active { transform: scale(0.96); }
+        .btn { background: #0071E3; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: 0 4px 6px rgba(0, 113, 227, 0.2); position: relative; overflow: hidden; }
+        .btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent); transform: skewX(-20deg); }
+        .btn:hover::after { animation: shimmer 1.5s infinite; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 12px rgba(0, 113, 227, 0.3); background: #0066FF; }
+        .btn:active { transform: scale(0.96); box-shadow: 0 2px 4px rgba(0, 113, 227, 0.2); }
         .service-block h3 { margin: 0 0 16px 0; }
-        .testimonial { font-style: italic; color: #555; margin-bottom: 8px; }
+        .testimonial { font-style: italic; color: #555; margin-bottom: 8px; transition: transform 0.3s ease; }
+        .testimonial-card:hover .testimonial { transform: translateX(4px); }
         @media (prefers-color-scheme: dark) { .testimonial { color: #bbb; } }
-        .author { font-weight: 600; font-size: 14px; }
+        .author { font-weight: 600; font-size: 14px; color: #0066FF; }
+        .loading-skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; height: 1em; width: 100%; margin-bottom: 8px; }
+        @media (prefers-color-scheme: dark) { .loading-skeleton { background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%); } }
     </style>
     </head>
     <body>

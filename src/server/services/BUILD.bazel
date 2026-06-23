@@ -78,6 +78,7 @@ rust_library(
         "//src/server/services/omnichannel:mod.rs",
         "//src/server/services/omnichannel:gateway.rs",
         "//src/server/services/omnichannel:identity.rs",
+        "//src/server/services/omnichannel:gateway_test.rs",
         "//src/server/services/ops:service.rs",
         "//src/server/services/org:mod.rs",
         "//src/server/services/org:service.rs",
