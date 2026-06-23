@@ -1,0 +1,42 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "project",
+    crate_root = "mod.rs",
+    srcs = [
+        "mod.rs",
+        "service.rs",
+        "service_test.rs",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/auth:server_auth",
+        "//src/server/common:server_common",
+        "//src/proto:ohc_project_prost",
+        "//src/proto:ohc_project_tonic",
+        "@crates//:chrono",
+        "@crates//:prost",
+        "@crates//:prost-types",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tonic",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "project_test",
+    crate = ":project",
+    deps = [
+        "@crates//:tracing-subscriber",
+    ],
+)
+
+exports_files([
+    "mod.rs",
+    "service.rs",
+    "service_test.rs",
+])

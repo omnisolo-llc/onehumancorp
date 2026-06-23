@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package ohc.project;
+
+
+service ProjectService {
+    rpc CreateProposal(CreateProposalRequest) returns (Proposal) {}
+    rpc GetProposal(GetProposalRequest) returns (Proposal) {}
+    rpc UpdateProposalStatus(UpdateProposalStatusRequest) returns (Proposal) {}
+
+    rpc CreateProjectMilestone(CreateProjectMilestoneRequest) returns (ProjectMilestone) {}
+    rpc GetProjectMilestones(GetProjectMilestonesRequest) returns (GetProjectMilestonesResponse) {}
+    rpc UpdateProjectMilestoneStatus(UpdateProjectMilestoneStatusRequest) returns (ProjectMilestone) {}
+}
+
+message Proposal {
+    string id = 1;
+    string tenant_id = 2;
+    string customer_id = 3;
+    string status = 4;
+    int64 total_amount_cents = 5;
+    int64 required_deposit_cents = 6;
+    string checkout_url = 7;
+    string message = 8;
+    int64 created_at = 9;
+    int64 updated_at = 10;
+    repeated ProposalLineItem line_items = 11;
+}
+
+message ProposalLineItem {
+    string id = 1;
+    string proposal_id = 2;
+    string description = 3;
+    int64 unit_price_cents = 4;
+    int32 quantity = 5;
+    int64 created_at = 6;
+    int64 updated_at = 7;
+}
+
+message ProjectMilestone {
+    string id = 1;
+    string tenant_id = 2;
+    string proposal_id = 3;
+    string title = 4;
+    string description = 5;
+    int64 due_date = 6;
+    string status = 7;
+    string invoice_id = 8;
+    int64 created_at = 9;
+    int64 updated_at = 10;
+}
+
+message CreateProposalRequest {
+    string customer_id = 1;
+    string message = 2;
+    repeated CreateProposalLineItem line_items = 3;
+    int64 required_deposit_cents = 4;
+}
+
+message CreateProposalLineItem {
+    string description = 1;
+    int64 unit_price_cents = 2;
+    int32 quantity = 3;
+}
+
+message GetProposalRequest {
+    string proposal_id = 1;
+}
+
+message UpdateProposalStatusRequest {
+    string proposal_id = 1;
+    string status = 2;
+}
+
+message CreateProjectMilestoneRequest {
+    string proposal_id = 1;
+    string title = 2;
+    string description = 3;
+    int64 due_date = 4;
+}
+
+message GetProjectMilestonesRequest {
+    string proposal_id = 1;
+}
+
+message GetProjectMilestonesResponse {
+    repeated ProjectMilestone milestones = 1;
+}
+
+message UpdateProjectMilestoneStatusRequest {
+    string milestone_id = 1;
+    string status = 2;
+    string invoice_id = 3;
+}
