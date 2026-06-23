@@ -93,7 +93,7 @@ export default function LocationManagerDashboard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans">
-      <header className="p-4 bg-white/70 dark:bg-black/70 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800">
+      <header className="p-4 bg-white/70 dark:bg-black/70 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800">
         <h1 className="text-xl font-semibold">Location Dashboard</h1>
         <p className="text-sm text-gray-500">Location A</p>
       </header>
@@ -165,7 +165,7 @@ export default function LocationManagerDashboard() {
 
       {/* Escalation Modal */}
       {showEscalationModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-end md:items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-[30px] saturate-[210%] z-[100] flex items-end md:items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 md:zoom-in-95">
             <h3 className="text-xl font-semibold mb-2">Escalate Issue</h3>
             <p className="text-sm text-gray-500 mb-6">The Operations Agent is preparing a summary for the owner.</p>

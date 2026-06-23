@@ -162,7 +162,7 @@ export default function Integrations() {
       <div className="flex flex-col font-inter">
         {/* Twilio for WhatsApp Connect Modal */}
         {showWhatsAppModal && (
-          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-[30px] saturate-[210%]">
             <div className="app-card glassmorphism w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/40 dark:border-white/10 bg-white/90 dark:bg-zinc-900/90">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 bg-teal-50/10 rounded-xl flex items-center justify-center text-2xl text-teal-600 border border-teal-100/30">
@@ -227,7 +227,7 @@ export default function Integrations() {
 
         {/* WhatsApp Cloud API Connect Modal */}
         {showWhatsAppCloudApiModal && (
-          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-[30px] saturate-[210%]">
             <div className="app-card glassmorphism w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/40 dark:border-white/10 bg-white/90 dark:bg-zinc-900/90">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 bg-teal-50/10 rounded-xl flex items-center justify-center text-2xl text-teal-600 border border-teal-100/30">
@@ -259,7 +259,7 @@ export default function Integrations() {
 
         {/* Twilio Conversations Connect Modal */}
         {showTwilioModal && (
-          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-[30px] saturate-[210%]">
             <div className="app-card glassmorphism w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/40 dark:border-white/10 bg-white/90 dark:bg-zinc-900/90">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 bg-teal-50/10 rounded-xl flex items-center justify-center text-2xl text-teal-600 border border-teal-100/30">

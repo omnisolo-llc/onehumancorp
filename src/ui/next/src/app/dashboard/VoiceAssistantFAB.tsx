@@ -76,13 +76,13 @@ export function VoiceAssistantFAB() {
   return (
     <div className="fixed bottom-24 right-6 z-50 flex flex-col items-center gap-2">
       {isListening && (
-        <div className="px-4 py-2 bg-indigo-600/90 text-white rounded-full text-sm font-medium animate-pulse shadow-lg backdrop-blur-md border border-indigo-400/30">
+        <div className="px-4 py-2 bg-indigo-600/90 text-white rounded-full text-sm font-medium animate-pulse shadow-lg backdrop-blur-[30px] saturate-[210%] border border-indigo-400/30">
           Listening... Release to send
         </div>
       )}
 
       {isProcessing && (
-        <div className="px-4 py-2 bg-gray-800/90 text-white rounded-full text-sm font-medium shadow-lg backdrop-blur-md border border-gray-600/30">
+        <div className="px-4 py-2 bg-gray-800/90 text-white rounded-full text-sm font-medium shadow-lg backdrop-blur-[30px] saturate-[210%] border border-gray-600/30">
           Processing command...
         </div>
       )}
@@ -97,7 +97,7 @@ export function VoiceAssistantFAB() {
         className={`w-16 h-16 min-w-[44px] min-h-[44px] rounded-full shadow-2xl flex items-center justify-center text-2xl transition-all duration-200 border-2 ${
           isListening
             ? 'bg-red-500 scale-110 border-red-400 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)]'
-            : 'bg-indigo-600 hover:bg-indigo-500 hover:scale-105 border-indigo-400/50 backdrop-blur-xl bg-opacity-80'
+            : 'bg-indigo-600 hover:bg-indigo-500 hover:scale-105 border-indigo-400/50 backdrop-blur-[30px] saturate-[210%] bg-opacity-80'
         } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
         aria-label="Voice Command Assistant"
         title="Hold to speak to your assistant"

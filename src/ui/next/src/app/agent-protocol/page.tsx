@@ -112,7 +112,7 @@ export default function AgentProtocolPage() {
               placeholder="New Task Input..."
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
-              className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-white/50 backdrop-blur-sm"
+              className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-white/50 backdrop-blur-[30px] saturate-[210%]"
             />
             <button
               onClick={createTask}
@@ -150,7 +150,7 @@ export default function AgentProtocolPage() {
                   placeholder="Optional Step Input..."
                   value={stepInput}
                   onChange={(e) => setStepInput(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-white/50 backdrop-blur-sm"
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-white/50 backdrop-blur-[30px] saturate-[210%]"
                 />
                 <button
                   onClick={executeStep}

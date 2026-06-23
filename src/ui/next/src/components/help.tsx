@@ -229,7 +229,7 @@ export function HelpWidget() {
 
       {open && (
         <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
-          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md overflow-x-auto scrollbar-hide">
+          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide">
             {helpTabs.map((t) => (
               <button
                 key={t.id}
@@ -262,7 +262,7 @@ export function HelpWidget() {
                       <h4 className="font-bold font-outfit text-gray-800 mb-3 text-lg">{category}</h4>
                       <div className="space-y-3">
                         {articles.map((a, aIdx) => (
-                          <div key={aIdx} className="bg-white/80 backdrop-blur-xl saturate-200 p-5 rounded-2xl shadow-sm border border-white/60 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
+                          <div key={aIdx} className="bg-white/80 backdrop-blur-[30px] saturate-[210%] saturate-200 p-5 rounded-2xl shadow-sm border border-white/60 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
                             {a.link ? (
                               <a href={a.link} className="block min-h-[44px]"><h4 className="font-bold font-outfit text-blue-700 text-base hover:underline">{a.title}</h4></a>
                             ) : (
@@ -312,8 +312,8 @@ export function HelpWidget() {
                   {chatMessages.map((msg) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
                       msg.role === "bot"
-                        ? "backdrop-blur-2xl bg-white/80 border border-white/60 shadow-sm text-blue-900 rounded-tl-none"
-                        : "backdrop-blur-2xl bg-white/40 border border-white/40 shadow-sm text-gray-800 rounded-tr-none ml-auto"
+                        ? "backdrop-blur-[30px] saturate-[210%] bg-white/80 border border-white/60 shadow-sm text-blue-900 rounded-tl-none"
+                        : "backdrop-blur-[30px] saturate-[210%] bg-white/40 border border-white/40 shadow-sm text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
                       <div key={msg.id} className={className}>
@@ -335,9 +335,9 @@ export function HelpWidget() {
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    className="flex-1 p-3 border border-white/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/80 backdrop-blur-md shadow-sm min-h-[44px]"
+                    className="flex-1 p-3 border border-white/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white/80 backdrop-blur-[30px] saturate-[210%] shadow-sm min-h-[44px]"
                   />
-                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-md text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send message">
+                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send message">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </form>
@@ -351,7 +351,7 @@ export function HelpWidget() {
                   {videos.map((v) => (
                     <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-sm border border-white/30">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
-                      <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
+                      <div className="w-10 h-10 bg-white/90 backdrop-blur-[30px] saturate-[210%] rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                       </div>
                       <div className="absolute bottom-2 left-2 right-2 z-10">
@@ -397,7 +397,7 @@ export function HelpWidget() {
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-10 flex justify-between items-start pt-6">
               <h3 className="text-white font-bold font-outfit text-base pr-4 line-clamp-2 drop-shadow-md leading-tight">{activeVideo.title}</h3>
-              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" aria-label="Close video">
+              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-[30px] saturate-[210%] border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" aria-label="Close video">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>

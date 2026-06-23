@@ -45,9 +45,9 @@ export function PoweredByOHC({ tenantId }: PoweredByOHCProps) {
     >
       {isHovered && (
         <div
-          className="absolute bottom-full mb-3 w-64 p-4 rounded-[20px] border border-white/50 bg-white/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[9999] text-center animate-fade-in transition-all duration-300 pointer-events-auto"
+          className="absolute bottom-full mb-3 w-64 p-4 rounded-[20px] border border-white/50 bg-white/70 backdrop-blur-[30px] saturate-[210%] shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-[9999] text-center animate-fade-in transition-all duration-300 pointer-events-auto"
         >
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/70 border-b border-r border-white/50 transform rotate-45 backdrop-blur-xl z-[9998]"></div>
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/70 border-b border-r border-white/50 transform rotate-45 backdrop-blur-[30px] saturate-[210%] z-[9998]"></div>
 
           <div className="relative z-[9999]">
             <div className="flex justify-center mb-2">
@@ -76,7 +76,7 @@ export function PoweredByOHC({ tenantId }: PoweredByOHCProps) {
       <a
         href={referralUrl}
         onClick={handleBaseClick}
-        className="group flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white/50 backdrop-blur-md hover:bg-white/80 hover:shadow-sm transition-all text-xs font-semibold text-gray-500 hover:text-indigo-600 uppercase tracking-widest font-outfit z-10 relative"
+        className="group flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white/50 backdrop-blur-[30px] saturate-[210%] hover:bg-white/80 hover:shadow-sm transition-all text-xs font-semibold text-gray-500 hover:text-indigo-600 uppercase tracking-widest font-outfit z-10 relative"
       >
         <span className="text-yellow-400 group-hover:scale-110 transition-transform">⚡</span>
         Powered by OHC

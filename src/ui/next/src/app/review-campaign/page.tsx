@@ -59,7 +59,7 @@ export default function ReviewCampaignBuilderPage() {
           </p>
         </div>
 
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-[30px] saturate-[210%] shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
           <form onSubmit={handleGenerate} className="space-y-6">
             <div>
               <label htmlFor="customerName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -123,7 +123,7 @@ export default function ReviewCampaignBuilderPage() {
         </div>
 
         {generatedDraft && (
-          <div className="bg-indigo-50/80 dark:bg-indigo-900/20 backdrop-blur-md shadow-xl rounded-2xl p-6 border border-indigo-100 dark:border-indigo-800 animate-fade-in-up">
+          <div className="bg-indigo-50/80 dark:bg-indigo-900/20 backdrop-blur-[30px] saturate-[210%] shadow-xl rounded-2xl p-6 border border-indigo-100 dark:border-indigo-800 animate-fade-in-up">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">✨</span>
               <h3 className="text-lg font-bold font-outfit text-indigo-900 dark:text-indigo-300">

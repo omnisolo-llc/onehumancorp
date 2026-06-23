@@ -52,7 +52,7 @@ export default function VerificationLoopsPage() {
             Task Context
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white/50 backdrop-blur-sm"
+            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white/50 backdrop-blur-[30px] saturate-[210%]"
             rows={4}
             value={taskContext}
             onChange={(e) => setTaskContext(e.target.value)}
@@ -65,7 +65,7 @@ export default function VerificationLoopsPage() {
             Agent Output / Command / Path
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white/50 backdrop-blur-sm font-mono text-sm"
+            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white/50 backdrop-blur-[30px] saturate-[210%] font-mono text-sm"
             rows={4}
             value={outputText}
             onChange={(e) => setOutputText(e.target.value)}
@@ -101,7 +101,7 @@ export default function VerificationLoopsPage() {
       </div>
 
       {error && (
-        <div className="mt-8 p-4 bg-red-50/80 backdrop-blur-sm text-red-700 rounded-lg border border-red-200">
+        <div className="mt-8 p-4 bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-lg border border-red-200">
           <h3 className="font-bold mb-2 flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             Verification Failed
@@ -111,7 +111,7 @@ export default function VerificationLoopsPage() {
       )}
 
       {result && (
-        <div className="mt-8 p-6 bg-green-50/80 backdrop-blur-sm text-green-800 border border-green-200 rounded-lg shadow-sm">
+        <div className="mt-8 p-6 bg-green-50/80 backdrop-blur-[30px] saturate-[210%] text-green-800 border border-green-200 rounded-lg shadow-sm">
           <h3 className="font-bold mb-2 flex items-center text-green-900">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
             Verification Passed

@@ -47,7 +47,7 @@ export function ShareAndSaveWidget({ tenantId, discountPercentage, onShareComple
   }
 
   return (
-    <div className="mb-6 p-5 rounded-xl glassmorphism border border-indigo-200/60 dark:border-indigo-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-md relative overflow-hidden group" data-testid="share-and-save-widget">
+    <div className="mb-6 p-5 rounded-xl glassmorphism border border-indigo-200/60 dark:border-indigo-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden group" data-testid="share-and-save-widget">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
         <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-indigo-200 dark:border-indigo-800 group-hover:scale-110 transition-transform">
           <span className="text-xl">🎁</span>

@@ -132,7 +132,7 @@ export default function StorefrontWidgetPage() {
                     {/* Mock Widget Content for Preview (matches the real iframe output loosely) */}
                     <div className="w-full h-48 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-t-[16px] relative flex items-center justify-center">
                         <span className="text-4xl">🛍️</span>
-                        <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 text-white text-xs font-bold px-3 py-1 rounded-full">
                             Featured
                         </div>
                     </div>
@@ -172,7 +172,7 @@ export default function StorefrontWidgetPage() {
 
       {/* Embed Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
             <div className="app-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"

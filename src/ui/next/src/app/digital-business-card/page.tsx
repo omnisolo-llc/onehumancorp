@@ -88,7 +88,7 @@ export default function DigitalBusinessCardGeneratorPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7] dark:bg-[#121212]">
-      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-40 bg-white/65 dark:bg-black/65 backdrop-blur-md border-gray-200 dark:border-gray-800">
+      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-40 bg-white/65 dark:bg-black/65 backdrop-blur-[30px] saturate-[210%] border-gray-200 dark:border-gray-800">
         <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-white tracking-tight">Digital Business Card Generator</h1>
         <Link href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 dark:bg-gray-800 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors dark:text-white">
           Back to Dashboard
@@ -350,7 +350,7 @@ export default function DigitalBusinessCardGeneratorPage() {
 
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
-        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-[30px] saturate-[210%] animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#1E1E1E] w-full max-w-md rounded-3xl p-8 shadow-2xl relative overflow-hidden font-inter text-center border border-gray-100 dark:border-gray-800">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-100 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/10 rounded-bl-[100px] -z-10 opacity-60"></div>
 

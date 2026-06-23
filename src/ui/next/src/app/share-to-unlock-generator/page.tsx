@@ -37,7 +37,7 @@ export default function ShareToUnlockGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Share-to-Unlock Generator 🔓</h1>
         <button
           onClick={() => router.push('/dashboard')}
@@ -50,7 +50,7 @@ export default function ShareToUnlockGeneratorPage() {
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
         {/* Settings Panel */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 rounded-[16px] shadow-lg bg-white/80 backdrop-blur-md border border-white/40">
+            <div className="p-6 rounded-[16px] shadow-lg bg-white/80 backdrop-blur-[30px] saturate-[210%] border border-white/40">
                 <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Campaign Settings</h2>
 
                 <div className="mb-4">

@@ -72,7 +72,7 @@ export default function WhatsAppLinkGeneratorPage() {
         <title>WhatsApp Link Generator | OHC</title>
       </Head>
 
-      <nav className="p-6 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+      <nav className="p-6 border-b border-gray-100 bg-white/80 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-600/20">
@@ -88,7 +88,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
       <main className="max-w-6xl mx-auto p-6 pt-12 flex flex-col md:flex-row gap-12">
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-8 rounded-[16px] shadow-xl border border-gray-100 bg-white/60 backdrop-blur-xl">
+            <div className="p-8 rounded-[16px] shadow-xl border border-gray-100 bg-white/60 backdrop-blur-[30px] saturate-[210%]">
                 <h1 className="text-3xl font-bold font-outfit mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                     WhatsApp Link Generator 📱
                 </h1>
@@ -213,7 +213,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
       {/* Embed Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
             <div className="bg-white rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"
@@ -256,7 +256,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
       {/* Paywall Modal */}
       {showPaywall && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
             <div className="bg-white rounded-[16px] p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close modal"

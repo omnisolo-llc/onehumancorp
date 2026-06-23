@@ -209,7 +209,7 @@ export default function ShareCardsPage() {
                  )}
 
                  <div className="z-10 flex flex-col items-center">
-                    <div className="w-20 h-20 mb-6 bg-white/20 rounded-2xl shadow-inner flex items-center justify-center backdrop-blur-md border border-white/30">
+                    <div className="w-20 h-20 mb-6 bg-white/20 rounded-2xl shadow-inner flex items-center justify-center backdrop-blur-[30px] saturate-[210%] border border-white/30">
                         <span className="text-4xl">🛍️</span>
                     </div>
                     <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold font-outfit mb-4 leading-tight tracking-tight drop-shadow-sm">

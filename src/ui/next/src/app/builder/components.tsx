@@ -19,7 +19,7 @@ export function ActionSheet({ isOpen, onClose, title, children }: { isOpen: bool
   if (!isOpen) return null;
   return (
     <div className="absolute inset-0 z-[100] flex flex-col justify-end">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={onClose} />
       <div className="glassmorphism w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up relative z-10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{title}</h2>
@@ -151,7 +151,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
               )}
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{item.name}</h3>
-                <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-white/10 backdrop-blur-sm px-2 py-1 rounded-[8px] text-sm">{item.price}</span>
+                <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] px-2 py-1 rounded-[8px] text-sm">{item.price}</span>
               </div>
               <p className="text-sm text-gray-600 dark:text-[#A1A1A6] leading-relaxed">{item.description}</p>
               <button className="mt-4 w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] font-semibold py-2 rounded-[8px] min-h-[44px] flex items-center justify-center hover:bg-opacity-80 transition-colors">

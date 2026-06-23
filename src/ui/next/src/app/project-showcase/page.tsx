@@ -68,7 +68,7 @@ export default function ProjectShowcasePage() {
   return (
     <div className="flex flex-col min-h-screen bg-[#F5F5F7] text-[#1D1D1F] font-inter">
       {/* Header */}
-      <header className="px-4 py-4 md:px-6 flex items-center justify-between sticky top-0 z-40 bg-[#F5F5F7]/80 backdrop-blur-xl border-b border-[#E5E5EA]">
+      <header className="px-4 py-4 md:px-6 flex items-center justify-between sticky top-0 z-40 bg-[#F5F5F7]/80 backdrop-blur-[30px] saturate-[210%] border-b border-[#E5E5EA]">
         <h1 className="text-xl md:text-2xl font-bold tracking-tight">Project Showcase</h1>
         <button
           onClick={() => router.push('/dashboard')}
@@ -269,7 +269,7 @@ export default function ProjectShowcasePage() {
 
       {/* Paywall Modal */}
       {showPaywall && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%] z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <button
               onClick={() => setShowPaywall(false)}

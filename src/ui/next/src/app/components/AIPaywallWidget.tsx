@@ -33,7 +33,7 @@ export function AIPaywallWidget({ remainingActions }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-[30px] saturate-[210%]">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 relative">
         <button
           onClick={handleDismiss}

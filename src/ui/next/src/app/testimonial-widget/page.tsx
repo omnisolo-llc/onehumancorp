@@ -41,7 +41,7 @@ export default function TestimonialWidgetGenerator() {
         <title>Testimonial Widget Builder | OHC</title>
       </Head>
 
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Testimonial Widget 🌟</h1>
         <button className="px-4 py-2 bg-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard
@@ -181,7 +181,7 @@ export default function TestimonialWidgetGenerator() {
 
       {/* Embed Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
             <div className="bg-white rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"

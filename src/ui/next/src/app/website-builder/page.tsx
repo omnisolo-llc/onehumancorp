@@ -313,7 +313,7 @@ export default function WebsiteBuilderPage() {
             {wizardStep !== 0 && (
               <button
                 onClick={handleBack}
-                className="absolute top-6 left-8 text-[#0066FF] font-medium text-sm hover:underline transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] z-10 flex items-center gap-1 bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
+                className="absolute top-6 left-8 text-[#0066FF] font-medium text-sm hover:underline transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] z-10 flex items-center gap-1 bg-white/50 backdrop-blur-[30px] saturate-[210%] px-3 py-1 rounded-full shadow-sm border border-white/20"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
@@ -326,7 +326,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep !== 0 && wizardStep !== 'instant-build' && (
                 <button
                   onClick={handleSaveDraft}
-                  className="text-[#0066FF] font-medium text-sm hover:underline transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
+                  className="text-[#0066FF] font-medium text-sm hover:underline transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] bg-white/50 backdrop-blur-[30px] saturate-[210%] px-3 py-1 rounded-full shadow-sm border border-white/20"
                 >
                   Save Draft
                 </button>
@@ -805,7 +805,7 @@ export default function WebsiteBuilderPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden glassmorphism">
-        <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
+        <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-[30px] saturate-[210%] text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>

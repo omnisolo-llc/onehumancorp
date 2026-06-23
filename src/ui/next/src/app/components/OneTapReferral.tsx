@@ -11,7 +11,7 @@ export function OneTapReferral({ tenantId, source, style }: { tenantId: string, 
   };
 
   return (
-    <div className="one-tap-referral p-4 bg-indigo-50/50 backdrop-blur-sm border border-indigo-100 rounded-xl shadow-sm text-center">
+    <div className="one-tap-referral p-4 bg-indigo-50/50 backdrop-blur-[30px] saturate-[210%] border border-indigo-100 rounded-xl shadow-sm text-center">
       <h3 className="font-bold font-outfit text-indigo-900 mb-1">Refer & Earn $50</h3>
       <p className="text-xs text-indigo-700 mb-3">Invite a friend to OHC and you both get rewarded!</p>
       <div className="flex gap-2 justify-center">

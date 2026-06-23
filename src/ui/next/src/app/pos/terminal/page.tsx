@@ -446,7 +446,7 @@ export default function POSTerminal() {
            {/* Cart Drawer */}
            {isCartOpen && !checkoutComplete && (
              <div className="fixed inset-0 z-50 flex flex-col justify-end">
-               <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsCartOpen(false)}></div>
+               <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => setIsCartOpen(false)}></div>
                <div className="relative bg-white/85 backdrop-blur-[40px] saturate-[210%] border-t border-white/40 rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
                  <div className="flex justify-between items-center mb-6">
                    <h2 className="text-xl font-bold font-outfit text-gray-900">Current Order</h2>
@@ -489,7 +489,7 @@ export default function POSTerminal() {
 
            {/* Post-Sale Screen */}
            {checkoutComplete && (
-             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-white/80 backdrop-blur-md">
+             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-white/80 backdrop-blur-[30px] saturate-[210%]">
                <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 w-full max-w-sm text-center animate-in zoom-in-95">
                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
@@ -532,7 +532,7 @@ export default function POSTerminal() {
         </div>
 
         {syncing && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-md border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -541,7 +541,7 @@ export default function POSTerminal() {
           </div>
         )}
         {offlineConversion && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100/80 backdrop-blur-md border border-amber-200 shadow-xl shadow-amber-500/20 text-amber-900 px-4 py-2 rounded-full text-xs font-bold animate-bounce">
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-amber-100/80 backdrop-blur-[30px] saturate-[210%] border border-amber-200 shadow-xl shadow-amber-500/20 text-amber-900 px-4 py-2 rounded-full text-xs font-bold animate-bounce">
             {t('Using cached rates - Syncing soon')}
           </div>
         )}

@@ -115,7 +115,7 @@ export default function AgentMarketplacePage() {
  )}
 
  {toastMessage && (
- <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-md shadow-lg rounded-full px-6 py-3 text-gray-900 border border-white/50 animate-in fade-in slide-in-from-bottom-4 flex items-center gap-2">
+ <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-[30px] saturate-[210%] shadow-lg rounded-full px-6 py-3 text-gray-900 border border-white/50 animate-in fade-in slide-in-from-bottom-4 flex items-center gap-2">
  <span className="text-green-500">✓</span>
  <span className="font-medium">{toastMessage}</span>
  </div>

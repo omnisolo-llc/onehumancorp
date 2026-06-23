@@ -76,7 +76,7 @@ export default function ProductsPage() {
 
       {/* QR Code Modal */}
       {isQRModalOpen && selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-[30px] saturate-[210%]">
           <div className="relative w-full max-w-md p-8 bg-white/80 rounded-[24px] shadow-2xl border border-white/40 overflow-hidden" style={{ backdropFilter: 'blur(40px) saturate(200%)' }}>
             <button
               onClick={closeQRModal}

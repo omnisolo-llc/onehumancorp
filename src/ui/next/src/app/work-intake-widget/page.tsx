@@ -116,7 +116,7 @@ export default function WorkIntakeWidgetPage() {
                         type="text"
                         value={tenant}
                         onChange={(e) => setTenant(e.target.value)}
-                        className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] backdrop-blur-md transition-all"
+                        className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] backdrop-blur-[30px] saturate-[210%] transition-all"
                         placeholder="e.g. my-business"
                     />
                 </div>
@@ -127,7 +127,7 @@ export default function WorkIntakeWidgetPage() {
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] backdrop-blur-md transition-all"
+                        className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] backdrop-blur-[30px] saturate-[210%] transition-all"
                         placeholder="e.g. Work Request"
                     />
                 </div>
@@ -258,7 +258,7 @@ export default function WorkIntakeWidgetPage() {
       {/* Embed Code Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)}></div>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => setShowModal(false)}></div>
             <div className="app-card rounded-[16px] shadow-2xl p-8 max-w-xl w-full relative z-10 animate-fade-in-up">
                 <button
                     aria-label="Close embed modal"

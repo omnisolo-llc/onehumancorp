@@ -56,7 +56,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%] animate-in fade-in duration-200">
       <div
         className="w-full max-w-lg bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-t-[24px] sm:rounded-[24px] shadow-2xl border border-white/40 dark:border-white/10 flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom duration-300"
         role="dialog"
