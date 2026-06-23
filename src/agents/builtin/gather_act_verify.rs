@@ -6,7 +6,7 @@ use crate::tools::Tool;
 use crate::agent::AgentEvent;
 use crate::agent::AgentRunConfig;
 
-/// Anthropic Claude Agent SDK & Claude Code Archetype:
+/// Master Catalog A: Framework Implementation Archetypes: Anthropic Claude Agent SDK & Claude Code.
 /// Implements the harness via a single `query()` function that returns an async iterator streaming messages.
 /// Uses a "dumb loop" Gather-Act-Verify cycle:
 /// 1. gather context (search files, read code)

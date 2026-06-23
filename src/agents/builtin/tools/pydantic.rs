@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::sync::Arc;
 
-/// SOTA Harness Pattern: Pydantic-first tool schema validation.
+/// Master Catalog B.6. Output Parsing: Schema-constrained responses with Pydantic fallback.
 /// If validation fails, it generates a precise ToolError::LlmRecoverable containing the serde validation error
 /// so the LLM can self-correct its arguments.
 

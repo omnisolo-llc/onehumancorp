@@ -1,4 +1,4 @@
-/// CrewAI: Role-based + Flow deterministic backbone
+/// Master Catalog A: Framework Implementation Archetypes: CrewAI.
 use crate::agent::{Agent, AgentRunConfig};
 use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
