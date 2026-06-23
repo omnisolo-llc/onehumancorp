@@ -18,11 +18,12 @@ pub static ONBOARDING_STATE_CACHE: OnceLock<HybridCache<::server_ohc::app::GetOn
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
     db: Arc<crate::db::DB>,
+    pub is_multitenant: bool,
 }
 
 impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
-        Self { db, hub }
+        Self { db, hub, is_multitenant: ::server_config::get().multitenant }
     }
 
     #[tracing::instrument(skip(self))]
@@ -535,12 +536,12 @@ impl DashboardService for MyDashboardService {
 
         let req = request.into_inner();
 
-        if ::server_config::get().multitenant && req.organization_id.is_empty() {
+        if self.is_multitenant && req.organization_id.is_empty() {
             return Err(Status::invalid_argument(
                 "organization_id is required in cloud mode to maintain tenant isolation",
             ));
         }
-        if ::server_config::get().multitenant
+        if self.is_multitenant
             && auth_info.org_id != "system"
             && auth_info.org_id != req.organization_id
         {
@@ -784,7 +785,7 @@ impl DashboardService for MyDashboardService {
         let req = request.into_inner();
         let org_id = req.organization_id;
 
-        if ::server_config::get().multitenant && org_id.is_empty() {
+        if self.is_multitenant && org_id.is_empty() {
             return Err(Status::invalid_argument(
                 "organization_id is required in cloud mode to maintain tenant isolation",
             ));
@@ -935,16 +936,16 @@ mod tests {
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(database_url).await.unwrap();
+            .connect(database_url).await.expect("Failed");
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.expect("Failed");
+        sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.expect("Failed");
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.expect("Failed");
 
         // Add dummy data for tests
-        sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'test_org', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'test_org', 50.0, 'completed')").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('test_org', 'Test Org', 'free')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'test_org', 'Test Product', 'physical', 100.0)").execute(&pool).await.expect("Failed");
+        sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'test_org', 50.0, 'completed')").execute(&pool).await.expect("Failed");
+        sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('test_org', 'Test Org', 'free')").execute(&pool).await.expect("Failed");
 
         let pg_pool = crate::db::get_pool();
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
@@ -990,7 +991,7 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
+        let res_mobile = service.get_dashboard(request_mobile).await.expect("Failed").into_inner();
         assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
         if let Some(org) = res_mobile.organization {
             assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
@@ -1035,7 +1036,7 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res_desktop = service.get_dashboard(request_desktop).await.unwrap().into_inner();
+        let res_desktop = service.get_dashboard(request_desktop).await.expect("Failed").into_inner();
         assert_ne!(res_desktop.agents[0].name, "", "Desktop should preserve agent names");
         if !res_desktop.meetings.is_empty() {
             assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop should preserve meeting transcripts");
@@ -1053,8 +1054,8 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res = service.get_dashboard(request).await.unwrap().into_inner();
-        let cost_summary = res.cost_summary.unwrap();
+        let res = service.get_dashboard(request).await.expect("Failed").into_inner();
+        let cost_summary = res.cost_summary.expect("Failed");
         // Since original text is long with stop words ("a", "is", "and", "about", "of"),
         // the tokens should be mathematically reduced (compressed < original).
         // The mock might return 0 total_tokens, so we just verify it doesn't crash and returns the struct.
@@ -1074,7 +1075,7 @@ mod tests {
             agent_id: "test".to_string(),
         });
         let start1 = std::time::Instant::now();
-        let _res1 = service.get_dashboard(request1).await.unwrap().into_inner();
+        let _res1 = service.get_dashboard(request1).await.expect("Failed").into_inner();
         let _elapsed1 = start1.elapsed();
 
         let req2 = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
@@ -1085,7 +1086,7 @@ mod tests {
             agent_id: "test".to_string(),
         });
         let start2 = std::time::Instant::now();
-        let _res2 = service.get_dashboard(request2).await.unwrap().into_inner();
+        let _res2 = service.get_dashboard(request2).await.expect("Failed").into_inner();
         let _elapsed2 = start2.elapsed();
 
         // The second call might be faster, but we just verify it works properly via caching
@@ -1107,25 +1108,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_dashboard_wrong_org() {
-        // the config sets multitenant mode state, we need to bypass or mock it, or skip.
-        // It turns out server_config::get().multitenant is false by default in tests
-        // unless environment variables are set.
-        // Let's test get_onboarding_state instead, which doesn't check multitenant config
-        // but DOES check auth_info.org_id != org_id.
-        let service = setup_test_dashboard_service().await;
+        let mut service = setup_test_dashboard_service().await;
+        service.is_multitenant = true;
 
-        let req = ::server_ohc::app::GetOnboardingStateRequest { organization_id: "test_org".to_string() };
+        let req = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request = Request::new(req);
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
             org_id: "other_org".to_string(),
             agent_id: "test".to_string(),
         });
-        let res = service.get_onboarding_state(request).await;
+
+        let res = service.get_dashboard(request).await;
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
-
     #[tokio::test]
     async fn test_agent_cache_ttl_config() {
         // We can't directly check the TTL of a set value easily with current HybridCache API,
@@ -1158,10 +1155,28 @@ mod tests {
         });
 
         let start = std::time::Instant::now();
-        let _res = service.get_dashboard(request).await.unwrap().into_inner();
+        let _res = service.get_dashboard(request).await.expect("Failed").into_inner();
         let elapsed = start.elapsed();
         tracing::info!("Hybrid benchmark completed in {} ms", elapsed.as_millis());
         assert!(elapsed.as_millis() < 500, "Dashboard fetch took too long: {}ms", elapsed.as_millis());
+    }
+
+    #[tokio::test]
+    async fn test_dashboard_multitenant_missing_org() {
+        let mut service = setup_test_dashboard_service().await;
+        service.is_multitenant = true;
+
+        let req = GetDashboardRequest { organization_id: "".to_string(), mobile_optimized: false };
+        let mut request = Request::new(req);
+        request.extensions_mut().insert(AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "test_org".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let res = service.get_dashboard(request).await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
 }
 
