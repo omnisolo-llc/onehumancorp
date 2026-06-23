@@ -378,8 +378,203 @@ pub struct UpdateInvoiceStatusHttp {
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
     Router::new()
         .route("/", get(list_invoices_handler).post(create_invoice_handler))
-        .route("/{id}/status", put(update_invoice_status_handler))
+        .route("/{id}/status", put(update_invoice_status_handler).get(get_invoice_status_handler))
+        .route("/trigger_autonomous_draft", axum::routing::post(trigger_autonomous_draft_handler))
+        .route("/{id}/approve", axum::routing::post(approve_invoice_handler))
         .with_state(hub)
+}
+
+async fn get_invoice_status_handler(
+    State(hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
+        Some(t) if !t.trim().is_empty() => t.to_string(),
+        _ => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    let service = InvoiceServiceImpl { hub: hub.clone() };
+    let req = tonic::Request::new(::server_ohc::invoice::GetInvoiceRequest {
+        tenant_id: tenant_id.clone(),
+        invoice_id: id.clone(),
+    });
+
+    match service.get_invoice(req).await {
+        Ok(resp) => {
+            let inv = resp.into_inner();
+            Ok(Json(serde_json::json!({
+                "status": inv.status
+            })))
+        },
+        Err(_) => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+async fn trigger_autonomous_draft_handler(
+    State(hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
+        Some(t) if !t.trim().is_empty() => t.to_string(),
+        _ => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    // 1. Create a draft invoice
+    let invoice_id = uuid::Uuid::new_v4().to_string();
+    let client_name = "Smith Residence".to_string();
+    let status = "draft".to_string();
+    let total_amount = 450.0;
+
+    let mut tx = hub.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+        .bind(&tenant_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
+
+    sqlx::query(
+        "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+    )
+    .bind(&invoice_id)
+    .bind(&tenant_id)
+    .bind("client123")
+    .bind(&client_name)
+    .bind(&status)
+    .bind(chrono::Utc::now().timestamp() + 86400)
+    .bind("USD")
+    .bind(total_amount)
+    .bind(&stripe_payment_link)
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let item_id = uuid::Uuid::new_v4().to_string();
+    sqlx::query(
+        "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)"
+    )
+    .bind(&item_id)
+    .bind(&tenant_id)
+    .bind(&invoice_id)
+    .bind("Repair Job")
+    .bind(1)
+    .bind(450.0)
+    .bind(450.0)
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 2. Add an item to the Agent Feed
+    let feed_id = uuid::Uuid::new_v4().to_string();
+    let action_payload = serde_json::json!({
+        "invoice_id": invoice_id,
+        "amount": 450.0,
+        "client_name": client_name
+    });
+
+    sqlx::query(
+        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+    )
+    .bind(&feed_id)
+    .bind(&tenant_id)
+    .bind("finance_agent")
+    .bind(sqlx::types::Json(serde_json::json!({"description": format!("Job completed for {}.", client_name), "feature_type": "autonomous_invoice"})))
+    .bind(sqlx::types::Json(action_payload))
+    .bind("PENDING_APPROVAL")
+    .bind(chrono::Utc::now())
+    .bind(chrono::Utc::now())
+    .execute(&hub.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "invoice_id": invoice_id,
+        "feed_id": feed_id
+    })))
+}
+
+async fn approve_invoice_handler(
+    State(hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
+        Some(t) if !t.trim().is_empty() => t.to_string(),
+        _ => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    let mut tx = hub.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+        .bind(&tenant_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 1. Update invoice status to 'sent'
+    sqlx::query("UPDATE invoices SET status = 'sent', updated_at = $1 WHERE id = $2 AND tenant_id = $3")
+        .bind(chrono::Utc::now().timestamp())
+        .bind(&id)
+        .bind(&tenant_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 2. Fetch the invoice to get amount
+    let inv: (f64, String) = sqlx::query_as("SELECT total_amount, currency FROM invoices WHERE id = $1 AND tenant_id = $2")
+        .bind(&id)
+        .bind(&tenant_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let total_amount = inv.0;
+    let currency = inv.1;
+
+    // 3. Create a LedgerTransaction (or cash_ledger_entry) to represent the sent invoice expectation
+    let ledger_entry_id = uuid::Uuid::new_v4().to_string();
+    // Assuming ohc_universal_ledger
+    sqlx::query(
+        "INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change)
+         VALUES ($1, $2, $3, $4, $5)"
+    )
+    .bind(&ledger_entry_id)
+    .bind(&tenant_id)
+    .bind("finance")
+    .bind("INVOICE_SENT")
+    .bind(serde_json::json!({
+        "invoice_id": id,
+        "amount_cents": (total_amount * 100.0) as i32,
+        "currency": currency
+    }))
+    .execute(&mut *tx)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 4. Update the agent feed item to 'APPROVED'
+    sqlx::query("UPDATE agent_feed_items SET lifecycle_state = 'APPROVED', updated_at = $1 WHERE tenant_id = $2 AND proposed_action->>'invoice_id' = $3")
+        .bind(chrono::Utc::now())
+        .bind(&tenant_id)
+        .bind(&id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "status": "sent"
+    })))
 }
 
 
