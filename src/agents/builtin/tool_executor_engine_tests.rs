@@ -508,4 +508,33 @@ mod additional_transient_tests {
         // Loop should run twice: first is error, second is success.
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
+
+    #[tokio::test(start_paused = true)]
+    async fn test_transient_retry_fails_first_then_succeeds_custom() {
+        let call_count = Arc::new(AtomicUsize::new(0));
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(TransientRetryExecutor {
+                call_count: call_count.clone(),
+                fail_until: 1, // Fails once, then succeeds
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        let handle = tokio::spawn(async move {
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(5000)).await;
+        let res = handle.await.expect("Expected string in test");
+        assert!(res.is_ok());
+        assert_eq!(res.expect("Expected string in test"), "success");
+    }
 }
