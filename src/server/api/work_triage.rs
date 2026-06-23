@@ -85,6 +85,9 @@ pub async fn simulate_inbound_signal_handler(
         }
     }
 
+    if let Some(c) = DAILY_WORK_CACHE.get() {
+        let _ = c.invalidate(&format!("daily_work:{}", tenant_id)).await;
+    }
     (axum::http::StatusCode::OK, Json(serde_json::json!({"id": work_item_id, "success": true}))).into_response()
 }
 
@@ -267,6 +270,9 @@ pub async fn approve_daily_work_handler(
             .execute(&db.pool).await;
 
             if res.is_ok() {
+                if let Some(c) = DAILY_WORK_CACHE.get() {
+                    let _ = c.invalidate(&format!("daily_work:{}", tenant_id)).await;
+                }
                 (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
             } else {
                 (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
@@ -282,6 +288,9 @@ pub async fn approve_daily_work_handler(
             .execute(pool).await;
 
             if res.is_ok() {
+                if let Some(c) = DAILY_WORK_CACHE.get() {
+                    let _ = c.invalidate(&format!("daily_work:{}", tenant_id)).await;
+                }
                 (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
             } else {
                 (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()

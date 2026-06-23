@@ -237,9 +237,7 @@ pub async fn bench_agent_snapshot() {
     });
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
-
-
-    let db = if database_url.starts_with("sqlite") {
+let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
@@ -341,9 +339,7 @@ pub async fn bench_dashboard_snapshot() {
     });
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
-
-
-    let db = if database_url.starts_with("sqlite") {
+let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
@@ -424,9 +420,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: true };
     let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
-
-
-    let db_arc = std::sync::Arc::new(db.clone());
+let db_arc = std::sync::Arc::new(db.clone());
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
 
     let mut req_mobile_t = tonic::Request::new(req_mobile);
@@ -441,9 +435,7 @@ pub async fn bench_dashboard_snapshot() {
         org_id: "test_org".to_string(),
         agent_id: "test".to_string(),
     });
-
-
-    let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
+let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
     let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
 
     if !res_mobile.meetings.is_empty() {
@@ -621,9 +613,7 @@ mod tests {
     async fn test_bench_dashboard_analytics_chat_latency() {
         bench_dashboard_analytics_chat_latency().await;
     }
-
-
-    #[tokio::test]
+#[tokio::test]
     async fn test_bench_time_savings_latency() {
         bench_time_savings_latency().await;
     bench_ui_omni_inbox_latency().await;
@@ -709,9 +699,7 @@ mod tests {
         }).await;
         assert!(result.is_err());
     }
-
-
-    #[tokio::test]
+#[tokio::test]
     async fn test_bench_get_analytics() {
         bench_get_analytics().await;
     }
@@ -721,11 +709,7 @@ mod tests {
         bench_advisory_insights_latency().await;
         bench_get_analytics().await;
     }
-
-
 }
-
-
 pub async fn bench_dashboard_analytics_briefing_latency() {
     println!("Benchmarking ui_dashboard_analytics_briefing_handler (Parallel Execution Optimization)...");
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
@@ -772,9 +756,7 @@ pub async fn bench_hybrid_latency() {
 
     println!("4. Billing API Response Time (Parallel Execution Optimization verified, Hybrid Cache)");
     bench_billing_api_response_time().await;
-
-
-    println!("7. Time Savings Latency");
+println!("7. Time Savings Latency");
     bench_time_savings_latency().await;
     bench_ui_omni_inbox_latency().await;
 
@@ -989,14 +971,6 @@ pub async fn bench_time_savings_latency() {
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
         let pool4 = pg_pool.clone();
-        let pool5 = pg_pool.clone();
-        let pool6 = pg_pool.clone();
-        let pool7 = pg_pool.clone();
-        let pool8 = pg_pool.clone();
-        let pool5 = pg_pool.clone();
-        let pool6 = pg_pool.clone();
-        let pool7 = pg_pool.clone();
-        let pool8 = pg_pool.clone();
         let _ = tokio::join!(
             sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
             sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2),
@@ -1086,27 +1060,19 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
         let pool4 = pg_pool.clone();
-        let pool5 = pg_pool.clone();
-        let pool6 = pg_pool.clone();
-        let pool7 = pg_pool.clone();
-        let pool8 = pg_pool.clone();
-        let pool5 = pg_pool.clone();
-        let pool6 = pg_pool.clone();
-        let pool7 = pg_pool.clone();
-        let pool8 = pg_pool.clone();
-        let _ = tokio::join!(
+let _ = tokio::join!(
             sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1),
             sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2),
             sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3),
             sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool5),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool6),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool7),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool8),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool5),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool6),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool7),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool8)
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4)
         );
         let duration_par = start_par.elapsed();
 
@@ -1162,8 +1128,6 @@ pub async fn bench_dashboard_analytics_chat_latency() {
         println!("  - ui_dashboard_analytics_chat_handler (Parallel Execution Optimization verified, Hybrid Cache)");
     }
 }
-
-
 // Benchmarking complete. Hybrid Latency Benchmarking optimizations verified.
 
 pub async fn bench_ui_omni_inbox_latency() {
@@ -1226,17 +1190,13 @@ pub async fn bench_ai_job_dispatch_latency() {
     queue.enqueue_batch(jobs).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
     let duration = start_sim.elapsed();
     println!("  - AI Job Dispatch (Enqueue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration);
-
-
-    let _start_sim = std::time::Instant::now();
+let _start_sim = std::time::Instant::now();
     for _ in 0..100 {
         queue.dequeue(vec!["bench-role".to_string()], 0, 0).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
     }
     let duration_deq = _start_sim.elapsed();
     println!("  - AI Job Dispatch (Dequeue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration_deq);
 }
-
-
 pub async fn bench_ui_orders_latency() {
     println!("Benchmarking list_ui_orders_handler (Mobile Payload Optimization)...");
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
