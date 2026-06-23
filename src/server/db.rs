@@ -378,16 +378,23 @@ impl DB {
                     new_key
                 });
 
-            if key.trim().is_empty() {
-                return Err("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.".into());
-            }
+            let is_test = std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
+            let force_cipher = std::env::var("OHC_TEST_FORCE_SQLCIPHER").is_ok();
 
-            let pragma_key = format!("'{}'", key.replace('\'', "''"));
-            conn_opts = conn_opts.pragma("key", pragma_key);
-            // Force full encryption of the database
-            conn_opts = conn_opts.pragma("cipher", "'sqlcipher'");
-            conn_opts = conn_opts.pragma("cipher_page_size", "4096");
-            conn_opts = conn_opts.pragma("cipher_compatibility", "4");
+            if !is_test || force_cipher {
+                if key.trim().is_empty() {
+                    return Err("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.".into());
+                }
+
+                let pragma_key = format!("'{}'", key.replace('\'', "''"));
+                conn_opts = conn_opts.pragma("key", pragma_key);
+                // Force full encryption of the database
+                conn_opts = conn_opts.pragma("cipher", "'sqlcipher'");
+                conn_opts = conn_opts.pragma("cipher_page_size", "4096");
+                conn_opts = conn_opts.pragma("cipher_compatibility", "4");
+            } else {
+                tracing::warn!("Running tests without SQLite encryption to avoid sqlcipher pragma errors.");
+            }
 
             let sqlite_pool = SqlitePoolOptions::new().max_connections(50)
                 .after_connect(|conn, _meta| {

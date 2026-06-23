@@ -138,7 +138,7 @@
   </div>
 
   <footer>
-    <a href="/setup.html?ref=giveaway_footer">⚡ Powered by OHC</a>
+    <a id="footer-branding-link" href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=giveaway_footer">⚡ Powered by OHC</a>
   </footer>
 
   <script>
@@ -146,6 +146,11 @@
       const params = new URLSearchParams(window.location.search);
       const title = params.get('title') || 'Exclusive Giveaway';
       const desc = params.get('desc') || 'Enter your email below for a chance to win.';
+      const refId = params.get('ref');
+
+      if (refId) {
+        document.getElementById('footer-branding-link').href = `https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${refId}`;
+      }
 
       document.getElementById('giveaway-title').textContent = title;
       document.getElementById('giveaway-desc').textContent = desc;
@@ -176,7 +181,6 @@
         document.getElementById('share-link').value = currentUrl;
         document.getElementById('success-area').style.display = 'block';
 
-        const refId = params.get('ref');
         if (refId) {
             fetch('/api/v1/growth/referrals/click', {
                 method: 'POST',

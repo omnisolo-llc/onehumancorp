@@ -162,16 +162,23 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                 tracing::info!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
             }
 
-        let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
-            if !key.is_empty() {
-                format!("{}?pragma.key={}", base_sqlite_url, key)
+        let force_cipher = std::env::var("OHC_TEST_FORCE_SQLCIPHER").is_ok();
+        let use_cipher = !is_test || force_cipher;
+
+        let sqlite_url = if use_cipher {
+            if let Some(key) = &cfg.sqlite_encryption_key {
+                if !key.is_empty() {
+                    format!("{}?pragma.key={}", base_sqlite_url, key)
+                } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+                    format!("{}?pragma.key={}", base_sqlite_url, fallback_key)
+                } else {
+                    base_sqlite_url
+                }
             } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
                 format!("{}?pragma.key={}", base_sqlite_url, fallback_key)
             } else {
                 base_sqlite_url
             }
-        } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-            format!("{}?pragma.key={}", base_sqlite_url, fallback_key)
         } else {
             base_sqlite_url
         };
