@@ -439,7 +439,6 @@ export default function OnboardingWizard() {
     }
     updateState({ isLoading: true });
     updateState({ error: '' });
-    updateState({ step: 4 }); syncStateToBackend({ step: 4 });
 
     try {
       const backendUrl = (typeof window !== 'undefined' && (window.location.origin.includes('localhost') || window.location.protocol === 'file:')) ? 'http://127.0.0.1:18789' : '';
@@ -471,14 +470,21 @@ export default function OnboardingWizard() {
       updateState({ location: intakeData.location || 'Local' });
       updateState({ targetAudience: intakeData.target_audience || 'General' });
       updateState({ adminName: intakeData.business_name || 'Admin' });
-      updateState({ adminEmail: 'admin@mybusiness.com' });
-      updateState({ adminPassword: 'password123' });
       updateState({ domainChoice: 'subdomain' });
       updateState({ websiteTemplate: 'auto' });
 
-      setTimeout(() => {
-        handleStartOnboarding(intakeData);
-      }, 100);
+      if (intakeData.initial_products) {
+         localStorage.setItem('onboarding_initial_products', JSON.stringify(intakeData.initial_products));
+      }
+
+      updateState({ step: 3 }); syncStateToBackend({
+        step: 3,
+        firstProductName: intakeData.initial_products?.[0]?.name || 'First Product',
+        firstProductPrice: intakeData.initial_products?.[0]?.price || '0.00',
+        businessType: intakeData.business_type || 'Online Store',
+        businessName: intakeData.business_name || 'My Business',
+        categories: intakeData.categories || ['physical']
+      });
     } catch (err: any) {
       console.error(err);
       updateState({ error: err.message || 'Failed to generate your business' });
@@ -488,65 +494,7 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleStartOnboarding = async (intakeDataOverride?: any) => {
-    if (intakeDataOverride && intakeDataOverride.business_name) {
-      updateState({ isLoading: true });
-      updateState({ error: '' });
-      updateState({ step: 4 }); syncStateToBackend({
-        step: 4,
-        firstProductName: intakeDataOverride.initial_products?.[0]?.name || 'First Product',
-        firstProductPrice: intakeDataOverride.initial_products?.[0]?.price || '0.00'
-      });
-      try {
-        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-        const startRes = await fetchWithRetry('/api/onboarding/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-          body: JSON.stringify({
-            business_type: intakeDataOverride.business_type || 'Online Store',
-            company_name: intakeDataOverride.business_name || 'My Business',
-            company_description: bio,
-            selling_categories: intakeDataOverride.categories || ['physical'],
-            payment_pref: 'online',
-            admin_email: 'admin@mybusiness.com',
-            admin_name: intakeDataOverride.business_name || 'Admin',
-            admin_password: 'password123',
-            website_template: 'auto',
-            first_product_name: intakeDataOverride.initial_products?.[0]?.name || 'First Product',
-            first_product_price: intakeDataOverride.initial_products?.[0]?.price || '0.00',
-            domain_choice: 'subdomain',
-            price_type: 'fixed',
-            location: intakeDataOverride.location || 'Local',
-            target_audience: intakeDataOverride.target_audience || 'General',
-            ai_agents: [],
-            ai_auto_respond: true,
-            initial_products: intakeDataOverride.initial_products || []
-          })
-        });
-
-        const result = await startRes.json().catch(() => ({}));
-        if (!startRes.ok) throw new Error(result.error || result.message || 'Failed to start onboarding');
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-        updateState({ startResult: result });
-        localStorage.setItem('has_onboarded', 'true');
-        if (result.organization_id) {
-          localStorage.setItem('tenant_id', result.organization_id);
-          localStorage.setItem('tenant', result.organization_id);
-        }
-        updateState({ step: 5 }); syncStateToBackend({ step: 5 });
-        fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
-        return;
-      } catch (err: any) {
-        console.error(err);
-        updateState({ error: err.message || 'Failed to start onboarding' });
-        updateState({ step: 3 }); syncStateToBackend({ step: 3 });
-        updateState({ isLoading: false });
-        return;
-      }
-    }
-
+  const handleStartOnboarding = async () => {
     const errors: Record<string, string> = {};
     if (!adminName.trim()) {
       errors.adminName = 'Admin Name is required';
