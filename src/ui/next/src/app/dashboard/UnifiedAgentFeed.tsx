@@ -685,16 +685,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4"
+                className="glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-300"
                 data-testid={`triage-card-${approval.id}`}
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#0066FF]/20 px-2 py-1 rounded-[8px]">
+                      Approval
+                    </span>
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-[8px]">
                       {approval.event_source.replace("_", " ")}
                     </span>
                     {approval.lifecycle_state === "PENDING_APPROVAL" && (
-                      <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-[8px]">
+                      <span className="text-xs font-bold uppercase tracking-wider text-green-700 bg-green-100 px-2 py-1 rounded-[8px]">
                         Requires Review
                       </span>
                     )}
@@ -1591,7 +1594,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             approval.event_source,
                           )
                         }
-                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send"
                         data-testid="approve-supply-order"
                       >
@@ -2123,7 +2126,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             approval.event_source,
                           )
                         }
-                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send"
                         data-testid="approve-send-proposal"
                       >
@@ -2201,9 +2204,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             approval.event_source,
                           )
                         }
-                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve proposal"
-                        data-testid={`triage-approve-${approval.id}`}
+                        data-testid="approve-proposal"
                       >
                         Approve
                       </button>
