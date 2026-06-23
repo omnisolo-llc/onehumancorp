@@ -11,6 +11,37 @@ impl PgTaskQueue {
     pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
     }
+
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+
+        let result = sqlx::query(
+            "UPDATE ohc_job_queue
+             SET status = 'PENDING', retry_count = retry_count + 1, updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'PROCESSING' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '1 hour'"
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
+             SELECT id, tenant_id, 'job_failed', 'job_queue', payload::text, '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
+             FROM ohc_job_queue
+             WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let stagnant_result = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'")
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(result.rows_affected() + stagnant_result.rows_affected())
+    }
 }
 
 #[async_trait]
@@ -267,5 +298,36 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
 
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+
+        let result = sqlx::query(
+            "UPDATE ohc_job_queue
+             SET status = 'PENDING', retry_count = retry_count + 1, updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'PROCESSING' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '1 hour'"
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
+             SELECT id, tenant_id, 'job_failed', 'job_queue', payload::text, '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
+             FROM ohc_job_queue
+             WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let stagnant_result = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'")
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(result.rows_affected() + stagnant_result.rows_affected())
     }
 }

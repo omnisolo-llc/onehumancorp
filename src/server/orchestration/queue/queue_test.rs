@@ -308,3 +308,78 @@ async fn test_sqlite_queue_concurrent_workers() {
         .fetch_one(&pool).await.unwrap();
     assert_eq!(remaining.0, 0, "There should be no pending jobs left");
 }
+
+#[tokio::test]
+async fn test_sqlite_cleanup_stale_jobs() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    let _ = sqlx::query(
+        "CREATE TABLE ohc_job_queue (
+            id TEXT PRIMARY KEY,
+            parent_task_id TEXT,
+            job_type TEXT,
+            payload TEXT,
+            status TEXT,
+            retry_count INTEGER DEFAULT 0,
+            max_retries INTEGER DEFAULT 3,
+            next_retry_at TEXT,
+            locked_until TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            tenant_id TEXT
+        )",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let _ = sqlx::query(
+        "CREATE TABLE department_dead_letters (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            department TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            error_message TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let queue = super::SQLiteTaskQueue::new(std::sync::Arc::new(pool.clone()));
+
+    let job1 = super::Job {
+        id: "job-stale-sqlite-1".to_string(),
+        tenant_id: "test_org".to_string(),
+        parent_task_id: "parent-1".to_string(),
+        job_type: "test-role".to_string(),
+        payload: "{}".to_string(),
+        status: "PROCESSING".to_string(),
+        retry_count: 0,
+        max_retries: 3,
+        next_retry_at: chrono::Utc::now() - chrono::Duration::seconds(10),
+        locked_until: None,
+        created_at: chrono::Utc::now() - chrono::Duration::hours(2),
+        updated_at: chrono::Utc::now() - chrono::Duration::hours(2),
+    };
+
+    queue.enqueue(job1).await.unwrap();
+    sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = datetime('now', '-2 hour') WHERE id = 'job-stale-sqlite-1'").execute(&pool).await.unwrap();
+
+    let cleaned = queue.cleanup_stale_jobs().await.unwrap();
+    assert_eq!(cleaned, 1);
+
+    // Verify
+    use sqlx::Row;
+    let row = sqlx::query("SELECT status, retry_count FROM ohc_job_queue WHERE id = 'job-stale-sqlite-1'").fetch_one(&pool).await.unwrap();
+
+    let status: String = row.get("status");
+    assert_eq!(status, "PENDING");
+    let retry_count: i32 = row.get("retry_count");
+    assert_eq!(retry_count, 1);
+}

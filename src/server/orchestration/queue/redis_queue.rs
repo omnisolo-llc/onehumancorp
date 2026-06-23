@@ -102,4 +102,8 @@ impl TaskQueue for RedisTaskQueue {
         // Since we lack state in this simplified trait interface we assume it's handled via requeue by the caller or we would implement it here
         Ok(())
     }
+
+    async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+        Ok(0)
+    }
 }

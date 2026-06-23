@@ -183,3 +183,50 @@ async fn test_pg_queue_concurrent_workers() {
         .fetch_one(&pool).await.unwrap();
     assert_eq!(remaining.0, 0, "There should be no pending jobs left");
 }
+
+#[tokio::test]
+async fn test_pg_cleanup_stale_jobs() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        unsafe { std::env::set_var("OHC_DATABASE_URL", "postgres://postgres:postgres@localhost:5432/ohc"); }
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
+
+    let queue = PgTaskQueue::new(Arc::new(pool.clone()));
+
+    // Ensure table is clean for tests
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+    sqlx::query("DELETE FROM department_dead_letters").execute(&pool).await.unwrap();
+
+    let job1 = Job {
+        id: "job-stale-pg-1".to_string(),
+        tenant_id: "test_org".to_string(),
+        parent_task_id: "parent-1".to_string(),
+        job_type: "test-role".to_string(),
+        payload: "{}".to_string(),
+        status: "PROCESSING".to_string(),
+        retry_count: 0,
+        max_retries: 3,
+        next_retry_at: Utc::now() - chrono::Duration::seconds(10),
+        locked_until: None,
+        created_at: Utc::now() - chrono::Duration::hours(2),
+        updated_at: Utc::now() - chrono::Duration::hours(2),
+    };
+
+    queue.enqueue(job1).await.unwrap();
+    sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP - INTERVAL '2 hours' WHERE id = 'job-stale-pg-1'").execute(&pool).await.unwrap();
+
+
+    let cleaned = queue.cleanup_stale_jobs().await.unwrap();
+    assert_eq!(cleaned, 1);
+
+    // Verify
+    use sqlx::Row;
+    let row = sqlx::query("SELECT status, retry_count FROM ohc_job_queue WHERE id = 'job-stale-pg-1'").fetch_one(&pool).await.unwrap();
+
+    let status: String = row.get("status");
+    assert_eq!(status, "PENDING");
+    let retry_count: i32 = row.get("retry_count");
+    assert_eq!(retry_count, 1);
+}

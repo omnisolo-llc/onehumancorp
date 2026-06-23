@@ -452,7 +452,15 @@ impl HybridSyncDaemon {
             }
         }
 
+        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT id, COALESCE(tenant_id, 'system'), 'mission_failed', 'agent_missions', COALESCE(payload, '{}'), '[bug] Mission became stuck' FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hour') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hour')))")
+            .execute(&self.sqlite_pool)
+            .await;
+
         // Find and fail stuck missions in pg pool
+        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT id, COALESCE(tenant_id, 'system'), 'mission_failed', 'agent_missions', COALESCE(payload, '{}'), '[bug] Mission became stuck' FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))")
+            .execute(&self.pg_pool)
+            .await;
+
         let res_pg = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = '[bug] Mission became stuck', last_synced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))")
             .execute(&self.pg_pool)
             .await;
@@ -476,6 +484,10 @@ impl HybridSyncDaemon {
             }
         }
 
+        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT id, COALESCE(tenant_id, 'system'), 'job_failed', 'sub_agent_queue', COALESCE(payload, '{}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hour')")
+            .execute(&self.sqlite_pool)
+            .await;
+
         let res_queued_sqlite = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hour')")
             .execute(&self.sqlite_pool)
             .await;
@@ -494,6 +506,10 @@ impl HybridSyncDaemon {
                 info!("Pruned {} stuck RUNNING jobs from PostgreSQL sub_agent_queue", res.rows_affected());
             }
         }
+
+        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT id, COALESCE(tenant_id, 'system'), 'job_failed', 'sub_agent_queue', COALESCE(payload::text, '{}'), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'")
+            .execute(&self.pg_pool)
+            .await;
 
         let res_queued_pg = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'")
             .execute(&self.pg_pool)
