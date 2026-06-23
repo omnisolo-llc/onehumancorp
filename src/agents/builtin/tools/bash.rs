@@ -205,3 +205,35 @@ mod tests {
         assert!(result.len() <= 70000); // 30k + 30k + padding/notes
     }
 }
+
+#[tokio::test]
+async fn test_bash_executor_missing_args() {
+    let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+    let tool = bash_tool(None, runner);
+
+    let invalid_args = json!({});
+    let res = crate::ToolExecutor::execute(&*tool.execute, invalid_args).await;
+
+    assert!(res.is_err());
+    let err_msg = res.unwrap_err().to_string();
+    assert!(err_msg.contains("Validation Error (Pydantic-first tool schema)"));
+}
+
+#[tokio::test]
+async fn test_bash_executor_empty_output() {
+    let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+    runner.push_response(Ok(crate::runner::mock::mock_output(123, "", "")));
+
+    let executor = BashExecutor {
+        working_dir: None,
+        runner,
+    };
+
+    let args = BashArgs {
+        command: "false".to_string(),
+        timeout: 120.0,
+    };
+
+    let result = executor.execute_typed(args).await.unwrap();
+    assert_eq!(result, "Command failed with exit code 123");
+}

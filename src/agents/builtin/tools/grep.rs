@@ -200,3 +200,38 @@ mod tests {
         let _ = std::fs::remove_dir_all(&test_dir);
     }
 }
+
+#[tokio::test]
+async fn test_grep_tool_missing_args() {
+    let tool = grep_tool(None);
+
+    let invalid_args = json!({});
+    let res = crate::ToolExecutor::execute(&*tool.execute, invalid_args).await;
+
+    assert!(res.is_err());
+    let err_msg = res.unwrap_err().to_string();
+    assert!(err_msg.contains("Validation Error (Pydantic-first tool schema)"));
+}
+
+#[tokio::test]
+async fn test_grep_basic_match() {
+    let temp_dir = std::env::temp_dir();
+    let test_dir = temp_dir.join(format!("grep_test_basic_{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(&test_dir).unwrap();
+
+    let test_file = test_dir.join("test.txt");
+    std::fs::write(&test_file, "hello\nworld\nthis is a match\n").unwrap();
+
+    let executor = PydanticAdapter::new(GrepExecutor { working_dir: Some(test_dir.clone()) });
+
+    let args = json!({
+        "pattern": "is a match",
+        "path": ".",
+    });
+
+    let result = crate::ToolExecutor::execute(&executor, args).await.unwrap();
+    assert!(result.contains("is a match"));
+    assert!(result.contains("test.txt"));
+
+    std::fs::remove_dir_all(&test_dir).unwrap();
+}

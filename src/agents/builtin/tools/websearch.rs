@@ -123,3 +123,43 @@ pub fn websearch_tool() -> Tool {
         })),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_strip_tags() {
+        assert_eq!(strip_tags("<b>bold</b>"), "bold");
+        assert_eq!(strip_tags("hello <a href='x'>world</a>"), "hello world");
+        assert_eq!(strip_tags("no tags here"), "no tags here");
+    }
+
+    #[test]
+    fn test_extract_ddg_results() {
+        let html = r#"
+            <div>
+                <a class="result__snippet" href="x">
+                    This is <b>result 1</b> snippet.
+                </a>
+            </div>
+            <div>
+                <a class="result__snippet" href="y">
+                    This is <i>result 2</i> snippet.
+                </a>
+            </div>
+        "#;
+
+        let results = extract_ddg_results(html);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0], "This is result 1 snippet.");
+        assert_eq!(results[1], "This is result 2 snippet.");
+    }
+
+    #[test]
+    fn test_extract_ddg_results_empty() {
+        let html = "<html><body>No results here</body></html>";
+        let results = extract_ddg_results(html);
+        assert!(results.is_empty());
+    }
+}
