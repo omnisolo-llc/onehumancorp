@@ -3,22 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
-import { ProposalDraftCard } from '../../components/feed/ProposalDraftCard';
-
-interface FeedItem {
-  id: string;
-  tenant_id: string;
-  event_source: string;
-  context_payload?: any;
-  proposed_action?: any;
-  lifecycle_state: string;
-  created_at: string;
-  updated_at: string;
-}
+import { AgentActionCard, AgentFeedItem } from '../../components/feed/AgentActionCard';
 
 export default function FeedPage() {
   const router = useRouter();
-  const [items, setItems] = useState<FeedItem[]>([]);
+  const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -94,10 +83,11 @@ export default function FeedPage() {
     };
   }, []);
 
-  const startEditing = (item: FeedItem) => {
+  const startEditing = (item: AgentFeedItem) => {
     setEditingId(item.id);
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
-    const textToEdit = isAmbassador ?
+
+    let textToEdit = isAmbassador ?
         (item.proposed_action || item.context_payload)?.generated_response || (item.proposed_action || item.context_payload)?.draft_reply :
         (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
     setEditValue(textToEdit || "");
@@ -215,7 +205,6 @@ export default function FeedPage() {
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
       <div className="w-full max-w-[375px] mx-auto p-4 space-y-4" data-testid="agent-feed">
-        {items.find(i => i.proposed_action?.action_type === "Draft Proposal") && <ProposalDraftCard item={items.find(i => i.proposed_action?.action_type === "Draft Proposal") as any} />}
         {loading && (
           <div className="flex justify-center items-center py-12">
             <p className="text-gray-500 font-medium">Checking your feed...</p>
@@ -223,14 +212,14 @@ export default function FeedPage() {
         )}
 
         {error && (
-          <div className="glassmorphism p-4 text-center rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[210%]">
+          <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 text-center rounded-[16px]">
             <p className="text-[#FF3B30] dark:text-[#DE1B1B] font-medium mb-2">We couldn't load your feed.</p>
             <p className="text-sm text-gray-500">{error}</p>
           </div>
         )}
 
         {!loading && !error && items.length === 0 && (
-          <div className="glassmorphism flex flex-col items-center justify-center p-12 text-center rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[210%]" data-testid="agent-feed-empty">
+          <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col items-center justify-center p-12 text-center rounded-[16px]" data-testid="agent-feed-empty">
             <div className="w-16 h-16 bg-[#e8f7ef] dark:bg-[rgba(23,166,106,0.2)] rounded-full flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-[#17a66a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
@@ -244,231 +233,20 @@ export default function FeedPage() {
         )}
 
         <div className="flex flex-col gap-4">
-          {items.map((item) => {
-            const isProcessing = processingId === item.id;
-            const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
-            const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
-            const isDisputeResolution = item.proposed_action?.feature_type === 'dispute_resolution' || item.context_payload?.feature_type === 'dispute_resolution';
-            const disputePayload = isDisputeResolution ? (item.proposed_action || item.context_payload) : null;
-
-            return (
-              <div
-                key={item.id}
-                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[210%] ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
-                data-testid="agent-feed-card"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
-                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
-                  </span>
-                  <span className="text-[11px] text-gray-400 font-medium">
-                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-
-                <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
-                  {isDisputeResolution
-                    ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
-                    : isAmbassador
-                    ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
-                    : item.proposed_action?.action_type === 'Draft Quote'
-                    ? `Drafted Estimate for ${item.context_payload?.customer_name || 'Customer'}`
-                    : item.proposed_action?.action_type === 'Draft Follow-up'
-                    ? `Unpaid Deposit: ${item.context_payload?.customer_name || 'Customer'}`
-                    : item.proposed_action?.action_type === 'Draft Booking'
-                    ? `Drafted Booking for ${item.context_payload?.customer_name || 'Customer'}`
-                    : (item.proposed_action?.title || 'Review Required')}
-                </h3>
-
-                {editingId === item.id ? (
-                  <div className="mb-5">
-                    <textarea
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="w-full min-h-[44px] text-[13px] text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded p-2 focus:outline-none focus:ring-1 focus:ring-[#0066FF] mb-2"
-                      rows={3}
-                      data-testid="feed-edit-input"
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => {
-                          saveEdit(item.id);
-                          // It should also save via handleAction to backend if we want to submit the edit immediately
-                          // But we are matching the existing saveEdit behavior which only updates state locally.
-                          // Usually they click "Save" then "Approve" OR we can auto-approve on save like in UnifiedAgentFeed.
-                          // UnifiedAgentFeed does: `handleDecision(approval.id, true, editContent); setEditingId(null);`
-                          // Let's keep it separate for now or change saveEdit to do handleAction directly if needed.
-                        }}
-                        className="flex-1 min-h-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
-                        data-testid="feed-save-edit-btn"
-                      >
-                        {isAmbassador ? 'Save & Send' : 'Save'}
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="flex-1 min-h-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
-                        data-testid="feed-cancel-edit-btn"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mb-5">
-                    {isDisputeResolution ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="bg-[#FFF5E5] dark:bg-[rgba(255,149,0,0.1)] p-3 rounded-lg border border-[#FFD699] dark:border-[rgba(255,149,0,0.3)]">
-                          <p className="text-[13px] text-[#8C5300] dark:text-[#FF9F0A] italic mb-1">"{disputePayload?.original_message}"</p>
-                          {disputePayload?.past_orders && (
-                            <span className="inline-block text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full mt-1">
-                              {disputePayload?.past_orders}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-bold text-gray-500 uppercase mb-1">Proposed Resolution</p>
-                          <p className="text-[13px] text-gray-900 dark:text-white leading-relaxed mb-3">
-                            {disputePayload?.generated_response}
-                          </p>
-                          <div className="bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
-                            {disputePayload?.refund_amount && (
-                              <div className="flex items-center gap-3 p-3 border-b border-gray-100 dark:border-gray-700">
-                                <input type="checkbox" defaultChecked className="w-4 h-4 text-[#FF9500] rounded border-gray-300 focus:ring-[#FF9500]" />
-                                <span className="text-[13px] text-gray-800 dark:text-gray-200 font-medium">Issue ${disputePayload?.refund_amount} Refund</span>
-                              </div>
-                            )}
-                            {disputePayload?.operational_action && (
-                              <div className="flex items-center gap-3 p-3">
-                                <input type="checkbox" defaultChecked className="w-4 h-4 text-[#FF9500] rounded border-gray-300 focus:ring-[#FF9500]" />
-                                <span className="text-[13px] text-gray-800 dark:text-gray-200 font-medium">{disputePayload?.operational_action}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ) : isAmbassador ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                          <p className="text-[13px] text-gray-700 dark:text-gray-300 italic mb-1">"{ambassadorPayload.original_message}"</p>
-                          {ambassadorPayload.past_orders && (
-                            <span className="inline-block text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full mt-1">
-                              {ambassadorPayload.past_orders}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-bold text-gray-500 uppercase mb-1">Agent Draft</p>
-                          <p className="text-[13px] text-gray-900 dark:text-white leading-relaxed">
-                            {ambassadorPayload.generated_response}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
-                        {item.proposed_action?.action_type === 'Draft Quote'
-                          ? (item.context_payload?.context || 'AI has drafted a new estimate based on recent customer inquiry.')
-                          : item.proposed_action?.action_type === 'Draft Booking'
-                          ? (item.context_payload?.context || 'AI has locked in a tentative time slot based on recent customer inquiry.')
-                          : (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.')}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {!editingId || editingId !== item.id ? (
-                  isDisputeResolution ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleAction(item.id, 'APPROVED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#FF9500] text-white font-medium hover:bg-[#E68A00] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Resolve"
-                        data-testid="feed-approve-resolve-btn"
-                      >
-                        {isProcessing ? 'Processing...' : 'Approve & Resolve'}
-                      </button>
-                      <button
-                        onClick={() => startEditing(item)}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Edit Draft"
-                        data-testid="feed-edit-btn"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleAction(item.id, 'DISMISSED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss Draft"
-                        data-testid="feed-dismiss-btn"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  ) : isAmbassador ? (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleAction(item.id, 'APPROVED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send Draft"
-                        data-testid="feed-approve-btn"
-                      >
-                        {isProcessing ? 'Processing...' : 'Send Draft'}
-                      </button>
-                      <button
-                        onClick={() => startEditing(item)}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Edit Draft"
-                        data-testid="feed-edit-btn"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleAction(item.id, 'DISMISSED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        aria-label="Dismiss Draft"
-                        data-testid="feed-dismiss-btn"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                      <button
-                        onClick={() => handleAction(item.id, 'APPROVED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                        data-testid="feed-approve-btn"
-                      >
-                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : 'Approve'}
-                      </button>
-                      <button
-                        onClick={() => startEditing(item)}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        data-testid="feed-edit-btn"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleAction(item.id, 'DISMISSED')}
-                        disabled={isProcessing}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-                        data-testid="feed-dismiss-btn"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  )
-                ) : null}
-              </div>
-            );
-          })}
+          {items.map((item) => (
+            <AgentActionCard
+              key={item.id}
+              item={item}
+              isProcessing={processingId === item.id}
+              editingId={editingId}
+              editValue={editValue}
+              onEditValueChange={setEditValue}
+              onStartEditing={startEditing}
+              onSaveEdit={saveEdit}
+              onCancelEdit={cancelEdit}
+              onAction={handleAction}
+            />
+          ))}
         </div>
 
         {/* Hidden test button to trigger simulation easily during development/testing */}
@@ -476,14 +254,14 @@ export default function FeedPage() {
           <button
              onClick={simulateAmbassadorDraft}
              data-testid="simulate-ambassador-btn"
-             className="text-xs bg-gray-200 text-gray-600 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+             className="text-xs border border-gray-300 dark:border-gray-600 px-3 py-1 rounded-[8px] min-h-[44px] min-w-[44px] text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800"
           >
             Simulate Ambassador Draft
           </button>
           <button
              onClick={simulateDisputeDraft}
              data-testid="simulate-dispute-btn"
-             className="text-xs bg-[#FFF5E5] text-[#FF9500] border border-[#FFD699] px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+             className="text-xs border border-[#FFD699] dark:border-[#FF9500]/30 px-3 py-1 rounded-[8px] min-h-[44px] min-w-[44px] text-[#FF9500] bg-[#FFF5E5] dark:bg-[#FF9500]/10"
           >
             Simulate Dispute
           </button>

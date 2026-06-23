@@ -1424,7 +1424,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full min-h-[44px] min-w-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1442,14 +1442,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                               );
                               setEditingId(null);
                             }}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                             data-testid="save-booking-draft"
                           >
                             Save & Approve
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                             data-testid="cancel-edit-booking-draft"
                           >
                             Cancel
@@ -1827,7 +1827,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full min-h-[44px] min-w-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1845,14 +1845,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                               );
                               setEditingId(null);
                             }}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                             data-testid="save-send-ambassador-reply"
                           >
                             Save & Send
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                             data-testid="cancel-edit-ambassador-reply"
                           >
                             Cancel
@@ -1936,7 +1936,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             Scope of Work
                           </label>
                           <textarea
-                            className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                            className="w-full min-h-[44px] min-w-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                             rows={3}
                             value={editQuoteScope}
                             onChange={(e) => setEditQuoteScope(e.target.value)}
@@ -1957,14 +1957,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                               );
                               setEditingId(null);
                             }}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                             data-testid="modal-approve-btn"
                           >
                             Approve & Send
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                             data-testid="cancel-edit-quote"
                           >
                             Cancel
@@ -2161,7 +2161,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : editingId === approval.id ? (
                     <div className="flex flex-col gap-3 w-full">
                       <textarea
-                        className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                        className="w-full min-h-[44px] min-w-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                         rows={4}
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
@@ -2179,14 +2179,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             );
                             setEditingId(null);
                           }}
-                          className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                           data-testid="save-proposal"
                         >
                           Save & Approve
                         </button>
                         <button
                           onClick={() => setEditingId(null)}
-                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                           data-testid="cancel-edit-proposal"
                         >
                           Cancel
@@ -2277,7 +2277,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               {activities.map((activity) => (
                 <div
                   key={activity.id}
-                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px] min-w-[44px]"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-[8px]">
