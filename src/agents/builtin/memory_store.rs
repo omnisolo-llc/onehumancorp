@@ -575,7 +575,13 @@ impl VectorRepository {
         Ok(resolved_count)
     }
 
+    /// Uses explicit owner override, reliability score, and recency (newer wins) to determine the winner.
     /// Determines the winner of a memory conflict between two embedding records.
+    /// Conflict resolution priority:
+    /// 1. Owner Override (explicit > implicit)
+    /// 2. Reliability Score (higher is better)
+    /// 3. Recency (newer `created_at` wins)
+    /// 4. ID (tie-breaker for consistency)
     pub fn determine_conflict_winner<'a>(
         a: &'a EmbeddingRecord,
         b: &'a EmbeddingRecord,
@@ -3737,3 +3743,4 @@ mod reliability_score_tests {
         );
     }
 }
+    // Consolidated Memory: Auto-resolves by recency, reliability, and override.
