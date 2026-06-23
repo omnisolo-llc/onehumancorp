@@ -850,48 +850,59 @@ impl VectorRepository {
                         }
 
                         let records = records_in_tenant;
-                        let magnitudes: Vec<f32> = records
-                            .iter()
-                            .map(|r| r.embedding.iter().map(|&val| val * val).sum::<f32>().sqrt())
-                            .collect();
+                        let (new_conflicting_pairs, new_match_count) = tokio::task::spawn_blocking(move || {
+                            let mut local_pairs = Vec::new();
+                            let mut local_match_count = match_count;
+                            let magnitudes: Vec<f32> = records
+                                .iter()
+                                .map(|r| r.embedding.iter().map(|&val| val * val).sum::<f32>().sqrt())
+                                .collect();
 
-                        for i in 0..records.len() {
-                            let mag_a = magnitudes[i];
-                            if mag_a == 0.0 {
-                                continue;
-                            }
-
-                            for j in (i + 1)..records.len() {
-                                let mag_b = magnitudes[j];
-                                if mag_b == 0.0 {
+                            'inner: for i in 0..records.len() {
+                                let mag_a = magnitudes[i];
+                                if mag_a == 0.0 {
                                     continue;
                                 }
 
-                                let a = &records[i];
-                                let b = &records[j];
+                                for j in (i + 1)..records.len() {
+                                    let mag_b = magnitudes[j];
+                                    if mag_b == 0.0 {
+                                        continue;
+                                    }
 
-                                let dot_product: f32 = a
-                                    .embedding
-                                    .iter()
-                                    .zip(b.embedding.iter())
-                                    .map(|(x, y)| x * y)
-                                    .sum();
-                                let similarity = dot_product / (mag_a * mag_b);
-                                let distance = 1.0 - similarity;
+                                    let a = &records[i];
+                                    let b = &records[j];
 
-                                if distance < 0.05 {
-                                    let (id_a, id_b) = if a.id < b.id {
-                                        (a.id.clone(), b.id.clone())
-                                    } else {
-                                        (b.id.clone(), a.id.clone())
-                                    };
-                                    conflicting_pairs_ids.push((id_a, id_b));
-                                    match_count += 1;
-                                    if match_count >= 10 {
-                                        break 'outer;
+                                    let dot_product: f32 = a
+                                        .embedding
+                                        .iter()
+                                        .zip(b.embedding.iter())
+                                        .map(|(x, y)| x * y)
+                                        .sum();
+                                    let similarity = dot_product / (mag_a * mag_b);
+                                    let distance = 1.0 - similarity;
+
+                                    if distance < 0.05 {
+                                        let (id_a, id_b) = if a.id < b.id {
+                                            (a.id.clone(), b.id.clone())
+                                        } else {
+                                            (b.id.clone(), a.id.clone())
+                                        };
+                                        local_pairs.push((id_a, id_b));
+                                        local_match_count += 1;
+                                        if local_match_count >= 10 {
+                                            break 'inner;
+                                        }
                                     }
                                 }
                             }
+                            (local_pairs, local_match_count)
+                        }).await.map_err(|e| format!("Spawn blocking error: {}", e))?;
+
+                        conflicting_pairs_ids.extend(new_conflicting_pairs);
+                        match_count = new_match_count;
+                        if match_count >= 10 {
+                            break 'outer;
                         }
                     }
 
