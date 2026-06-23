@@ -35,7 +35,7 @@ pub async fn meta_webhook_get_handler(
         Ok(t) if !t.is_empty() => t,
         _ => {
             ::server_telemetry::record_error_signal("[bug] META_VERIFY_TOKEN not configured");
-            tracing::warn!("META_VERIFY_TOKEN not configured");
+            tracing::warn!("META_VERIFY_TOKEN not configured"); // pii-safe
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
@@ -57,7 +57,7 @@ pub async fn meta_webhook_post_handler(
     let secret = match std::env::var("META_APP_SECRET") {
         Ok(s) if !s.is_empty() => s,
         _ => {
-            tracing::warn!("META_APP_SECRET not configured, bypassing signature check for development");
+            tracing::warn!("META_APP_SECRET not configured, bypassing signature check for development"); // pii-safe
             "test_secret".to_string()
         }
     };
