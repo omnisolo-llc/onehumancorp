@@ -214,7 +214,7 @@ export default function FeedPage() {
 
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
-      <div className="w-full max-w-md mx-auto p-4 space-y-4" data-testid="agent-feed">
+      <div className="w-full max-w-[375px] mx-auto p-4 space-y-4" data-testid="agent-feed">
         {items.find(i => i.proposed_action?.action_type === "Draft Proposal") && <ProposalDraftCard item={items.find(i => i.proposed_action?.action_type === "Draft Proposal") as any} />}
         {loading && (
           <div className="flex justify-center items-center py-12">
@@ -223,14 +223,14 @@ export default function FeedPage() {
         )}
 
         {error && (
-          <div className="glassmorphism p-4 text-center">
+          <div className="glassmorphism p-4 text-center rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[210%]">
             <p className="text-[#FF3B30] dark:text-[#DE1B1B] font-medium mb-2">We couldn't load your feed.</p>
             <p className="text-sm text-gray-500">{error}</p>
           </div>
         )}
 
         {!loading && !error && items.length === 0 && (
-          <div className="glassmorphism flex flex-col items-center justify-center p-12 text-center" data-testid="agent-feed-empty">
+          <div className="glassmorphism flex flex-col items-center justify-center p-12 text-center rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[210%]" data-testid="agent-feed-empty">
             <div className="w-16 h-16 bg-[#e8f7ef] dark:bg-[rgba(23,166,106,0.2)] rounded-full flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-[#17a66a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
@@ -254,7 +254,7 @@ export default function FeedPage() {
             return (
               <div
                 key={item.id}
-                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
+                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[210%] ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
