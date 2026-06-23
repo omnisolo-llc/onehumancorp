@@ -162,19 +162,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                 tracing::info!("standalone: REDIS_URL is ignored in standalone desktop builds; using embedded NATS");
             }
 
-        let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
-            if !key.is_empty() {
-                format!("{}?pragma.key={}", base_sqlite_url, key)
-            } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-                format!("{}?pragma.key={}", base_sqlite_url, fallback_key)
-            } else {
-                base_sqlite_url
-            }
-        } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-            format!("{}?pragma.key={}", base_sqlite_url, fallback_key)
-        } else {
-            base_sqlite_url
-        };
+        let sqlite_url = base_sqlite_url.clone();
         cfg.database_url = Some(sqlite_url.clone());
 
         // Set proper file permissions for local storage wrapper in standalone mode atomically
