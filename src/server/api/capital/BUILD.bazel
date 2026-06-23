@@ -21,8 +21,7 @@ rust_library(
 
 
 
-        "//src/proto:funding_prost",
-        "//src/proto:funding_tonic",
+        "//src/proto:funding",
 
         "//src/server/services/capital:server_services_capital",
         "@crates//:sqlx",

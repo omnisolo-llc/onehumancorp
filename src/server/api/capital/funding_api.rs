@@ -1,5 +1,5 @@
 use tonic::{Request, Response, Status};
-use fundingpb::{
+use funding_prost::{
     funding_service_server::FundingService,
     ListFundingOpportunitiesRequest, ListFundingOpportunitiesResponse,
     ApproveFundingOpportunityRequest, ApproveFundingOpportunityResponse,
