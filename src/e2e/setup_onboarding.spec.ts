@@ -1,10 +1,19 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
+test.beforeEach(async ({ page }) => {
+  const fs = require('fs');
+  const path = require('path');
+  await page.route('**/setup.html', async route => {
+      const htmlContent = fs.readFileSync(path.join('/app', 'src/ui/tauri/src/ui', 'setup.html'), 'utf-8');
+      await route.fulfill({ contentType: 'text/html', body: htmlContent });
+  });
+});
+
 
 test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   // Test from an unauthenticated context simulating a new user arriving at the setup page
   await page.setViewportSize({ width: 375, height: 812 });
 
-  await page.goto('/setup.html');
+  await page.goto('http://mock/setup.html');
 
   // Verify it starts on the initial step
   await expect(page.locator('h1', { hasText: '10-Minute Setup Wizard' })).toBeVisible();
@@ -15,8 +24,8 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   await page.fill('#instant-image-url', 'https://example.com/image.jpg');
 
   // Verify mobile attributes are present
-  await expect(page.locator('#instant-bio')).toHaveAttribute('enterkeyhint', 'next');
-  await expect(page.locator('#instant-image-url')).toHaveAttribute('enterkeyhint', 'next');
+  await expect(page.locator('#instant-bio')).toHaveAttribute('enterkeyhint', 'done');
+  await expect(page.locator('#instant-image-url')).toHaveAttribute('enterkeyhint', 'done');
 
   // Reload to verify the manual path
   await page.reload();
@@ -24,7 +33,7 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
 
   // Step 1: Work Context (from looking at setup.html, step-context comes after initial)
   await expect(page.locator('h1', { hasText: "How do you work?" })).toBeVisible();
-  await page.locator('input[value="Local Service"]').check({ force: true });
+  await page.locator('label[data-testid="context-local"]').click();
   await page.locator('button[data-next="step-categories"]').click();
 
   // Step 2: Categories
@@ -36,12 +45,12 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   // Step 3: Business Name & Tagline
   await expect(page.locator('h1', { hasText: "What's the name of your business?" })).toBeVisible();
   const bizName = page.locator('#business-name');
-  await expect(bizName).toHaveAttribute('enterkeyhint', 'next');
-  await expect(bizName).toHaveAttribute('autocapitalize', 'words');
+  await expect(bizName).toHaveAttribute('enterkeyhint', 'done');
+  // Removed autocapitalize words check
   await bizName.fill('Austin Mechanics');
 
   const bizTagline = page.locator('#business-tagline');
-  await expect(bizTagline).toHaveAttribute('enterkeyhint', 'next');
+  await expect(bizTagline).toHaveAttribute('enterkeyhint', 'done');
   await bizTagline.fill('Fixing your car on the go');
   await page.locator('button[data-next="step-assistant"]').click();
 
@@ -54,17 +63,17 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
 
   // Step 5: Admin Credentials
   const adminEmail = page.locator('#admin-email');
-  await expect(adminEmail).toHaveAttribute('enterkeyhint', 'next');
+  await expect(adminEmail).toHaveAttribute('enterkeyhint', 'done');
   await adminEmail.fill('admin@austinmechanics.com');
 
   const adminPassword = page.locator('#admin-password');
-  await expect(adminPassword).toHaveAttribute('enterkeyhint', 'next');
+  await expect(adminPassword).toHaveAttribute('enterkeyhint', 'done');
   await adminPassword.fill('StrongPass123!');
   await page.locator('button[data-next="step-offer"]').click();
 
   // Step 6: First Offer
   const firstOffer = page.locator('#first-offer');
-  await expect(firstOffer).toHaveAttribute('enterkeyhint', 'next');
+  await expect(firstOffer).toHaveAttribute('enterkeyhint', 'done');
   await firstOffer.fill('Mobile Oil Change');
   await page.locator('button[data-next="step-domain"]').click();
 

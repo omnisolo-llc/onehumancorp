@@ -22,7 +22,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     // Click Start My Business (which goes to context)
     await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
     // Context step
-    await page.locator('label', { hasText: 'Storefront or Cafe' }).click();
+    await page.locator('label[data-testid="context-storefront"]').click();
     await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
     // Category step
     const categorySelect = page.getByTestId('business-categories');
