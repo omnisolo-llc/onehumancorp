@@ -286,6 +286,7 @@ export type AssistantSettings = {
     macOS: string;
     Windows: string;
   };
+  observationMasking: boolean;
   installation: {
     Windows: {
       installer: string;
@@ -786,6 +787,7 @@ let settings: AssistantSettings = {
   sync: {
     accountSettingsAcrossDevices: true,
   },
+  observationMasking: true,
   logLocations: {
     macOS: 'Open Log Folder: ~/Library/Logs/Agent',
     Windows: 'Open Log Directory: %LOCALAPPDATA%\\Agent\\Logs',
@@ -2872,6 +2874,7 @@ export function resetAssistantStore() {
     sync: {
       accountSettingsAcrossDevices: true,
     },
+    observationMasking: true,
     logLocations: {
       macOS: 'Open Log Folder: ~/Library/Logs/Agent',
       Windows: 'Open Log Directory: %LOCALAPPDATA%\\Agent\\Logs',
