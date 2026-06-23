@@ -655,7 +655,7 @@ export default function OnboardingWizard() {
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
-              <button type="button" onClick={handleBackToIntro} className="setup-nav-button rounded-[8px]">
+              <button type="button" onClick={handleBackToIntro} className="setup-nav-button">
                 Back
               </button>
             ) : (
@@ -665,7 +665,7 @@ export default function OnboardingWizard() {
               <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
               <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
             </div>
-            <button type="button" onClick={handleSkipSetup} className="setup-nav-button rounded-[8px]">
+            <button type="button" onClick={handleSkipSetup} className="setup-nav-button">
               Skip setup
             </button>
           </div>
@@ -699,7 +699,7 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <button
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
+                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px]"
                   onClick={() => { updateState({ step: 1 }); syncStateToBackend({ step: 1 }); }}
                 >
                   Start My Business
