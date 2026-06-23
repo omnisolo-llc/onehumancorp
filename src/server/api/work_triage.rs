@@ -121,18 +121,18 @@ pub async fn get_daily_work_handler(
         tokio::spawn(async move {
             let res = match &db_bg.store {
                 crate::db::DbStore::Postgres => {
-                    sqlx::query!(
-                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC",
-                        t_bg
-                    ).fetch_all(&db_bg.pool).await.map(|rows| {
+                    sqlx::query(
+                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC"
+                    ).bind(&t_bg).fetch_all(&db_bg.pool).await.map(|rows| {
+                        use sqlx::Row;
                         rows.into_iter().map(|r| {
                             serde_json::json!({
-                                "id": r.id,
-                                "signal_id": r.signal_id,
-                                "intent": r.intent,
-                                "customer_info": r.customer_info,
-                                "suggested_actions": r.suggested_actions,
-                                "status": r.status
+                                "id": r.get::<String, _>("id"),
+                                "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
+                                "intent": r.get::<String, _>("intent"),
+                                "customer_info": r.try_get::<Option<serde_json::Value>, _>("customer_info").ok().flatten(),
+                                "suggested_actions": r.try_get::<Option<serde_json::Value>, _>("suggested_actions").ok().flatten(),
+                                "status": r.get::<String, _>("status")
                             })
                         }).collect::<Vec<_>>()
                     })
@@ -177,22 +177,23 @@ pub async fn get_daily_work_handler(
 
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let res = sqlx::query!(
-                "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC",
-                tenant_id
+            let res = sqlx::query(
+                "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC"
             )
+            .bind(&tenant_id)
             .fetch_all(&db.pool).await;
 
             match res {
                 Ok(rows) => {
+                    use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                         serde_json::json!({
-                            "id": r.id,
-                            "signal_id": r.signal_id,
-                            "intent": r.intent,
-                            "customer_info": r.customer_info,
-                            "suggested_actions": r.suggested_actions,
-                            "status": r.status
+                            "id": r.get::<String, _>("id"),
+                            "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
+                            "intent": r.get::<String, _>("intent"),
+                            "customer_info": r.try_get::<Option<serde_json::Value>, _>("customer_info").ok().flatten(),
+                            "suggested_actions": r.try_get::<Option<serde_json::Value>, _>("suggested_actions").ok().flatten(),
+                            "status": r.get::<String, _>("status")
                         })
                     }).collect();
                     let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
