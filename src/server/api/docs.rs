@@ -43,10 +43,12 @@ pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<Stri
             WalkthroughStep { selector: "#wrapped-summary".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
         ],
         "pos" => vec![
-            WalkthroughStep { selector: "#charge-btn".to_string(), title: "Accept your first payment".to_string(), text: "Enter an amount and tap here to charge your first customer. It's that easy!".to_string() }
+            WalkthroughStep { selector: "#pos-keypad".to_string(), title: "Enter Amount".to_string(), text: "Type in the total sale amount using the keypad.".to_string() },
+            WalkthroughStep { selector: "#charge-btn".to_string(), title: "Charge Customer".to_string(), text: "Tap here to process the payment. It's that easy!".to_string() }
         ],
         "assistant" => vec![
-            WalkthroughStep { selector: "#ohc-help-input-area".to_string(), title: "Activate your AI Support Agent".to_string(), text: "Chat here to activate your AI agent. They can handle support tickets while you sleep.".to_string() }
+            WalkthroughStep { selector: "#ai-chat-trigger".to_string(), title: "Open Assistant".to_string(), text: "Click here to open your AI Support Agent.".to_string() },
+            WalkthroughStep { selector: "#ohc-help-input-area".to_string(), title: "Ask Anything".to_string(), text: "Type your request here and the agent will handle it while you sleep.".to_string() }
         ],
         _ => vec![],
     };
