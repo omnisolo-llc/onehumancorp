@@ -13,11 +13,14 @@ rust_library(
     srcs = [
         "mod.rs",
         "ledger.rs",
+        "funding_engine.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
-    deps = [],
+    deps = [
+        "@crates//:sqlx",
+    ],
 )
 
 rust_test(
