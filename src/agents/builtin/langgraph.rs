@@ -5,7 +5,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-/// LangChain/LangGraph: Models the harness as an explicit state graph. Mechanically: uses `llm_call` and `tool_node` connected by conditional edges (if tool calls present -> route to `tool_node`; if absent -> route to `END`). State flows as typed dictionaries with reducer functions.
+/// Master Catalog A: Framework Implementation Archetypes: LangChain/LangGraph. Models the harness as an explicit state graph. Mechanically: uses `llm_call` and `tool_node` connected by conditional edges (if tool calls present -> route to `tool_node`; if absent -> route to `END`). State flows as typed dictionaries with reducer functions.
 
 /// Reducer trait to merge state updates into the main state
 pub trait Reducer<S>: Send + Sync {

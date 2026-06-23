@@ -2,7 +2,7 @@
 use ohc_builtin_agent_core::types::{Message, Role};
 use serde_json::Value;
 
-/// Applies JetBrains Observation Masking.
+/// Master Catalog B.4: Context Management: Master Catalog: JetBrains Observation Masking.
 /// Hides the raw output of old tools from the prompt,
 /// but keeps the `tool_calls` themselves visible so the model remembers what it did.
 /// Upgraded to Recency-Aware Masking: Only mask if older than threshold and exceeds size limit.
