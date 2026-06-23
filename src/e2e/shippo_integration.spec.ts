@@ -32,3 +32,13 @@ test('User can purchase and print shipping labels for an order', async ({ page }
   await expect(page.getByRole('link', { name: /Print Label/ })).toBeVisible({ timeout: 30000 });
   await expect(page.getByText('Shipped', { exact: true }).first()).toBeVisible({ timeout: 30000 });
 });
+
+test('User encounters address validation error and corrects it', async ({ page }) => {
+  await page.goto('/orders/e2e-shippo-order');
+  await expect(page.getByRole('heading', { name: /Order/ })).toBeVisible({ timeout: 30000 });
+
+  await page.getByRole('spinbutton').fill('9999');
+  await page.getByPlaceholder('e.g. 10x8x6').fill('100x100x100');
+
+  await page.getByRole('button', { name: /Get Shipping Rates/ }).click();
+});
