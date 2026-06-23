@@ -181,7 +181,7 @@ export default function CostDashboardPage() {
                       <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{formatStorage(myPlanData?.storage_used_bytes || 0)} <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${formatStorage(myPlanData.storage_limit_bytes)}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 app-card ohc-growth-card glass-card">
-                      <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
+                      <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill:</h3>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
                   </div>
                   {myPlanData?.storage_limit_bytes && myPlanData?.storage_used_bytes != null && (
