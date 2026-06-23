@@ -10,6 +10,7 @@ export default function Integrations() {
   const [statusMessage, setStatusMessage] = useState("");
 
   const [integrations, setIntegrations] = useState([
+    { id: "taxjar", name: "TaxJar", category: "finance", status: "disconnected", icon: "🏛️", description: "Automatically calculate and track sales tax for your orders." },
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Single API for posting and retrieving messages across social networks." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },

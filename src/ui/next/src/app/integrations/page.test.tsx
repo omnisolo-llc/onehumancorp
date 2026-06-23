@@ -38,7 +38,7 @@ describe("Integrations", () => {
     });
 
     render(<Integrations />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Connect" })[4]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Connect" })[5]);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith("/api/integrations/shippo/connect", {
