@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Extension, Path},
+    extract::{Extension, Path, Query},
     http::StatusCode,
     routing::get,
     Router,
@@ -12,6 +12,11 @@ use ::server_common::Claims;
 use uuid::Uuid;
 use chrono::Utc;
 use sqlx::Row;
+
+#[derive(serde::Deserialize)]
+pub struct AssistantQuery {
+    pub mobile_optimized: Option<bool>,
+}
 
 pub fn router<S>(db: Arc<DB>) -> Router<S>
 where
@@ -176,10 +181,12 @@ fn require_text(value: Option<String>, field: &str) -> Result<String, (StatusCod
 async fn list_workspaces(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
+    Query(query): Query<AssistantQuery>,
 ) -> Result<Json<Vec<Workspace>>, (StatusCode, String)> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    match &db.store {
+    let mut workspaces = match &db.store {
         DbStore::Sqlite(pool) => {
             let rows = sqlx::query(
                 "SELECT id, name, default_work_dir, default_model, 
@@ -192,7 +199,7 @@ async fn list_workspaces(
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| Workspace {
+            let list: Vec<Workspace> = rows.into_iter().map(|row| Workspace {
                 id: row.get("id"),
                 name: row.get("name"),
                 default_work_dir: row.get("default_work_dir"),
@@ -200,7 +207,7 @@ async fn list_workspaces(
                 created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
                 updated_at_unix: row.get::<Option<String>, _>("u_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
         }
         DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -217,7 +224,7 @@ async fn list_workspaces(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| Workspace {
+            let list: Vec<Workspace> = rows.into_iter().map(|row| Workspace {
                 id: row.get("id"),
                 name: row.get("name"),
                 default_work_dir: row.get("default_work_dir"),
@@ -225,9 +232,20 @@ async fn list_workspaces(
                 created_at_unix: row.get("c_unix"),
                 updated_at_unix: row.get("u_unix"),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
+        }
+    };
+
+    let mut workspaces = workspaces.map_err(|e: (StatusCode, String)| e)?;
+
+    if mobile_optimized {
+        for w in workspaces.iter_mut() {
+            w.default_work_dir = None;
+            w.default_model = None;
         }
     }
+
+    Ok(Json(workspaces))
 }
 
 async fn create_workspace(
@@ -346,10 +364,12 @@ async fn get_workspace(
 async fn list_tasks(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
+    Query(query): Query<AssistantQuery>,
 ) -> Result<Json<Vec<Task>>, (StatusCode, String)> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    match &db.store {
+    let mut tasks = match &db.store {
         DbStore::Sqlite(pool) => {
             let rows = sqlx::query(
                 "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived, 
@@ -362,7 +382,7 @@ async fn list_tasks(
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| Task {
+            let list: Vec<Task> = rows.into_iter().map(|row| Task {
                 id: row.get("id"),
                 workspace_id: row.get("workspace_id"),
                 title: row.get("title"),
@@ -376,7 +396,7 @@ async fn list_tasks(
                 created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
                 updated_at_unix: row.get::<Option<String>, _>("u_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
         }
         DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -393,7 +413,7 @@ async fn list_tasks(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| Task {
+            let list: Vec<Task> = rows.into_iter().map(|row| Task {
                 id: row.get("id"),
                 workspace_id: row.get("workspace_id"),
                 title: row.get("title"),
@@ -407,9 +427,20 @@ async fn list_tasks(
                 created_at_unix: row.get("c_unix"),
                 updated_at_unix: row.get("u_unix"),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
+        }
+    };
+
+    let mut tasks = tasks.map_err(|e: (StatusCode, String)| e)?;
+
+    if mobile_optimized {
+        for t in tasks.iter_mut() {
+            t.prompt = String::new();
+            t.model_config_json = None;
         }
     }
+
+    Ok(Json(tasks))
 }
 
 async fn create_task(
@@ -587,10 +618,12 @@ async fn list_messages(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
     Path(task_id): Path<String>,
+    Query(query): Query<AssistantQuery>,
 ) -> Result<Json<Vec<Message>>, (StatusCode, String)> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    match &db.store {
+    let mut messages = match &db.store {
         DbStore::Sqlite(pool) => {
             let rows = sqlx::query(
                 "SELECT id, task_id, role, content, tool_metadata, 
@@ -603,7 +636,7 @@ async fn list_messages(
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| Message {
+            let list: Vec<Message> = rows.into_iter().map(|row| Message {
                 id: row.get("id"),
                 task_id: row.get("task_id"),
                 role: row.get("role"),
@@ -611,7 +644,7 @@ async fn list_messages(
                 tool_metadata_json: row.get::<Option<String>, _>("tool_metadata").and_then(|s| serde_json::from_str(&s).ok()),
                 created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
         }
         DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -628,7 +661,7 @@ async fn list_messages(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| Message {
+            let list: Vec<Message> = rows.into_iter().map(|row| Message {
                 id: row.get("id"),
                 task_id: row.get("task_id"),
                 role: row.get("role"),
@@ -636,9 +669,19 @@ async fn list_messages(
                 tool_metadata_json: row.get("tool_metadata"),
                 created_at_unix: row.get("c_unix"),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
+        }
+    }?;
+
+    if mobile_optimized {
+        for m in messages.iter_mut() {
+            // For mobile, maybe we don't need tool_metadata_json or full content if not requested
+            // but let's clear tool_metadata_json
+            m.tool_metadata_json = None;
         }
     }
+
+    Ok(Json(messages))
 }
 
 async fn create_message(
@@ -695,10 +738,12 @@ async fn list_artifacts(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
     Path(task_id): Path<String>,
+    Query(query): Query<AssistantQuery>,
 ) -> Result<Json<Vec<Artifact>>, (StatusCode, String)> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    match &db.store {
+    let mut artifacts = match &db.store {
         DbStore::Sqlite(pool) => {
             let rows = sqlx::query(
                 "SELECT id, task_id, type, filename, path, mime_type, size, preview_ref, 
@@ -711,7 +756,7 @@ async fn list_artifacts(
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| Artifact {
+            let list: Vec<Artifact> = rows.into_iter().map(|row| Artifact {
                 id: row.get("id"),
                 task_id: row.get("task_id"),
                 type_: row.get("type"),
@@ -722,7 +767,7 @@ async fn list_artifacts(
                 preview_ref: row.get("preview_ref"),
                 created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
         }
         DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -739,7 +784,7 @@ async fn list_artifacts(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| Artifact {
+            let list: Vec<Artifact> = rows.into_iter().map(|row| Artifact {
                 id: row.get("id"),
                 task_id: row.get("task_id"),
                 type_: row.get("type"),
@@ -750,9 +795,17 @@ async fn list_artifacts(
                 preview_ref: row.get("preview_ref"),
                 created_at_unix: row.get("c_unix"),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
+        }
+    }?;
+
+    if mobile_optimized {
+        for a in artifacts.iter_mut() {
+            a.path = String::new();
         }
     }
+
+    Ok(Json(artifacts))
 }
 
 async fn create_artifact(
@@ -815,10 +868,12 @@ async fn list_file_changes(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
     Path(task_id): Path<String>,
+    Query(query): Query<AssistantQuery>,
 ) -> Result<Json<Vec<FileChange>>, (StatusCode, String)> {
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    match &db.store {
+    let mut file_changes = match &db.store {
         DbStore::Sqlite(pool) => {
             let rows = sqlx::query(
                 "SELECT id, task_id, path, change_type, summary, approval_status, 
@@ -831,7 +886,7 @@ async fn list_file_changes(
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| FileChange {
+            let list: Vec<FileChange> = rows.into_iter().map(|row| FileChange {
                 id: row.get("id"),
                 task_id: row.get("task_id"),
                 path: row.get("path"),
@@ -840,7 +895,7 @@ async fn list_file_changes(
                 approval_status: row.get("approval_status"),
                 created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
         }
         DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -857,7 +912,7 @@ async fn list_file_changes(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list = rows.into_iter().map(|row| FileChange {
+            let list: Vec<FileChange> = rows.into_iter().map(|row| FileChange {
                 id: row.get("id"),
                 task_id: row.get("task_id"),
                 path: row.get("path"),
@@ -866,9 +921,17 @@ async fn list_file_changes(
                 approval_status: row.get("approval_status"),
                 created_at_unix: row.get("c_unix"),
             }).collect();
-            Ok(Json(list))
+            Ok(list)
+        }
+    }?;
+
+    if mobile_optimized {
+        for f in file_changes.iter_mut() {
+            f.summary = None;
         }
     }
+
+    Ok(Json(file_changes))
 }
 
 async fn create_file_change(
@@ -926,9 +989,16 @@ async fn create_file_change(
 async fn list_memory(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
+    Query(query): Query<AssistantQuery>,
 ) -> Result<Json<AssistantMemoryListResponse>, (StatusCode, String)> {
     let tenant_id = tenant_id_from(&claims);
-    let memories = fetch_memory_records(db.as_ref(), &tenant_id).await?;
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let mut memories = fetch_memory_records(db.as_ref(), &tenant_id).await?;
+    if mobile_optimized {
+        for m in memories.iter_mut() {
+            m.content = String::new();
+        }
+    }
     Ok(Json(AssistantMemoryListResponse { memories }))
 }
 
@@ -1055,9 +1125,17 @@ async fn mutate_memory(
 async fn list_skills(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
+    Query(query): Query<AssistantQuery>,
 ) -> Result<Json<AssistantSkillListResponse>, (StatusCode, String)> {
     let tenant_id = tenant_id_from(&claims);
-    let skills = fetch_skill_records(db.as_ref(), &tenant_id).await?;
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let mut skills = fetch_skill_records(db.as_ref(), &tenant_id).await?;
+    if mobile_optimized {
+        for s in skills.iter_mut() {
+            s.description = None;
+            s.config = None;
+        }
+    }
     Ok(Json(AssistantSkillListResponse { skills }))
 }
 
@@ -1210,9 +1288,16 @@ async fn mutate_skill(
 async fn list_connectors(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
+    Query(query): Query<AssistantQuery>,
 ) -> Result<Json<AssistantConnectorListResponse>, (StatusCode, String)> {
     let tenant_id = tenant_id_from(&claims);
-    let connectors = fetch_connector_records(db.as_ref(), &tenant_id).await?;
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let mut connectors = fetch_connector_records(db.as_ref(), &tenant_id).await?;
+    if mobile_optimized {
+        for c in connectors.iter_mut() {
+            c.config = None;
+        }
+    }
     Ok(Json(AssistantConnectorListResponse { connectors }))
 }
 
