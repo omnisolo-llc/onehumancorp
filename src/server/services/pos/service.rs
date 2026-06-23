@@ -22,7 +22,7 @@ impl MyPosService {
         for payload in payloads {
             if payload.r#type == "inventory" {
                 let _res = sqlx::query(
-                    "UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1) WHERE id = $2 AND tenant_id = $3"
+                    "UPDATE products SET inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), pn_counter_n = pn_counter_n + $1 WHERE id = $2 AND tenant_id = $3"
                 )
                 .bind(payload.quantity_delta)
                 .bind(&payload.item_id)
