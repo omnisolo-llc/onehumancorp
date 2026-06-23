@@ -125,40 +125,24 @@ impl PromptCache {
             return;
         }
 
-        // To avoid cloning all strings (which are long prompts), we keep a BinaryHeap
-        // of the oldest elements.
-        // BinaryHeap is a max-heap. We want to keep the oldest elements (smallest Instant).
-        // If we store `Reverse<Instant>`, a max-heap gives us the *largest Reverse<Instant>*,
-        // which corresponds to the *smallest Instant*.
-        // Wait, if we want to find the `to_remove` oldest elements:
-        // A max-heap of size `to_remove` tracking the *newest* of the oldest will help.
-        // We push elements. If size > to_remove, we pop the max (which is the newest among the oldest).
-        // What's left are the `to_remove` oldest elements.
         use std::collections::BinaryHeap;
 
-        // (Instant, String) tuple for the heap. Instant implements Ord.
-        let mut heap: BinaryHeap<(Instant, String)> = BinaryHeap::with_capacity(to_remove + 1);
+        // Max-heap tracking the *newest* of the oldest elements.
+        let mut heap: BinaryHeap<(std::time::Instant, String)> = BinaryHeap::with_capacity(to_remove + 1);
 
         for kv in self.cache.iter() {
             let created_at = kv.value().created_at;
 
-            // If heap isn't full, just push. We clone the key here.
             if heap.len() < to_remove {
                 heap.push((created_at, kv.key().clone()));
-            } else {
-                // If it's full, compare with the max element (the newest of the oldest)
-                if let Some(max) = heap.peek() {
-                    if created_at < max.0 {
-                        // This element is older than the newest of our oldest.
-                        // Clone the key and push it, then pop the max.
-                        heap.push((created_at, kv.key().clone()));
-                        heap.pop();
-                    }
+            } else if let Some(max) = heap.peek() {
+                if created_at < max.0 {
+                    heap.push((created_at, kv.key().clone()));
+                    heap.pop();
                 }
             }
         }
 
-        // Remove the oldest elements from the cache
         for (_, key) in heap.into_iter() {
             self.cache.remove(&key);
         }
@@ -229,6 +213,32 @@ impl PromptCache {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn test_prompt_cache_mass_eviction_memory_optimization_ordered() {
+        let max_cap = 10;
+        let cache = PromptCache::with_capacity(Duration::from_secs(10), max_cap);
+
+        // Insert exactly max_cap items
+        for i in 0..max_cap {
+            let key = format!("prompt-key-{}", i);
+            cache.set(&key, "val", 1);
+            thread::sleep(Duration::from_millis(5)); // ensure distinct Instant
+        }
+
+        assert_eq!(cache.cache.len(), 10);
+
+        // Insert 11th item, triggering eviction
+        // target capacity = 9. len = 10. to_remove = 10 - 9 = 1.
+        // wait, len = 10. target = 10 * 0.9 = 9. to_remove = 10 - 9 = 1.
+        // It will remove the oldest (prompt-key-0)
+        cache.set("prompt-key-new", "new_val", 1);
+
+        assert_eq!(cache.cache.len(), 10); // 10 - 1 + 1
+
+        // prompt-key-0 should be evicted because it's the oldest
+        assert!(cache.get("prompt-key-0").is_none());
+        assert!(cache.get("prompt-key-1").is_some());
+    }
     use super::*;
     use std::thread;
 
