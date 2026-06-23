@@ -262,7 +262,7 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
 
     let mut msg = format!(
         "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}",
-        serde_json::to_string_pretty(&pydantic_json).unwrap_or_else(|_| msg_content)
+        serde_json::to_string_pretty(&pydantic_json).unwrap_or(msg_content)
     );
 
     if let Some(instruction) = custom_instruction {
