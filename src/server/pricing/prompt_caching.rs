@@ -125,25 +125,42 @@ impl PromptCache {
             return;
         }
 
-        // Sort by created_at to remove the oldest items.
-        // DashMap iter() locks the shards, so we collect keys first to minimize lock time.
-        let mut entries: Vec<(String, Instant)> = self
-            .cache
-            .iter()
-            .map(|kv| (kv.key().clone(), kv.value().created_at))
-            .collect();
+        // To avoid cloning all strings (which are long prompts), we keep a BinaryHeap
+        // of the oldest elements.
+        // BinaryHeap is a max-heap. We want to keep the oldest elements (smallest Instant).
+        // If we store `Reverse<Instant>`, a max-heap gives us the *largest Reverse<Instant>*,
+        // which corresponds to the *smallest Instant*.
+        // Wait, if we want to find the `to_remove` oldest elements:
+        // A max-heap of size `to_remove` tracking the *newest* of the oldest will help.
+        // We push elements. If size > to_remove, we pop the max (which is the newest among the oldest).
+        // What's left are the `to_remove` oldest elements.
+        use std::collections::BinaryHeap;
 
-        // Use select_nth_unstable_by_key for O(N) performance instead of O(N log N) sorting
-        if entries.len() > to_remove {
-            let (to_remove_slice, _, _) =
-                entries.select_nth_unstable_by_key(to_remove, |(_, time)| *time);
-            for (key, _) in to_remove_slice.iter() {
-                self.cache.remove(key);
+        // (Instant, String) tuple for the heap. Instant implements Ord.
+        let mut heap: BinaryHeap<(Instant, String)> = BinaryHeap::with_capacity(to_remove + 1);
+
+        for kv in self.cache.iter() {
+            let created_at = kv.value().created_at;
+
+            // If heap isn't full, just push. We clone the key here.
+            if heap.len() < to_remove {
+                heap.push((created_at, kv.key().clone()));
+            } else {
+                // If it's full, compare with the max element (the newest of the oldest)
+                if let Some(max) = heap.peek() {
+                    if created_at < max.0 {
+                        // This element is older than the newest of our oldest.
+                        // Clone the key and push it, then pop the max.
+                        heap.push((created_at, kv.key().clone()));
+                        heap.pop();
+                    }
+                }
             }
-        } else {
-            for (key, _) in entries.into_iter() {
-                self.cache.remove(&key);
-            }
+        }
+
+        // Remove the oldest elements from the cache
+        for (_, key) in heap.into_iter() {
+            self.cache.remove(&key);
         }
     }
 
@@ -323,6 +340,43 @@ mod tests {
         assert!(cache.get("key2").is_some());
         assert!(cache.get("key3").is_some());
         assert!(cache.get("key4").is_some());
+    }
+
+    #[test]
+    fn test_prompt_cache_mass_eviction_memory_optimization() {
+        let max_cap = 100;
+        let cache = PromptCache::with_capacity(Duration::from_secs(10), max_cap);
+
+        // Insert `max_cap` items
+        for i in 0..max_cap {
+            let key = format!("prompt-key-{}", i);
+            cache.set(&key, "val", 1);
+            // We sleep very briefly to guarantee different timestamps, though Instant::now() might be enough.
+            // On fast systems, multiple may have the exact same Instant::now(), making ordering non-deterministic.
+            // For a test, we can just ensure the first few have a definite gap.
+            if i < 20 {
+                thread::sleep(Duration::from_millis(1));
+            }
+        }
+
+        assert_eq!(cache.cache.len(), 100);
+
+        // Insert `max_cap + 1`th item, triggering eviction.
+        // target capacity = 90% of 100 = 90.
+        // len = 100, target_len = 90, to_remove = 10.
+        // So 10 items will be evicted (the 10 oldest).
+        cache.set("prompt-key-new", "new_val", 1);
+
+        assert_eq!(cache.cache.len(), 91); // 100 - 10 + 1
+
+        // Verify the oldest 10 items were removed (prompt-key-0 to prompt-key-9)
+        for i in 0..10 {
+            let key = format!("prompt-key-{}", i);
+            assert!(cache.get(&key).is_none(), "Old key {} was not evicted!", key);
+        }
+
+        // Verify the newly inserted item is there
+        assert!(cache.get("prompt-key-new").is_some());
     }
 
     #[test]
