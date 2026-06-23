@@ -700,5 +700,4 @@ mod tests {
         }
 
         assert!(has_guardrail_err);
-    }
-    #[tokio::test]
+}

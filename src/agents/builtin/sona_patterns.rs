@@ -62,16 +62,27 @@ impl PatternMatcher {
         }
     }
 
-    /// Computes Jaccard similarity between two sets of keywords/words
-    fn compute_jaccard_similarity(set1: &HashSet<&str>, text2: &str) -> f32 {
-        let set2: HashSet<&str> = text2.split_whitespace().collect();
+    /// Helper to normalize text into a set of lowercased words stripping punctuation
+    fn normalize_to_word_set(text: &str) -> HashSet<String> {
+        text.split_whitespace()
+            .map(|word| {
+                word.chars()
+                    .filter(|c| c.is_alphanumeric())
+                    .collect::<String>()
+                    .to_lowercase()
+            })
+            .filter(|w| !w.is_empty())
+            .collect()
+    }
 
+    /// Computes Jaccard similarity between two sets of normalized words
+    fn compute_jaccard_similarity(set1: &HashSet<String>, set2: &HashSet<String>) -> f32 {
         if set1.is_empty() || set2.is_empty() {
             return 0.0;
         }
 
-        let intersection: HashSet<_> = set1.intersection(&set2).collect();
-        let union: HashSet<_> = set1.union(&set2).collect();
+        let intersection: HashSet<_> = set1.intersection(set2).collect();
+        let union: HashSet<_> = set1.union(set2).collect();
 
         intersection.len() as f32 / union.len() as f32
     }
@@ -83,7 +94,7 @@ impl PatternMatcher {
             return None;
         }
 
-        let context_set: HashSet<&str> = current_context.split_whitespace().collect();
+        let context_set = Self::normalize_to_word_set(current_context);
 
         let mut best_pattern: Option<&TrajectoryPattern> = None;
         let mut best_score = 0.0;
@@ -94,7 +105,8 @@ impl PatternMatcher {
                 continue;
             }
 
-            let sim = Self::compute_jaccard_similarity(&context_set, &pattern.initial_context);
+            let pattern_set = Self::normalize_to_word_set(&pattern.initial_context);
+            let sim = Self::compute_jaccard_similarity(&context_set, &pattern_set);
             // Weight the similarity by the outcome score
             let weighted_score = sim * pattern.outcome_score;
 
@@ -215,15 +227,31 @@ mod tests {
 
     #[test]
     fn test_jaccard_similarity() {
-        let set1: HashSet<&str> = "a b c".split_whitespace().collect();
-        let sim1 = PatternMatcher::compute_jaccard_similarity(&set1, "a b c");
+        let set1 = PatternMatcher::normalize_to_word_set("a b c");
+        let set2 = PatternMatcher::normalize_to_word_set("a b c");
+        let sim1 = PatternMatcher::compute_jaccard_similarity(&set1, &set2);
         assert_eq!(sim1, 1.0);
 
-        let sim2 = PatternMatcher::compute_jaccard_similarity(&set1, "d e f");
+        let set3 = PatternMatcher::normalize_to_word_set("d e f");
+        let sim2 = PatternMatcher::compute_jaccard_similarity(&set1, &set3);
         assert_eq!(sim2, 0.0);
 
-        let sim3 = PatternMatcher::compute_jaccard_similarity(&set1, "b c d");
+        let set4 = PatternMatcher::normalize_to_word_set("b c d");
+        let sim3 = PatternMatcher::compute_jaccard_similarity(&set1, &set4);
         // union: a b c d (4), intersection: b c (2). 2/4 = 0.5
         assert_eq!(sim3, 0.5);
+    }
+
+    #[test]
+    fn test_jaccard_similarity_normalization() {
+        // Test that punctuation and casing are properly ignored.
+        let text1 = "Analyze the database, please.";
+        let text2 = "analyze the database please";
+
+        let set1 = PatternMatcher::normalize_to_word_set(text1);
+        let set2 = PatternMatcher::normalize_to_word_set(text2);
+
+        let sim = PatternMatcher::compute_jaccard_similarity(&set1, &set2);
+        assert_eq!(sim, 1.0);
     }
 }
