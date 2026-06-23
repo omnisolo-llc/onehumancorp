@@ -6602,8 +6602,26 @@ async fn create_ui_bom_item_handler(
         .route("/cost-dashboard", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/cost-dashboard.html"))
         }))
-        .route("/pricing", axum::routing::get(|| async {
+                .route("/pricing", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/pricing.html"))
+        }))
+        .route("/login", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/index.html"))
+        }))
+        .route("/dashboard", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
+        }))
+        .route("/agents", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/agent-profile.html"))
+        }))
+        .route("/integrations", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/integrations.html"))
+        }))
+        .route("/customer-referral-program", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/referrals.html"))
+        }))
+        .route("/storefront-builder", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/website-builder.html"))
         }))
         .route("/social-share-widget.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/social-share-widget.html"))
