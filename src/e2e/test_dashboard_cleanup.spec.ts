@@ -57,7 +57,6 @@ test.describe('Dashboard Cleanup Audit', () => {
     await page.waitForTimeout(3000);
     expect(tooltipLoaded).toBe(false);
   });
-});
 
   test('Verify gracefully hiding AI savings widget when backend returns error (HTTP 500)', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
@@ -176,3 +175,4 @@ test.describe('Dashboard Cleanup Audit', () => {
       // Should show 'undefined' for missing data, but shouldn't crash the widget
     }
   });
+});
