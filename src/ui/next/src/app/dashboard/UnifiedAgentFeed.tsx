@@ -725,6 +725,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     (approval.proposed_action || approval.context_payload)
                       ?.feature_type === "incident_resolution" ||
                     (approval.proposed_action || approval.context_payload)
+                      ?.feature_type === "booking_draft" ||
+                    (approval.proposed_action || approval.context_payload)
                       ?.feature_type === "instagram_dm") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
                       {(approval.proposed_action || approval.context_payload)
@@ -1413,6 +1415,101 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
+                  ) : (approval.proposed_action || approval.context_payload)
+                      ?.feature_type === "booking_draft" ? (
+                    editingId === approval.id ? (
+                      <div className="flex flex-col gap-3 w-full">
+                        <textarea
+                          className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          rows={4}
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          data-testid="edit-booking-draft-textarea"
+                          autoFocus
+                        />
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => {
+                              handleDecision(
+                                approval.id,
+                                true,
+                                editContent,
+                                approval.event_source,
+                              );
+                              setEditingId(null);
+                            }}
+                            className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                            data-testid="save-booking-draft"
+                          >
+                            Save & Approve
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                            data-testid="cancel-edit-booking-draft"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg mb-3 border border-gray-200 dark:border-gray-700 backdrop-blur-[10px]">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                            Audio Summary
+                          </p>
+                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                            <span className="text-lg">▶️</span>
+                            <span>0:10 AI Summary ({(approval.proposed_action || approval.context_payload)?.caller_phone})</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            handleDecision(
+                              approval.id,
+                              true,
+                              undefined,
+                              approval.event_source,
+                            )
+                          }
+                          className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+                          aria-label="Approve Route & Send Confirmation"
+                          data-testid="approve-booking-draft"
+                        >
+                          Approve Route & Send Confirmation
+                        </button>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full">
+                          <button
+                            onClick={() => {
+                              setEditingId(approval.id);
+                              setEditContent(
+                                (approval.proposed_action || approval.context_payload)?.summary || ""
+                              );
+                            }}
+                            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                            aria-label="Edit booking draft"
+                            data-testid="edit-booking-draft"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleDecision(
+                                approval.id,
+                                false,
+                                undefined,
+                                approval.event_source,
+                              )
+                            }
+                            className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                            aria-label="Reject booking draft"
+                            data-testid="reject-booking-draft"
+                          >
+                            Deny
+                          </button>
+                        </div>
+                      </>
+                    )
                   ) : (approval.proposed_action || approval.context_payload)
                     ?.feature_type === "incident_resolution" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
