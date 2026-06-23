@@ -5,45 +5,41 @@ test.describe('Viral Waitlist Generator E2E', () => {
         test.setTimeout(90000);
 
         // Navigate to the generator page
-        await memberPage.goto('/ui/viral-waitlist-generator.html');
+        await memberPage.goto('/pre-order-widget');
 
         // Wait for the page to load
-        await expect(memberPage.locator('h1', { hasText: 'Viral Waitlist Generator' })).toBeVisible({ timeout: 15000 });
+        await expect(memberPage.locator('h1', { hasText: 'Pre-Order Waitlist Engine' })).toBeVisible({ timeout: 15000 });
 
         // Update product name
-        const productInput = memberPage.locator('#product-name');
+        const productInput = memberPage.locator('input[placeholder="e.g. The Vegan Chocolate Cake"]');
         await productInput.fill('Playwright Test Launch');
 
         // Verify the preview updates
-        await expect(memberPage.locator('#preview-title')).toHaveText('Join the Playwright Test Launch Waitlist');
-
-        // Verify that by default, the "Powered by OHC" branding is visible in the preview
-        const previewBranding = memberPage.locator('#preview-branding');
-        await expect(previewBranding).toBeVisible();
-        await expect(previewBranding).toContainText('Powered by OHC');
+        await expect(memberPage.locator('h2', { hasText: 'Playwright Test Launch' })).toBeVisible();
 
         // Click generate widget code
-        await memberPage.locator('#get-code-btn').click();
+        await memberPage.locator('button', { hasText: 'Get Widget Embed Code' }).click();
 
-        // Check the generated embed code
-        const embedModal = memberPage.locator('#embed-modal');
-        await expect(embedModal).toHaveClass(/active/);
+        // Check the generated embed code modal
+        const embedModal = memberPage.locator('h2', { hasText: 'Embed Your Waitlist' });
+        await expect(embedModal).toBeVisible();
 
-        const embedCode = await memberPage.locator('#embed-code').inputValue();
-        expect(embedCode).toContain('Playwright%20Test%20Launch'); // URL encoded
-        expect(embedCode).toContain('hideBranding=false'); // Default should include branding
+        const embedCode = await memberPage.locator('div.font-mono').textContent();
+        expect(embedCode).toContain('Playwright Test Launch');
     });
 
-    test('should show paywall when attempting to remove branding', async ({ memberPage }) => {
+    test('should allow member to change theme', async ({ memberPage }) => {
         // Navigate to the generator page
-        await memberPage.goto('/ui/viral-waitlist-generator.html');
+        await memberPage.goto('/pre-order-widget');
 
-        // Attempt to remove branding
-        await memberPage.locator('label', { hasText: 'Remove "Powered by OHC" Badge' }).click();
+        // Wait for the page to load
+        await expect(memberPage.locator('h1', { hasText: 'Pre-Order Waitlist Engine' })).toBeVisible({ timeout: 15000 });
 
-        // Since the member in E2E isn't a "Pro" by default in local storage, it should pop the paywall
-        const paywallModal = memberPage.locator('#paywall-modal');
-        await expect(paywallModal).toHaveClass(/active/);
-        await expect(paywallModal.locator('h2')).toHaveText('Upgrade to Pro');
+        // Change theme
+        await memberPage.locator('button', { hasText: 'Dark' }).click();
+
+        // Check if theme changed (class name changes)
+        const darkThemeButton = memberPage.locator('button', { hasText: 'Dark' });
+        await expect(darkThemeButton).toHaveClass(/bg-blue-900/);
     });
 });

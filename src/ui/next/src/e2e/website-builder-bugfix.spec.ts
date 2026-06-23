@@ -4,12 +4,12 @@ test.describe('Website Builder Tool (E2E Validation)', () => {
 
     test('renders the initial step successfully', async ({ page }) => {
         await page.goto('/website-builder');
-        await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
     });
 
     test('can enter business type and advance', async ({ page }) => {
         await page.goto('/website-builder');
-        await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
         await page.getByRole('button', { name: 'Start My Business' }).click();
 
         await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();

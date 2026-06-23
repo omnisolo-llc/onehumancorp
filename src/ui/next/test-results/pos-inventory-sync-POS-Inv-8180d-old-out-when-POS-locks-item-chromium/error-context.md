@@ -34,8 +34,8 @@ Received: false
         - generic [ref=e14] [cursor=pointer]:
           - generic [ref=e15]:
             - paragraph [ref=e16]: Neighborhood Collective Points
-            - paragraph [ref=e17]: You have 0 points available
-          - generic [ref=e19]: 0% off
+            - paragraph [ref=e17]: You have 50 points available
+          - generic [ref=e19]: "-10% off"
         - generic [ref=e20]:
           - generic [ref=e21]: Delivery Address (Optional)
           - generic [ref=e22]:
