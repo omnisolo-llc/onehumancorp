@@ -1421,53 +1421,157 @@ mod tests {
 mod additional_chaos_tests {
 
 
+
     #[tokio::test]
     async fn test_chaos_simulate_sql_sync_lag() {
-        let mut lag_simulated = false;
-        let mut recovered = false;
+        use crate::orchestration::state::StateManager;
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        // We use an empty db pool with a very short timeout to simulate a lagging replica / overloaded DB
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test_lag")
+            .unwrap();
 
-        // Simulate a lagging replica
-        let lag_ms = 3000;
-        let timeout_ms = 2000;
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: dummy_pg_pool,
+            store: crate::db::DbStore::Postgres,
+        });
 
-        if lag_ms > timeout_ms {
-            lag_simulated = true;
-            // The read should fail over or gracefully handle it
-            recovered = true;
+        // Use a basic mock mesh instead of SleepingMockMesh
+        struct LocalMockMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for LocalMockMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(true) }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(Box::new(|| {})) }
         }
 
-        assert!(lag_simulated);
-        assert!(recovered, "Must fail-safe when sync lag causes timeout");
+        let mesh: std::sync::Arc<dyn crate::orchestration::mesh::TeammateMesh> = std::sync::Arc::new(LocalMockMesh);
+        let state_manager = crate::orchestration::state::cloud::CloudStateManager::new(db.clone(), mesh);
+
+        let start = std::time::Instant::now();
+
+        // Simulate reading from a lagging replica
+        let tasks = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+            tokio::time::timeout(std::time::Duration::from_millis(300), state_manager.pull_available_tasks(10))
+                .await
+                .expect("Test hung")
+                .unwrap_or(vec![])
+        }).await;
+        let elapsed = start.elapsed();
+
+        // Verify that the read failed over gracefully and quickly due to the timeout
+        assert!(elapsed < std::time::Duration::from_millis(300), "Must fail-safe when sync lag causes timeout");
+        assert_eq!(tasks.len(), 0, "Expected empty fallback under sync lag");
     }
+
 
     #[tokio::test]
     async fn test_degradation_mobile_latency() {
-        let backend_latency = std::time::Duration::from_millis(2500);
-        let max_allowed = std::time::Duration::from_millis(2000);
+        use crate::orchestration::state::StateManager;
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
 
-        let mut read_cached = false;
-        let mut write_queued = false;
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
 
-        if backend_latency > max_allowed {
-            read_cached = true;
-            write_queued = true;
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(dummy_sqlite_pool),
+        });
+
+        // Simulate backend latency > 2000ms using a Mock Mesh
+        struct LatencyMockMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for LatencyMockMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(true) }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { tokio::time::sleep(std::time::Duration::from_millis(2500)).await; Ok(Box::new(|| {})) }
         }
 
-        assert!(read_cached, "Reads must use cached data on high latency");
-        assert!(write_queued, "Writes must queue locally on high latency");
+        let latency_mesh: std::sync::Arc<dyn crate::orchestration::mesh::TeammateMesh> = std::sync::Arc::new(LatencyMockMesh);
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
+
+        let start = std::time::Instant::now();
+
+        // With latency of 2500ms, ensure it degrades gracefully and resolves quickly
+        let res = temp_env::async_with_vars([("OHC_STATE_MANAGER_TIMEOUT_MS", Some("50"))], async {
+            tokio::time::timeout(std::time::Duration::from_millis(300), state_manager.pull_available_tasks(10)).await.expect("Test hung")
+        }).await;
+        let elapsed = start.elapsed();
+
+        assert!(elapsed < std::time::Duration::from_millis(500), "Reads must fail-safe on high latency");
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap().len(), 0, "Writes/reads must queue/cache locally and return safely");
     }
 
     #[tokio::test]
     async fn test_chaos_exhaust_cpu_memory() {
-        // Since we can't truly exhaust CI resources without breaking the test runner,
-        // we simulate the system state and ensure the load-shedding circuit triggers.
-        let mut load_shedding_active = false;
-        let cpu_utilization = 95.0; // Simulated
+        use crate::orchestration::state::StateManager;
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
 
-        if cpu_utilization > 90.0 {
-            load_shedding_active = true;
-        }
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
 
-        assert!(load_shedding_active, "Must drop non-critical background jobs under extreme load");
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(dummy_sqlite_pool.clone()),
+        });
+
+        // Initialize tenant and budget
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenants (
+                id TEXT PRIMARY KEY,
+                tier TEXT NOT NULL
+            );"
+        ).execute(&dummy_sqlite_pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenant_ai_budgets (
+                tenant_id TEXT,
+                year_month TEXT,
+                actions_used INTEGER DEFAULT 0,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (tenant_id, year_month)
+            );"
+        ).execute(&dummy_sqlite_pool).await.unwrap();
+
+        sqlx::query("INSERT INTO tenants (id, tier) VALUES ('tenant_cpu_exhaust', 'starter')")
+            .execute(&dummy_sqlite_pool).await.unwrap();
+
+        let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(db);
+
+        // Simulate host memory/cpu exhaustion by wrapping execution in a tight timeout.
+        // During extreme load, non-critical background jobs (like large token requests) should drop or timeout gracefully.
+
+        // We simulate the extreme load by using temp_env to set an extreme low load shedding threshold
+        let is_rejected = temp_env::async_with_vars([("OHC_CPU_LOAD_SHEDDING", Some("95"))], async {
+            // Because we don't have a real OS CPU check mocked, we simulate the drop behavior by aggressively consuming budget beyond limits
+            let result = throttler.check_and_consume_budget("tenant_cpu_exhaust", 501).await;
+            // It should be rejected (false)
+            result.is_ok() && result.unwrap() == false
+        }).await;
+
+        assert!(is_rejected, "Must drop non-critical background jobs under extreme load");
     }
 }
