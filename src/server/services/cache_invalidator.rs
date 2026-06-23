@@ -8,7 +8,7 @@ pub struct InvalidationEvent {
     pub tags: Vec<String>,
 }
 
-pub async fn start_cache_invalidator() {
+pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
     let redis_url = match std::env::var("REDIS_URL") {
         Ok(url) => url,
         Err(_) => {
@@ -56,9 +56,34 @@ pub async fn start_cache_invalidator() {
         match serde_json::from_str::<InvalidationEvent>(&payload) {
             Ok(event) => {
                 info!("Received invalidation event: {}", event.event);
-                for tag in event.tags {
+                let mut tenant_id_str = None;
+                let mut product_id_str = None;
+
+                for tag in &event.tags {
                     info!("Invalidating cache for tag: {}", tag);
-                    edge_cache.invalidate_by_tag(&tag).await;
+                    if tag.starts_with("tenant-id:") {
+                        tenant_id_str = Some(tag.trim_start_matches("tenant-id:").to_string());
+                    } else if tag.starts_with("entity:product:") {
+                        product_id_str = Some(tag.trim_start_matches("entity:product:").to_string());
+                    }
+                    edge_cache.invalidate_by_tag(tag).await;
+                }
+
+                if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str) {
+                    if let (Ok(tenant_id), Ok(product_id)) = (uuid::Uuid::parse_str(&t_str), uuid::Uuid::parse_str(&p_str)) {
+                        let site_id_res = sqlx::query_scalar::<_, uuid::Uuid>(
+                            "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
+                        )
+                        .bind(tenant_id)
+                        .fetch_one(&pool)
+                        .await;
+
+                        if let Ok(site_id) = site_id_res {
+                            info!("Pre-warming cache for product: {} tenant: {}", product_id, tenant_id);
+                            let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
+                            let _ = crate::builder::edge::regenerate_cache(pool.clone(), tenant_id, site_id, cache_key, edge_cache.clone()).await;
+                        }
+                    }
                 }
             }
             Err(e) => {

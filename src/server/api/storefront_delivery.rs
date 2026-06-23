@@ -8,7 +8,7 @@ use axum::http::StatusCode;
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::builder::edge::{get_edge_cache, regenerate_cache};
+use crate::builder::edge::{get_edge_cache, regenerate_cache, get_ongoing_generation, inject_dynamic_inventory};
 
 #[derive(Clone)]
 pub struct DeliveryState {
@@ -48,8 +48,57 @@ async fn get_storefront_product(
     let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
 
     if let Some((cached_html, is_stale)) = cache.get_with_swr(&cache_key).await {
+        let html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
+        let mut response = Html(html).into_response();
+        let cache_tag = format!("tenant-id:{}", tenant_id);
+        if let Ok(val) = cache_tag.parse() {
+            response.headers_mut().insert("Cache-Tag", val);
+        }
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+        );
+
         if !is_stale {
-            let mut response = Html(cached_html).into_response();
+            return Ok(response);
+        } else {
+            let ongoing = get_ongoing_generation();
+            let mut guard = ongoing.lock().await;
+            if !guard.contains(&cache_key) {
+                guard.insert(cache_key.clone());
+                let pool_clone = state.pool.clone();
+                let cache_key_clone = cache_key.clone();
+                let cache_clone = cache.clone();
+                tokio::spawn(async move {
+                    let _ = regenerate_storefront_product(pool_clone, tenant_id, product_id, cache_key_clone.clone(), cache_clone).await;
+                    let ongoing = get_ongoing_generation();
+                    ongoing.lock().await.remove(&cache_key_clone);
+                });
+            }
+            return Ok(response);
+        }
+    }
+
+    let ongoing = get_ongoing_generation();
+    let is_generating = {
+        let mut guard = ongoing.lock().await;
+        if guard.contains(&cache_key) {
+            true
+        } else {
+            guard.insert(cache_key.clone());
+            false
+        }
+    };
+
+    if is_generating {
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        if let Some((cached_html, _)) = cache.get_with_swr(&cache_key).await {
+            let html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
+            let mut response = Html(html).into_response();
+            let cache_tag = format!("tenant-id:{}", tenant_id);
+            if let Ok(val) = cache_tag.parse() {
+                response.headers_mut().insert("Cache-Tag", val);
+            }
             response.headers_mut().insert(
                 axum::http::header::CACHE_CONTROL,
                 "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
@@ -58,19 +107,54 @@ async fn get_storefront_product(
         }
     }
 
-    // In a real scenario we might render directly here if it's missing,
-    // but the builder edge regenerate_cache logic expects a site_id.
-    // Let's find the primary site for this tenant.
+    let result = regenerate_storefront_product(state.pool.clone(), tenant_id, product_id, cache_key.clone(), cache.clone()).await;
+
+    {
+        let ongoing = get_ongoing_generation();
+        ongoing.lock().await.remove(&cache_key);
+    }
+
+    if let Ok((html, tags)) = result {
+        let final_html = inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
+        let mut response = Html(final_html).into_response();
+        if !tags.is_empty() {
+            if let Ok(cache_tag) = tags.join(", ").parse() {
+                response.headers_mut().insert("Cache-Tag", cache_tag);
+            }
+        }
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+        );
+        return Ok(response);
+    }
+
+    // Fallback simple HTML
+    let mut response = Html(format!("<!DOCTYPE html><html><body>Product {} not found</body></html>", product_id)).into_response();
+    response.headers_mut().insert(
+        axum::http::header::CACHE_CONTROL,
+        "public, max-age=10".parse().unwrap(),
+    );
+    Ok(response)
+}
+
+async fn regenerate_storefront_product(
+    pool: PgPool,
+    tenant_id: Uuid,
+    product_id: Uuid,
+    cache_key: String,
+    cache: std::sync::Arc<crate::utils::cache::HybridCache<String>>,
+) -> Result<(String, Vec<String>), StatusCode> {
     let site_id_res = sqlx::query_scalar::<_, Uuid>(
         "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
     )
     .bind(tenant_id)
-    .fetch_one(&state.pool)
+    .fetch_one(&pool)
     .await;
 
     if let Ok(site_id) = site_id_res {
         // Just call regenerate_cache from builder edge
-        if let Ok((mut html, tags)) = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
+        if let Ok((mut html, tags)) = regenerate_cache(pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
             #[derive(sqlx::FromRow)]
             struct ProductSeoRow {
                 seo_title: Option<String>,
@@ -84,7 +168,7 @@ async fn get_storefront_product(
             )
             .bind(product_id.to_string())
             .bind(tenant_id.to_string())
-            .fetch_optional(&state.pool)
+            .fetch_optional(&pool)
             .await;
 
             if let Ok(Some(row)) = seo_res {
@@ -92,7 +176,7 @@ async fn get_storefront_product(
                     if let Some(start) = html.find("<title>") {
                         if let Some(end) = html[start..].find("</title>") {
                             let end = start + end + "</title>".len();
-                            html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">", crate::builder::edge::escape_html(&seo_title), crate::builder::edge::escape_html(&seo_title)));
+                            html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">", seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
                         }
                     }
                 }
@@ -101,10 +185,10 @@ async fn get_storefront_product(
                     if let Some(start) = html.find("<meta name=\"description\"") {
                         if let Some(end) = html[start..].find(">") {
                             let end = start + end + ">".len();
-                            html.replace_range(start..end, &format!("<meta name=\"description\" content=\"{}\">", crate::builder::edge::escape_html(&seo_desc)));
+                            html.replace_range(start..end, &format!("<meta name=\"description\" content=\"{}\">", seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
                         }
                     } else if let Some(head_end) = html.find("</head>") {
-                        html.insert_str(head_end, &format!("<meta name=\"description\" content=\"{}\">\n", crate::builder::edge::escape_html(&seo_desc)));
+                        html.insert_str(head_end, &format!("<meta name=\"description\" content=\"{}\">\n", seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
                     }
                 }
 
@@ -120,25 +204,11 @@ async fn get_storefront_product(
                 }
             }
 
-            let mut response = Html(html).into_response();
-            if !tags.is_empty() {
-                if let Ok(cache_tag) = tags.join(", ").parse() {
-                    response.headers_mut().insert("Cache-Tag", cache_tag);
-                }
-            }
-            response.headers_mut().insert(
-                axum::http::header::CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
-            );
-            return Ok(response);
+            // Pre-warm the cache since SWR or cache miss just resolved
+            cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
+
+            return Ok((html, tags));
         }
     }
-
-    // Fallback simple HTML
-    let mut response = Html(format!("<!DOCTYPE html><html><body>Product {} not found</body></html>", product_id)).into_response();
-    response.headers_mut().insert(
-        axum::http::header::CACHE_CONTROL,
-        "public, max-age=10".parse().unwrap(),
-    );
-    Ok(response)
+    Err(StatusCode::NOT_FOUND)
 }

@@ -195,6 +195,11 @@ impl StripeClient {
             current_period_end: 1714560000,
         })
     }
+
+    pub async fn submit_dispute_evidence(&self, _dispute_id: &str, _evidence_data: serde_json::Value) -> Result<(), String> {
+        // Simulates submitting dispute evidence to Stripe
+        Ok(())
+    }
 }
 
 impl StripeClient {

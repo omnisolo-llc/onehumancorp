@@ -91,7 +91,7 @@ impl VectorRepository {
 
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
         let emb_str =
-            serde_json::to_string(&record.embedding).map_err(|e| format!("DB Error: {}", e))?;
+            serde_json::to_string(&record.embedding).map_err(|e| format!("VectorRepository Upsert JSON Serialization Error: {}", e))?;
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
@@ -175,7 +175,7 @@ impl VectorRepository {
         query_embedding: &[f32],
         limit: i64,
     ) -> Result<Vec<EmbeddingRecord>, String> {
-        let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
+        let emb_str = serde_json::to_string(query_embedding).map_err(|e| format!("VectorRepository Semantic Search JSON Serialization Error: {}", e))?;
 
         let mut results = Vec::new();
 
@@ -546,6 +546,7 @@ impl VectorRepository {
         let mut updated_winner = winner.clone();
         updated_winner.reference_count += loser.reference_count + 1;
         updated_winner.last_referenced_at = chrono::Utc::now();
+        updated_winner.reliability_score = std::cmp::max(winner.reliability_score, loser.reliability_score);
         if loser.owner_override && !updated_winner.owner_override {
             updated_winner.owner_override = true;
         }
@@ -557,6 +558,7 @@ impl VectorRepository {
     /// It uses explicit owner override, reliability score, and recency to determine the winner.
     pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
         let conflicts = self.get_conflicting_pairs().await?;
+        tracing::info!("Found {} conflicting memory pairs during auto_resolve_conflicts", conflicts.len());
         let mut resolved_count = 0;
         let mut deleted_ids = std::collections::HashSet::new();
 
@@ -3642,5 +3644,96 @@ mod additional_tests_fallback {
         let (a, b) = &conflicts[0];
         assert_eq!(a.id, "rec_fallback_a");
         assert_eq!(b.id, "rec_fallback_b");
+    }
+}
+
+#[cfg(test)]
+mod reliability_score_tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_resolve_conflict_takes_max_reliability_score() {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+
+        let mut v1 = vec![0.0; 10];
+        v1[0] = 1.0;
+
+        let timestamp = chrono::Utc::now();
+
+        // Winner with lower reliability score
+        let record_a = EmbeddingRecord {
+            id: "winner_low_score".to_string(),
+            tenant_id: "org_rel_test".to_string(),
+            agent_id: "test".to_string(),
+            content: "Newer info".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp + chrono::Duration::days(1),
+            last_referenced_at: timestamp + chrono::Duration::days(1),
+            reference_count: 1,
+            reliability_score: 60,
+            owner_override: true,
+            metadata: None,
+        };
+
+        // Loser with higher reliability score
+        let record_b = EmbeddingRecord {
+            id: "loser_high_score".to_string(),
+            tenant_id: "org_rel_test".to_string(),
+            agent_id: "test".to_string(),
+            content: "Older info".to_string(),
+            embedding: v1.clone(),
+            source_type: "NOTE".to_string(),
+            created_at: timestamp,
+            last_referenced_at: timestamp,
+            reference_count: 1,
+            reliability_score: 95,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&record_a).await.unwrap();
+        repo.upsert(&record_b).await.unwrap();
+
+        repo.resolve_conflict(&record_a, &record_b).await.unwrap();
+
+        let results = repo
+            .cross_department_search("org_rel_test", &v1, 10)
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 1, "Only the winner should remain");
+        assert_eq!(results[0].id, "winner_low_score");
+        assert_eq!(
+            results[0].reliability_score, 95,
+            "Winner should have inherited the maximum reliability score (95)"
+        );
     }
 }

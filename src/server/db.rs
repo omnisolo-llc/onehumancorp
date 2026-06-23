@@ -197,7 +197,13 @@ impl DB {
                 })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
 
-            let mut conn_opts = SqliteConnectOptions::from_str(&database_url)?;
+            // Strip the pragma query parameter safely before parsing if it was set
+            let safe_url = if database_url.contains("?pragma.key=") {
+                database_url.split("?pragma.key=").next().unwrap_or(&database_url).to_string()
+            } else {
+                database_url.clone()
+            };
+            let mut conn_opts = SqliteConnectOptions::from_str(&safe_url)?;
             // Force create_if_missing to false to avoid insecure creation by sqlx
             // Only our manual secure creation below will be allowed to create it.
             conn_opts = conn_opts.create_if_missing(false);

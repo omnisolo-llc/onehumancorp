@@ -66,6 +66,8 @@ const secondaryNav: NavItem[] = [
   { label: "Integrations", href: "/integrations", icon: "integrations" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },
+  { label: "Help", href: "/help", icon: "activity" },
+  { label: "API Docs", href: "/api-docs", icon: "diagnostics" },
 ];
 
 function ShellIcon({ name }: { name: IconName }) {
@@ -138,6 +140,14 @@ function NavLink({ item }: { item: NavItem }) {
     return <WithTooltip id="orders-tooltip" defaultText="See what customers bought and track order fulfillment.">{link}</WithTooltip>;
   }
 
+  if (item.href === "/help") {
+    return <WithTooltip id="help-nav-tooltip" defaultText="Help Center">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/api-docs") {
+    return <WithTooltip id="api-docs-nav-tooltip" defaultText="API Documentation">{link}</WithTooltip>;
+  }
+
   return link;
 }
 
@@ -203,7 +213,7 @@ export function AppShell({
               </Link>
             ))}
             <WithTooltip id="help-btn-tooltip-appshell" defaultText="Need help? Click here to access our Help Center and tutorials.">
-              <Link href="/help" className="app-button min-h-[44px]" aria-label="Help Center" style={{ padding: '0 12px', minWidth: 'auto', borderRadius: '50%' }}>
+              <Link href="/help" className="app-button min-h-[44px] flex items-center justify-center aspect-square rounded-full px-3 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Help Center">
                 <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
               </Link>
             </WithTooltip>
