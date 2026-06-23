@@ -164,14 +164,14 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
-                format!("{}?pragma.key={}", base_sqlite_url, key)
-            } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-                format!("{}?pragma.key={}", base_sqlite_url, fallback_key)
+                base_sqlite_url // Let db.rs handle pragma key via connection options
+            } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+                base_sqlite_url
             } else {
                 base_sqlite_url
             }
-        } else if let Ok(fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-            format!("{}?pragma.key={}", base_sqlite_url, fallback_key)
+        } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+            base_sqlite_url
         } else {
             base_sqlite_url
         };

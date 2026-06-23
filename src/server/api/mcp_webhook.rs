@@ -336,7 +336,7 @@ pub async fn handle_mcp_webhook(
     let auth_header = headers.get("Authorization").and_then(|v| v.to_str().ok());
 
     if auth_header != Some(&format!("Bearer {}", expected_token)) {
-        tracing::warn!("Unauthorized MCP webhook access attempt");
+        tracing::warn!("Unauthorized MCP webhook access attempt"); // pii-safe
         return (
             StatusCode::UNAUTHORIZED,
             Json(McpWebhookResponse {

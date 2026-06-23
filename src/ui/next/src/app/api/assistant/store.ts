@@ -1276,10 +1276,7 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
 
   const createdAt = now();
   const primaryArtifact = artifactForFormat(normalized.outputFormat);
-  const artifacts = [primaryArtifact, chartArtifact()];
-  if (normalized.outputFormat.toLowerCase().includes('code') || normalized.outputFormat.toLowerCase().includes('app')) {
-    artifacts.push(appPreviewArtifact());
-  }
+  const artifacts: AssistantArtifact[] = [];
   const task: AssistantTask = {
     id: id('task'),
     title: titleFromPrompt(prompt),
@@ -1300,24 +1297,8 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
     currentStep: 'Planning and preparing tools',
     riskSummary: buildRiskSummary(normalized),
     artifacts,
-    changes: [
-      {
-        id: id('change'),
-        path: `${normalized.workDirectory.replace(/\/$/, '')}/${primaryArtifact.filename}`,
-        changeType: 'created',
-        summary: 'Generated output file will be written after approval if required.',
-        approvalStatus: normalized.permissionProfile === 'Guarded' ? 'pending' : 'not_required',
-      },
-    ],
-    messages: [
-      { id: id('msg'), role: 'user', content: prompt, createdAt },
-      {
-        id: id('msg'),
-        role: 'assistant',
-        content: `Agent planned the task with ${normalized.skills.length || 'default'} skills and ${normalized.connectors.length || 'no'} connectors.`,
-        createdAt,
-      },
-    ],
+    changes: [],
+    messages: [],
     actions: actionsForTask(normalized.outputFormat, normalized.permissionProfile),
     createdAt,
     updatedAt: createdAt,
