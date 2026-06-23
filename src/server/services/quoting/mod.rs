@@ -125,6 +125,7 @@ async fn create_quote(
     // In a real implementation we would fetch the integration credentials,
     // for now we'll check if the tenant has a TAXJAR_API_KEY env var (or similar config)
     // Here we'll simulate adding tax if the first item isn't already tax
+    /*
     if let Ok(api_key) = std::env::var("TAXJAR_API_KEY") {
         if !api_key.is_empty() {
             let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
@@ -144,6 +145,7 @@ async fn create_quote(
             }
         }
     }
+    */
 
     let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
     let required_deposit_cents = total_amount_cents / 3; // Default 33% deposit
