@@ -82,7 +82,40 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
         .route("/create-billing-portal-session", axum::routing::post(create_billing_portal_session_handler))
         .route("/cancel-subscription", axum::routing::post(cancel_subscription_handler))
         .route("/download-invoice", axum::routing::post(download_invoice_handler))
+        .route("/report-cost", axum::routing::post(report_cost_handler))
         .with_state(hub)
+}
+
+#[derive(serde::Deserialize)]
+pub struct ReportCostRequest {
+    pub metric_name: String,
+    pub value: i64,
+    pub labels: std::collections::HashMap<String, String>,
+}
+
+pub async fn report_cost_handler(
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
+        Some(_) => "default".to_string(),
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
+
+    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
+    let req: ReportCostRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    if req.value < 0 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    if req.metric_name == "ohc_llm_cost_total_cents" {
+        let agent_id = req.labels.get("agent_id").map(|s| s.as_str()).unwrap_or("unknown_agent");
+        hub.get_cost_auditor().record_manual_cost(agent_id, &tenant_id, req.value);
+    }
+
+    Ok(Json(serde_json::json!({ "success": true })))
 }
 
 #[derive(serde::Serialize)]
