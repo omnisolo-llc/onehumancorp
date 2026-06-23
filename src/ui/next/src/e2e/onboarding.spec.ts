@@ -34,8 +34,8 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Everyone');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.locator("input[value=\"Test Type\"]").first()).toBeVisible({ timeout: 15000 }).catch(() => {});
-    await page.waitForSelector("text=Review Details");
+
+    await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByText('Modern').click();
@@ -68,8 +68,8 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Homeowners');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.locator("input[value=\"Test Type\"]").first()).toBeVisible({ timeout: 15000 }).catch(() => {});
-    await page.waitForSelector("text=Review Details");
+
+    await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByText('Minimal').click();
@@ -168,7 +168,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.getByText('Draft Saved!')).toBeVisible();
 
     // Ensure localStorage is populated via zustand persist
-    const lsStore = await page.evaluate(() => window.localStorage.getItem('onboarding-storage-v3'));
+    const lsStore = await page.evaluate(() => window.localStorage.getItem('onboarding-storage-v4'));
     expect(lsStore).toContain('My Restored Business');
 
     // 2. Clear local storage to simulate device switch
