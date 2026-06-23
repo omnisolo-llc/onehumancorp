@@ -520,7 +520,7 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
 
     match ::server_auth::parse_spiffe_id(spiffe_id_str) {
         Ok((_org_id, _agent_id)) => {
-            tracing::info!("Authenticated SPIFFE ID successfully.");
+            tracing::info!("Authenticated SPIFFE ID successfully."); // pii-safe
         }
         Err(e) => return Err(e),
     }
@@ -2492,7 +2492,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         let auth_token = match std::env::var("TWILIO_AUTH_TOKEN") {
             Ok(value) if !value.trim().is_empty() => value,
             _ => {
-                tracing::warn!("Skipping critical SMS because TWILIO_AUTH_TOKEN is not configured.");
+                tracing::warn!("Skipping critical SMS because TWILIO_AUTH_TOKEN is not configured."); // pii-safe
                 return Ok(());
             }
         };
