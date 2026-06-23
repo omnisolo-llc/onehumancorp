@@ -4656,11 +4656,13 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
     let db1 = db.clone();
     let db2 = db.clone();
     let db3 = db.clone();
+    let db4 = db.clone();
     let t_id1 = tenant_id.to_string();
     let t_id2 = tenant_id.to_string();
     let t_id3 = tenant_id.to_string();
+    let t_id4 = tenant_id.to_string();
 
-    let (legacy_res, feed_res, approvals_res) = tokio::join!(
+    let (legacy_res, feed_res, approvals_res, daily_work_res) = tokio::join!(
         tokio::spawn(async move {
             let mut legacy_rows_json = Vec::new();
             match &db1.store {
@@ -4859,6 +4861,52 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 }
             }
             approvals
+        }),
+        tokio::spawn(async move {
+            let mut daily_work_rows_json = Vec::new();
+            match &db4.store {
+                crate::db::DbStore::Postgres => {
+                    if let Ok(rows) = sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50")
+                        .bind(&t_id4).fetch_all(&db4.pool).await {
+                        for row in rows {
+                            use sqlx::Row;
+                            let customer_info: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("customer_info").ok().map(|j| j.0);
+                            let suggested_actions: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("suggested_actions").ok().map(|j| j.0);
+                            daily_work_rows_json.push(serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "tenant_id": t_id4,
+                                "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                "intent": row.get::<String, _>("intent"),
+                                "customer_info": customer_info,
+                                "suggested_actions": suggested_actions,
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                            }));
+                        }
+                    }
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    if let Ok(rows) = sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS TEXT) AS created_at FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50")
+                        .bind(&t_id4).fetch_all(pool).await {
+                        for row in rows {
+                            use sqlx::Row;
+                            let customer_info: Option<serde_json::Value> = row.try_get::<String, _>("customer_info").ok().and_then(|s| serde_json::from_str(&s).ok());
+                            let suggested_actions: Option<serde_json::Value> = row.try_get::<String, _>("suggested_actions").ok().and_then(|s| serde_json::from_str(&s).ok());
+                            daily_work_rows_json.push(serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "tenant_id": t_id4,
+                                "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                "intent": row.get::<String, _>("intent"),
+                                "customer_info": customer_info,
+                                "suggested_actions": suggested_actions,
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                            }));
+                        }
+                    }
+                }
+            }
+            daily_work_rows_json
         })
     );
 
@@ -4870,6 +4918,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
     }
     if let Ok(approvals_rows) = approvals_res {
         results.extend(approvals_rows);
+    }
+    if let Ok(daily_work_rows) = daily_work_res {
+        results.extend(daily_work_rows);
     }
 
     // Sort combined results by created_at DESC
