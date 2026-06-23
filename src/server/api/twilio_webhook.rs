@@ -41,6 +41,7 @@ pub async fn twilio_webhook_post_handler(
 
     let sender_id = params.get("From").cloned().unwrap_or_else(|| "unknown".to_string());
     let _to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
+    let _to_number = _to_number.replace("whatsapp:", "");
     let mut text = params.get("Body").cloned().unwrap_or_else(|| "".to_string());
 
     let num_media: usize = params.get("NumMedia").and_then(|s| s.parse().ok()).unwrap_or(0);

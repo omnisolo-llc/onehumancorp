@@ -3795,6 +3795,43 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
+
+                        // Handle outbound WhatsApp response via Twilio
+                        if let Ok(Some(msg_row)) = sqlx::query("SELECT source, sender_id FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            let source = msg_row.try_get::<String, _>("source").unwrap_or_default();
+                            let sender_id = msg_row.try_get::<String, _>("sender_id").unwrap_or_default();
+
+                            if source == "whatsapp" && !sender_id.is_empty() {
+                                if let Ok(Some(settings)) = sqlx::query("SELECT whatsapp_phone_number, twilio_account_sid, twilio_auth_token FROM settings WHERE tenant_id = $1")
+                                    .bind(&tenant_id)
+                                    .fetch_optional(&mut *tx)
+                                    .await
+                                {
+                                    let phone = settings.try_get::<String, _>("whatsapp_phone_number").unwrap_or_default();
+                                    let sid = settings.try_get::<String, _>("twilio_account_sid").unwrap_or_default();
+                                    let token = settings.try_get::<String, _>("twilio_auth_token").unwrap_or_default();
+
+                                    if !phone.is_empty() && !sid.is_empty() && !token.is_empty() {
+                                        let twilio_provider = ::server_integrations_twilio::provider::TwilioProvider::new(sid, token);
+                                        let outbound_sender = if phone.starts_with("whatsapp:") { phone.clone() } else { format!("whatsapp:{}", phone) };
+                                        let outbound_recipient = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
+
+                                        tracing::info!("Sending outbound WhatsApp message to {} via Twilio", outbound_recipient);
+                                        // Fire and forget so we don't block the UI
+                                        tokio::spawn(async move {
+                                            if let Err(e) = twilio_provider.send_whatsapp(&outbound_recipient, &outbound_sender, &action_payload).await {
+                                                tracing::error!("Failed to send WhatsApp reply: {}", e);
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                        }
                     } else if action_type == "SocialPostDraft" {
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
@@ -4017,6 +4054,43 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
+
+                        // Handle outbound WhatsApp response via Twilio
+                        if let Ok(Some(msg_row)) = sqlx::query("SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            let source = msg_row.try_get::<String, _>("source").unwrap_or_default();
+                            let sender_id = msg_row.try_get::<String, _>("sender_id").unwrap_or_default();
+
+                            if source == "whatsapp" && !sender_id.is_empty() {
+                                if let Ok(Some(settings)) = sqlx::query("SELECT whatsapp_phone_number, twilio_account_sid, twilio_auth_token FROM settings WHERE tenant_id = ?")
+                                    .bind(&tenant_id)
+                                    .fetch_optional(&mut *tx)
+                                    .await
+                                {
+                                    let phone = settings.try_get::<String, _>("whatsapp_phone_number").unwrap_or_default();
+                                    let sid = settings.try_get::<String, _>("twilio_account_sid").unwrap_or_default();
+                                    let token = settings.try_get::<String, _>("twilio_auth_token").unwrap_or_default();
+
+                                    if !phone.is_empty() && !sid.is_empty() && !token.is_empty() {
+                                        let twilio_provider = ::server_integrations_twilio::provider::TwilioProvider::new(sid, token);
+                                        let outbound_sender = if phone.starts_with("whatsapp:") { phone.clone() } else { format!("whatsapp:{}", phone) };
+                                        let outbound_recipient = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
+
+                                        tracing::info!("Sending outbound WhatsApp message to {} via Twilio", outbound_recipient);
+                                        // Fire and forget so we don't block the UI
+                                        tokio::spawn(async move {
+                                            if let Err(e) = twilio_provider.send_whatsapp(&outbound_recipient, &outbound_sender, &action_payload).await {
+                                                tracing::error!("Failed to send WhatsApp reply: {}", e);
+                                            }
+                                        });
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
