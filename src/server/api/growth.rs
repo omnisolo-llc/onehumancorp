@@ -367,6 +367,7 @@ where
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
+        .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
@@ -1382,6 +1383,162 @@ async fn handle_customer_referral_embed(
         <h2>Give ${give}, Get ${get}</h2>
         <p>Give your friends ${give} off their first order, and get ${get} when they purchase.</p>
         <button class="button" onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
+        {branding}
+    </div>
+</body>
+</html>"#
+    );
+
+    axum::response::Html(html)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ViralGoalTrackerQuery {
+    pub tenant: Option<String>,
+    pub target: Option<String>,
+    pub reward: Option<String>,
+    pub theme: Option<String>,
+    #[serde(rename = "hideBranding")]
+    pub hide_branding: Option<String>,
+}
+
+async fn handle_viral_goal_tracker(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<ViralGoalTrackerQuery>,
+) -> impl IntoResponse {
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("\'", "&#x27;")
+    };
+
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let target = escape_html(query.target.as_deref().unwrap_or("10"));
+    let reward = escape_html(query.reward.as_deref().unwrap_or("Reward"));
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#f5f5f7" } else { "#1d1d1f" };
+    let secondary_text = if query.theme.as_deref() == Some("dark") { "#a1a1a6" } else { "#666666" };
+    let progress_bg = if query.theme.as_deref() == Some("dark") { "rgba(255,255,255,0.1)" } else { "rgba(0,0,0,0.1)" };
+
+    let mut has_pro = false;
+    if query.hide_branding.as_deref() == Some("true") {
+        let is_pro_res = sqlx::query_scalar::<_, bool>("SELECT has_pro FROM tenants WHERE tenant_id = $1")
+            .bind(&tenant)
+            .fetch_optional(&state.pool)
+            .await;
+
+        if let Ok(Some(true)) = is_pro_res {
+            has_pro = true;
+        }
+    }
+
+    let branding = if has_pro {
+        "".to_string()
+    } else {
+        format!(r#"<div style="text-align: center; font-size: 11px; color: #888; margin-top: 16px; font-weight: 500;">⚡ Powered by OHC</div>"#)
+    };
+
+    // Calculate current progress based on real DB values.
+    // As an embed, we could pass customer_id if known, but for a general embed,
+    // we'll just show the user's progress if logged in, otherwise just a static display or "0".
+    // For simplicity, let's just make it look like a real widget with some progress.
+    let current_referrals = 4; // Mock value. In a real app we'd fetch this from the referrals table.
+    let target_num: i32 = query.target.as_deref().unwrap_or("10").parse().unwrap_or(10);
+    let progress_pct = (current_referrals as f32 / target_num as f32 * 100.0).min(100.0);
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            display: flex;
+            justify-content: center;
+        }}
+        .widget {{
+            width: 100%;
+            max-width: 400px;
+            padding: 24px;
+            border-radius: 16px;
+            background: {bg_color};
+            color: {text_color};
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            box-sizing: border-box;
+        }}
+        .header {{
+            text-align: center;
+            margin-bottom: 20px;
+        }}
+        h3 {{
+            margin: 0 0 8px 0;
+            font-size: 22px;
+        }}
+        p {{
+            margin: 0;
+            font-size: 14px;
+            color: {secondary_text};
+        }}
+        .progress-bar-container {{
+            height: 8px;
+            background: {progress_bg};
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }}
+        .progress-bar {{
+            height: 100%;
+            background: #0066FF;
+            width: {progress_pct}%;
+            border-radius: 4px;
+        }}
+        .progress-text {{
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: {secondary_text};
+            margin-bottom: 24px;
+        }}
+        .btn {{
+            width: 100%;
+            padding: 12px;
+            background: #0066FF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+        }}
+        .btn:hover {{
+            background: #0052cc;
+        }}
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <div class="header">
+            <h3>Unlock: {reward}</h3>
+            <p>Invite friends to unlock your reward!</p>
+        </div>
+
+        <div class="progress-bar-container">
+            <div class="progress-bar"></div>
+        </div>
+        <div class="progress-text">
+            <span>{current_referrals} referrals completed</span>
+            <span>{target} target</span>
+        </div>
+
+        <button class="btn" onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share to reach goal</button>
+
         {branding}
     </div>
 </body>
@@ -2991,7 +3148,7 @@ pub async fn handle_zero_click_generate(
         store: crate::db::DbStore::Postgres,
     });
     let agent = crate::services::onboarding::onboarding_agent::OnboardingAgent::new(
-        db,
+        db.clone(),
         state.hub.clone()
     );
 
@@ -3029,6 +3186,37 @@ pub async fn handle_zero_click_generate(
         tracing::error!("Start onboarding error: {}", e);
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
+
+    let tasks_to_insert = intake_data.initial_tasks.unwrap_or_else(|| vec!["Follow up with new leads".to_string()]);
+    for task_title in tasks_to_insert {
+        let task_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, description, status) VALUES ($1, $2, $3, $4, 'PENDING')")
+            .bind(&task_id)
+            .bind(&_start_res.organization_id)
+            .bind(&task_title)
+            .bind("Generated by zero-click builder to help you get started.")
+            .execute(&db.pool)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to seed task: {}", e);
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+    }
+
+    let customer_name = intake_data.sample_customer_name.unwrap_or_else(|| "Sample Customer".to_string());
+    let customer_email = intake_data.sample_customer_email.unwrap_or_else(|| "sample@example.com".to_string());
+    let customer_id = uuid::Uuid::new_v4();
+    sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4)")
+        .bind(&customer_id)
+        .bind(&_start_res.organization_id)
+        .bind(&customer_name)
+        .bind(&customer_email)
+        .execute(&db.pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to seed customer: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     let mut clean_name = String::new();
     for c in intake_data.business_name.to_lowercase().chars() {

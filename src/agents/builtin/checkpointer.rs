@@ -135,7 +135,40 @@ impl GitCheckpointer {
         self.repo_path
             .join(format!(".agent_progress_{}.json", thread_id))
     }
+
+    pub async fn merge_scratchpad_state(
+        scratchpad_path: &std::path::PathBuf,
+        checkpoint_id: &str,
+    ) -> Result<serde_json::Value, String> {
+        let mut scratchpad_json_val = serde_json::to_value(ProgressFile::default()).unwrap();
+
+        if scratchpad_path.exists() {
+            if let Ok(content) = tokio::fs::read_to_string(scratchpad_path).await {
+                if let Ok(mut ralph_prog) =
+                    serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content)
+                {
+                    ralph_prog.notes.push(format!("Checkpoint {}", checkpoint_id));
+                    scratchpad_json_val = serde_json::to_value(&ralph_prog).unwrap();
+                } else if let Ok(mut generic_json) =
+                    serde_json::from_str::<serde_json::Value>(&content)
+                {
+                    if let Some(obj) = generic_json.as_object_mut() {
+                        obj.insert("current_objective".to_string(), serde_json::Value::String(format!("Checkpoint {}", checkpoint_id)));
+                    }
+                    scratchpad_json_val = generic_json;
+                }
+            }
+        } else {
+            let pf = ProgressFile {
+                current_objective: format!("Checkpoint {}", checkpoint_id),
+                ..Default::default()
+            };
+            scratchpad_json_val = serde_json::to_value(&pf).unwrap();
+        }
+        Ok(scratchpad_json_val)
+    }
 }
+
 
 #[async_trait]
 impl CheckpointSaver for GitCheckpointer {
@@ -194,45 +227,7 @@ impl CheckpointSaver for GitCheckpointer {
             .await
             .map_err(|e| e.to_string())?;
 
-        // Intelligently merge real RalphProgress state
-        let mut scratchpad_json_val = serde_json::to_value(ProgressFile::default()).unwrap();
-
-        if scratchpad_path.exists() {
-            if let Ok(content) = tokio::fs::read_to_string(&scratchpad_path).await {
-                // Try parsing as RalphProgress
-                if let Ok(mut ralph_prog) =
-                    serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content)
-                {
-                    ralph_prog
-                        .notes
-                        .push(format!("Checkpoint {}", checkpoint.checkpoint_id));
-                    scratchpad_json_val = serde_json::to_value(&ralph_prog).unwrap();
-                } else {
-                    // Try parsing as generic JSON to preserve unknown fields
-                    if let Ok(mut generic_json) =
-                        serde_json::from_str::<serde_json::Value>(&content)
-                    {
-                        if let Some(obj) = generic_json.as_object_mut() {
-                            obj.insert(
-                                "current_objective".to_string(),
-                                serde_json::Value::String(format!(
-                                    "Checkpoint {}",
-                                    checkpoint.checkpoint_id
-                                )),
-                            );
-                        }
-                        scratchpad_json_val = generic_json;
-                    }
-                }
-            }
-        } else {
-            // Create a new ProgressFile but set objective
-            let pf = ProgressFile {
-                current_objective: format!("Checkpoint {}", checkpoint.checkpoint_id),
-                ..Default::default()
-            };
-            scratchpad_json_val = serde_json::to_value(&pf).unwrap();
-        }
+        let scratchpad_json_val = Self::merge_scratchpad_state(&scratchpad_path, &checkpoint.checkpoint_id).await?;
 
         let scratchpad_json =
             serde_json::to_string_pretty(&scratchpad_json_val).map_err(|e| e.to_string())?;
@@ -329,21 +324,32 @@ impl CheckpointSaver for GitCheckpointer {
             checkpoint_id.to_string(),
         ];
 
-        // Pre-clean to remove any untracked files that might block the checkout
-        let _pre_clean = Command::new("git")
+        // 1. Pre-clean to remove any untracked files that might block the checkout
+        let pre_clean = Command::new("git")
             .arg("clean")
             .arg("-fdx")
             .current_dir(&self.repo_path)
             .output()
-            .await;
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let _reset_head = Command::new("git")
+        if !pre_clean.status.success() {
+            tracing::warn!("Pre-clean failed: {}", String::from_utf8_lossy(&pre_clean.stderr));
+        }
+
+        // 2. Reset HEAD to ensure we are in a clean state before checkout
+        let reset_head = Command::new("git")
             .arg("reset")
             .arg("--hard")
             .arg("HEAD")
             .current_dir(&self.repo_path)
             .output()
-            .await;
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !reset_head.status.success() {
+            tracing::warn!("Reset HEAD failed: {}", String::from_utf8_lossy(&reset_head.stderr));
+        }
 
         let branch_name = format!(
             "agent-restore-{}",
@@ -352,6 +358,7 @@ impl CheckpointSaver for GitCheckpointer {
         let mut success = false;
         let mut last_err = String::new();
 
+        // 3. Checkout the target tag into a new branch
         for target_ref in refs_to_try {
             let output = Command::new("git")
                 .arg("checkout")
@@ -378,7 +385,23 @@ impl CheckpointSaver for GitCheckpointer {
             ));
         }
 
-        // Robust Restore Edge Cases: Clean remaining untracked and ignored files to ensure spotless working tree.
+        // 4. Robust Restore Edge Cases: Reset to HEAD of the new branch and clean remaining untracked and ignored files to ensure spotless working tree.
+        let reset_branch = Command::new("git")
+            .arg("reset")
+            .arg("--hard")
+            .arg("HEAD")
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !reset_branch.status.success() {
+            return Err(format!(
+                "Failed to restore workspace (reset branch): {}",
+                String::from_utf8_lossy(&reset_branch.stderr)
+            ));
+        }
+
         let clean_output = Command::new("git")
             .arg("clean")
             .arg("-fdx")
@@ -393,10 +416,6 @@ impl CheckpointSaver for GitCheckpointer {
                 String::from_utf8_lossy(&clean_output.stderr)
             ));
         }
-
-        // Additional edge case: detached HEAD cleanup / checkout logic if needed,
-        // but `git reset --hard` along with `git clean -fdx` usually leaves the working tree spotless.
-        // By doing this we make sure the progress file matches the checkpoint itself.
 
         Ok(())
     }
@@ -537,14 +556,25 @@ impl CheckpointSaver for PgCheckpointer {
     }
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
-        // For PgCheckpointer, restoring a checkpoint verifies it exists.
-        let row_opt = sqlx::query("SELECT 1 FROM swarm_checkpoints WHERE checkpoint_id = $1")
+        // Fetch the target checkpoint's thread_id and created_at timestamp
+        let row_opt = sqlx::query("SELECT thread_id, created_at FROM swarm_checkpoints WHERE checkpoint_id = $1")
             .bind(checkpoint_id)
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
 
-        if row_opt.is_some() {
+        if let Some(row) = row_opt {
+            let thread_id: String = row.get("thread_id");
+            let target_time: DateTime<Utc> = row.get("created_at");
+
+            // Delete all checkpoints for this thread that were created AFTER the target checkpoint
+            sqlx::query("DELETE FROM swarm_checkpoints WHERE thread_id = $1 AND created_at > $2")
+                .bind(thread_id)
+                .bind(target_time)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
             Ok(())
         } else {
             Err(format!(
@@ -645,6 +675,77 @@ mod tests {
         let decompressed_json = decompress_data(raw_json).unwrap();
         assert_eq!(raw_json, decompressed_json.as_slice());
     }
+
+    #[tokio::test]
+    async fn test_pg_checkpointer_restore() {
+        // Fallback testing if Postgres is unavailable
+        let pool = match sqlx::postgres::PgPoolOptions::new()
+            .connect("postgres://postgres:postgres@localhost/postgres")
+            .await
+        {
+            Ok(p) => p,
+            Err(_) => {
+                return;
+            }
+        };
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS swarm_checkpoints (thread_id TEXT, checkpoint_id TEXT, parent_id TEXT, checkpoint BYTEA, metadata BYTEA, created_at TIMESTAMPTZ, PRIMARY KEY (thread_id, checkpoint_id))").execute(&pool).await;
+
+        // Clean up previous runs
+        let _ = sqlx::query("DELETE FROM swarm_checkpoints WHERE thread_id = 'thread-restore-1'").execute(&pool).await;
+
+        let saver = PgCheckpointer::new(pool.clone());
+
+        let t1 = chrono::Utc::now() - chrono::Duration::hours(3);
+        let t2 = chrono::Utc::now() - chrono::Duration::hours(2);
+        let t3 = chrono::Utc::now() - chrono::Duration::hours(1);
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-restore-1".to_string(),
+            checkpoint_id: "cp-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"step": 1}),
+            metadata: serde_json::json!({}),
+            created_at: t1,
+        };
+
+        let cp2 = Checkpoint {
+            thread_id: "thread-restore-1".to_string(),
+            checkpoint_id: "cp-2".to_string(),
+            parent_id: Some("cp-1".to_string()),
+            data: serde_json::json!({"step": 2}),
+            metadata: serde_json::json!({}),
+            created_at: t2,
+        };
+
+        let cp3 = Checkpoint {
+            thread_id: "thread-restore-1".to_string(),
+            checkpoint_id: "cp-3".to_string(),
+            parent_id: Some("cp-2".to_string()),
+            data: serde_json::json!({"step": 3}),
+            metadata: serde_json::json!({}),
+            created_at: t3,
+        };
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+        saver.put_checkpoint(cp2.clone()).await.unwrap();
+        saver.put_checkpoint(cp3.clone()).await.unwrap();
+
+        // Ensure all 3 exist
+        let all = saver.list_checkpoints("thread-restore-1").await.unwrap();
+        assert_eq!(all.len(), 3);
+
+        // Restore to middle one
+        saver.restore_checkpoint("cp-2").await.unwrap();
+
+        // Verify that cp-3 is gone, but cp-2 and cp-1 remain
+        let after = saver.list_checkpoints("thread-restore-1").await.unwrap();
+        assert_eq!(after.len(), 2);
+        assert!(after.iter().any(|c| c.checkpoint_id == "cp-1"));
+        assert!(after.iter().any(|c| c.checkpoint_id == "cp-2"));
+        assert!(!after.iter().any(|c| c.checkpoint_id == "cp-3"));
+    }
+
     #[tokio::test]
     async fn test_pg_checkpointer_save_and_load() {
         // Fallback testing if Postgres is unavailable

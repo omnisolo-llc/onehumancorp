@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 #![allow(clippy::empty_line_after_doc_comments)]
 #![allow(unused_mut, clippy::useless_format)]
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
@@ -252,14 +253,14 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let result = server.list_steps(task_id).await;
-            let resp = JsonRpcResponse {
+            let json_resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id.clone(),
                 result: Some(result),
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&resp).unwrap_or_default();
+            return serde_json::to_string(&json_resp).unwrap_or_default();
         } else if req.method == "am_search_agents" {
             let marketplace = crate::marketplace::Marketplace::new();
             let query = req
@@ -313,7 +314,7 @@ impl AppServer {
         } else if req.method == "am_publish_agent" {
             let marketplace = crate::marketplace::Marketplace::new();
             let agent: Result<crate::marketplace::AgentDefinition, _> = serde_json::from_value(req.params.clone());
-            let resp = match agent {
+            let response_obj = match agent {
                 Ok(a) => match marketplace.publish_agent(a) {
                     Ok(_) => JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
@@ -344,7 +345,7 @@ impl AppServer {
                     meta: None,
                 },
             };
-            return serde_json::to_string(&resp).unwrap_or_default();
+            return serde_json::to_string(&response_obj).unwrap_or_default();
 
         } else if req.method == "ap_execute_step" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());

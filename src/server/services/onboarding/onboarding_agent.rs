@@ -15,6 +15,9 @@ pub struct IntakeData {
     pub business_type: String,
     pub categories: Vec<String>,
     pub initial_products: Vec<IntakeProduct>,
+    pub initial_tasks: Option<Vec<String>>,
+    pub sample_customer_name: Option<String>,
+    pub sample_customer_email: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -197,6 +200,9 @@ Your response:",
                     ],
                     location: Some("Mock Location".to_string()),
                     target_audience: Some("Mock Audience".to_string()),
+                    initial_tasks: Some(vec!["Follow up with new leads".to_string()]),
+                    sample_customer_name: Some("Sample Customer".to_string()),
+                    sample_customer_email: Some("sample@example.com".to_string()),
                 });
             }
         };
@@ -221,6 +227,9 @@ Your response:",
             - initial_products (array of at least 3 objects with 'name', 'price' string, 'description' string, and optional 'variants' array of objects with 'name' and 'price_modifier' string)
             - location (string)
             - target_audience (string)
+            - initial_tasks (array of strings, e.g., ['Follow up with new leads'])
+            - sample_customer_name (string)
+            - sample_customer_email (string)
 
             Description: \"{}\"
 
@@ -237,7 +246,10 @@ Your response:",
                     {{\"name\": \"8-inch\", \"price_modifier\": \"15.00\"}}
                 ]}},
                 {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\", \"description\": \"A dozen assorted vegan cupcakes\", \"variants\": []}}
-              ]
+              ],
+              \"initial_tasks\": [\"Follow up with new leads\", \"Setup delivery calendar\"],
+              \"sample_customer_name\": \"Jane Doe\",
+              \"sample_customer_email\": \"jane.doe@example.com\"
             }}",
             input
         );
@@ -3150,6 +3162,7 @@ mod tests {
             ai_agents: vec![],
             ai_auto_respond: false,
         };
+
 
         let state = onboarding_feature_state(&req, "Maya Studio", &req.business_type, &req.location);
 

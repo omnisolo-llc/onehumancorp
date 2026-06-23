@@ -151,6 +151,12 @@ export function HelpChat() {
     ]);
   };
 
+  useEffect(() => {
+    const handleOpenHelpChat = () => setIsOpen(true);
+    window.addEventListener("open-help-chat", handleOpenHelpChat);
+    return () => window.removeEventListener("open-help-chat", handleOpenHelpChat);
+  }, []);
+
   const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
   const forceChat =
     typeof window !== "undefined" &&
@@ -166,6 +172,7 @@ export function HelpChat() {
       <div className="fixed bottom-24 right-6 z-[9999] pointer-events-auto">
         {!isOpen && (
           <button
+            id="ai-chat-trigger"
             onClick={() => setIsOpen(true)}
             className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[30px] saturate-[210%]"
             aria-label="Open help chat"
@@ -288,6 +295,7 @@ export function HelpChat() {
             className="p-3 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border-t border-white/40 dark:border-white/10 flex gap-2 items-center"
           >
             <input
+              id="ohc-help-input-area"
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}

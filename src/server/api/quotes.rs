@@ -39,17 +39,17 @@ pub struct QuoteQuery {
 pub struct CreateQuoteRequest {
     pub tenant_id: String,
     pub customer_id: String,
-    pub total_amount: Option<i64>,
-    pub required_deposit: Option<i64>,
-    pub checkout_url: Option<String>,
+    pub total_amount_cents: Option<i64>,
+    pub required_deposit_cents: Option<i64>,
+    pub stripe_payment_link: Option<String>,
     pub line_items: Vec<QuoteLineItemRequest>,
 }
 
 #[derive(Deserialize)]
 pub struct UpdateQuoteRequest {
-    pub total_amount: Option<i64>,
-    pub required_deposit: Option<i64>,
-    pub checkout_url: Option<String>,
+    pub total_amount_cents: Option<i64>,
+    pub required_deposit_cents: Option<i64>,
+    pub stripe_payment_link: Option<String>,
     pub status: Option<String>,
     pub line_items: Vec<QuoteLineItemRequest>,
 }
@@ -76,15 +76,50 @@ async fn create_quote(
         }
     };
 
+    let mut line_items = payload.line_items;
+
+    // Check if TaxJar integration is connected for this tenant in the DB
+    let api_key_res: Result<(String,), _> = sqlx::query_as(
+        "SELECT api_token FROM integrations WHERE tenant_id = $1 AND provider_id = 'taxjar'"
+    )
+    .bind(&payload.tenant_id)
+    .fetch_one(&mut *tx)
+    .await;
+
+    let api_key = match api_key_res {
+        Ok((token,)) => token,
+        Err(_) => std::env::var("TAXJAR_API_KEY").unwrap_or_default(),
+    };
+
+    if !api_key.is_empty() {
+        let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
+        let total_pre_tax = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+        let total_pre_tax_usd = (total_pre_tax as f64) / 100.0;
+
+        if let Ok(tax_rate) = provider.calculate_tax(total_pre_tax_usd, 0.0, "US", "90002", "CA", "US", "92093", "CA").await {
+            if tax_rate.amount_to_collect > 0.0 {
+                line_items.push(QuoteLineItemRequest {
+                    description: "Automated Sales Tax (TaxJar)".to_string(),
+                    unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
+                    quantity: 1,
+                    is_optional: false,
+                });
+            }
+        }
+    }
+
+    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+    let required_deposit_cents = payload.required_deposit_cents.unwrap_or(total_amount_cents / 3);
+
     let quote_res = sqlx::query(
-        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
+        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
     )
     .bind(quote_id)
     .bind(&payload.tenant_id)
     .bind(&payload.customer_id)
-    .bind(payload.total_amount)
-    .bind(payload.required_deposit)
-    .bind(&payload.checkout_url)
+    .bind(payload.total_amount_cents.unwrap_or(total_amount_cents))
+    .bind(required_deposit_cents)
+    .bind(&payload.stripe_payment_link)
     .execute(&mut *tx)
     .await;
 
@@ -93,7 +128,7 @@ async fn create_quote(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    for item in payload.line_items {
+    for item in line_items {
         let item_id = Uuid::new_v4();
         let res = sqlx::query(
             "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
@@ -142,12 +177,12 @@ async fn update_quote(
     // we can't easily bind dynamic number of parameters in simple query string building
     // so we'll do it securely:
     let update_res = sqlx::query(
-        "UPDATE quotes SET updated_at = NOW(), total_amount = COALESCE($1, total_amount), required_deposit = COALESCE($2, required_deposit), status = COALESCE($3, status), checkout_url = COALESCE($4, checkout_url) WHERE id = $5"
+        "UPDATE quotes SET updated_at = NOW(), total_amount_cents = COALESCE($1, total_amount_cents), required_deposit_cents = COALESCE($2, required_deposit_cents), status = COALESCE($3, status), stripe_payment_link = COALESCE($4, stripe_payment_link) WHERE id = $5"
     )
-    .bind(payload.total_amount)
-    .bind(payload.required_deposit)
+    .bind(payload.total_amount_cents)
+    .bind(payload.required_deposit_cents)
     .bind(&payload.status)
-    .bind(&payload.checkout_url)
+    .bind(&payload.stripe_payment_link)
     .bind(quote_id)
     .execute(&mut *tx)
     .await;
@@ -263,9 +298,9 @@ mod tests {
             customer_id: "c1".to_string(),
             status: "DRAFT".to_string(),
             valid_until: Some(chrono::Utc::now()),
-            total_amount: None,
-            required_deposit: None,
-            checkout_url: None,
+            total_amount_cents: None,
+            required_deposit_cents: None,
+            stripe_payment_link: None,
             created_at: Some(chrono::Utc::now()),
             updated_at: Some(chrono::Utc::now()),
         };
@@ -346,7 +381,7 @@ async fn approve_quote(
         }
     };
 
-    let amount_usd = (quote.total_amount.unwrap_or(0) as f64) / 100.0;
+    let amount_usd = (quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
 
     // Fallback if Stripe client isn't fully integrated here
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
@@ -359,14 +394,14 @@ async fn approve_quote(
         None
     ).await {
         Ok(url) => {
-            let _ = sqlx::query("UPDATE quotes SET checkout_url = $1 WHERE id = $2")
+            let _ = sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2")
                 .bind(&url)
                 .bind(&quote.id)
                 .execute(&pool)
                 .await;
 
             let mut q = quote;
-            q.checkout_url = Some(url);
+            q.stripe_payment_link = Some(url);
             (StatusCode::OK, Json(serde_json::json!({"quote": q}))).into_response()
         },
         Err(e) => {

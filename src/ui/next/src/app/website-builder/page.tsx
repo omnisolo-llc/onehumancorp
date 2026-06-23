@@ -353,7 +353,7 @@ export default function WebsiteBuilderPage() {
                     </button>
 
                     <button
-                      className="w-full min-h-[54px] glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                      className="w-full min-h-[54px] glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-[#0066FF]/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                       onClick={() => { setBio(''); setWizardStep('instant-build'); }}
                     >
                       Instant Build
@@ -525,8 +525,8 @@ export default function WebsiteBuilderPage() {
                     >
                       Next
                     </button>
-                    {!userEmail.includes('@') && userEmail.length > 0 && <p className="text-red-500 text-xs text-center mt-1">Please enter a valid email address.</p>}
-                    {userPassword.length > 0 && userPassword.length < 8 && <p className="text-red-500 text-xs text-center mt-1">Password must be at least 8 characters.</p>}
+                    {!userEmail.includes('@') && userEmail.length > 0 && <p className="text-[#FF3B30] text-xs text-center mt-1">Please enter a valid email address.</p>}
+                    {userPassword.length > 0 && userPassword.length < 8 && <p className="text-[#FF3B30] text-xs text-center mt-1">Password must be at least 8 characters.</p>}
                   </div>
                 </>
               )}
@@ -575,7 +575,7 @@ export default function WebsiteBuilderPage() {
                       Free OHC Domain
                     </button>
                     <button
-                      className="w-full min-h-[54px] glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                      className="w-full min-h-[54px] glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-[#0066FF]/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                       onClick={() => setWizardStep('8.5')}
                     >
                       Connect Custom Domain
@@ -779,7 +779,7 @@ export default function WebsiteBuilderPage() {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden text-center p-8 justify-center glassmorphism">
-          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <div className="w-16 h-16 bg-[#34C759]/10 text-[#34C759] rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
           <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Success! Your business is live!</h1>
@@ -853,7 +853,7 @@ export default function WebsiteBuilderPage() {
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-center items-center gap-2 rounded-[8px]"
+              className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-lg hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-center items-center gap-2 rounded-[8px]"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>

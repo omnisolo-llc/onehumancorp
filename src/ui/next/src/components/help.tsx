@@ -228,7 +228,7 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/50 backdrop-blur-3xl saturate-[210%] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
+        <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
           <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md overflow-x-auto scrollbar-hide">
             {helpTabs.map((t) => (
               <button
@@ -247,7 +247,7 @@ export function HelpWidget() {
           <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
             {tab === "center" && (
               <div>
-                <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">Help Center</h3>
+                <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">In-App Help Center</h3>
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[20px] saturate-200 min-h-[44px]" />
                 <div className="space-y-6 mb-8">
                   {Array.from(

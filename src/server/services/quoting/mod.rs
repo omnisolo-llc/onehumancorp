@@ -119,7 +119,33 @@ async fn create_quote(
 
     let mut tx = pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let total_amount_cents = payload.line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+    let mut line_items = payload.line_items;
+
+    // Check if TaxJar integration is active for this tenant
+    // In a real implementation we would fetch the integration credentials,
+    // for now we'll check if the tenant has a TAXJAR_API_KEY env var (or similar config)
+    // Here we'll simulate adding tax if the first item isn't already tax
+    if let Ok(api_key) = std::env::var("TAXJAR_API_KEY") {
+        if !api_key.is_empty() {
+            let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
+            let total_pre_tax = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+            let total_pre_tax_usd = (total_pre_tax as f64) / 100.0;
+
+            // Hardcoding dummy from/to zip codes for automated tax calculation via API
+            if let Ok(tax_rate) = provider.calculate_tax(total_pre_tax_usd, 0.0, "US", "90002", "CA", "US", "92093", "CA").await {
+                if tax_rate.amount_to_collect > 0.0 {
+                    line_items.push(QuoteLineItemReq {
+                        description: "Automated Sales Tax (TaxJar)".to_string(),
+                        unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
+                        quantity: 1,
+                        is_optional: false,
+                    });
+                }
+            }
+        }
+    }
+
+    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
     let required_deposit_cents = total_amount_cents / 3; // Default 33% deposit
 
     let quote = sqlx::query_as::<_, Quote>(
@@ -138,7 +164,7 @@ async fn create_quote(
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    for item in payload.line_items {
+    for item in line_items {
         sqlx::query(
             "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional) VALUES ($1, $2, $3, $4, $5, $6)"
         )

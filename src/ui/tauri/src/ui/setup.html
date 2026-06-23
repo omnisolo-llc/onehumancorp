@@ -74,7 +74,7 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism, input.glassmorphism {
-        border-radius: 16px;
+        border-radius: 8px;
         min-height: 44px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
@@ -854,13 +854,14 @@
         }
       }
 
-            @media (max-width: 375px) {
+      @media (max-width: 375px) {
         .container { padding: 16px; margin: 0; width: 100vw; max-width: 100vw; box-sizing: border-box; overflow-x: hidden; height: auto; max-height: 100vh; border-radius: 16px; overflow-y: auto; border: none; }
-        .context-card { padding: 12px; min-height: 44px; }
+        .context-card { padding: 12px; min-height: 44px; border-radius: 16px; }
         .work-context-cards { grid-template-columns: 1fr; }
         .radio-group { grid-template-columns: 1fr; } /* Added if it was a grid */
         .stepper {
-          gap: 4px;
+          gap: 8px;
+          padding: 0 10px;
         }
         .step-indicator {
           width: 8px;
@@ -870,11 +871,18 @@
           transform: scale(1.2);
         }
         .radio-option {
-        min-height: 44px;
-        min-width: 44px;
-        box-sizing: border-box;
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
           padding: 8px 12px;
           font-size: 14px;
+          border-radius: 16px;
+        }
+        button, input, select, textarea {
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
+          border-radius: 8px;
         }
         h1 {
           font-size: 20px;
@@ -883,12 +891,12 @@
           font-size: 13px;
         }
         .persona-chip {
-        min-height: 44px;
-        min-width: 44px;
-        box-sizing: border-box;
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
           padding: 6px 12px;
           font-size: 12px;
-          min-height: 44px;
+          border-radius: 16px;
         }
       }
 
@@ -1301,9 +1309,9 @@
         <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" enterkeyhint="next" />
         <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
 
-        <div style="position: relative; width: 100%;">
-          <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" enterkeyhint="next" style="padding-right: 40px;" />
-          <button type="button" id="toggle-password-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #555;">
+        <div style="position: relative; width: 100%; margin-bottom: 20px; display: flex; align-items: center;">
+          <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" enterkeyhint="next" style="padding-right: 44px !important; margin-bottom: 0; flex: 1;" />
+          <button type="button" id="toggle-password-visibility" aria-label="Toggle password visibility" title="Toggle password visibility" style="position: absolute; right: 0; height: 100%; width: 44px; background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; color: #555; box-shadow: none; min-width: auto !important; min-height: auto !important; z-index: 10;">
             <svg id="eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
               <circle cx="12" cy="12" r="3"></circle>
@@ -1574,17 +1582,24 @@
                 populateForm();
             }
         })
-        .catch(err => console.error('Failed to load cross-device state:', err));
-      }
-
-
-      if (state.step === undefined || state.step === 0) {
-         goToStep('step-initial');
-      } else {
-         const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
-         if (state.step < steps.length) {
-            goToStep(steps[state.step]);
-         }
+        .catch(err => console.error('Failed to load cross-device state:', err))
+        .finally(() => {
+            if (!state.step) {
+                const stored = localStorage.getItem('onboardingState');
+                if (stored) {
+                    state = { ...state, ...JSON.parse(stored) };
+                    populateForm();
+                }
+            }
+            if (state.step === undefined || state.step === 0) {
+               goToStep('step-initial');
+            } else {
+               const steps = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-domain', 'step-template', 'step-instant', 'step-chat'];
+               if (state.step < steps.length) {
+                  goToStep(steps[state.step]);
+               }
+            }
+        });
       }
 
             // Clear name error on typing if valid
@@ -1745,9 +1760,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-categories') {
               if (inputs.categories.value.trim() === '') {
                   errors.categories.style.display = 'block';
+                  inputs.categories.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.categories.style.display = 'none';
+                  inputs.categories.style.borderColor = '';
                   state.categories = inputs.categories.value.trim();
               }
           }
@@ -1758,25 +1775,29 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   isValid = false;
               } else {
                   errors.name.style.display = 'none';
-                  inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  inputs.name.style.borderColor = '';
                   state.businessName = inputs.name.value.trim();
                   state.tagline = inputs.tagline.value.trim();
               }
           }
           else if (stepId === 'step-assistant') {
               if (inputs.assistantName.value.trim() === '') {
-                  errors.assistantName.style.display = 'block'; inputs.assistantName.style.borderColor = '#FF3B30';
+                  errors.assistantName.style.display = 'block';
+                  inputs.assistantName.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
-                  errors.assistantName.style.display = 'none'; inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  errors.assistantName.style.display = 'none';
+                  inputs.assistantName.style.borderColor = '';
                   state.assistantName = inputs.assistantName.value.trim();
               }
 
               if (!inputs.assistantTone.value) {
                   errors.assistantTone.style.display = 'block';
+                  inputs.assistantTone.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.assistantTone.style.display = 'none';
+                  inputs.assistantTone.style.borderColor = '';
                   state.assistantTone = inputs.assistantTone.value;
               }
           }
@@ -1792,7 +1813,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   stepValid = false;
               } else {
                   errors.adminEmail.style.display = 'none';
-                  inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  inputs.adminEmail.style.borderColor = '';
               }
 
               if (passVal === '' || passVal.length < 8 || !/\d/.test(passVal)) {
@@ -1802,7 +1823,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   stepValid = false;
               } else {
                   errors.adminPassword.style.display = 'none';
-                  inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  inputs.adminPassword.style.borderColor = '';
               }
 
               if (stepValid) {
@@ -1815,9 +1836,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-offer') {
               if (inputs.firstOffer.value.trim() === '') {
                   errors.firstOffer.style.display = 'block';
+                  inputs.firstOffer.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.firstOffer.style.display = 'none';
+                  inputs.firstOffer.style.borderColor = '';
                   state.first_offer = inputs.firstOffer.value.trim();
               }
           }
@@ -1825,9 +1848,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-domain') {
               if (inputs.domainName.value.trim().length < 3) {
                   errors.domainName.style.display = 'block';
+                  inputs.domainName.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.domainName.style.display = 'none';
+                  inputs.domainName.style.borderColor = '';
                   state.domain = inputs.domainName.value.trim();
               }
           }
@@ -1835,9 +1860,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-template') {
               if (inputs.templateSelection.value === '') {
                   errors.templateSelection.style.display = 'block';
+                  inputs.templateSelection.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.templateSelection.style.display = 'none';
+                  inputs.templateSelection.style.borderColor = '';
                   state.templateSelection = inputs.templateSelection.value;
               }
           }
@@ -2270,7 +2297,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
       if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
 
-      if (generateStorefrontBtn) {
+            if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
               const bioInput = instantBioInputEl.value;
               const imageUrlInput = document.getElementById("instant-image-url");
@@ -2296,14 +2323,52 @@ if (state.capabilities && document.getElementById('cap-draft')) {
 
               try {
                   const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
-                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
-                  const userIdStr = localStorage.getItem('user_id') || 'e2e-admin-user';
+                  const res = await fetch(`${backendUrl}/api/v1/growth/zero-click-builder/generate`, {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'X-Tenant-ID': 'e2e-tenant',
+                          'X-User-ID': 'e2e-admin-user'
+                      },
+                      body: JSON.stringify({ prompt: bioInput + (imageUrl ? " " + imageUrl : "") })
+                  });
 
-                  let intakeData = null;
+                  if (!res.ok) {
+                      const errData = await res.json().catch(()=>({}));
+                      throw new Error(errData.error || errData.message || 'Failed to generate storefront');
+                  }
 
-                  if (window.__TAURI__ && window.__TAURI__.core) {
-                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput, imageUrl: imageUrl || undefined });
-                  } else {
+                  const data = await res.json();
+
+                  if (data.organization_id) {
+                      localStorage.setItem('tenant_id', data.organization_id);
+                      localStorage.setItem('tenant', data.organization_id);
+                  }
+                  if (data.user_id) {
+                      localStorage.setItem('user_id', data.user_id);
+                  }
+
+                  localStorage.removeItem('onboardingState');
+                  localStorage.setItem('has_onboarded', 'true');
+
+                  setTimeout(() => {
+                    window.location.href = "success.html";
+                  }, 1500);
+
+              } catch (err) {
+                  console.error(err);
+                  goToStep('step-instant');
+                  const errorMsg = err.message || "Network Error: Failed to fetch";
+                  instantErrorEl.innerText = errorMsg;
+                  instantErrorEl.style.display = 'block';
+                  instantErrorEl.style.color = '#FF3B30';
+                  instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+                  instantBioInputEl.style.borderColor = '#FF3B30';
+                  generateStorefrontBtn.disabled = false;
+                  generateStorefrontBtn.innerText = "Next";
+              }
+          });
+      } else {
                      const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
                          method: 'POST',
                          headers: {

@@ -44,7 +44,7 @@ pub async fn handle_oauth_callback(
             let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
-            let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
+            let mut redirect_url = format!("{}/{}/oauth/callback#code={}&state={}",
                 tunnel_base_url,
                 urlencoding::encode(&tunnel_id),
                 urlencoding::encode(&query.code),
