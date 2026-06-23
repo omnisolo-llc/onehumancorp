@@ -896,22 +896,36 @@ impl Agent {
             None
         };
 
-        let mut system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
+        let mut lightweight_index_vec: Option<Vec<String>> = None;
+        if let Some(store) = &self.memory_store {
+            if let Ok(index_content) = store.get_lightweight_index().await {
+                if !index_content.trim().is_empty() {
+                    let mut lines = Vec::new();
+                    for line in index_content.lines() {
+                        let l = line.trim();
+                        if !l.is_empty() {
+                            let content = if l.starts_with("- ") {
+                                l.trim_start_matches("- ").to_string()
+                            } else {
+                                l.to_string()
+                            };
+                            lines.push(content);
+                        }
+                    }
+                    if !lines.is_empty() {
+                        lightweight_index_vec = Some(lines);
+                    }
+                }
+            }
+        }
+
+        let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
             cfg,
             session_tools,
             agents_md,
-            None,
+            lightweight_index_vec,
         )
         .build();
-
-        if let Some(store) = &self.memory_store
-            && let Ok(index_content) = store.get_lightweight_index().await
-            && !index_content.trim().is_empty()
-        {
-            system_prompt.push_str("\n\n[Lightweight Memory Index]\n");
-            system_prompt.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
-            system_prompt.push_str(&index_content);
-        }
 
         let tool_defs: Vec<crate::types::ToolDefinition> = session_tools
             .iter()
@@ -3449,14 +3463,6 @@ impl Agent {
             None
         };
 
-        let mut combined_system = crate::prompt_construction::HierarchicalPromptBuilder::new(
-            &final_cfg,
-            &session_tools,
-            agents_md,
-            None,
-        )
-        .build();
-
         // Long-Term Memory Retrieval
         let mut checkpoint_history: Vec<String> = Vec::new();
         if let Some(id) = &last_checkpoint_id {
@@ -3464,13 +3470,16 @@ impl Agent {
         }
         let mut rewind_attempts_remaining = final_cfg.max_rewind_attempts;
 
+        let mut long_term_memory_content = String::new();
+        let mut lightweight_index_vec: Option<Vec<String>> = None;
+
         if let Some(store) = &self_with_memory.memory_store {
             match store.retrieve(initial_message, 5).await {
                 Ok(memories) => {
                     if !memories.is_empty() {
-                        combined_system.push_str("\n\n[Long-Term Memory Context]\n");
+                        long_term_memory_content.push_str("\n\n[Long-Term Memory Context]\n");
                         for mem in memories {
-                            combined_system.push_str(&format!("- {}\n", mem));
+                            long_term_memory_content.push_str(&format!("- {}\n", mem));
                         }
                     }
                 }
@@ -3480,13 +3489,37 @@ impl Agent {
             }
 
             // Anthropic Mechanic: 3-Tier Memory Store implementation. Crucial rule: Agent must treat memory as a "hint" and verify against actual state before acting.
-            if let Ok(index_content) = store.get_lightweight_index().await
-                && !index_content.trim().is_empty()
-            {
-                combined_system.push_str("\n\n[Lightweight Memory Index]\n");
-                combined_system.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
-                combined_system.push_str(&index_content);
+            if let Ok(index_content) = store.get_lightweight_index().await {
+                if !index_content.trim().is_empty() {
+                    let mut lines = Vec::new();
+                    for line in index_content.lines() {
+                        let l = line.trim();
+                        if !l.is_empty() {
+                            let content = if l.starts_with("- ") {
+                                l.trim_start_matches("- ").to_string()
+                            } else {
+                                l.to_string()
+                            };
+                            lines.push(content);
+                        }
+                    }
+                    if !lines.is_empty() {
+                        lightweight_index_vec = Some(lines);
+                    }
+                }
             }
+        }
+
+        let mut combined_system = crate::prompt_construction::HierarchicalPromptBuilder::new(
+            &final_cfg,
+            &session_tools,
+            agents_md,
+            lightweight_index_vec,
+        )
+        .build();
+
+        if !long_term_memory_content.is_empty() {
+            combined_system.push_str(&long_term_memory_content);
         }
 
         // 1. The Orchestration Loop
