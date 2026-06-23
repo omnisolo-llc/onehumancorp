@@ -347,6 +347,7 @@ where
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/discount-code/embed", get(handle_discount_code_embed))
+        .route("/footer-branding/embed.js", get(handle_footer_branding_embed))
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
@@ -3700,4 +3701,122 @@ async fn handle_lead_magnet_capture(
         "success": true,
         "message": "Lead captured successfully"
     })))
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct FooterBrandingEmbedQuery {
+    pub tenant: Option<String>,
+    pub style: Option<String>,
+    pub text: Option<String>,
+    pub theme: Option<String>,
+}
+
+pub async fn handle_footer_branding_embed(
+    axum::extract::Query(query): axum::extract::Query<FooterBrandingEmbedQuery>,
+) -> impl axum::response::IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let style = query.style.as_deref().unwrap_or("pill");
+    let text = query.text.as_deref().unwrap_or("Powered by OHC");
+    let theme = query.theme.as_deref().unwrap_or("light");
+
+    let safe_tenant = escape_html(tenant);
+    let safe_style = escape_html(style);
+    let safe_text = escape_html(text);
+    let safe_theme = escape_html(theme);
+
+    let js = format!(r#"
+(function() {{
+    var tenant = '{safe_tenant}';
+    var style = '{safe_style}';
+    var text = '{safe_text}';
+    var theme = '{safe_theme}';
+
+    var container = document.createElement('div');
+    container.style.position = style === 'pill' ? 'fixed' : 'relative';
+    if (style === 'pill') {{
+        container.style.bottom = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '999999';
+    }} else {{
+        container.style.marginTop = '40px';
+        container.style.marginBottom = '20px';
+        container.style.display = 'flex';
+        container.style.justifyContent = 'center';
+    }}
+
+    var link = document.createElement('a');
+    link.href = 'https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=' + encodeURIComponent(tenant) + '&source=footer_branding';
+    link.target = '_blank';
+    link.style.textDecoration = 'none';
+    link.style.display = 'flex';
+    link.style.alignItems = 'center';
+    link.style.gap = '8px';
+    link.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+    link.style.fontWeight = '500';
+    link.style.transition = 'transform 0.2s, box-shadow 0.2s';
+
+    if (style === 'pill') {{
+        link.style.padding = '8px 16px';
+        link.style.borderRadius = '999px';
+        link.style.fontSize = '13px';
+        link.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+        link.style.background = theme === 'dark' ? '#1f2937' : '#ffffff';
+        link.style.color = theme === 'dark' ? '#f9fafb' : '#1d1d1f';
+        link.style.border = theme === 'dark' ? '1px solid #374151' : '1px solid #e5e7eb';
+
+        link.onmouseover = function() {{
+            link.style.transform = 'translateY(-2px)';
+            link.style.boxShadow = '0 6px 16px rgba(0,0,0,0.12)';
+        }};
+        link.onmouseout = function() {{
+            link.style.transform = 'translateY(0)';
+            link.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+        }};
+    }} else {{
+        link.style.fontSize = '12px';
+        link.style.color = '#6b7280';
+        link.style.justifyContent = 'center';
+        link.style.opacity = '0.8';
+
+        link.onmouseover = function() {{
+            link.style.opacity = '1';
+        }};
+        link.onmouseout = function() {{
+            link.style.opacity = '0.8';
+        }};
+    }}
+
+    var icon = document.createElement('div');
+    icon.textContent = '⚡';
+    icon.style.background = '#0066FF';
+    icon.style.color = 'white';
+    icon.style.borderRadius = '50%';
+    icon.style.width = '20px';
+    icon.style.height = '20px';
+    icon.style.display = 'flex';
+    icon.style.alignItems = 'center';
+    icon.style.justifyContent = 'center';
+    icon.style.fontSize = '10px';
+    icon.style.fontWeight = '800';
+
+    var textSpan = document.createElement('span');
+    textSpan.textContent = text;
+
+    link.appendChild(icon);
+    link.appendChild(textSpan);
+    container.appendChild(link);
+
+    // Attempt to append to body, if body doesn't exist wait for DOMContentLoaded
+    if (document.body) {{
+        document.body.appendChild(container);
+    }} else {{
+        document.addEventListener('DOMContentLoaded', function() {{
+            document.body.appendChild(container);
+        }});
+    }}
+}})();
+"#);
+
+    ([(axum::http::header::CONTENT_TYPE, "application/javascript")], js)
 }

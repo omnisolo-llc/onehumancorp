@@ -5614,6 +5614,7 @@ dependencies = [
  "server_integrations_shippo",
  "server_integrations_stripe",
  "server_integrations_task_scheduler",
+ "server_integrations_taxjar",
  "server_integrations_teams",
  "server_integrations_twilio",
  "server_integrations_zoom",
@@ -8923,6 +8924,18 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "server_integrations_taxjar"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
