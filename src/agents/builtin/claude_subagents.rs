@@ -1,4 +1,4 @@
-/// Master Catalog B.11. Subagent Orchestration
+/// Master Catalog B.11. Subagent Orchestration: Worktree execution model
 use crate::agent::{Agent, AgentRunConfig};
 use crate::types::Message;
 use std::path::{Path, PathBuf};

@@ -110,7 +110,7 @@ impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
 
         let task = format!("{}\n\nCRITICAL INSTRUCTION: You are a subagent. When you finish your work, you MUST return a 1k-2k token condensed summary of your findings and actions. NEVER return your full context loop or raw unsummarized output.", raw_task);
 
-        // Subagent Orchestration: Claude Code Execution Models: 1) Fork (byte-identical copy of parent context), 2) Teammate (separate terminal pane communicating via file-based mailboxes), 3) Worktree (spawns its own git worktree with an isolated branch). Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
+        // Master Catalog B.11. Subagent Orchestration: Worktree execution model. Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
         tracing::info!("Spawning subagent in mode '{}' for task: {}", mode, raw_task);
 
         if mode == "fork" {

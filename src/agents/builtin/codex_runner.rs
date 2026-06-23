@@ -5,7 +5,7 @@ use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
-/// OpenAI Codex & Agents SDK Archetype:
+/// Master Catalog A: Framework Implementation Archetypes: OpenAI Codex & Agents SDK.
 /// Implements the exact implementation mechanics used by OpenAI Agents SDK (Python).
 /// Uses a `Runner` class with async, sync, and streamed modes.
 /// Uses a 3-layer architecture: Codex Core (agent code + runtime), App Server (bidirectional JSON-RPC API), and client surfaces sharing the exact same harness.

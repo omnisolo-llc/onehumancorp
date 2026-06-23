@@ -1,4 +1,4 @@
-/// Master Catalog B.6. Output Parsing
+/// Master Catalog B.6. Output Parsing: Schema-constrained responses with Pydantic fallback
 use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
