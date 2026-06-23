@@ -989,6 +989,14 @@ pub async fn bench_time_savings_latency() {
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
         let pool4 = pg_pool.clone();
+        let pool5 = pg_pool.clone();
+        let pool6 = pg_pool.clone();
+        let pool7 = pg_pool.clone();
+        let pool8 = pg_pool.clone();
+        let pool5 = pg_pool.clone();
+        let pool6 = pg_pool.clone();
+        let pool7 = pg_pool.clone();
+        let pool8 = pg_pool.clone();
         let _ = tokio::join!(
             sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
             sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2),
@@ -1078,11 +1086,27 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
         let pool4 = pg_pool.clone();
+        let pool5 = pg_pool.clone();
+        let pool6 = pg_pool.clone();
+        let pool7 = pg_pool.clone();
+        let pool8 = pg_pool.clone();
+        let pool5 = pg_pool.clone();
+        let pool6 = pg_pool.clone();
+        let pool7 = pg_pool.clone();
+        let pool8 = pg_pool.clone();
         let _ = tokio::join!(
             sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1),
             sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2),
             sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4)
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool5),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool6),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool7),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool8),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool5),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool6),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool7),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool8)
         );
         let duration_par = start_par.elapsed();
 
