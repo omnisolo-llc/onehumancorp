@@ -200,12 +200,12 @@ impl Store {
                 });
 
                 let new_secret = if let Some(sqlite_key) = sqlite_key_opt {
-                    tracing::debug!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence");
+                    tracing::debug!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence"); // pii-safe
                     let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {
-                    tracing::debug!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
+                    tracing::debug!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence"); // pii-safe
                     let mut key_bytes = [0u8; 32];
                     use rand::RngCore;
                     rand::thread_rng().fill_bytes(&mut key_bytes);

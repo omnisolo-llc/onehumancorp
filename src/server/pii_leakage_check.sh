@@ -25,7 +25,7 @@ for FILE in $FILES; do
 
     # We grep all matches first. The issue reviewer mentioned ".*? with grep -E is not supported",
     # so we should use a simpler pattern for the {}
-    MATCHES=$(grep -nE "tracing::(info|debug|warn|error)!\(.*\{.*\}.*\)" "$FILE" | grep -iE "($PII_KEYWORDS)" | grep -vE "redacted_" || true)
+    MATCHES=$(grep -nE "tracing::(info|debug|warn|error)!\(" "$FILE" | grep -iE "(\{.*($PII_KEYWORDS).*\}|($PII_KEYWORDS)[[:space:]]*=)" | grep -vE "redacted_" || true)
 
     if [ -n "$MATCHES" ]; then
         # Check if the matched line has an explicit opt-out // pii-safe

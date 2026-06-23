@@ -654,3 +654,22 @@ fn test_record_error_signal() {
     // and categorize correctly behind the scenes.
     ::server_telemetry::record_error_signal("panic: test");
 }
+
+    #[test]
+    fn test_telemetry_standalone_strict_override() {
+        // Enforce Local Sovereignty
+        // Ensures that OHC_STANDALONE_MODE properly overrides any implicit telemetry activation.
+        // It must default to false unless OHC_TELEMETRY_ENABLED is explicitly "true".
+        temp_env::with_vars(
+            [
+                ("OHC_STANDALONE_MODE", Some("true")),
+                ("OHC_TELEMETRY_ENABLED", None::<&str>), // No explicit opt-in
+                ("OHC_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+                ("OHC_SQLITE_KEY", Some("test-key")),
+            ],
+            || {
+                let config = ::server_config::load().unwrap();
+                assert!(!config.telemetry_enabled, "Local Sovereignty violation: Telemetry must default to false in standalone mode without explicit user opt-in.");
+            },
+        );
+}
