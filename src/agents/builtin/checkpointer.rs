@@ -135,7 +135,40 @@ impl GitCheckpointer {
         self.repo_path
             .join(format!(".agent_progress_{}.json", thread_id))
     }
+
+    pub async fn merge_scratchpad_state(
+        scratchpad_path: &std::path::PathBuf,
+        checkpoint_id: &str,
+    ) -> Result<serde_json::Value, String> {
+        let mut scratchpad_json_val = serde_json::to_value(ProgressFile::default()).unwrap();
+
+        if scratchpad_path.exists() {
+            if let Ok(content) = tokio::fs::read_to_string(scratchpad_path).await {
+                if let Ok(mut ralph_prog) =
+                    serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content)
+                {
+                    ralph_prog.notes.push(format!("Checkpoint {}", checkpoint_id));
+                    scratchpad_json_val = serde_json::to_value(&ralph_prog).unwrap();
+                } else if let Ok(mut generic_json) =
+                    serde_json::from_str::<serde_json::Value>(&content)
+                {
+                    if let Some(obj) = generic_json.as_object_mut() {
+                        obj.insert("current_objective".to_string(), serde_json::Value::String(format!("Checkpoint {}", checkpoint_id)));
+                    }
+                    scratchpad_json_val = generic_json;
+                }
+            }
+        } else {
+            let pf = ProgressFile {
+                current_objective: format!("Checkpoint {}", checkpoint_id),
+                ..Default::default()
+            };
+            scratchpad_json_val = serde_json::to_value(&pf).unwrap();
+        }
+        Ok(scratchpad_json_val)
+    }
 }
+
 
 #[async_trait]
 impl CheckpointSaver for GitCheckpointer {
@@ -194,45 +227,7 @@ impl CheckpointSaver for GitCheckpointer {
             .await
             .map_err(|e| e.to_string())?;
 
-        // Intelligently merge real RalphProgress state
-        let mut scratchpad_json_val = serde_json::to_value(ProgressFile::default()).unwrap();
-
-        if scratchpad_path.exists() {
-            if let Ok(content) = tokio::fs::read_to_string(&scratchpad_path).await {
-                // Try parsing as RalphProgress
-                if let Ok(mut ralph_prog) =
-                    serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content)
-                {
-                    ralph_prog
-                        .notes
-                        .push(format!("Checkpoint {}", checkpoint.checkpoint_id));
-                    scratchpad_json_val = serde_json::to_value(&ralph_prog).unwrap();
-                } else {
-                    // Try parsing as generic JSON to preserve unknown fields
-                    if let Ok(mut generic_json) =
-                        serde_json::from_str::<serde_json::Value>(&content)
-                    {
-                        if let Some(obj) = generic_json.as_object_mut() {
-                            obj.insert(
-                                "current_objective".to_string(),
-                                serde_json::Value::String(format!(
-                                    "Checkpoint {}",
-                                    checkpoint.checkpoint_id
-                                )),
-                            );
-                        }
-                        scratchpad_json_val = generic_json;
-                    }
-                }
-            }
-        } else {
-            // Create a new ProgressFile but set objective
-            let pf = ProgressFile {
-                current_objective: format!("Checkpoint {}", checkpoint.checkpoint_id),
-                ..Default::default()
-            };
-            scratchpad_json_val = serde_json::to_value(&pf).unwrap();
-        }
+        let scratchpad_json_val = Self::merge_scratchpad_state(&scratchpad_path, &checkpoint.checkpoint_id).await?;
 
         let scratchpad_json =
             serde_json::to_string_pretty(&scratchpad_json_val).map_err(|e| e.to_string())?;

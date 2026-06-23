@@ -651,7 +651,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4 font-inter">
-      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative glassmorphism shadow-[0_18px_44px_rgba(15,23,42,0.12)] rounded-[16px]">
+      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative glassmorphism shadow-[0_18px_44px_rgba(15,23,42,0.12)] rounded-[16px]">
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (

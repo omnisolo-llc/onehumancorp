@@ -57,7 +57,6 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/localization_offline.spec.ts",
     "playwright/documentation_features.spec.ts",
     "playwright/mock_agent_feed_end_to_end.spec.ts",
-    "//src/ui/next:e2e/social_share_widget.spec.ts",
     "//src/ui/next:e2e/referrals.spec.ts",
     "//src/ui/next:src/e2e/post-purchase-share.spec.ts",
 

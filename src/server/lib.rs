@@ -124,7 +124,11 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
 
-    m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly. It can guide you to the right article.".to_string());
+    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
+    m.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
+    m.insert("help-search-tooltip".to_string(), "Search for help articles and videos...".to_string());
+    m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
+    m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
     m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
     m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
     m.insert("dashboard-widget-btn".to_string(), "Build a referral widget for your website.".to_string());
@@ -6529,6 +6533,10 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+
+
+
+
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
         .route_layer(axum::middleware::from_fn(::server_utils::tenant_middleware::tenant_middleware))
@@ -6596,6 +6604,9 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/pricing", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/pricing.html"))
+        }))
+        .route("/social-share-widget.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/social-share-widget.html"))
         }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![

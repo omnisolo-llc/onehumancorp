@@ -179,7 +179,7 @@ export function AppShell({
         <header className="app-topbar">
           <div className="min-w-0">
             <div className="app-breadcrumb">Site: default</div>
-            <h1 className="app-title">{title}</h1>
+            <h1 id="dashboard-title" className="app-title">{title}</h1>
             {subtitle && <p className="app-subtitle">{subtitle}</p>}
           </div>
           <div className="app-topbar-right">

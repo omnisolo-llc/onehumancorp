@@ -1,0 +1,27 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+exports_files(
+    [
+        "handler.rs",
+        "mod.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "server_api_ohc_job_queue",
+    srcs = [
+        "handler.rs",
+        "mod.rs",
+    ],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "//src/server/auth:server_auth",
+        "@crates//:axum",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tracing",
+    ],
+)

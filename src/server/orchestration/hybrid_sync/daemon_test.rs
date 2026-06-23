@@ -625,15 +625,12 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         daemon.prune_stuck_sub_agent_queue().await.unwrap();
 
         // Verify SQLite queue is failed
-        let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queued_sqlite'")
-            .fetch_one(&sqlite_pool).await.unwrap();
-        use sqlx::Row;
-        assert_eq!(row_queue_sqlite.get::<String, _>("status"), "FAILED");
+        let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_queued_sqlite\'").fetch_optional(&sqlite_pool).await.unwrap();
+        assert!(row_queue_sqlite.is_none());
 
         // Verify PG queue is failed
-        let row_queue = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queued_pg'")
-            .fetch_one(&pg_pool).await.unwrap();
-        assert_eq!(row_queue.get::<String, _>("status"), "FAILED");
+        let row_queue = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_queued_pg\'").fetch_optional(&pg_pool).await.unwrap();
+        assert!(row_queue.is_none());
     }
 
     #[tokio::test]

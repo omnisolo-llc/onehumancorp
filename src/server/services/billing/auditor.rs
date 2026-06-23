@@ -356,6 +356,20 @@ impl CostAuditor {
         (*tenant_costs.get(tenant_id).unwrap_or(&0.0) * 100.0).round() as i64
     }
 
+    pub fn record_manual_cost(&self, agent_id: &str, tenant_id: &str, cost_cents: i64) {
+        let cost = cost_cents as f64 / 100.0;
+        let mut agent_costs = self.agent_costs.lock().unwrap();
+        let current_cost = agent_costs.entry(agent_id.to_string()).or_insert(0.0);
+        *current_cost += cost;
+
+        let mut tenant_costs = self.tenant_costs.lock().unwrap();
+        let current_tenant_cost = tenant_costs.entry(tenant_id.to_string()).or_insert(0.0);
+        *current_tenant_cost += cost;
+
+        let mut total_cost = self.total_cost.lock().unwrap();
+        *total_cost += cost;
+    }
+
     pub fn get_total_revenue(&self) -> f64 {
         let agent_revenues = self.agent_revenues.lock().unwrap();
         agent_revenues.values().sum()
