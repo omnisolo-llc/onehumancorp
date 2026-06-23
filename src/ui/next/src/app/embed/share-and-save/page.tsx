@@ -48,7 +48,7 @@ function ShareAndSaveContent() {
 
             {/* Powered By Watermark */}
             {!hideBranding && (
-                <div className={`py-2 text-center text-[11px] sm:text-xs font-medium border-t ${theme === 'dark' ? 'border-gray-800 bg-gray-900/80' : 'border-gray-100 bg-white/80'} backdrop-blur-sm mt-auto`}>
+                <div className={`py-2 text-center text-[11px] sm:text-xs font-medium border-t ${theme === 'dark' ? 'border-gray-800 bg-gray-900/80' : 'border-gray-100 bg-white/80'} backdrop-blur-[30px] saturate-[210%] mt-auto`}>
                     <a
                         href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}
                         target="_blank"

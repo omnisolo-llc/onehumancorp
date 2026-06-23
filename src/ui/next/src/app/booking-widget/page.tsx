@@ -41,7 +41,7 @@ export default function BookingWidgetBuilder() {
   return (
     <div className="min-h-screen bg-gray-50 font-inter text-gray-900 pb-20">
       {/* Top Nav */}
-      <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+      <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-[30px] saturate-[210%] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
             <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -142,7 +142,7 @@ export default function BookingWidgetBuilder() {
                     {/* Mock Widget Content for Preview */}
                     <div className="w-full h-48 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-t-[16px] relative flex items-center justify-center">
                         <span className="text-4xl text-white">📅</span>
-                        <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 text-white text-xs font-bold px-3 py-1 rounded-full">
                             Book Now
                         </div>
                     </div>
@@ -177,7 +177,7 @@ export default function BookingWidgetBuilder() {
 
       {/* Embed Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
             <div className="app-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"

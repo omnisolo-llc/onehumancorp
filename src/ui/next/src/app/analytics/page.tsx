@@ -33,7 +33,7 @@ export default function AnalyticsPage() {
   return (
     <AppShell title="Business Analytics">
       <div className="mx-auto max-w-5xl space-y-8 font-inter">
-        <header className="mb-8 p-6 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 rounded-3xl border border-indigo-100/40 shadow-sm backdrop-blur-md">
+        <header className="mb-8 p-6 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 rounded-3xl border border-indigo-100/40 shadow-sm backdrop-blur-[30px] saturate-[210%]">
           <h1 className="text-3xl font-extrabold font-outfit text-gray-900 tracking-tight">Business Analytics 📊</h1>
           <p className="mt-2 text-sm text-gray-500">Track your store performance, active visitor numbers, conversion rates, and AI insights.</p>
         </header>
@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
         <section className="space-y-4">
           <h2 className="text-xl font-bold font-outfit text-gray-900">Core Metrics (30 Days)</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 bg-white/70 backdrop-blur-lg">
+            <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 bg-white/70 backdrop-blur-[30px] saturate-[210%]">
               <div className="text-xs font-bold uppercase tracking-wider text-gray-400">Total Revenue</div>
               <div className="text-3xl font-extrabold font-outfit text-gray-900 mt-2">$4,250.00</div>
               <div className="text-xs font-bold text-green-600 mt-4 flex items-center gap-1">
@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 bg-white/70 backdrop-blur-lg">
+            <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 bg-white/70 backdrop-blur-[30px] saturate-[210%]">
               <div className="text-xs font-bold uppercase tracking-wider text-gray-400">Active Customers</div>
               <div className="text-3xl font-extrabold font-outfit text-gray-900 mt-2">142</div>
               <div className="text-xs font-bold text-green-600 mt-4 flex items-center gap-1">
@@ -66,7 +66,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 bg-white/70 backdrop-blur-lg">
+            <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 bg-white/70 backdrop-blur-[30px] saturate-[210%]">
               <div className="text-xs font-bold uppercase tracking-wider text-gray-400">Conversion Rate</div>
               <div className="text-3xl font-extrabold font-outfit text-gray-900 mt-2">3.8%</div>
               <div className="text-xs font-bold text-gray-400 mt-4 flex items-center gap-1">
@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
            </h2>
 
            <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-500 ${!hasPro ? 'filter blur-sm select-none pointer-events-none opacity-60' : ''}`}>
-               <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 h-64 flex flex-col bg-white/70 backdrop-blur-lg">
+               <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 h-64 flex flex-col bg-white/70 backdrop-blur-[30px] saturate-[210%]">
                    <h3 className="font-bold font-outfit text-gray-800 mb-4 text-sm uppercase tracking-wider">Traffic Sources</h3>
                    <div className="flex-1 flex flex-col justify-center items-center gap-3">
                        <div className="w-full flex items-end justify-around h-32 border-b border-gray-100 pb-2">
@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
                    </div>
                </div>
 
-               <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 h-64 flex flex-col bg-white/70 backdrop-blur-lg">
+               <div className="app-card p-6 rounded-2xl shadow-md border border-indigo-100/40 h-64 flex flex-col bg-white/70 backdrop-blur-[30px] saturate-[210%]">
                    <h3 className="font-bold font-outfit text-gray-800 mb-4 text-sm uppercase tracking-wider">AI Buying Intent</h3>
                    <div className="flex-1 flex flex-col justify-center gap-4">
                        <div>
@@ -123,7 +123,7 @@ export default function AnalyticsPage() {
 
            {!hasPro && (
                <div className="absolute inset-0 z-10 flex items-center justify-center">
-                   <div className="bg-white/95 p-8 rounded-3xl shadow-2xl border border-indigo-100/60 text-center max-w-sm backdrop-blur-lg">
+                   <div className="bg-white/95 p-8 rounded-3xl shadow-2xl border border-indigo-100/60 text-center max-w-sm backdrop-blur-[30px] saturate-[210%]">
                        <div className="text-5xl mb-4">🔒</div>
                        <h3 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Unlock Advanced Insights</h3>
                        <p className="text-sm text-gray-500 mb-6 leading-relaxed">See exactly where your traffic is coming from and predict buyer behavior with our Pro Plan.</p>
@@ -141,8 +141,8 @@ export default function AnalyticsPage() {
 
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="app-card w-full max-w-md rounded-[24px] p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 bg-white/95 backdrop-blur-2xl text-center">
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-[30px] saturate-[210%]">
+          <div className="app-card w-full max-w-md rounded-[24px] p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 bg-white/95 backdrop-blur-[30px] saturate-[210%] text-center">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-end mb-2">

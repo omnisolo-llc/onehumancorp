@@ -169,7 +169,7 @@ export default function EmbedBuilderPage() {
                                 </pre>
                                 <button
                                     onClick={handleCopy}
-                                    className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 flex items-center gap-2 text-xs font-medium border border-white/10 shadow-lg"
+                                    className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg backdrop-blur-[30px] saturate-[210%] transition-all opacity-0 group-hover:opacity-100 flex items-center gap-2 text-xs font-medium border border-white/10 shadow-lg"
                                 >
                                     {copied ? (
                                         <>
@@ -215,7 +215,7 @@ export default function EmbedBuilderPage() {
                                     />
 
                                     {!hideBranding && (
-                                        <div className={`py-3 text-center text-xs font-semibold border-t ${theme === 'dark' ? 'border-gray-800 bg-gray-900/90' : 'border-gray-100 bg-white/90'} backdrop-blur-sm z-20`}>
+                                        <div className={`py-3 text-center text-xs font-semibold border-t ${theme === 'dark' ? 'border-gray-800 bg-gray-900/90' : 'border-gray-100 bg-white/90'} backdrop-blur-[30px] saturate-[210%] z-20`}>
                                             <a
                                                 href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`}
                                                 target="_blank"
@@ -235,7 +235,7 @@ export default function EmbedBuilderPage() {
 
             {/* Soft Paywall Modal */}
             {showPaywall && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-[30px] saturate-[210%] animate-in fade-in duration-200">
                     <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden border border-gray-100">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -z-10"></div>
 

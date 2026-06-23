@@ -139,7 +139,7 @@ export default function DiscountCodeGeneratorPage() {
 
       {/* Embed Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
             <div className="app-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in bg-white">
                 <button
                     aria-label="Close embed modal"

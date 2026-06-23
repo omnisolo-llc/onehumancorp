@@ -95,7 +95,7 @@ export default function KDSPage() {
 
   return (
     <div dir={language === 'ar' ? 'rtl' : 'ltr'} className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] max-w-[375px] mx-auto h-[812px] bg-gradient-to-br from-white/40 to-white/10 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-[375px] max-w-[375px] mx-auto h-[812px] bg-gradient-to-br from-white/40 to-white/10 backdrop-blur-[30px] saturate-[210%] shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
         <div className="pt-12 pb-4 px-6 bg-white/65 backdrop-blur-[30px] shadow-sm border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">

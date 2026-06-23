@@ -70,7 +70,7 @@ export function WrappedWidget() {
       <div className="relative z-10">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider mb-3 border border-white/30 backdrop-blur-md">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider mb-3 border border-white/30 backdrop-blur-[30px] saturate-[210%]">
               <span className="w-2 h-2 rounded-full bg-pink-300 animate-pulse"></span>
               {data.year} Wrapped
             </div>
@@ -88,19 +88,19 @@ export function WrappedWidget() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white/10 rounded-2xl p-4 border border-white/20 backdrop-blur-md">
+          <div className="bg-white/10 rounded-2xl p-4 border border-white/20 backdrop-blur-[30px] saturate-[210%]">
             <div className="text-xs text-white/70 font-semibold uppercase tracking-wider mb-1">Total Sales</div>
             <div className="text-2xl font-bold font-outfit text-white">{data.stats.totalSales}</div>
           </div>
-          <div className="bg-white/10 rounded-2xl p-4 border border-white/20 backdrop-blur-md">
+          <div className="bg-white/10 rounded-2xl p-4 border border-white/20 backdrop-blur-[30px] saturate-[210%]">
             <div className="text-xs text-white/70 font-semibold uppercase tracking-wider mb-1">Orders</div>
             <div className="text-2xl font-bold font-outfit text-white">{data.stats.totalOrders}</div>
           </div>
-          <div className="bg-white/10 rounded-2xl p-4 border border-white/20 backdrop-blur-md">
+          <div className="bg-white/10 rounded-2xl p-4 border border-white/20 backdrop-blur-[30px] saturate-[210%]">
             <div className="text-xs text-white/70 font-semibold uppercase tracking-wider mb-1">New Customers</div>
             <div className="text-2xl font-bold font-outfit text-white">{data.stats.newCustomers}</div>
           </div>
-          <div className="bg-white/10 rounded-2xl p-4 border border-white/20 backdrop-blur-md relative overflow-hidden">
+          <div className="bg-white/10 rounded-2xl p-4 border border-white/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden">
              <div className="absolute top-0 right-0 w-16 h-16 bg-white/20 rounded-full blur-[20px] -mr-8 -mt-8"></div>
             <div className="text-xs text-white/70 font-semibold uppercase tracking-wider mb-1">AI Hours Saved</div>
             <div className="text-2xl font-bold font-outfit text-white flex items-center gap-2">
@@ -133,7 +133,7 @@ export function WrappedWidget() {
             target="_blank"
             rel="noopener noreferrer"
             data-testid="wrapped-twitter-btn"
-            className="flex-1 py-3 px-6 rounded-xl font-bold font-outfit text-sm bg-black/40 border border-white/20 text-white hover:bg-black/60 shadow-lg backdrop-blur-md transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
+            className="flex-1 py-3 px-6 rounded-xl font-bold font-outfit text-sm bg-black/40 border border-white/20 text-white hover:bg-black/60 shadow-lg backdrop-blur-[30px] saturate-[210%] transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
             Share on X

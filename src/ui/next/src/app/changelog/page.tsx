@@ -92,7 +92,7 @@ export default function ChangelogPage() {
               href="https://onehumancorp.com/changelog"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 font-bold hover:underline bg-blue-50/80 px-6 py-3 rounded-full border border-blue-100 inline-block shadow-sm backdrop-blur-md saturate-[210%]"
+              className="text-blue-600 font-bold hover:underline bg-blue-50/80 px-6 py-3 rounded-full border border-blue-100 inline-block shadow-sm backdrop-blur-[30px] saturate-[210%] saturate-[210%]"
             >
               Read the full technical changelog on our website →
             </a>

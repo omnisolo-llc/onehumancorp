@@ -45,7 +45,7 @@ export default function MissionTrackPage() {
         </header>
 
         {/* Tabs */}
-        <div className="flex px-5 pt-4 pb-2 gap-2 overflow-x-auto hide-scrollbar sticky top-[108px] z-10 bg-[#F5F5F7]/90 backdrop-blur-md">
+        <div className="flex px-5 pt-4 pb-2 gap-2 overflow-x-auto hide-scrollbar sticky top-[108px] z-10 bg-[#F5F5F7]/90 backdrop-blur-[30px] saturate-[210%]">
           {['all', 'active', 'completed'].map((tab) => (
             <button
               key={tab}

@@ -281,7 +281,7 @@ export default function StorefrontBuilderPage() {
                   id="bio-input"
                   enterKeyHint="done"
                   autoCapitalize="sentences"
-                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] rounded-[16px]"
+                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-[30px] saturate-[210%] p-4 mb-8 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] rounded-[16px]"
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
                   onKeyDown={(e) => {
@@ -416,7 +416,7 @@ export default function StorefrontBuilderPage() {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glassmorphism">
-        <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
+        <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-[30px] saturate-[210%] text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>
@@ -463,7 +463,7 @@ export default function StorefrontBuilderPage() {
           </div>
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50 rounded-b-[16px]">
+        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-[30px] saturate-[210%] border-t border-gray-200 z-50 rounded-b-[16px]">
           <div className="flex gap-2 mb-3">
             <button onClick={() => setIsAddBlockOpen(true)} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 rounded-[16px] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]">
               <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
