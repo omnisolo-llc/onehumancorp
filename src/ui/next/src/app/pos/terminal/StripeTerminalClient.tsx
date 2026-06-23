@@ -149,6 +149,106 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     }
   };
 
+  const processCashSale = async () => {
+    setReserving(true);
+    setStatus('Processing cash sale...');
+    onOptimisticReserve?.();
+
+    if (!navigator.onLine) {
+       setTimeout(async () => {
+          const transactionId = `tx_offline_cash_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          const tx = {
+             id: transactionId,
+             type: 'cash_sale',
+             client_id: 'terminal_1',
+             amount_cents: amount,
+             amount: amount,
+             currency: 'usd',
+             product_id: cart ? cart[0].product.id : productId,
+             quantity: cart ? cart[0].quantity : 1,
+             payload: JSON.stringify((cart || [{product: {id: productId}, quantity: 1}]).map(c => ({ product_id: c.product.id, quantity: c.quantity }))),
+             timestamp: new Date().toISOString()
+          };
+
+          for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
+            const crdtTx = {
+              id: `crdt_${transactionId}_${item.product.id}`,
+              type: 'CRDT_MUTATION',
+              timestamp: new Date().toISOString(),
+              payload: {
+                 entity_id: item.product.id,
+                 data: {
+                    pn_counter_n_increment: item.quantity
+                 }
+              }
+            };
+            await SyncManager.getInstance().enqueue(crdtTx);
+          }
+          await SyncManager.getInstance().enqueue(tx);
+
+          setStatus('Cash sale saved offline. Will sync when network is restored.');
+          setTimeout(() => {
+             setStatus('Terminal ready.');
+             if (onSuccess) onSuccess();
+          }, 1500);
+          setReserving(false);
+       }, 500);
+       return;
+    }
+
+    try {
+        let allCommitted = true;
+        let lockIds: string[] = [];
+        const items = cart || [{product: {id: productId}, quantity: 1}];
+
+        for (const item of items) {
+          const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenant_id: tenantId, product_id: item.product.id, quantity: item.quantity, ttl_seconds: 15 })
+          });
+          const reserveData = await reserveRes.json();
+          if (!reserveData.success) {
+            onOptimisticRollback?.();
+            setStatus('Reservation failed: ' + (reserveData.error_message || 'Item just sold out'));
+            setReserving(false);
+            return;
+          }
+          lockIds.push(reserveData.lock_id);
+        }
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const currentLockId = lockIds[i];
+          const commitRes = await fetch('/api/v1/payments/terminal/commit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tenant_id: tenantId,
+              product_id: item.product.id,
+              quantity: item.quantity,
+              lock_id: currentLockId,
+              amount_cents: i === 0 ? amount : 0
+            })
+          });
+          const commitData = await commitRes.json();
+          if (!commitData.success) {
+             allCommitted = false;
+             setStatus('Cash sale successful, but inventory commit failed for an item: ' + commitData.error_message);
+          }
+        }
+        if (allCommitted) {
+          setStatus('Cash sale successful!');
+          if (onSuccess) onSuccess();
+        }
+    } catch (e: any) {
+        onOptimisticRollback?.();
+        setStatus('Error processing cash sale: ' + e.message);
+    } finally {
+        setReserving(false);
+    }
+  };
+
   const processPayment = async () => {
     if (!terminal || !connectedReader) return;
 
@@ -340,11 +440,20 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         </div>
       )}
 
-      {connectedReader && (
-        <div>
-          <button id="charge-btn" onClick={processPayment} disabled={reserving} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all charge-btn ${reserving ? 'opacity-50' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+      {connectedReader ? (
+        <div className="flex gap-2 mt-4">
+          <button id="charge-btn" onClick={processPayment} disabled={reserving} className={`flex-1 bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all charge-btn ${reserving ? 'opacity-50' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
             {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
           </button>
+          <button id="cash-btn" onClick={processCashSale} disabled={reserving} className={`flex-1 bg-gradient-to-b from-[#34C759] to-[#28A745] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-green-500/30 transition-all cash-btn ${reserving ? 'opacity-50' : 'hover:shadow-green-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+            {reserving ? 'Processing...' : `Cash $${(amount / 100).toFixed(2)}`}
+          </button>
+        </div>
+      ) : (
+        <div className="flex gap-2 mt-4">
+           <button id="cash-btn-offline" onClick={processCashSale} disabled={reserving} className={`w-full bg-gradient-to-b from-[#34C759] to-[#28A745] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-green-500/30 transition-all cash-btn ${reserving ? 'opacity-50' : 'hover:shadow-green-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+             {reserving ? 'Processing...' : `Record Cash Sale $${(amount / 100).toFixed(2)}`}
+           </button>
         </div>
       )}
     </div>
