@@ -1199,6 +1199,13 @@ impl DepartmentOrchestrator {
                         if let Err(e) = self.dispatch_event(approved_event).await {
                             tracing::error!("Failed to dispatch agent:customer_success:approved event: {}", e);
                         }
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("dispute_resolution") {
+                        let dispute_id = payload.get("dispute_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
+                        let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
+                        if let Err(e) = stripe.submit_dispute_evidence(dispute_id, payload.clone()).await {
+                            tracing::error!("Failed to submit dispute evidence: {}", e);
+                        }
                     }
                 }
 
