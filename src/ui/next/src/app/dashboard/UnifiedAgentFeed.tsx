@@ -5,6 +5,8 @@ import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
 import { InstagramDMCard } from "./InstagramDMCard";
+import { AgentActionCard } from "../../components/feed/AgentActionCard";
+
 
 type TriageItem = {
   id: string;
@@ -658,7 +660,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
       <div className="flex flex-col gap-4 w-full">
         {activeTab === "proposals" && (
-          <>
+          <div className="w-full max-w-[375px] mx-auto overflow-hidden">
             {loading && (
               <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Loading Agent Proposals...
@@ -666,7 +668,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             )}
             {!loading && items.length === 0 && (
               <div
-                className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center"
+                className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] shadow-sm opacity-90 text-center"
                 data-testid="triage-feed-empty"
               >
                 <div className="text-3xl mb-2">✨</div>
@@ -781,11 +783,77 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       )}
                       {(approval.proposed_action || approval.context_payload)
                         ?.feature_type === "instagram_dm" && (
-                        <InstagramDMCard approval={approval} />
+                        <AgentActionCard
+                          id={approval.id}
+                          department="Instagram DM"
+                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+                          headerColorClass="text-pink-600 bg-pink-50 dark:bg-pink-900/30"
+                          isEditing={editingId === approval.id}
+                          editContent={editContent}
+                          onEditContentChange={setEditContent}
+                          onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)}
+                          onReject={() => handleDecision(approval.id, false, undefined, approval.event_source)}
+                          onEditToggle={() => {
+                            setEditingId(approval.id);
+                            setEditContent((approval.proposed_action || approval.context_payload)?.draft_reply || "");
+                          }}
+                          onSaveApprove={(id, content) => {
+                            handleDecision(approval.id, true, content, approval.event_source);
+                            setEditingId(null);
+                          }}
+                          onCancelEdit={() => setEditingId(null)}
+                          approveLabel="Approve"
+                          testIdPrefix="instagram-dm"
+                          bodyContent={
+                            <>
+                              <div className="text-xs text-gray-500 font-medium">
+                                Customer: {(approval.proposed_action || approval.context_payload).customer_message}
+                              </div>
+                              <div className="text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic line-clamp-3 bg-white/50 dark:bg-black/20 p-3 rounded-[8px] break-words shadow-sm">
+                                Draft: {(approval.proposed_action || approval.context_payload).draft_reply}
+                              </div>
+                            </>
+                          }
+                        />
                       )}
                       {(approval.proposed_action || approval.context_payload)
                         ?.feature_type === "ambassador_reply" && (
-                        <AmbassadorReplyCard approval={approval} />
+                        <AgentActionCard
+                          id={approval.id}
+                          department="Customer Inquiry"
+                          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>}
+                          headerColorClass="text-[#0066FF] bg-blue-50 dark:bg-blue-900/30"
+                          isEditing={editingId === approval.id}
+                          editContent={editContent}
+                          onEditContentChange={setEditContent}
+                          onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)}
+                          onReject={() => handleDecision(approval.id, false, undefined, approval.event_source)}
+                          onEditToggle={() => {
+                            setEditingId(approval.id);
+                            setEditContent((approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.draft_reply || "");
+                          }}
+                          onSaveApprove={(id, content) => {
+                            handleDecision(approval.id, true, content, approval.event_source);
+                            setEditingId(null);
+                          }}
+                          onCancelEdit={() => setEditingId(null)}
+                          approveLabel="Send Draft"
+                          testIdPrefix="ambassador-reply"
+                          bodyContent={
+                            <>
+                              <div className="bg-white/50 dark:bg-black/20 p-3 rounded-[8px] text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic shadow-sm">
+                                "{(approval as any).payload?.original_message || (approval.proposed_action || approval.context_payload)?.original_message || (approval.proposed_action || approval.context_payload)?.original_payload?.original_message || (approval as any).payload?.original_payload?.original_message || "Customer message"}"
+                              </div>
+                              <div className="text-[#0066FF] font-semibold text-sm mt-2 flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                Draft Reply
+                              </div>
+                              <div className="bg-[#0066FF] p-3 rounded-[8px] text-xs text-white shadow-inner">
+                                {(approval as any).payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || (approval as any).payload?.original_payload?.generated_response || "Ready to send."}
+                              </div>
+                            </>
+                          }
+                        />
                       )}
                       {(approval.proposed_action || approval.context_payload)
                         ?.feature_type === "quote_draft" && (
@@ -1424,7 +1492,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full min-h-[44px] min-w-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1827,7 +1895,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     editingId === approval.id ? (
                       <div className="flex flex-col gap-3 w-full">
                         <textarea
-                          className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                          className="w-full min-h-[44px] min-w-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                           rows={4}
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1936,7 +2004,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             Scope of Work
                           </label>
                           <textarea
-                            className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                            className="w-full min-h-[44px] min-w-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                             rows={3}
                             value={editQuoteScope}
                             onChange={(e) => setEditQuoteScope(e.target.value)}
@@ -2161,7 +2229,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   ) : editingId === approval.id ? (
                     <div className="flex flex-col gap-3 w-full">
                       <textarea
-                        className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                        className="w-full min-h-[44px] min-w-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
                         rows={4}
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
@@ -2256,11 +2324,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </div>
               </div>
             ))}
-          </>
+          </div>
         )}
 
         {activeTab === "activity" && (
-          <>
+          <div className="w-full max-w-[375px] mx-auto overflow-hidden">
             {activityLoading && (
               <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Loading Activity Feed...
@@ -2326,7 +2394,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
     </section>
