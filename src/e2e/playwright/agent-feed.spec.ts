@@ -23,7 +23,7 @@ test.describe('Unified Agent Feed (Mobile MVP)', () => {
     });
 
     // Navigate to the feed page
-    await page.goto('/feed');
+    await page.goto('/dashboard?tenant_id=t1');
 
     // Wait for feed items to load
     await page.waitForSelector('[data-testid="agent-feed"]');
