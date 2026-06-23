@@ -66,6 +66,8 @@ const secondaryNav: NavItem[] = [
   { label: "Integrations", href: "/integrations", icon: "integrations" },
   { label: "Cost", href: "/cost-dashboard", icon: "cost" },
   { label: "Diagnostics", href: "/diagnostics", icon: "diagnostics" },
+  { label: "Help", href: "/help", icon: "activity" },
+  { label: "API Docs", href: "/api-docs", icon: "diagnostics" },
 ];
 
 function ShellIcon({ name }: { name: IconName }) {
@@ -136,6 +138,14 @@ function NavLink({ item }: { item: NavItem }) {
 
   if (item.href === "/orders") {
     return <WithTooltip id="orders-tooltip" defaultText="See what customers bought and track order fulfillment.">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/help") {
+    return <WithTooltip id="help-nav-tooltip" defaultText="Help Center">{link}</WithTooltip>;
+  }
+
+  if (item.href === "/api-docs") {
+    return <WithTooltip id="api-docs-nav-tooltip" defaultText="API Documentation">{link}</WithTooltip>;
   }
 
   return link;
