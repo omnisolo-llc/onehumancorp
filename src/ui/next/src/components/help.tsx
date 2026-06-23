@@ -247,7 +247,7 @@ export function HelpWidget() {
           <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
             {tab === "center" && (
               <div>
-                <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">Help Center</h3>
+                <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">In-App Help Center</h3>
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[20px] saturate-200 min-h-[44px]" />
                 <div className="space-y-6 mb-8">
                   {Array.from(
