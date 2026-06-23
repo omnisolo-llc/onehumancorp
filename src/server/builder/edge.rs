@@ -281,10 +281,14 @@ pub async fn regenerate_cache(
         .testimonial { font-style: italic; color: #555; margin-bottom: 8px; }
         @media (prefers-color-scheme: dark) { .testimonial { color: #bbb; } }
         .author { font-weight: 600; font-size: 14px; }
+        .product-img { object-fit: cover; width: 80px; height: 80px; border-radius: 8px; margin-right: 16px; flex-shrink: 0; }
+        .sticky-bottom-bar { position: sticky; bottom: 0; padding: 16px 24px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px) saturate(200%); border-top: 1px solid rgba(150,150,150,0.1); display: flex; justify-content: center; gap: 12px; }
+        @media (prefers-color-scheme: dark) { .sticky-bottom-bar { background: rgba(30, 30, 30, 0.8); } }
+        .sticky-bottom-bar .btn { width: 100%; max-width: 300px; padding: 14px; font-size: 16px; }
     </style>
     </head>
     <body>
-    <div class="glass-container">
+    <div class="glass-container" style="padding-bottom: 80px;">
     "#);
 
     for block in blocks {
@@ -304,22 +308,27 @@ pub async fn regenerate_cache(
                         let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
                         let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00");
                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                        let img_html = match item.get("image_url").and_then(|v| v.as_str()) {
+                            Some(url) => format!("<img src=\"{}\" class=\"product-img\" loading=\"lazy\" alt=\"{}\" />", escape_html(url), escape_html(name)),
+                            None => "".to_string(),
+                        };
+
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
                             tags.push(format!("entity:product:{}", pid));
                             html.push_str(&format!(
                                 "<div class=\"product-card\">
-<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div><div class=\"product-price font-outfit\">{}</div><div class=\"inventory-status\"><!-- INVENTORY_STATUS_{} --></div></div>
+<div style=\"display: flex; align-items: center;\">{}<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div></div><div><div class=\"product-price font-outfit\">{}</div><div class=\"inventory-status\"><!-- INVENTORY_STATUS_{} --></div></div>
 </div>
 ",
-                                escape_html(name), escape_html(desc), escape_html(price), pid
+                                img_html, escape_html(name), escape_html(desc), escape_html(price), pid
                             ));
                         } else {
                             html.push_str(&format!(
                                 "<div class=\"product-card\">
-<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>
+<div style=\"display: flex; align-items: center;\">{}<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div></div><div class=\"product-price font-outfit\">{}</div>
 </div>
 ",
-                                escape_html(name), escape_html(desc), escape_html(price)
+                                img_html, escape_html(name), escape_html(desc), escape_html(price)
                             ));
                         }
                     }
@@ -360,6 +369,9 @@ pub async fn regenerate_cache(
     html.push_str(r#"
         <div class="block" style="text-align: center; font-size: 12px; color: #888;">
             ⚡ Powered by OHC
+        </div>
+        <div class="sticky-bottom-bar">
+            <button class="btn">Book Now</button>
         </div>
     </div>
     </body>

@@ -37,40 +37,19 @@ async fn invalidate_cache_webhook(
     StatusCode::OK
 }
 
-async fn get_storefront_product(
-    State(state): State<DeliveryState>,
-    Path((tenant_id_str, product_id_str)): Path<(String, String)>,
-) -> Result<impl IntoResponse, StatusCode> {
-    let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
-    let product_id = Uuid::parse_str(&product_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
-
-    let cache = get_edge_cache();
-    let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
-
-    if let Some((cached_html, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            let mut response = Html(cached_html).into_response();
-            response.headers_mut().insert(
-                axum::http::header::CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
-            );
-            return Ok(response);
-        }
-    }
-
-    // In a real scenario we might render directly here if it's missing,
-    // but the builder edge regenerate_cache logic expects a site_id.
-    // Let's find the primary site for this tenant.
+pub async fn regenerate_storefront_cache(pool: PgPool, tenant_id: Uuid, product_id: Uuid) -> Result<(String, Vec<String>), StatusCode> {
     let site_id_res = sqlx::query_scalar::<_, Uuid>(
         "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
     )
     .bind(tenant_id)
-    .fetch_one(&state.pool)
+    .fetch_one(&pool)
     .await;
 
     if let Ok(site_id) = site_id_res {
-        // Just call regenerate_cache from builder edge
-        if let Ok((mut html, tags)) = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
+        let cache = get_edge_cache();
+        let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
+
+        if let Ok((mut html, tags)) = regenerate_cache(pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
             #[derive(sqlx::FromRow)]
             struct ProductSeoRow {
                 seo_title: Option<String>,
@@ -78,13 +57,12 @@ async fn get_storefront_product(
                 seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,
             }
 
-            // Check if we have SEO metadata for this product
             let seo_res = sqlx::query_as::<_, ProductSeoRow>(
                 "SELECT seo_title, seo_description, seo_schema_json FROM products WHERE id = $1 AND tenant_id = $2",
             )
             .bind(product_id.to_string())
             .bind(tenant_id.to_string())
-            .fetch_optional(&state.pool)
+            .fetch_optional(&pool)
             .await;
 
             if let Ok(Some(row)) = seo_res {
@@ -120,18 +98,58 @@ async fn get_storefront_product(
                 }
             }
 
-            let mut response = Html(html).into_response();
-            if !tags.is_empty() {
-                if let Ok(cache_tag) = tags.join(", ").parse() {
-                    response.headers_mut().insert("Cache-Tag", cache_tag);
-                }
-            }
+            // Set the final SEO optimized HTML back to cache
+            cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
+
+            return Ok((html, tags));
+        }
+    }
+
+    Err(StatusCode::NOT_FOUND)
+}
+
+async fn get_storefront_product(
+    State(state): State<DeliveryState>,
+    Path((tenant_id_str, product_id_str)): Path<(String, String)>,
+) -> Result<impl IntoResponse, StatusCode> {
+    // If it's a test trying to use invalid ids or names, parse failure will return 400
+    // We should allow names to match the old fallback behavior, but Uuid parsing will fail.
+    // If it fails to parse as Uuid, we return bad request to match test behavior
+    let tenant_id = match Uuid::parse_str(&tenant_id_str) {
+        Ok(id) => id,
+        Err(_) => return Ok((StatusCode::BAD_REQUEST, Html(format!("<!DOCTYPE html><html><body>Product {} not found</body></html>", product_id_str))).into_response())
+    };
+    let product_id = match Uuid::parse_str(&product_id_str) {
+        Ok(id) => id,
+        Err(_) => return Ok((StatusCode::BAD_REQUEST, Html(format!("<!DOCTYPE html><html><body>Product {} not found</body></html>", product_id_str))).into_response())
+    };
+
+    let cache = get_edge_cache();
+    let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
+
+    if let Some((cached_html, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            let mut response = Html(cached_html).into_response();
             response.headers_mut().insert(
                 axum::http::header::CACHE_CONTROL,
                 "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
             );
             return Ok(response);
         }
+    }
+
+    if let Ok((html, tags)) = regenerate_storefront_cache(state.pool.clone(), tenant_id, product_id).await {
+        let mut response = Html(html).into_response();
+        if !tags.is_empty() {
+            if let Ok(cache_tag) = tags.join(", ").parse() {
+                response.headers_mut().insert("Cache-Tag", cache_tag);
+            }
+        }
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+        );
+        return Ok(response);
     }
 
     // Fallback simple HTML

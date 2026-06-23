@@ -1,6 +1,7 @@
 use futures::StreamExt;
 use serde::Deserialize;
 use tracing::{info, error, warn};
+use uuid::Uuid;
 
 #[derive(Deserialize, Debug)]
 pub struct InvalidationEvent {
@@ -56,9 +57,32 @@ pub async fn start_cache_invalidator() {
         match serde_json::from_str::<InvalidationEvent>(&payload) {
             Ok(event) => {
                 info!("Received invalidation event: {}", event.event);
-                for tag in event.tags {
+
+                let mut tenant_id_opt: Option<Uuid> = None;
+                let mut product_id_opt: Option<Uuid> = None;
+
+                for tag in &event.tags {
                     info!("Invalidating cache for tag: {}", tag);
-                    edge_cache.invalidate_by_tag(&tag).await;
+                    edge_cache.invalidate_by_tag(tag).await;
+
+                    if tag.starts_with("tenant-id:") {
+                        if let Ok(id) = Uuid::parse_str(&tag["tenant-id:".len()..]) {
+                            tenant_id_opt = Some(id);
+                        }
+                    } else if tag.starts_with("entity:product:") {
+                        if let Ok(id) = Uuid::parse_str(&tag["entity:product:".len()..]) {
+                            product_id_opt = Some(id);
+                        }
+                    }
+                }
+
+                // Asynchronously pre-warm the cache if we have both tenant_id and product_id
+                if let (Some(tenant_id), Some(product_id)) = (tenant_id_opt, product_id_opt) {
+                    let pool = crate::db::get_pool();
+                    tokio::spawn(async move {
+                        info!("Pre-warming cache for product {}", product_id);
+                        let _ = crate::api::storefront_delivery::regenerate_storefront_cache(pool, tenant_id, product_id).await;
+                    });
                 }
             }
             Err(e) => {
@@ -100,8 +124,8 @@ mod tests {
             tags: vec![tag.to_string()],
         };
 
-        for tag in event.tags {
-            edge_cache.invalidate_by_tag(&tag).await;
+        for tag in &event.tags {
+            edge_cache.invalidate_by_tag(tag).await;
         }
 
         assert_eq!(edge_cache.get("test_key").await, None);

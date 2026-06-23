@@ -12,12 +12,14 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
 
     // Perform an inventory invalidation trigger via webhook (simulating backend ops)
     const invalidateRes = await request.post('/api/v1/storefront/webhook/invalidate', {
-      data: { tags: [`entity:product:${productId}`] }
+      data: { tags: [`entity:product:${productId}`, `tenant-id:${tenantId}`] }
     });
     expect(invalidateRes.status()).toBe(200);
 
+    // Give it a moment to regenerate
+    await new Promise(r => setTimeout(r, 1000));
+
     // Hit cache again and verify regeneration logic is invoked
-    // In a real e2e environment this hits the backend properly. We verify the API endpoint contract.
     let refreshed = await request.get(`/api/v1/storefront/${tenantId}/${productId}`);
     expect(refreshed.status()).toBe(200);
   });
@@ -30,6 +32,8 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     let text = await res.text();
     // Validating fallback SEO or html tags
     expect(text).toContain('<!DOCTYPE html>');
+    expect(text).toContain('Edge Cake');
+    expect(text).toContain('sticky-bottom-bar');
   });
 
   test('handles edge cache miss dynamically and creates fallback', async ({ request, page }) => {
@@ -51,9 +55,11 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
   });
 
   test('validates cache regeneration after offline POS sync deduction', async ({ request, page }) => {
+    const tenantId = '11111111-1111-1111-1111-111111111111';
+    const productId = '22222222-2222-2222-2222-222222222222';
     // Analogous to updating POS orders invalidation endpoint
     const invalidateRes = await request.post('/api/v1/storefront/webhook/invalidate', {
-      data: { tags: [`tenant-id:00000000-0000-0000-0000-000000000000`] }
+      data: { tags: [`tenant-id:${tenantId}`, `entity:product:${productId}`] }
     });
     expect(invalidateRes.status()).toBe(200);
   });
