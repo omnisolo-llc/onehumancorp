@@ -379,6 +379,7 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
 VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
 ON CONFLICT (id) DO NOTHING;
+ALTER TABLE IF EXISTS telemetry_buffer ENABLE ROW LEVEL SECURITY;
 -- Seed real data for Chaos Report
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('test_org', 'api_latency', 'histogram', 12.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
@@ -534,6 +535,7 @@ ALTER TABLE IF EXISTS triage_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS quote_line_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
 INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES
 ('823e4567-e89b-12d3-a456-426614174000', 'e2e-tenant', '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', 'DRAFT', 15000, 5000, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)

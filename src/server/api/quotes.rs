@@ -286,8 +286,7 @@ async fn get_quote(
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
-    use super::*;
+
     use crate::domain::repository::models::{Quote, QuoteLineItem};
 
     #[test]

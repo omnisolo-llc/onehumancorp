@@ -745,8 +745,8 @@ mod tests {
     use super::*;
 
         // tests go here
-    #[allow(unused_imports)]
-    use sqlx::postgres::PgPoolOptions;
+
+
 
     #[tokio::test]
     async fn test_commit_inventory_low_stock() {
