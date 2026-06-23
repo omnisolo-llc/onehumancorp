@@ -69,7 +69,7 @@ impl PartialOrd for DistNode {
 
 impl Ord for DistNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.dist.partial_cmp(&self.dist).unwrap_or(Ordering::Equal)
+        if other.dist < self.dist { Ordering::Less } else if other.dist > self.dist { Ordering::Greater } else { Ordering::Equal }
     }
 }
 
@@ -96,7 +96,7 @@ impl PartialOrd for MaxDistNode {
 
 impl Ord for MaxDistNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.dist.partial_cmp(&other.dist).unwrap_or(Ordering::Equal)
+        if self.dist < other.dist { Ordering::Less } else if self.dist > other.dist { Ordering::Greater } else { Ordering::Equal }
     }
 }
 
@@ -340,7 +340,7 @@ impl AgentDB {
         candidates.sort_by(|a, b| {
             let da = q.distance(self.vectors.get(a).unwrap());
             let db = q.distance(self.vectors.get(b).unwrap());
-            da.partial_cmp(&db).unwrap_or(Ordering::Equal)
+            if da < db { Ordering::Less } else if da > db { Ordering::Greater } else { Ordering::Equal }
         });
 
         candidates
