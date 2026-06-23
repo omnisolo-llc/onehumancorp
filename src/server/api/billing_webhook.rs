@@ -475,6 +475,27 @@ pub async fn stripe_webhook_handler(
 
             StatusCode::OK.into_response()
         },
+        "charge.dispute.created" => {
+            let obj = &payload.data.object;
+            let tenant_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("tenant_id"))
+                .and_then(|id| id.as_str());
+            if let Some(tenant_id) = tenant_id_opt {
+                let orch = webhook_state.orchestrator.clone();
+                let payload_val = obj.clone();
+                let tenant_id_val = tenant_id.to_string();
+                tokio::spawn(async move {
+                    let evt = crate::orchestration::departments::types::DepartmentEvent {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        tenant_id: tenant_id_val,
+                        event_type: "charge.dispute.created".to_string(),
+                        payload: payload_val,
+                    };
+                    let _ = orch.dispatch_event(evt).await;
+                });
+            }
+            StatusCode::OK.into_response()
+        },
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
             if payload.r#type == "checkout.session.completed" {
