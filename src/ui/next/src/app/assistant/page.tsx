@@ -640,6 +640,15 @@ function ResourcePage({
   const [agentNameInput, setAgentNameInput] = useState('');
   const [customConnector, setCustomConnector] = useState('');
   const [customSkill, setCustomSkill] = useState('');
+  const [observationMasking, setObservationMasking] = useState(
+    data?.settings?.observationMasking ?? true
+  );
+
+  useEffect(() => {
+    if (data?.settings?.observationMasking !== undefined) {
+      setObservationMasking(data.settings.observationMasking);
+    }
+  }, [data?.settings?.observationMasking]);
 
   const blocks = resourceBlocks(data, config.rootKeys);
 
@@ -708,6 +717,35 @@ function ResourcePage({
           >
             Save Name
           </button>
+        </div>
+      )}
+
+      {section === 'system' && (
+        <div className={styles.resourceBlock}>
+          <div className={styles.featureGridTwo}>
+            <div className={styles.featureCard}>
+              <div className={styles.cardTitle}>Observation Masking</div>
+              <p className={styles.eyebrow}>Hides the raw output of old tools from the prompt, but keeps the tool_calls themselves visible so the model remembers what it did.</p>
+              <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={observationMasking}
+                    onChange={(e) => setObservationMasking(e.target.checked)}
+                    aria-label="Observation Masking Toggle"
+                  />
+                  <span className={styles.eyebrow} style={{ margin: 0 }}>Enable Masking</span>
+                </label>
+                <button
+                  type="button"
+                  className={styles.smallButton}
+                  onClick={() => onAction(section, { observationMasking })}
+                >
+                  Save UI Settings
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
