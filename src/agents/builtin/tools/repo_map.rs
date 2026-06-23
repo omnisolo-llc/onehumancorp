@@ -9,7 +9,7 @@ use once_cell::sync::Lazy;
 use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 // Keep regexes as fallback
-static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
+static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait|type|const|static|impl(?:\s*<[^>]*>)?)\s+([a-zA-Z0-9_!:]+)(?:\s+for\s+[a-zA-Z0-9_!:]+)?").expect("should succeed in test"));
 static PY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
 static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
 static GO_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(func|type)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
@@ -36,61 +36,48 @@ impl RepoMapExecutor {
     }
 
     fn extract_signatures(content: &str, ext: &str) -> Vec<String> {
-        // Fallback to regex since tree-sitter is removed
         let mut sigs = Vec::new();
-        match ext {
-            "rs" => {
-                for line in content.lines() {
-                    if RS_REGEX.captures(line).is_some() {
-                        sigs.push(line.trim().to_string());
+        let regex = match ext {
+            "rs" => Some(&*RS_REGEX),
+            "py" => Some(&*PY_REGEX),
+            "ts" | "js" | "tsx" | "jsx" => Some(&*TS_REGEX),
+            "go" => Some(&*GO_REGEX),
+            "cpp" | "hpp" | "c" | "h" => Some(&*CPP_REGEX),
+            "java" => Some(&*JAVA_REGEX),
+            "rb" => Some(&*RB_REGEX),
+            _ => None,
+        };
+
+        if let Some(r) = regex {
+            for line in content.lines() {
+                if let Some(caps) = r.captures(line) {
+                    let match_end = caps.get(0).unwrap().end();
+                    let mut sig = caps.get(0).unwrap().as_str().trim().to_string();
+
+                    // Prevent slicing panic by checking if match_end is valid
+                    if match_end <= line.len() {
+                        let remainder = &line[match_end..];
+                        if remainder.trim_start().starts_with('(') || remainder.trim_start().starts_with('<') {
+                            let end_idx = remainder.find('{').unwrap_or(remainder.len());
+                            let end_idx2 = remainder.find(';').unwrap_or(remainder.len());
+                            sig.push_str(&remainder[..std::cmp::min(end_idx, end_idx2)]);
+                            sig = sig.trim().to_string(); // Remove trailing spaces from parameters
+                        }
                     }
+                    sigs.push(sig.trim().to_string());
                 }
             }
-            "py" => {
-                for line in content.lines() {
-                    if PY_REGEX.captures(line).is_some() {
-                        sigs.push(line.trim().to_string());
-                    }
-                }
-            }
-            "ts" | "js" | "tsx" | "jsx" => {
-                for line in content.lines() {
-                    if TS_REGEX.captures(line).is_some() {
-                        sigs.push(line.trim().to_string());
-                    }
-                }
-            }
-            "go" => {
-                for line in content.lines() {
-                    if GO_REGEX.captures(line).is_some() {
-                        sigs.push(line.trim().to_string());
-                    }
-                }
-            }
-            "c" | "cpp" | "h" | "hpp" => {
-                for line in content.lines() {
-                    if CPP_REGEX.captures(line).is_some() {
-                        sigs.push(line.trim().to_string());
-                    }
-                }
-            }
-            "java" => {
-                for line in content.lines() {
-                    if JAVA_REGEX.captures(line).is_some() {
-                        sigs.push(line.trim().to_string());
-                    }
-                }
-            }
-            "rb" => {
-                for line in content.lines() {
-                    if RB_REGEX.captures(line).is_some() {
-                        sigs.push(line.trim().to_string());
-                    }
-                }
-            }
-            _ => {}
         }
-        sigs
+
+        // Remove duplicates and keep deterministic order using index set like approach
+        let mut unique_sigs = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        for sig in sigs {
+            if seen.insert(sig.clone()) {
+                unique_sigs.push(sig);
+            }
+        }
+        unique_sigs
     }
 
     fn generate_map_recursive(dir: PathBuf, prefix: String, current_depth: usize, max_depth: usize, exclude_dirs: &Vec<String>) -> Result<String, std::io::Error> {
@@ -304,7 +291,7 @@ mod extra_tests {
         let root = dir.path();
 
         let f = root.join("lib.rs");
-        std::fs::write(&f, "pub fn hello() {}\nstruct Example {\n  field: i32\n}\n").expect("should succeed");
+        std::fs::write(&f, "pub fn hello() {}\nstruct Example {\n  field: i32\n}\nimpl Example {\n  fn method() {}\n}\ntype MyType = i32;\nconst MY_CONST: i32 = 1;\n").expect("should succeed");
 
         let executor = RepoMapExecutor::new(root.to_path_buf());
 
@@ -312,6 +299,9 @@ mod extra_tests {
 
         assert!(result.contains("│ pub fn hello()"));
         assert!(result.contains("│ struct Example"));
+        assert!(result.contains("│ impl Example"));
+        assert!(result.contains("│ type MyType"));
+        assert!(result.contains("│ const MY_CONST"));
     }
 
     #[tokio::test]
