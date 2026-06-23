@@ -1,0 +1,10 @@
+--- Cargo.toml	2024-06-23 13:09:00.000000000 +0000
++++ Cargo.toml	2024-06-23 13:09:00.000000000 +0000
+@@ -107,6 +107,7 @@
+ server_integrations_google_calendar = { path = "src/server/integrations/google_calendar" }
+ server_integrations_jitsi = { path = "src/server/integrations/jitsi" }
+ server_integrations_messagebird = { path = "src/server/integrations/messagebird" }
++server_integrations_taxjar = { path = "src/server/integrations/taxjar" }
+ server_integrations_zoom = { path = "src/server/integrations/zoom" }
+
+ [workspace.dependencies]
