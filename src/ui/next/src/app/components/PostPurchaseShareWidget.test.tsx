@@ -12,6 +12,7 @@ describe('PostPurchaseShareWidget', () => {
       },
     });
     vi.spyOn(window, 'open').mockImplementation(() => null);
+    global.fetch = vi.fn().mockResolvedValue({ ok: true });
   });
 
   afterEach(() => {
@@ -20,8 +21,8 @@ describe('PostPurchaseShareWidget', () => {
 
   it('renders correctly with default props', () => {
     render(<PostPurchaseShareWidget tenantId="test-tenant" />);
-    expect(screen.getByText('Share & Save')).toBeInTheDocument();
-    expect(screen.getByText('🎁 Give 10%, Get 10%')).toBeInTheDocument();
+    expect(screen.getByText('Unlock VIP Concierge')).toBeInTheDocument();
+    expect(screen.getByText('Pro Feature')).toBeInTheDocument();
   });
 
   it('generates the correct referral link', () => {
@@ -30,18 +31,15 @@ describe('PostPurchaseShareWidget', () => {
     expect(input.value).toBe('https://ohc.app/shop/test-tenant?ref=post_purchase_123');
   });
 
-  it('copies link to clipboard', async () => {
+  it('copies link to clipboard and unlocks', async () => {
     render(<PostPurchaseShareWidget tenantId="test-tenant" />);
     const copyButton = screen.getByText('Copy');
 
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://ohc.app/shop/test-tenant?ref=post_purchase_default');
-    expect(screen.getByText('Copied!')).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(screen.getByText('Copy')).toBeInTheDocument();
-    }, { timeout: 2100 });
+    // UI immediately updates to unlocked state now, so we verify that instead
+    expect(screen.getByText('VIP Concierge Unlocked!')).toBeInTheDocument();
   });
 
   it('shares to WhatsApp', () => {
@@ -65,5 +63,24 @@ describe('PostPurchaseShareWidget', () => {
     expect(urlArg).toContain('twitter.com');
     expect(urlArg).toContain('Cool%20Store');
     expect(urlArg).toContain('Powered%20by%20OHC'); // Verifying loop branding
+  });
+
+  it('shows VIP Concierge Unlocked message after copying', async () => {
+    // Setup mock fetch for the unlock tracking
+    global.fetch = vi.fn().mockResolvedValue({ ok: true });
+
+    render(<PostPurchaseShareWidget tenantId="test-tenant" />);
+
+    expect(screen.getByText('Unlock VIP Concierge')).toBeDefined();
+
+    const copyButton = screen.getByText('Copy');
+    fireEvent.click(copyButton);
+
+    // Verify that fetch was called
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/growth/referrals/click?target=/onboarding&ref=test-tenant&source=post_purchase_share', expect.any(Object));
+
+    // Verify the UI updates to show the unlocked state
+    expect(await screen.findByText('VIP Concierge Unlocked!')).toBeDefined();
+    expect(screen.queryByText('Unlock VIP Concierge')).toBeNull();
   });
 });
