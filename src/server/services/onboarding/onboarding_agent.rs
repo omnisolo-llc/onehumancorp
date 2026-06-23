@@ -506,7 +506,7 @@ Your response:",
                     .bind(topic);
                 let pool = pool.clone();
                 topic_futures.push(tokio::spawn(async move {
-                    let _ = query.execute(&pool).await;
+                    query.execute(&pool).await;
                 }));
             }
             futures::future::join_all(topic_futures).await;
@@ -524,7 +524,7 @@ Your response:",
                 })).unwrap_or_default(),
                 msg_id: uuid::Uuid::new_v4().to_string(),
             };
-            let _ = hub_clone.publish_teammate_event("promoter_inbox".to_string(), storefront_event);
+            hub_clone.publish_teammate_event("promoter_inbox".to_string(), storefront_event);
 
             let policy_event = ::server_ohc::orchestration::TeammateMeshEvent {
                 agent_id: "system".to_string(),
@@ -536,7 +536,21 @@ Your response:",
                 })).unwrap_or_default(),
                 msg_id: uuid::Uuid::new_v4().to_string(),
             };
-            let _ = hub_clone.publish_teammate_event("protector_inbox".to_string(), policy_event);
+            hub_clone.publish_teammate_event("protector_inbox".to_string(), policy_event);
+
+            // Zero-Touch Onboarding: Trigger Stripe Connect Initialization
+            let stripe_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                agent_id: "system".to_string(),
+                action: "InitializeStripeConnect".to_string(),
+                status: "pending".to_string(),
+                payload: serde_json::to_vec(&json!({
+                    "organization_id": org_id_clone3,
+                    "company_name": company_name_clone,
+                    "account_type": "standard",
+                })).unwrap_or_default(),
+                msg_id: uuid::Uuid::new_v4().to_string(),
+            };
+            hub_clone.publish_teammate_event("accountant_inbox".to_string(), stripe_event);
 
 
             // Schedule the weekly health report via the internal task queue for The Advisor
@@ -720,7 +734,7 @@ Your response:",
             msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
-        let _ = self.hub.publish_teammate_event("products_inbox".to_string(), event);
+        self.hub.publish_teammate_event("products_inbox".to_string(), event);
 
         Ok(())
     }
@@ -3290,7 +3304,7 @@ mod tests {
         assert_eq!(res1.get("test_key").and_then(|v| v.as_str()), Some("test_value"));
 
         // Update directly in DB (bypass cache logic to prove cache is working)
-        let _ = sqlx::query("UPDATE onboarding_state SET current_step = 3 WHERE tenant_id = $1 AND user_id = $2")
+        sqlx::query("UPDATE onboarding_state SET current_step = 3 WHERE tenant_id = $1 AND user_id = $2")
             .bind(tenant_id)
             .bind(user_id)
             .execute(&db.pool)

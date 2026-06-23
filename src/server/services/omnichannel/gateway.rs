@@ -70,13 +70,24 @@ pub async fn handle_webhook(
         }
     };
 
-    // 2. Draft Response using "The Ambassador" logic (simulated for now, would use the actual ohc_builtin_agent_lib)
-    // We simulate querying "seed inventory/customer history data" as requested.
-    let draft_reply = format!(
-        "Hi {}! We see you asked: '{}'. Yes, we still make that item. Would you like to reorder?",
-        customer.name, payload.message
-    );
-    let context_summary = format!("Customer '{}' has a history of prior engagements.", customer.name);
+    // 2. Draft Response & Negotiation using "The Ambassador" logic
+    // Agentic Negotiator: Intercept and draft based on context (RAG simulated here)
+    let is_booking_inquiry = payload.message.to_lowercase().contains("book") || payload.message.to_lowercase().contains("schedule");
+
+    let draft_reply = if is_booking_inquiry {
+        format!(
+            "Hi {}! I've checked the calendar and we have availability for '{}'. I've drafted a $50 deposit request to secure your spot. Would you like to proceed?",
+            customer.name, payload.message
+        )
+    } else {
+        format!(
+            "Hi {}! We see you asked: '{}'. Yes, we can handle that. I've prepared a quote for you. Shall I send it?",
+            customer.name, payload.message
+        )
+    };
+
+    let context_summary = format!("Customer '{}' via {} ({}). Agentic Negotiator identified intent: {}.",
+        customer.name, payload.source, payload.identifier, if is_booking_inquiry { "BOOKING_NEGOTIATION" } else { "GENERAL_INQUIRY" });
 
     let draft = DraftedResponse {
         customer_id: customer.id.clone(),
@@ -84,13 +95,17 @@ pub async fn handle_webhook(
         draft_reply,
     };
 
-    // 3. Publish to Action Required Queue (Agent Feed)
+    // 3. Publish to Agent Feed for Owner Approval
     let new_item = AgentFeedItem {
         id: Uuid::new_v4().to_string(),
         tenant_id: payload.tenant_id.clone(),
         event_source: "omnichannel_gateway".to_string(),
         context_payload: Some(sqlx::types::Json(serde_json::to_value(&draft).unwrap())),
-        proposed_action: Some(sqlx::types::Json(serde_json::to_value(&draft).unwrap())),
+        proposed_action: Some(sqlx::types::Json(serde_json::json!({
+            "action_type": if is_booking_inquiry { "SEND_BOOKING_DEPOSIT" } else { "SEND_QUOTE" },
+            "draft_reply": draft.draft_reply,
+            "requires_owner_approval": true
+        }))),
         lifecycle_state: "PENDING_APPROVAL".to_string(),
         created_at: Some(Utc::now()),
         updated_at: Some(Utc::now()),

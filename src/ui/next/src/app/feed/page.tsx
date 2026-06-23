@@ -258,9 +258,9 @@ export default function FeedPage() {
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
-                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution || item.proposed_action?.feature_type === 'predictive_inventory' ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
+                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution || item.proposed_action?.feature_type === 'predictive_inventory' ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
+                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.feature_type === 'predictive_inventory' ? 'PREDICTIVE RESTOCK' : item.proposed_action?.action_type === 'Draft Quote' || item.proposed_action?.action_type === 'SEND_QUOTE' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' || item.proposed_action?.action_type === 'SEND_BOOKING_DEPOSIT' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -272,11 +272,13 @@ export default function FeedPage() {
                     ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
                     : isAmbassador
                     ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
-                    : item.proposed_action?.action_type === 'Draft Quote'
+                    : item.proposed_action?.feature_type === 'predictive_inventory'
+                    ? (item.proposed_action?.title || 'Inventory Alert')
+                    : item.proposed_action?.action_type === 'Draft Quote' || item.proposed_action?.action_type === 'SEND_QUOTE'
                     ? `Drafted Estimate for ${item.context_payload?.customer_name || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Follow-up'
                     ? `Unpaid Deposit: ${item.context_payload?.customer_name || 'Customer'}`
-                    : item.proposed_action?.action_type === 'Draft Booking'
+                    : item.proposed_action?.action_type === 'Draft Booking' || item.proposed_action?.action_type === 'SEND_BOOKING_DEPOSIT'
                     ? `Drafted Booking for ${item.context_payload?.customer_name || 'Customer'}`
                     : (item.proposed_action?.title || 'Review Required')}
                 </h3>
@@ -366,11 +368,11 @@ export default function FeedPage() {
                       </div>
                     ) : (
                       <p className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed mb-2">
-                        {item.proposed_action?.action_type === 'Draft Quote'
-                          ? (item.context_payload?.context || 'AI has drafted a new estimate based on recent customer inquiry.')
-                          : item.proposed_action?.action_type === 'Draft Booking'
-                          ? (item.context_payload?.context || 'AI has locked in a tentative time slot based on recent customer inquiry.')
-                          : (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.')}
+                        {item.proposed_action?.action_type === 'Draft Quote' || item.proposed_action?.action_type === 'SEND_QUOTE'
+                          ? (item.proposed_action?.draft_reply || item.context_payload?.context || 'AI has drafted a new estimate based on recent customer inquiry.')
+                          : item.proposed_action?.action_type === 'Draft Booking' || item.proposed_action?.action_type === 'SEND_BOOKING_DEPOSIT'
+                          ? (item.proposed_action?.draft_reply || item.context_payload?.context || 'AI has locked in a tentative time slot based on recent customer inquiry.')
+                          : (item.proposed_action?.description || item.context_payload?.summary || 'A new update requires your attention.')}
                       </p>
                     )}
                   </div>
@@ -445,7 +447,7 @@ export default function FeedPage() {
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         data-testid="feed-approve-btn"
                       >
-                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : 'Approve'}
+                        {isProcessing ? 'Processing...' : item.proposed_action?.action_type === 'Draft Quote' || item.proposed_action?.action_type === 'SEND_QUOTE' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' || item.proposed_action?.action_type === 'SEND_BOOKING_DEPOSIT' ? 'Approve & Confirm' : item.proposed_action?.feature_type === 'predictive_inventory' ? 'Approve Re-order' : 'Approve'}
                       </button>
                       <button
                         onClick={() => startEditing(item)}

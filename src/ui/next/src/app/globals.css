@@ -1064,3 +1064,41 @@ html.dark .ohc-growth-card {
 .app-panel {
   border-radius: 16px;
 }
+
+/* Vibrant macOS Translucent Glass standards */
+.glass-vibrant {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(30px) saturate(210%);
+  -webkit-backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+}
+
+.dark .glass-vibrant {
+  background: rgba(22, 22, 26, 0.7);
+  backdrop-filter: blur(30px) saturate(210%);
+  -webkit-backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-control {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.dark .glass-control {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-control:focus {
+  border-color: #0066FF;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.dark .glass-control:focus {
+  border-color: #0066FF;
+  background: rgba(255, 255, 255, 0.1);
+}
