@@ -121,7 +121,7 @@ export default function ZeroClickBuilderPage() {
                 disabled={isGenerating || !prompt.trim()}
                 className="w-full min-h-[44px] flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-xl font-semibold text-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-sm hover:shadow-md"
               >
-                <span>🚀</span> Generate Store
+                <span>🚀</span> Generate My Business
               </button>
             </form>
           </div>
