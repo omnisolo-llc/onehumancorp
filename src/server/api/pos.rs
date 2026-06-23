@@ -87,6 +87,9 @@ async fn post_inventory_handler(
                     .bind(tenant_id)
                     .execute(&pool)
                     .await;
+                let edge_cache = crate::builder::edge::get_edge_cache();
+                edge_cache.invalidate_by_tag(&format!("entity:product:{}", item_id)).await;
+                edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
             }
         }
     }
