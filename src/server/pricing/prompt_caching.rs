@@ -190,6 +190,11 @@ impl PromptCache {
             byte_index = max_chars;
             char_count = max_chars;
         } else {
+            // Optimization: If byte length <= max_chars, char length must also be <= max_chars
+            if context.len() <= max_chars {
+                return context.to_string();
+            }
+
             for (i, _) in context.char_indices() {
                 if char_count == max_chars {
                     byte_index = i;

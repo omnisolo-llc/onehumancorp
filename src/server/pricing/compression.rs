@@ -73,7 +73,13 @@ pub fn reduce_tokens(data: &str) -> String {
 
     // Optionally bounds check the cache to prevent infinite memory growth
     if cache.len() > 10_000 {
-        cache.clear();
+        // Optimization: retain half the cache to avoid massive latency spikes instead of full clear
+        // We use retain and a simple counter to keep ~50%
+        let mut count = 0;
+        cache.retain(|_, _| {
+            count += 1;
+            count % 2 == 0
+        });
     }
 
     cache.insert(data.to_string(), reduced.clone());
