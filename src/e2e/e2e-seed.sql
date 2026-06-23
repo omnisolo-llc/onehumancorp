@@ -621,3 +621,18 @@ SET username = EXCLUDED.username,
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
 VALUES ('m-e2e-1', 'e2e-tenant', 'first_sale', CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
+ALTER TABLE IF EXISTS builder_sites DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS builder_pages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS builder_blocks DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO builder_sites (id, tenant_id, domain) VALUES
+  ('e2e-site', 'e2e-tenant', 'e2e-tenant.ohc.app')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO builder_pages (id, tenant_id, site_id, path, title) VALUES
+  ('e2e-page', 'e2e-tenant', 'e2e-site', '/', 'Home')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO builder_blocks (id, tenant_id, page_id, block_type, content, sort_order) VALUES
+  ('e2e-block', 'e2e-tenant', 'e2e-page', 'Catalog', '{"items": [{"name": "E2E Cake", "price": "$39.99", "product_id": "e2e-product-cake"}]}'::jsonb, 0)
+ON CONFLICT DO NOTHING;

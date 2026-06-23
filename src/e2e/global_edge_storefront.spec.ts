@@ -4,8 +4,8 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
 
   test('validates storefront cache invalidation on inventory update', async ({ request, page }) => {
     // Attempt to access frontend page and cache miss, triggering cache builder
-    const tenantId = '11111111-1111-1111-1111-111111111111';
-    const productId = '22222222-2222-2222-2222-222222222222';
+    const tenantId = 'e2e-tenant';
+    const productId = 'e2e-product-cake';
 
     let res = await request.get(`/api/v1/storefront/${tenantId}/${productId}`);
     expect(res.status()).toBe(200);
@@ -23,8 +23,8 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
   });
 
   test('generates edge storefront with premium styling and seo tags injected via builder', async ({ request, page }) => {
-    const tenantId = '11111111-1111-1111-1111-111111111111';
-    const productId = '22222222-2222-2222-2222-222222222222';
+    const tenantId = 'e2e-tenant';
+    const productId = 'e2e-product-cake';
 
     let res = await request.get(`/api/v1/storefront/${tenantId}/${productId}`);
     let text = await res.text();
@@ -58,3 +58,23 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     expect(invalidateRes.status()).toBe(200);
   });
 });
+
+  test('verifies owner storefront review UI', async ({ page }) => {
+    // Navigate to dashboard
+    await page.goto('/dashboard.html');
+
+    // Look for the "Review Storefront" link (it should exist in dashboard)
+    const reviewLink = page.locator('a', { hasText: 'Review Storefront' }).first();
+    await expect(reviewLink).toBeVisible();
+
+    // Click it and wait for the storefront review UI to load
+    await reviewLink.click();
+    await expect(page).toHaveURL(/.*storefront\.html/);
+
+    // Verify UI structure
+    await expect(page.locator('h1')).toHaveText('Review Storefront');
+    await expect(page.locator('.device-mockup iframe')).toBeVisible();
+
+    // Verify the iframe src contains the storefront URL
+    await expect(page.locator('#storefront-frame')).toHaveAttribute('src', /\/api\/v1\/storefront\/.+/);
+  });
