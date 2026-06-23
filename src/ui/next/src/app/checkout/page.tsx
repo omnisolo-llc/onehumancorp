@@ -319,7 +319,7 @@ function CheckoutContent() {
 
               {true && (
                 <div
-                  className="bg-indigo-50/50 border border-indigo-100/50 rounded-xl p-4 my-2 backdrop-blur-md cursor-pointer hover:bg-indigo-50/80 transition-colors"
+                  className="bg-indigo-50/50 border border-indigo-100/50 rounded-xl p-4 my-2 backdrop-blur-[30px] saturate-[210%] cursor-pointer hover:bg-indigo-50/80 transition-colors"
                   onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
                 >
                   <div className="flex justify-between items-center">

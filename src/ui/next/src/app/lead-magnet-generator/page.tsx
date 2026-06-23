@@ -191,7 +191,7 @@ export default function LeadMagnetGeneratorPage() {
 
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
-        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-[30px] saturate-[210%] z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 text-center border border-gray-100">
             <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">✨</span>

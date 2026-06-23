@@ -66,7 +66,7 @@ export default function ShareAndSaveWidgetPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left Column: Configuration Form */}
             <div className="lg:col-span-7 space-y-6">
-                <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100/60 backdrop-blur-sm relative z-10">
+                <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100/60 backdrop-blur-[30px] saturate-[210%] relative z-10">
                     <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
                         <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3 text-sm font-bold">1</span>
                         Configure Incentive
@@ -116,7 +116,7 @@ export default function ShareAndSaveWidgetPage() {
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100/60 backdrop-blur-sm relative z-10">
+                <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-gray-100/60 backdrop-blur-[30px] saturate-[210%] relative z-10">
                      <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
                         <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3 text-sm font-bold">2</span>
                         Brand Settings
@@ -154,7 +154,7 @@ export default function ShareAndSaveWidgetPage() {
 
             {/* Right Column: Preview & Code */}
             <div className="lg:col-span-5 space-y-6">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100/60 backdrop-blur-sm overflow-hidden sticky top-6">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100/60 backdrop-blur-[30px] saturate-[210%] overflow-hidden sticky top-6">
                     <div className="p-4 border-b border-gray-100 bg-gray-50/50">
                         <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Live Preview</h3>
                     </div>
@@ -209,7 +209,7 @@ export default function ShareAndSaveWidgetPage() {
                             </pre>
                             <button
                                 onClick={handleCopy}
-                                className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg backdrop-blur-md transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center gap-2 text-xs font-medium"
+                                className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg backdrop-blur-[30px] saturate-[210%] transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center gap-2 text-xs font-medium"
                             >
                                 {copied ? (
                                     <>
@@ -235,7 +235,7 @@ export default function ShareAndSaveWidgetPage() {
 
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
-        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-[30px] saturate-[210%] z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-50/50">
             {/* Modal Deco */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-100 to-purple-50 rounded-bl-[100px] -z-10 opacity-60"></div>

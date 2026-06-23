@@ -327,7 +327,7 @@ export default function AgentsPage() {
         </div>
       </header>
       {showPaywall && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-[30px] saturate-[210%] p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl">
             <h2 className="text-2xl font-bold text-zinc-950 dark:text-white">Upgrade to Pro</h2>
             <p className="mt-2 text-sm text-zinc-650 dark:text-zinc-400">Unlock advanced model routing, connector automation, and higher agent budgets.</p>

@@ -104,7 +104,7 @@ export default function GiftCardsPage() {
                <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
 
                <div className="z-10 flex flex-col items-center text-center w-full">
-                  <div className="w-16 h-16 bg-white/30 rounded-2xl flex items-center justify-center text-3xl mb-4 backdrop-blur-md shadow-inner border border-white/40">
+                  <div className="w-16 h-16 bg-white/30 rounded-2xl flex items-center justify-center text-3xl mb-4 backdrop-blur-[30px] saturate-[210%] shadow-inner border border-white/40">
                     🎁
                   </div>
                   <h3 className="text-2xl font-bold font-outfit tracking-wide uppercase drop-shadow-sm opacity-90">Digital Gift Card</h3>
@@ -116,7 +116,7 @@ export default function GiftCardsPage() {
                {/* Viral Loop Footer */}
                {!removeBranding && (
                   <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
-                     <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=gift_card`} target="_blank" className="text-xs font-bold tracking-widest uppercase opacity-80 mix-blend-overlay shadow-sm px-3 py-1 bg-white/10 rounded-full backdrop-blur-md text-white hover:text-white" style={{ textDecoration: "none" }}>
+                     <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=gift_card`} target="_blank" className="text-xs font-bold tracking-widest uppercase opacity-80 mix-blend-overlay shadow-sm px-3 py-1 bg-white/10 rounded-full backdrop-blur-[30px] saturate-[210%] text-white hover:text-white" style={{ textDecoration: "none" }}>
                          ⚡ Powered by OHC
                      </a>
                   </div>

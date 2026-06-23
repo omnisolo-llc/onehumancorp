@@ -130,9 +130,9 @@ export default function FinancePage() {
 
             {/* Translucent Glass Modal for Reviewing Draft Invoice */}
             {showDraftModal && draftInvoice && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
-                    <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl w-full max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-t-2xl z-10">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-[30px] saturate-[210%] p-0 sm:p-4">
+                    <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-[30px] saturate-[210%] w-full max-w-lg rounded-t-2xl sm:rounded-2xl shadow-2xl border border-white/20 dark:border-white/10 flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-[30px] saturate-[210%] rounded-t-2xl z-10">
                             <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white">Review Invoice Draft</h2>
                             <button onClick={() => setShowDraftModal(false)} className="text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full">
                                 ✕

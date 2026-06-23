@@ -66,7 +66,7 @@ export default function ActorModelPage() {
       </button>
 
       {error && (
-        <div className="mt-8 p-4 bg-red-50/70 backdrop-blur-xl text-red-700 rounded-lg border border-red-200 shadow-sm" data-testid="error-message">
+        <div className="mt-8 p-4 bg-red-50/70 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-lg border border-red-200 shadow-sm" data-testid="error-message">
           <h3 className="font-bold mb-2">Execution Error:</h3>
           <p>{error}</p>
         </div>

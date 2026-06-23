@@ -46,7 +46,7 @@ export default function TipJarWidgetGenerator() {
         <title>Tip Jar Widget Builder | OHC</title>
       </Head>
 
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
          <div className="flex items-center gap-3">
              <span className="text-2xl font-bold text-indigo-600">⚡</span>
              <h1 className="text-xl font-bold font-outfit text-gray-900">Tip Jar Builder</h1>
@@ -148,7 +148,7 @@ export default function TipJarWidgetGenerator() {
 
         {/* Live Preview */}
         <div className="w-full md:w-2/3">
-            <div className="p-8 rounded-[16px] h-full flex flex-col items-center justify-center relative overflow-hidden bg-white/50 backdrop-blur-xl border border-white/80 shadow-lg">
+            <div className="p-8 rounded-[16px] h-full flex flex-col items-center justify-center relative overflow-hidden bg-white/50 backdrop-blur-[30px] saturate-[210%] border border-white/80 shadow-lg">
                 <div className="absolute top-4 left-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Preview</div>
 
                 {/* The Widget Preview */}
@@ -222,7 +222,7 @@ export default function TipJarWidgetGenerator() {
 
       {/* Embed Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
             <div className="bg-white rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-fade-in-up">
                 <button
                     aria-label="Close embed modal"
