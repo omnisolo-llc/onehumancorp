@@ -7,9 +7,9 @@ test.describe('Quoting UI e2e', () => {
     // Navigate to the quoting page
     await page.goto('/quoting?id=e2e-approval-quote-draft');
 
-    await expect(page.locator('text=Quote Summary')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Quote Details')).toBeVisible({ timeout: 15000 });
 
-    const approveBtn = page.getByRole('button', { name: 'Approve & Send' });
+    const approveBtn = page.getByRole('button', { name: 'Approve & Send to Customer' });
     await expect(approveBtn).toBeVisible();
 
     await approveBtn.click();
