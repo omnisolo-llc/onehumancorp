@@ -280,6 +280,9 @@ path = "src/server/integrations/messagebird"
 [dependencies.server_integrations_zoom]
 path = "src/server/integrations/zoom"
 
+[dependencies.server_integrations_taxjar]
+path = "src/server/integrations/taxjar"
+
 [workspace.dependencies]
 tonic = "0.12"
 prost = "0.13"
