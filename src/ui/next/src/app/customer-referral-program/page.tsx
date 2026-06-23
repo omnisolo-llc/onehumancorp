@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function CustomerReferralProgramPage() {
   const router = useRouter();
@@ -243,6 +244,7 @@ export default function CustomerReferralProgramPage() {
           </div>
         </div>
       )}
+      <PoweredByOHC tenantId={tenant} />
     </div>
   );
 }

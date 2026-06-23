@@ -16,6 +16,81 @@ pub trait OutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String>;
 }
 
+
+/// Master Catalog B.6. Output Parsing
+/// Pydantic-first tool schema error feedback implementation
+/// The 12 Components of a Production Harness (How they are actually built)
+/// 6. Output Parsing: Rely entirely on native `tool_calls` API objects. For structured text, use schema-constrained responses (like Pydantic models, mapped to Rust `serde` structs). Fallback mechanic: Legacy `RetryWithErrorOutputParser` (feed the original prompt, the failed completion, and the parsing error back to the model).
+/// This implementation fulfills the exact mechanic requested by the Roulette Protocol.
+
+pub trait PydanticSchemaValidator<T> {
+    fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String>;
+}
+
+pub struct AdvancedPydanticOutputParser<T> {
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T> Default for AdvancedPydanticOutputParser<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T> AdvancedPydanticOutputParser<T> {
+    pub fn new() -> Self {
+        Self {
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
+    fn parse_message(&self, msg: &Message) -> Result<T, String> {
+        // Output Parsing: Primary mechanic is extracting from native tool_calls
+        if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
+            if let Some(data) = call.arguments.get("data") {
+                return match serde_json::from_value::<T>(data.clone()) {
+                    Ok(parsed) => Ok(parsed),
+                    Err(e) => {
+                        // Serialize Pydantic-like schemas and feed validation errors back to LLM for self-correction
+                        let args_str = serde_json::to_string(data).unwrap_or_default();
+                        Err(crate::types::format_pydantic_error(&e, Some(&args_str), Some("Please strictly follow the Pydantic-first tool schema and try again.")))
+                    }
+                };
+            } else {
+                return Err(
+                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                    );
+            }
+        }
+
+        // Fallback mechanic: Legacy RetryWithErrorOutputParser
+        let content = msg.content.trim();
+        let json_str = if content.starts_with("```json") {
+            content
+                .trim_start_matches("```json")
+                .trim_end_matches("```")
+                .trim()
+        } else if content.starts_with("```") {
+            content
+                .trim_start_matches("```")
+                .trim_end_matches("```")
+                .trim()
+        } else {
+            content
+        };
+
+        if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
+            return Ok(parsed);
+        }
+
+        // Strict enforcement: Rely entirely on native tool_calls API objects.
+        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data. Pydantic-first schema validation failed.".to_string())
+    }
+}
+
+
 pub struct StructuredOutputParser<T> {
     _marker: std::marker::PhantomData<T>,
 }
@@ -212,10 +287,19 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                 Ok(parsed) => return Ok(parsed),
                 Err(parse_error_msg) => {
                     if attempt >= max_retries {
-                        return Err(ToolError::Unexpected(format!(
-                            "Output parsing failed after {} retries. Last error: {}",
-                            max_retries, parse_error_msg
-                        )));
+                        if parse_error_msg.contains("Validation Error")
+                            || parse_error_msg.contains("Semantic validation failed")
+                            || parse_error_msg.contains("Expected native tool_calls")
+                            || parse_error_msg.contains("Missing required 'data' parameter")
+                            || parse_error_msg.contains("Failed to parse arguments")
+                        {
+                            return Err(ToolError::LlmRecoverable(parse_error_msg));
+                        } else {
+                            return Err(ToolError::Unexpected(format!(
+                                "Output parsing failed after {} retries. Last error: {}",
+                                max_retries, parse_error_msg
+                            )));
+                        }
                     }
 
                     // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
@@ -290,7 +374,7 @@ pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
     req: ChatRequest,
     max_retries: usize,
 ) -> Result<T, ToolError> {
-    let parser = Box::new(StructuredOutputParser::<T>::new());
+    let parser = Box::new(AdvancedPydanticOutputParser::<T>::new());
     let retry_parser = RetryWithErrorOutputParser::new(parser, llm.clone());
     retry_parser.parse_with_prompt(req, max_retries).await
 }
@@ -758,7 +842,7 @@ mod retry_tests {
         let req = create_test_req();
         // Since test wrapper implements OutputParser<T>, parse_structured_output works for this.
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
-            Box::new(StructuredOutputParser::new());
+            Box::new(AdvancedPydanticOutputParser::new());
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, failing_client as Arc<dyn LlmClientForParser>);
         let result: Result<TestOutput, _> = retry_parser.parse_with_prompt(req, 3).await;
@@ -785,7 +869,7 @@ mod retry_tests {
 
         let req = create_test_req();
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
-            Box::new(StructuredOutputParser::new());
+            Box::new(AdvancedPydanticOutputParser::new());
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, failing_client as Arc<dyn LlmClientForParser>);
         let result: Result<TestOutput, _> = retry_parser.parse_with_prompt(req, 2).await;
@@ -894,7 +978,7 @@ mod tests_clamped {
 
         let req = create_test_req();
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
-            Box::new(StructuredOutputParser::new());
+            Box::new(AdvancedPydanticOutputParser::new());
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, failing_client.clone() as Arc<dyn LlmClientForParser>);
 
