@@ -92,7 +92,7 @@ async fn create_quote(
     };
 
     if !api_key.is_empty() {
-        let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
+        let provider = ::server_integrations_taxjar::provider::TaxJarProvider::new(api_key);
         let total_pre_tax = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
         let total_pre_tax_usd = (total_pre_tax as f64) / 100.0;
 

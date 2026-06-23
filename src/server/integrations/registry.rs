@@ -36,7 +36,7 @@ pub struct IntegrationsRegistry {
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
-    taxjar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::taxjar::provider::TaxJarProvider>>>,
+    taxjar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<::server_integrations_taxjar::provider::TaxJarProvider>>>,
 
 }
 
@@ -278,7 +278,7 @@ impl IntegrationsRegistry {
         }
         if integration_id == "taxjar" {
             let mut clients = self.taxjar_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::taxjar::provider::TaxJarProvider::new(creds.api_token.clone())));
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(::server_integrations_taxjar::provider::TaxJarProvider::new(creds.api_token.clone())));
         }
         if integration_id == "zoom" {
             let mut clients = self.zoom_clients.write().unwrap();

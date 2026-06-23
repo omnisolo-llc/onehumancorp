@@ -6,7 +6,7 @@ pub use ::server_integrations_chatwoot as chatwoot;
 pub use ::server_integrations_pubsub as pubsub;
 pub use ::server_integrations_nats as nats;
 pub mod stripe;
-pub use ::server_integrations_taxjar as taxjar;
+
 pub use ::server_integrations_twilio as twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
