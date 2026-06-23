@@ -18,7 +18,7 @@ pub async fn handle_proposal_action(tenant_id: &str, payload: &Value, pool: &PgP
     Ok(())
 }
 
-pub async fn parse_inquiry_to_proposal(tenant_id: &str, customer_id: Uuid, inquiry_text: &str, pool: &PgPool) -> Result<Uuid, sqlx::Error> {
+pub async fn parse_inquiry_to_proposal(tenant_id: &str, customer_id: Uuid, _inquiry_text: &str, pool: &PgPool) -> Result<Uuid, sqlx::Error> {
     // Simulated Estimator Agent logic
     // In a real implementation, this would use RAG against pricing rules
 
