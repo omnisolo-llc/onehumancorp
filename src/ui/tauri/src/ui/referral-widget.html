@@ -740,9 +740,11 @@
 
       function generateEmbedCode() {
         const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
-        const discountStr = state.amount + (state.type === '%' ? 'pct' : 'flat');
+        const sign = state.type === '$' ? '$' : '';
+        const pct = state.type === '%' ? '%' : '';
+        const val = state.amount;
 
-        const code = `<iframe src="${origin}/embed/referral?tenant=${state.tenant}&theme=${state.theme}&discount=${discountStr}&hideBranding=${state.removeBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Referral Widget"></iframe>`;
+        const code = `<iframe src="${origin}/api/v1/growth/customer-referral/embed?tenant=${state.tenant}&theme=${state.theme}&give=${sign}${val}${pct}&get=${sign}${val}${pct}&hide_branding=${state.removeBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Referral Widget"></iframe>`;
 
         embedCodeTextarea.value = code;
       }
