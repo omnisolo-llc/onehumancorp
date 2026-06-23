@@ -95,6 +95,41 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
     }
 }
 
+pub trait AgentState: Clone + Send + Sync + 'static {
+    fn has_tool_calls(&self) -> bool;
+}
+
+impl<S: AgentState> StateGraph<S> {
+    /// Mechanically: uses `llm_call` and `tool_node` connected by conditional edges
+    /// (if tool calls present -> route to `tool_node`; if absent -> route to `END`).
+    pub fn build_standard_agent_harness<F1, Fut1, F2, Fut2>(
+        &mut self,
+        llm_call: F1,
+        tool_node: F2,
+    ) where
+        F1: Fn(S) -> Fut1 + Send + Sync + 'static,
+        Fut1: Future<Output = Result<S, String>> + Send + 'static,
+        F2: Fn(S) -> Fut2 + Send + Sync + 'static,
+        Fut2: Future<Output = Result<S, String>> + Send + 'static,
+    {
+        self.add_node("llm_call", llm_call);
+        self.add_node("tool_node", tool_node);
+
+        // if tool calls present -> route to `tool_node`; if absent -> route to `END`
+        self.add_conditional_edges("llm_call", |state: &S| {
+            if state.has_tool_calls() {
+                "tool_node".to_string()
+            } else {
+                END.to_string()
+            }
+        });
+
+        // Loop back to llm_call after tool execution
+        self.add_edge("tool_node", "llm_call");
+        self.set_entry_point("llm_call");
+    }
+}
+
 /// A compiled state graph that is ready to be executed.
 pub struct CompiledStateGraph<S> {
     nodes: HashMap<String, NodeFn<S>>,
@@ -268,12 +303,18 @@ mod tests {
 
     // Testing the "typed dictionary" aspect of the mechanic.
     #[derive(Clone, Default)]
-    struct TypedAgentState {
-        messages: Vec<String>,
-        has_tool_calls: bool,
+    pub struct TypedAgentState {
+        pub messages: Vec<String>,
+        pub has_tool_calls: bool,
     }
 
-    struct TypedReducer;
+    impl AgentState for TypedAgentState {
+        fn has_tool_calls(&self) -> bool {
+            self.has_tool_calls
+        }
+    }
+
+    pub struct TypedReducer;
 
     impl Reducer<TypedAgentState> for TypedReducer {
         fn reduce(&self, state: &mut TypedAgentState, update: TypedAgentState) {

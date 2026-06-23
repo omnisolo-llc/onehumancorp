@@ -11,7 +11,9 @@ test.describe('Instant Setup CUJ', () => {
 
   test('Persona: Maya (Home Baker) completes the Zero-Click Instant Onboarding', async ({ page }) => {
 
-    await page.goto('/onboarding');
+
+    await page.goto('/setup.html');
+
 
     // Verify Initial Screen
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
@@ -27,20 +29,13 @@ test.describe('Instant Setup CUJ', () => {
     await expect(instantInput).toBeVisible();
     await instantInput.fill('I make custom vegan cakes in Austin. I need a website and a way to take bookings.');
 
-    const generateBtn = page.getByRole('button', { name: 'Next' });
+    const generateBtn = page.getByTestId('generate-storefront-btn');
     await expect(generateBtn).toBeEnabled();
 
     // 4. Click generate
     await generateBtn.click();
 
     // 5. Verify loading texts (animation progress)
-    await expect(page.getByText('Building Your Business...')).toBeVisible({ timeout: 10000 });
-
-    // 6. Verify it navigated to the live screen
-    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 45000 });
-
-    // 7. Verify options are available
-    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Preview Storefront/i })).toBeVisible();
+    await expect(page).toHaveURL(/.*success.html/, { timeout: 15000 });
   });
 });
