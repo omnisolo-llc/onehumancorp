@@ -129,7 +129,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         const actions = await getActions();
         for (const action of actions) {
           if (action.type === "approve_agent_feed") {
-            await submitDecision(action.payload.id, action.payload.approved, action.payload.modified_content, action.payload.event_source);
+            await submitDecision(
+              action.payload.id,
+              action.payload.approved,
+              action.payload.modified_content,
+              action.payload.event_source,
+            );
             await removeAction(action.id);
             setOfflineActionsCount((prev) => Math.max(0, prev - 1));
             setQueuedActionIds((prev) => {
@@ -698,7 +703,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     </span>
                     {approval.lifecycle_state === "PENDING_APPROVAL" && (
                       <span className="text-xs font-bold uppercase tracking-wider text-green-700 bg-green-100 px-2 py-1 rounded-[8px]">
-                        Requires Review
+                        Action Needed
                       </span>
                     )}
                     {queuedActionIds.has(approval.id) && (
@@ -771,11 +776,25 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           data-testid="onboarding-welcome-card"
                         >
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
                             Setup Complete
                           </div>
                           <p className="text-sm text-gray-800 dark:text-gray-200">
-                            {(approval.context_payload?.description || approval.proposed_action?.description) || "Welcome to OHC! I've set up your business. Click here to review your new storefront."}
+                            {approval.context_payload?.description ||
+                              approval.proposed_action?.description ||
+                              "Welcome to OHC! I've set up your business. Click here to review your new storefront."}
                           </p>
                         </div>
                       )}
@@ -1464,7 +1483,16 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           </p>
                           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
                             <span className="text-lg">▶️</span>
-                            <span>0:10 AI Summary ({(approval.proposed_action || approval.context_payload)?.caller_phone})</span>
+                            <span>
+                              0:10 AI Summary (
+                              {
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                )?.caller_phone
+                              }
+                              )
+                            </span>
                           </div>
                         </div>
                         <button
@@ -1487,7 +1515,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             onClick={() => {
                               setEditingId(approval.id);
                               setEditContent(
-                                (approval.proposed_action || approval.context_payload)?.summary || ""
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                )?.summary || "",
                               );
                             }}
                             className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
@@ -1515,7 +1546,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </>
                     )
                   ) : (approval.proposed_action || approval.context_payload)
-                    ?.feature_type === "incident_resolution" ? (
+                      ?.feature_type === "incident_resolution" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() =>
