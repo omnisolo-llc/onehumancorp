@@ -200,7 +200,16 @@
       <p class="preview-role" id="preview-role-el"></p>
       <p class="preview-desc" id="preview-desc-el"></p>
 
-      <a href="#" class="preview-btn" onclick="alert('This is a demo button. Start a chat here.'); return false;">Chat with me</a>
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+        <a href="#" class="preview-btn" onclick="alert('This is a demo button. Start a chat here.'); return false;">Chat with me</a>
+        <button id="cloud-bridge-share-btn" class="preview-btn" style="background-color: #0066FF; color: white; border: none;">Share Profile to Cloud Team</button>
+      </div>
+
+      <div id="cloud-bridge-share-container" style="display: none; margin-top: 16px; background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px;">
+        <p style="font-size: 13px; margin: 0 0 8px 0; color: #555;">Invite link generated:</p>
+        <input type="text" id="cloud-bridge-invite-link" readonly style="width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; margin-bottom: 8px;">
+        <button id="cloud-bridge-copy-btn" style="width: 100%; padding: 8px; border-radius: 4px; border: none; background: #eaeaea; cursor: pointer; font-size: 13px; font-weight: 600;">Copy Link</button>
+      </div>
     </div>
     <div class="preview-footer" id="preview-footer-el">
       <a href="#" id="branding-link" target="_blank">
@@ -230,6 +239,63 @@
       } else {
         document.getElementById('branding-link').href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}`;
       }
+
+      const shareBtn = document.getElementById('cloud-bridge-share-btn');
+      const shareContainer = document.getElementById('cloud-bridge-share-container');
+      const shareInput = document.getElementById('cloud-bridge-invite-link');
+      const copyBtn = document.getElementById('cloud-bridge-copy-btn');
+
+      shareBtn.addEventListener('click', async () => {
+        shareBtn.textContent = 'Generating...';
+        shareBtn.disabled = true;
+
+        try {
+          // Detect Tauri and use absolute URL if needed, else relative
+          let url = '/api/v1/growth/cloud-bridge/invite';
+          if (window.__TAURI__ && window.__TAURI__.core) {
+              url = 'http://127.0.0.1:18789/api/v1/growth/cloud-bridge/invite';
+          }
+
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              team_id: tenant,
+              inviter_id: 'owner',
+              invitee_id: 'pending'
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            shareInput.value = data.invite_link;
+            shareBtn.style.display = 'none';
+            shareContainer.style.display = 'block';
+          } else {
+            shareBtn.textContent = 'Failed to generate link';
+            setTimeout(() => {
+              shareBtn.textContent = 'Share Profile to Cloud Team';
+              shareBtn.disabled = false;
+            }, 3000);
+          }
+        } catch (e) {
+          console.error(e);
+          shareBtn.textContent = 'Error occurred';
+          setTimeout(() => {
+            shareBtn.textContent = 'Share Profile to Cloud Team';
+            shareBtn.disabled = false;
+          }, 3000);
+        }
+      });
+
+      copyBtn.addEventListener('click', () => {
+        shareInput.select();
+        document.execCommand('copy');
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy Link';
+        }, 2000);
+      });
     });
   </script>
 
