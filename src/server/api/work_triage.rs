@@ -1,3 +1,4 @@
+use sqlx::Row;
 use axum::{
     extract::{Query, State, Path},
     response::IntoResponse,
@@ -7,7 +8,16 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::common::auth::{ui_tenant_id, UiTenantQuery};
+#[derive(serde::Deserialize)]
+pub struct UiTenantQuery {
+    pub tenant_id: Option<String>,
+    pub tenant: Option<String>,
+}
+
+pub fn ui_tenant_id(query: &UiTenantQuery) -> String {
+    query.tenant_id.clone().or_else(|| query.tenant.clone()).unwrap_or_else(|| "default".to_string())
+}
+
 use crate::db::DB;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -30,58 +40,23 @@ pub async fn simulate_inbound_signal_handler(
     let signal_id = format!("sig-{}", Uuid::new_v4());
     let work_item_id = format!("wi-{}", Uuid::new_v4());
 
-    // Basic LLM simulation
-    let intent = "inquiry".to_string();
-    let customer_info = serde_json::json!({"name": "Simulated Customer"});
+    let intent = "Do you have vegan chocolate cake available this weekend?".to_string();
+    let customer_info = serde_json::json!({"name": "Maya"});
     let suggested_actions = serde_json::json!([
         {
             "action_type": "Draft Reply",
-            "message": "This is an AI-generated draft based on the inbound signal."
+            "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend."
         }
     ]);
 
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let _ = sqlx::query(
-                "INSERT INTO inbound_signals (id, tenant_id, source, raw_payload, status) VALUES ($1, $2, $3, $4, 'PROCESSED')"
-            )
-            .bind(&signal_id)
-            .bind(&tenant_id)
-            .bind(&payload.source)
-            .bind(sqlx::types::Json(&payload.payload))
-            .execute(&db.pool).await;
-
-            let _ = sqlx::query(
-                "INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, suggested_actions, status) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')"
-            )
-            .bind(&work_item_id)
-            .bind(&tenant_id)
-            .bind(&signal_id)
-            .bind(&intent)
-            .bind(sqlx::types::Json(&customer_info))
-            .bind(sqlx::types::Json(&suggested_actions))
-            .execute(&db.pool).await;
+            let _ = sqlx::query("INSERT INTO inbound_signals (id, tenant_id, source, raw_payload, status) VALUES ($1, $2, $3, $4, 'PROCESSED')").bind(&signal_id).bind(&tenant_id).bind(&payload.source).bind(serde_json::to_string(&payload.payload).unwrap()).execute(&db.pool).await;
+            let _ = sqlx::query("INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, suggested_actions, status) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')").bind(&work_item_id).bind(&tenant_id).bind(&signal_id).bind(&intent).bind(serde_json::to_string(&customer_info).unwrap()).bind(serde_json::to_string(&suggested_actions).unwrap()).execute(&db.pool).await;
         },
         crate::db::DbStore::Sqlite(pool) => {
-            let _ = sqlx::query(
-                "INSERT INTO inbound_signals (id, tenant_id, source, raw_payload, status) VALUES (?, ?, ?, ?, 'PROCESSED')"
-            )
-            .bind(&signal_id)
-            .bind(&tenant_id)
-            .bind(&payload.source)
-            .bind(serde_json::to_string(&payload.payload).unwrap())
-            .execute(pool).await;
-
-            let _ = sqlx::query(
-                "INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, suggested_actions, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')"
-            )
-            .bind(&work_item_id)
-            .bind(&tenant_id)
-            .bind(&signal_id)
-            .bind(&intent)
-            .bind(serde_json::to_string(&customer_info).unwrap())
-            .bind(serde_json::to_string(&suggested_actions).unwrap())
-            .execute(pool).await;
+            let _ = sqlx::query("INSERT INTO inbound_signals (id, tenant_id, source, raw_payload, status) VALUES (?, ?, ?, ?, 'PROCESSED')").bind(&signal_id).bind(&tenant_id).bind(&payload.source).bind(serde_json::to_string(&payload.payload).unwrap()).execute(pool).await;
+            let _ = sqlx::query("INSERT INTO daily_work_items (id, tenant_id, signal_id, intent, customer_info, suggested_actions, status) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')").bind(&work_item_id).bind(&tenant_id).bind(&signal_id).bind(&intent).bind(serde_json::to_string(&customer_info).unwrap()).bind(serde_json::to_string(&suggested_actions).unwrap()).execute(pool).await;
         }
     }
 
@@ -97,7 +72,6 @@ pub struct DailyWorkItemRow {
     pub suggested_actions: Option<serde_json::Value>,
     pub status: String,
 }
-
 
 static DAILY_WORK_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
@@ -121,34 +95,35 @@ pub async fn get_daily_work_handler(
         tokio::spawn(async move {
             let res = match &db_bg.store {
                 crate::db::DbStore::Postgres => {
-                    sqlx::query!(
-                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC",
-                        t_bg
-                    ).fetch_all(&db_bg.pool).await.map(|rows| {
+                    sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind(&t_bg).fetch_all(&db_bg.pool).await.map(|rows| {
                         rows.into_iter().map(|r| {
+                            let customer_info_str: Option<String> = r.try_get("customer_info").ok();
+                            let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s: String| serde_json::from_str(&s).ok());
+                            let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
+                            let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s: String| serde_json::from_str(&s).ok());
+                            let id: String = r.get("id");
+                            let signal_id: Option<String> = r.try_get("signal_id").ok().flatten();
+                            let intent: String = r.get("intent");
+                            let status: String = r.get("status");
+
                             serde_json::json!({
-                                "id": r.id,
-                                "signal_id": r.signal_id,
-                                "intent": r.intent,
-                                "customer_info": r.customer_info,
-                                "suggested_actions": r.suggested_actions,
-                                "status": r.status
+                                "id": id,
+                                "signal_id": signal_id,
+                                "intent": intent,
+                                "customer_info": customer_info,
+                                "suggested_actions": suggested_actions,
+                                "status": status
                             })
                         }).collect::<Vec<_>>()
                     })
                 },
                 crate::db::DbStore::Sqlite(pool) => {
-                    sqlx::query(
-                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC"
-                    ).bind(&t_bg).fetch_all(pool).await.map(|rows| {
-                        use sqlx::Row;
+                    sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind(&t_bg).fetch_all(pool).await.map(|rows| {
                         rows.into_iter().map(|r| {
                             let customer_info_str: Option<String> = r.try_get("customer_info").ok();
-                            let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
-
+                            let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s: String| serde_json::from_str(&s).ok());
                             let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
-                            let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s| serde_json::from_str(&s).ok());
-
+                            let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s: String| serde_json::from_str(&s).ok());
                             let id: String = r.get("id");
                             let signal_id: Option<String> = r.try_get("signal_id").ok().flatten();
                             let intent: String = r.get("intent");
@@ -177,22 +152,27 @@ pub async fn get_daily_work_handler(
 
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let res = sqlx::query!(
-                "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC",
-                tenant_id
-            )
-            .fetch_all(&db.pool).await;
+            let res = sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind(&tenant_id).fetch_all(&db.pool).await;
 
             match res {
                 Ok(rows) => {
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+                        let customer_info_str: Option<String> = r.try_get("customer_info").ok();
+                        let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s: String| serde_json::from_str(&s).ok());
+                        let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
+                        let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s: String| serde_json::from_str(&s).ok());
+                        let id: String = r.get("id");
+                        let signal_id: Option<String> = r.try_get("signal_id").ok().flatten();
+                        let intent: String = r.get("intent");
+                        let status: String = r.get("status");
+
                         serde_json::json!({
-                            "id": r.id,
-                            "signal_id": r.signal_id,
-                            "intent": r.intent,
-                            "customer_info": r.customer_info,
-                            "suggested_actions": r.suggested_actions,
-                            "status": r.status
+                            "id": id,
+                            "signal_id": signal_id,
+                            "intent": intent,
+                            "customer_info": customer_info,
+                            "suggested_actions": suggested_actions,
+                            "status": status
                         })
                     }).collect();
                     let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
@@ -202,22 +182,15 @@ pub async fn get_daily_work_handler(
             }
         },
         crate::db::DbStore::Sqlite(pool) => {
-             let res = sqlx::query(
-                "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC"
-            )
-            .bind(&tenant_id)
-            .fetch_all(pool).await;
+             let res = sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind(&tenant_id).fetch_all(pool).await;
 
             match res {
                 Ok(rows) => {
-                    use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                         let customer_info_str: Option<String> = r.try_get("customer_info").ok();
-                        let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
-
+                        let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s: String| serde_json::from_str(&s).ok());
                         let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
-                        let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s| serde_json::from_str(&s).ok());
-
+                        let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s: String| serde_json::from_str(&s).ok());
                         let id: String = r.get("id");
                         let signal_id: Option<String> = r.try_get("signal_id").ok().flatten();
                         let intent: String = r.get("intent");

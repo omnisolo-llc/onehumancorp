@@ -281,6 +281,7 @@ path = "src/server/integrations/messagebird"
 path = "src/server/integrations/zoom"
 
 [workspace.dependencies]
+server_integrations_taxjar = { path = "src/server/integrations/taxjar" }
 tonic = "0.12"
 prost = "0.13"
 serde_json = "1"
@@ -309,3 +310,6 @@ default-features = false
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(ohc_bazel)', 'cfg(ohc_bazel_package)'] }
+
+[dependencies.server_integrations_taxjar]
+path = "src/server/integrations/taxjar"

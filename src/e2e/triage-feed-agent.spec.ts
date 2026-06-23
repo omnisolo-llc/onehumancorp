@@ -6,14 +6,14 @@ test.describe('Agentic Work Triage Feed', () => {
     await loginAs(page, adminUser);
 
     // 2. Simulate an incoming message by hitting the new test endpoint
-    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const response = await page.request.post(`/api/triage/simulate?tenant_id=default`, { data: { source: 'Instagram DM', payload: { message: 'Do you have vegan chocolate cake available this weekend?' } } });
     expect(response.status()).toBe(200);
     const json = await response.json();
     expect(json.success).toBe(true);
     const triageItemId = json.id;
 
     // 3. Go to the dashboard
-    await page.goto('/dashboard');
+    await page.goto('/triage');
 
     // Wait for the feed to load
     const feed = page.locator('[data-testid="work-triage-feed"]');
@@ -37,11 +37,11 @@ test.describe('Agentic Work Triage Feed', () => {
 
   test('Owner can dismiss AI-drafted replies', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const response = await page.request.post(`/api/triage/simulate?tenant_id=default`, { data: { source: 'Instagram DM', payload: { message: 'Do you have vegan chocolate cake available this weekend?' } } });
     const json = await response.json();
     const triageItemId = json.id;
 
-    await page.goto('/dashboard');
+    await page.goto('/triage');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
@@ -54,7 +54,7 @@ test.describe('Agentic Work Triage Feed', () => {
 
   test('Triage feed handles empty state correctly', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    await page.goto('/dashboard');
+    await page.goto('/triage');
 
     // It should either show the empty state or an empty feed, but given we might have real data,
     // let's just ensure it loads without crashing and either shows items or caught up state.
@@ -70,11 +70,11 @@ test.describe('Agentic Work Triage Feed', () => {
 
   test('Triage feed item shows correct metadata', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const response = await page.request.post(`/api/triage/simulate?tenant_id=default`, { data: { source: 'Instagram DM', payload: { message: 'Do you have vegan chocolate cake available this weekend?' } } });
     const json = await response.json();
     const triageItemId = json.id;
 
-    await page.goto('/dashboard');
+    await page.goto('/triage');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
@@ -88,11 +88,11 @@ test.describe('Agentic Work Triage Feed', () => {
     await loginAs(page, adminUser);
     await page.setViewportSize({ width: 375, height: 812 }); // Mobile
 
-    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const response = await page.request.post(`/api/triage/simulate?tenant_id=default`, { data: { source: 'Instagram DM', payload: { message: 'Do you have vegan chocolate cake available this weekend?' } } });
     const json = await response.json();
     const triageItemId = json.id;
 
-    await page.goto('/dashboard');
+    await page.goto('/triage');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
