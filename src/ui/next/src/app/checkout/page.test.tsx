@@ -158,6 +158,32 @@ beforeEach(() => {
     });
   });
 
+  it('handles Sold Out state gracefully', async () => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/api/v1/pos/inventory')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ inventory: [{ id: 'prod_123', is_subscribable: true, subscription_discount_percent: 10 }] }),
+        });
+      }
+      if (url === '/api/billing/create-checkout-session') {
+        return Promise.resolve({
+          ok: false,
+          status: 409,
+          json: () => Promise.resolve({ error: 'Item just sold out' }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    await act(async () => { render(<CheckoutPage />); });
+
+    const payButton = screen.getByText('Pay');
+    await act(async () => { fireEvent.click(payButton); });
+
+    expect(screen.getByText('Oops! Item just sold out.')).toBeDefined();
+  });
+
   it('handles delivery quote flow correctly', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
