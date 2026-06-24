@@ -1,10 +1,11 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
-import { AgentFeedCard } from "./AgentFeedCard";
+import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
+import { InstagramDMCard } from "./InstagramDMCard";
+import { AgentActionCard } from "../../components/feed/AgentActionCard";
 
 type TriageItem = {
   id: string;
@@ -129,7 +130,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         const actions = await getActions();
         for (const action of actions) {
           if (action.type === "approve_agent_feed") {
-            await submitDecision(action.payload.id, action.payload.approved, action.payload.modified_content, action.payload.event_source);
+            await submitDecision(
+              action.payload.id,
+              action.payload.approved,
+              action.payload.modified_content,
+              action.payload.event_source,
+            );
             await removeAction(action.id);
             setOfflineActionsCount((prev) => Math.max(0, prev - 1));
             setQueuedActionIds((prev) => {
@@ -683,19 +689,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             )}
             {items.map((approval) => (
-              <AgentFeedCard
+              <AgentActionCard
                 key={approval.id}
                 approval={approval}
                 queuedActionIds={queuedActionIds}
                 editingId={editingId}
                 editContent={editContent}
+                editQuotePrice={editQuotePrice}
+                editQuoteScope={editQuoteScope}
                 setEditingId={setEditingId}
                 setEditContent={setEditContent}
-                handleDecision={handleDecision}
-                editQuotePrice={editQuotePrice}
                 setEditQuotePrice={setEditQuotePrice}
-                editQuoteScope={editQuoteScope}
                 setEditQuoteScope={setEditQuoteScope}
+                handleDecision={handleDecision}
               />
             ))}
           </>

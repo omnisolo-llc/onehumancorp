@@ -147,14 +147,13 @@ impl PromptCache {
                 heap.push((created_at, kv.key().clone()));
             } else {
                 // If it's full, compare with the max element (the newest of the oldest)
-                if let Some(max) = heap.peek() {
-                    if created_at < max.0 {
+                if let Some(max) = heap.peek()
+                    && created_at < max.0 {
                         // This element is older than the newest of our oldest.
                         // Clone the key and push it, then pop the max.
                         heap.push((created_at, kv.key().clone()));
                         heap.pop();
                     }
-                }
             }
         }
 
@@ -190,6 +189,11 @@ impl PromptCache {
             byte_index = max_chars;
             char_count = max_chars;
         } else {
+            // Optimization: If byte length <= max_chars, char length must also be <= max_chars
+            if context.len() <= max_chars {
+                return context.to_string();
+            }
+
             for (i, _) in context.char_indices() {
                 if char_count == max_chars {
                     byte_index = i;

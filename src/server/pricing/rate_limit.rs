@@ -391,8 +391,8 @@ impl RedisRateLimiter {
             conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?
         };
 
-        if let Some(store) = &self.telemetry_store {
-            if delta_bytes > 0 {
+        if let Some(store) = &self.telemetry_store
+            && delta_bytes > 0 {
                 store.storage_bytes_counter.add(
                     delta_bytes as u64,
                     &[
@@ -401,7 +401,6 @@ impl RedisRateLimiter {
                     ],
                 );
             }
-        }
 
         if let Some(limit_mb) = tier.storage_limit_mb() {
             let limit_bytes = (limit_mb as i64) * 1024 * 1024;

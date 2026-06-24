@@ -1,4 +1,3 @@
-#![allow(clippy::manual_clamp)]
 use ohc_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
@@ -28,7 +27,7 @@ impl PydanticToolExecutor<BashArgs> for BashExecutor {
     async fn execute_typed(&self, args: BashArgs) -> Result<String, ToolError> {
         let command = args.command;
         let timeout_secs = args.timeout;
-        let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
+        let timeout = Duration::from_secs_f64(timeout_secs.clamp(1.0, 600.0));
 
         let wd_ref = self.working_dir.as_deref();
         let output_res = tokio::time::timeout(timeout, self.runner.run("bash", &["-c", &command], wd_ref, vec![])).await;

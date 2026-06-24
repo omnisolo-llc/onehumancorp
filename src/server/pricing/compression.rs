@@ -43,7 +43,7 @@ static STOP_WORDS: &[&str] = &[
 static REDUCE_TOKENS_CACHE: OnceLock<DashMap<String, String>> = OnceLock::new();
 
 pub fn reduce_tokens(data: &str) -> String {
-    let cache = REDUCE_TOKENS_CACHE.get_or_init(|| DashMap::new());
+    let cache = REDUCE_TOKENS_CACHE.get_or_init(DashMap::new);
 
     if let Some(cached) = cache.get(data) {
         return cached.clone();
@@ -73,7 +73,13 @@ pub fn reduce_tokens(data: &str) -> String {
 
     // Optionally bounds check the cache to prevent infinite memory growth
     if cache.len() > 10_000 {
-        cache.clear();
+        // Optimization: retain half the cache to avoid massive latency spikes instead of full clear
+        // We use retain and a simple counter to keep ~50%
+        let mut count = 0;
+        cache.retain(|_, _| {
+            count += 1;
+            count % 2 == 0
+        });
     }
 
     cache.insert(data.to_string(), reduced.clone());

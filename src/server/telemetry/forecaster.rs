@@ -63,11 +63,10 @@ impl Forecaster {
             let val: f64 = row.get("value");
             let labels_json: String = row.get("labels_json");
 
-            if let Ok(parsed) = serde_json::from_str::<Value>(&labels_json) {
-            if let Some(org_id) = parsed.get("organization_id").and_then(|v| v.as_str()) {
+            if let Ok(parsed) = serde_json::from_str::<Value>(&labels_json)
+            && let Some(org_id) = parsed.get("organization_id").and_then(|v| v.as_str()) {
                 *recent_usage.entry(org_id.to_string()).or_insert(0) += val as i64;
             }
-        }
         }
 
         let mut forecasts = Vec::new();
