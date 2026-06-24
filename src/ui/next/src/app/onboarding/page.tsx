@@ -419,7 +419,7 @@ export default function OnboardingWizard() {
            localStorage.setItem('tenant', result.organization_id);
         }
         const launchRes = await fetchWithRetry(`${backendUrl}/api/onboarding/launch`, { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } });
-        if (!launchRes.ok) console.warn('Launch failed but proceeding to success');
+        if (!launchRes.ok) throw new Error('Launch failed');
         updateState({ step: 5 }); syncStateToBackend({ step: 5 });
 
         // Optional, but required by E2E test
@@ -568,7 +568,7 @@ export default function OnboardingWizard() {
         localStorage.setItem('tenant', result.organization_id);
       }
       const launchRes = await fetchWithRetry('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } });
-      if (!launchRes.ok) console.warn('Launch failed but proceeding to success');
+      if (!launchRes.ok) throw new Error('Launch failed');
       updateState({ step: 5 }); syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
 
     } catch (err: any) {
