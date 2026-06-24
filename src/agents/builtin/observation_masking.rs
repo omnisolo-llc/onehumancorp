@@ -21,7 +21,6 @@ impl JetBrainsObservationMasker {
         }
     }
 
-
     fn mask_json_value(
         val: &mut Value,
         size_limit: usize,
@@ -165,30 +164,55 @@ impl JetBrainsObservationMasker {
                                 let is_array = content_trimmed.starts_with('[');
 
                                 if content_trimmed.starts_with('{') || is_array {
-                                    if let Ok(json_val) = serde_json::from_str::<Value>(&tr.content) {
-                                        let mut current_element_limit = self.element_limit;
-                                        let mut current_size_limit = self.size_limit;
+                                    if let Ok(json_val) = serde_json::from_str::<Value>(&tr.content)
+                                    {
+                                        let mut best_content = None;
+                                        let mut factor_low = 1;
+                                        let mut factor_high = 100;
 
-                                        // Iterative compression
-                                        for _iteration in 0..4 {
+                                        while factor_low <= factor_high {
+                                            let factor_mid =
+                                                factor_low + (factor_high - factor_low) / 2;
+
+                                            let test_element_limit = std::cmp::max(
+                                                1,
+                                                (self.element_limit * factor_mid) / 100,
+                                            );
+                                            let test_size_limit = std::cmp::max(
+                                                10,
+                                                (self.size_limit * factor_mid) / 100,
+                                            );
+
                                             let mut temp_val = json_val.clone();
-                                            Self::mask_json_value(&mut temp_val, current_size_limit, current_element_limit, 0);
+                                            Self::mask_json_value(
+                                                &mut temp_val,
+                                                test_size_limit,
+                                                test_element_limit,
+                                                0,
+                                            );
 
-                                            let new_content = serde_json::to_string(&temp_val).unwrap_or_else(|_| tr.content.clone());
+                                            let new_content = serde_json::to_string(&temp_val)
+                                                .unwrap_or_else(|_| tr.content.clone());
 
                                             if new_content.len() <= self.size_limit {
-                                                tr.content = new_content;
-                                                modification_successful = true;
-                                                break;
+                                                best_content = Some(new_content);
+                                                factor_low = factor_mid + 1;
                                             } else {
-                                                current_element_limit = std::cmp::max(1, current_element_limit / 2);
-                                                current_size_limit = std::cmp::max(10, current_size_limit / 2);
+                                                factor_high = factor_mid - 1;
                                             }
+                                        }
+
+                                        if let Some(final_content) = best_content {
+                                            tr.content = final_content;
+                                            modification_successful = true;
                                         }
 
                                         if !modification_successful {
                                             // Fallback preserving the outer array/object structure if possible
-                                            let raw_msg = format!("[Observation Masked to save context. Output was {} bytes. Use 'RecallObservation' with ID '{}' to retrieve full output.]", bytes, tr.tool_call_id);
+                                            let raw_msg = format!(
+                                                "[Observation Masked to save context. Output was {} bytes. Use 'RecallObservation' with ID '{}' to retrieve full output.]",
+                                                bytes, tr.tool_call_id
+                                            );
                                             if is_array {
                                                 tr.content = serde_json::json!([{ "_masked_observation": raw_msg }]).to_string();
                                             } else {
@@ -203,11 +227,22 @@ impl JetBrainsObservationMasker {
                                     let preview_chars = std::cmp::max(10, self.size_limit / 4);
                                     let char_count = tr.content.chars().count();
                                     let raw_msg = if char_count > preview_chars * 2 {
-                                        let start_preview: String = tr.content.chars().take(preview_chars).collect();
-                                        let end_preview: String = tr.content.chars().skip(char_count - preview_chars).collect();
-                                        format!("[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]", bytes, start_preview, end_preview, tr.tool_call_id)
+                                        let start_preview: String =
+                                            tr.content.chars().take(preview_chars).collect();
+                                        let end_preview: String = tr
+                                            .content
+                                            .chars()
+                                            .skip(char_count - preview_chars)
+                                            .collect();
+                                        format!(
+                                            "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
+                                            bytes, start_preview, end_preview, tr.tool_call_id
+                                        )
                                     } else {
-                                        format!("[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]", bytes, tr.tool_call_id)
+                                        format!(
+                                            "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
+                                            bytes, tr.tool_call_id
+                                        )
                                     };
                                     // For plain text, we preserve it as a plain string rather than forcing a JSON wrapper, unless we explicitly parsed it as JSON previously.
                                     tr.content = raw_msg;
@@ -410,8 +445,18 @@ mod additional_tests {
         let parsed: Value = serde_json::from_str(masked_content).expect("Should be valid JSON");
 
         if let Some(arr) = parsed.as_array() {
-            if arr.len() == 1 && arr[0].as_object().map_or(false, |o| o.contains_key("_masked_observation")) {
-                let s = arr[0].as_object().unwrap().get("_masked_observation").unwrap().as_str().unwrap();
+            if arr.len() == 1
+                && arr[0]
+                    .as_object()
+                    .map_or(false, |o| o.contains_key("_masked_observation"))
+            {
+                let s = arr[0]
+                    .as_object()
+                    .unwrap()
+                    .get("_masked_observation")
+                    .unwrap()
+                    .as_str()
+                    .unwrap();
                 assert!(s.contains("[Observation Masked"));
             } else {
                 assert_eq!(arr.len(), 11); // 10 original elements + 1 masked summary

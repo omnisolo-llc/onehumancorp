@@ -411,7 +411,9 @@ mod tests {
                 assert!(prompt.contains("[Session: session_b]"));
 
                 Ok(ChatResponse {
-                    message: Message::assistant("Summarized cross-session insights regarding apples"),
+                    message: Message::assistant(
+                        "Summarized cross-session insights regarding apples",
+                    ),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: None,
