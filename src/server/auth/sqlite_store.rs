@@ -526,4 +526,35 @@ mod tests {
             }
         }).await;
     }
+
+    #[tokio::test]
+    async fn test_update_user_tenant_isolation_regression() {
+        let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        let _pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let repo = SqliteUserRepository::new(_pool.clone());
+
+        let dummy_user = User {
+            id: "dummy_id_update".to_string(),
+            username: "dummy_user".to_string(),
+            email: "dummy@example.com".to_string(),
+            password_hash: "hash".to_string(),
+            roles: vec![],
+            active: true,
+            organization_id: Some("system".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            oidc_subject: Some("sub".to_string()),
+        };
+
+        // Ensure multitenant environment is mocked strictly for 'system' context evaluation
+        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+            let res = repo.update_user(dummy_user, "system").await;
+            assert!(res.is_err(), "Must reject system org_id");
+            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+        }).await;
+    }
 }

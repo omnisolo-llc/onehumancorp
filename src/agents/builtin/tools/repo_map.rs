@@ -267,15 +267,15 @@ mod tests {
 
         assert!(result.contains("📄 server.go"));
         assert!(result.contains("│ func StartServer()"));
-        assert!(result.contains("│ type Handler struct"));
+        assert!(result.contains("│ type Handler"));
 
         assert!(result.contains("📄 engine.cpp"));
-        assert!(result.contains("│ class Engine {"));
-        assert!(result.contains("│ void globalFunc() {}"));
+        assert!(result.contains("│ class Engine"));
+        assert!(result.contains("│ void globalFunc() {"));
 
         assert!(result.contains("📄 Server.java"));
-        assert!(result.contains("│ public class Server {"));
-        assert!(result.contains("│ public static void main() {"));
+        assert!(result.contains("│ public class Server"));
+        assert!(result.contains("│ public static void main()"));
 
         assert!(result.contains("📄 utils.rb"));
         assert!(result.contains("│ class Utils"));

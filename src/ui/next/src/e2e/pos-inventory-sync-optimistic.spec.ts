@@ -175,4 +175,98 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
       await expect(page.getByText(/We oversold the item/i).first()).toBeVisible({ timeout: 10000 });
     }
   });
+
+  test('POS terminal immediately updates stock UI on cash sale before API returns', async ({ page }) => {
+    // 1. Log in to get token
+    await page.goto('/login');
+    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Password').fill('admin');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
+
+    const response = await page.request.post('/api/v1/auth/login', {
+        data: {
+            email: 'admin@ohc.local',
+            password: 'admin'
+        }
+    });
+    expect(response.ok()).toBeTruthy();
+    const { token } = await response.json();
+
+    // 2. Create the "Falafel" product
+    const createProductRes = await page.request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            title: 'Falafel',
+            inventory_count: 50,
+            price_cents: 800
+        }
+    });
+    expect(createProductRes.ok()).toBeTruthy();
+
+    // Navigate to POS terminal
+    await page.goto('/pos.html');
+    await page.evaluate(() => { localStorage.setItem("tenant_id", "default"); });
+
+    // Login with PIN 1234
+    await page.getByRole('button', { name: '1', exact: true }).click();
+    await page.getByRole('button', { name: '2', exact: true }).click();
+    await page.getByRole('button', { name: '3', exact: true }).click();
+    await page.getByRole('button', { name: '4', exact: true }).click();
+
+    await page.waitForTimeout(500);
+    await page.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(500);
+
+    // Wait for the product catalog to be populated
+    await expect(page.getByText('Falafel').first()).toBeVisible({ timeout: 10000 });
+
+    // Extract current stock from the text
+    const productButton = page.locator('button', { hasText: 'Falafel' }).first();
+    const descriptionText = await productButton.innerText();
+
+    const stockMatch = descriptionText.match(/Stock: (\d+)/);
+    expect(stockMatch).toBeTruthy();
+
+    if (stockMatch) {
+      const initialStock = parseInt(stockMatch[1], 10);
+
+      // Select the product
+      await productButton.click();
+
+      // Go offline
+      await page.context().setOffline(true);
+
+      // Verify offline mode indicator
+      await expect(page.getByText('Offline - Changes will sync later')).toBeVisible({ timeout: 5000 });
+
+      // Click the "Charge" button to open cart drawer
+      const collectBtn = page.locator('button', { hasText: /Charge/i }).first();
+      await expect(collectBtn).toBeVisible();
+      await collectBtn.click();
+
+      await page.waitForTimeout(500);
+
+      // Click the "Record Cash Sale" button to queue the mutation offline
+      const cashBtn = page.locator('button', { hasText: /Record Cash Sale/i });
+      await expect(cashBtn).toBeVisible();
+      await cashBtn.click();
+
+      // Immediately verify the stock decreased by 1 without waiting for API
+      // Since it's optimistic, it should happen instantly.
+      await page.waitForTimeout(500);
+      const updatedButtonText = await productButton.innerText();
+      const newMatch = updatedButtonText.match(/Stock:\s*(\d+)/);
+      if (newMatch) {
+          const newStock = parseInt(newMatch[1], 10);
+          expect(newStock).toBe(initialStock - 1);
+      }
+
+      // Restore network
+      await page.context().setOffline(false);
+
+      // Wait to verify it syncs back
+      await page.waitForTimeout(2000);
+    }
+  });
 });

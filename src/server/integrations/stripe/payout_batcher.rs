@@ -49,7 +49,7 @@ impl PayoutBatcher {
 
     async fn get_pending_balance_tx(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, account_id: &str) -> Result<i64, String> {
         let row = sqlx::query(
-            "SELECT COALESCE(CAST(SUM(CAST(state_change->>'amount' AS BIGINT)) AS BIGINT), 0) as balance
+            "SELECT COALESCE(CAST(SUM((state_change->>'amount')::BIGINT) AS BIGINT), 0) as balance
              FROM ohc_universal_ledger
              WHERE tenant_id = $1 AND action_type = 'PayoutBatchEvent'"
         )

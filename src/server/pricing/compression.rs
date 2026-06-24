@@ -51,7 +51,17 @@ pub fn reduce_tokens(data: &str) -> String {
 
     let reduced = data.split_whitespace()
         .filter(|word| {
-            !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
+            // Optimization: Iterate over stop words directly. No allocation.
+            let len = word.len();
+            if len == 0 || len > 5 {
+                return true; // None of our stop words are > 5 chars (longest is 'about')
+            }
+            !STOP_WORDS.iter().any(|&stop_word| {
+                if stop_word.len() != len {
+                    return false;
+                }
+                word.eq_ignore_ascii_case(stop_word)
+            })
         })
         .fold(String::with_capacity(data.len()), |mut acc, w| {
             if !acc.is_empty() {
@@ -63,7 +73,13 @@ pub fn reduce_tokens(data: &str) -> String {
 
     // Optionally bounds check the cache to prevent infinite memory growth
     if cache.len() > 10_000 {
-        cache.clear();
+        // Optimization: retain half the cache to avoid massive latency spikes instead of full clear
+        // We use retain and a simple counter to keep ~50%
+        let mut count = 0;
+        cache.retain(|_, _| {
+            count += 1;
+            count % 2 == 0
+        });
     }
 
     cache.insert(data.to_string(), reduced.clone());

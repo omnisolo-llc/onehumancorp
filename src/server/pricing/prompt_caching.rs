@@ -109,6 +109,7 @@ impl PromptCache {
     }
 
     fn evict_oldest(&self) {
+        // Clear expired first to see if that frees enough space
         self.clear_expired();
 
         let len = self.cache.len();
@@ -116,6 +117,7 @@ impl PromptCache {
             return;
         }
 
+        // We need to evict entries to get back down to 90% of max capacity
         let target_len = (self.max_capacity as f64 * 0.9) as usize;
         let to_remove = len.saturating_sub(target_len);
 
@@ -125,6 +127,7 @@ impl PromptCache {
 
         use std::collections::BinaryHeap;
 
+        // Max-heap tracking the *newest* of the oldest elements.
         let mut heap: BinaryHeap<(std::time::Instant, String)> = BinaryHeap::with_capacity(to_remove + 1);
 
         for kv in self.cache.iter() {
@@ -171,6 +174,11 @@ impl PromptCache {
             byte_index = max_chars;
             char_count = max_chars;
         } else {
+            // Optimization: If byte length <= max_chars, char length must also be <= max_chars
+            if context.len() <= max_chars {
+                return context.to_string();
+            }
+
             for (i, _) in context.char_indices() {
                 if char_count == max_chars {
                     byte_index = i;
@@ -213,12 +221,12 @@ mod tests {
     #[test]
     fn test_prompt_cache_mass_eviction_memory_optimization_ordered() {
         let max_cap = 10;
-        let cache = PromptCache::with_capacity(Duration::from_secs(10), max_cap);
+        let cache = PromptCache::with_capacity(std::time::Duration::from_secs(10), max_cap);
 
         for i in 0..max_cap {
             let key = format!("prompt-key-{}", i);
             cache.set(&key, "val", 1);
-            thread::sleep(Duration::from_millis(5));
+            std::thread::sleep(std::time::Duration::from_millis(5));
         }
 
         assert_eq!(cache.cache.len(), 10);
