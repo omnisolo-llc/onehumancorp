@@ -380,7 +380,7 @@
         text-align: center;
       }
       .triage-item {
-        padding: 16px;
+        padding: 16px; min-width: 44px; min-height: 44px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
         margin-bottom: 12px;
@@ -503,7 +503,7 @@
       }
       #omnibox-input {
         width: 100%;
-        padding: 16px 20px;
+        padding: 16px; min-width: 44px; min-height: 44px 20px;
         font-size: 18px;
         border: none;
         background: transparent;
@@ -595,7 +595,7 @@
       <div class="ohc-growth-card app-card" id="promoter-card" style="margin-top: 20px;">
         <h2>The Promoter Agent</h2>
         <p>Automatically draft and schedule marketing copy for your newest products.</p>
-        <a href="promoter.html" id="promoter-btn" style="display: inline-block; background-color: #34C759; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Promote New Product</a>
+        <a href="promoter.html" id="promoter-btn" style="display: inline-block; background-color: #34C759; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;; min-width: 44px; min-height: 44px">Promote New Product</a>
       </div>
 
 
@@ -624,11 +624,11 @@
             <p id="referral-tier-progress" style="margin: 0; font-weight: 600;"></p>
         </div>
 
-        <input type="text" id="referral-link-input" readonly style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px; background: white; text-align: center; color: #1d1d1f; font-family: monospace;" value="Loading link..." />
+        <input type="text" id="referral-link-input" readonly style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px; background: white; text-align: center; color: #1d1d1f; font-family: monospace;; min-width: 44px; min-height: 44px" value="Loading link..." />
 
         <div style="display: flex; gap: 8px;">
-          <button class="btn-primary" id="referral-tier-copy-btn" style="flex: 1; padding: 12px;">Copy Link</button>
-          <button class="btn-outline" id="referral-tier-share-x-btn" style="flex: 1; padding: 12px;">Share on X</button>
+          <button class="btn-primary" id="referral-tier-copy-btn" style="flex: 1; padding: 12px;; min-width: 44px; min-height: 44px">Copy Link</button>
+          <button class="btn-outline" id="referral-tier-share-x-btn" style="flex: 1; padding: 12px;; min-width: 44px; min-height: 44px">Share on X</button>
         </div>
       </div>
 
@@ -646,18 +646,18 @@
       </div>
       <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%;">
         <h1 id="dashboard-title" style="margin: 0;">Dashboard</h1>
-        <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
+        <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;; min-width: 44px; min-height: 44px">?</button>
       </div>
       <div class="subtitle" style="margin-top: 5px;" id="welcome-message">Welcome back.</div>
 
       <div class="subtitle" style="margin-top: 5px;">Your agents are working on your behalf.</div>
 
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;">
-        <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
-        <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
-        <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
-        <a href="agent-audit-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Agent Audit Dashboard</a>
-        <a href="booking-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Booking Dashboard</a>
+        <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;; min-width: 44px; min-height: 44px">Open WorkBuddy Assistant</a>
+        <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;; min-width: 44px; min-height: 44px">Quick Charge POS</a>
+        <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;; min-width: 44px; min-height: 44px">My Plan</a>
+        <a href="agent-audit-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;; min-width: 44px; min-height: 44px">Agent Audit Dashboard</a>
+        <a href="booking-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;; min-width: 44px; min-height: 44px">Booking Dashboard</a>
       </div>
 
       <div class="ohc-growth-card app-card" id="ai-savings-widget">
@@ -667,7 +667,7 @@
             <p id="ai-savings-desc" style="margin-top: 0; margin-bottom: 0;">Loading your time savings data...</p>
           </div>
           <div style="text-align: left;">
-            <button id="share-savings-btn" style="background-color: #1DA1F2; border: none; padding: 10px 16px;">Share to get 7 Days Pro</button>
+            <button id="share-savings-btn" style="background-color: #1DA1F2; border: none; padding: 10px 16px;; min-width: 44px; min-height: 44px">Share to get 7 Days Pro</button>
             <p id="savings-status" style="font-size: 12px; margin-top: 8px; color: #86868b; display: none;">Verifying Share...</p>
           </div>
         </div>
@@ -708,7 +708,7 @@
             </div>
           </div>
 
-          <button id="wrapped-share-btn" style="background: #0066FF; color: white; border-radius: 8px; padding: 12px; font-weight: 700;">
+          <button id="wrapped-share-btn" style="background: #0066FF; color: white; border-radius: 8px; padding: 12px; font-weight: 700;; min-width: 44px; min-height: 44px">
             Share 2026 Success
           </button>
         </div>
@@ -721,25 +721,25 @@
             <h2 style="margin-bottom: 4px;">Advanced AI Automations</h2>
             <p style="margin-top: 0; margin-bottom: 0;">Multi-agent workflows and predictive routing.</p>
           </div>
-          <button id="enable-advanced-automations-btn" style="background-color: #1d1d1f; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;">Enable</button>
+          <button id="enable-advanced-automations-btn" style="background-color: #1d1d1f; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;; min-width: 44px; min-height: 44px">Enable</button>
         </div>
         <p id="advanced-automations-status" style="display: none; color: #34C759; font-weight: 600; margin-top: 12px;">✅ Enabled</p>
       </div>
 
       <!-- Soft Paywall Modal -->
       <div id="soft-paywall-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(30px) saturate(210%);">
-        <div style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
+        <div style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
           <div style="font-size: 40px; margin-bottom: 16px;">🚀</div>
           <h2 style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Unlock Advanced Features</h2>
           <p style="color: #86868b; margin-bottom: 24px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
           <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
-            <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
+            <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;; min-width: 44px; min-height: 44px">
               Share on X to Unlock
             </button>
-            <button onclick="window.location.href='pricing.html'" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer;">
+            <button onclick="window.location.href='pricing.html'" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer;; min-width: 44px; min-height: 44px">
               Upgrade to Pro
             </button>
-            <button id="soft-paywall-close-btn" style="background: none; border: none; color: #86868b; font-weight: 500; cursor: pointer; padding: 8px;">
+            <button id="soft-paywall-close-btn" style="background: none; border: none; color: #86868b; font-weight: 500; cursor: pointer; padding: 8px;; min-width: 44px; min-height: 44px">
               Maybe Later
             </button>
           </div>
@@ -749,7 +749,7 @@
 
 
       <!-- AI Feature Paywall Widget -->
-      <div id="ai-feature-paywall" data-testid="ai-feature-paywall" style="margin-bottom: 24px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 24px; text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
+      <div id="ai-feature-paywall" data-testid="ai-feature-paywall" style="margin-bottom: 24px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 24px; text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
         <div id="ai-feature-paywall-locked">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; font-weight: 700; color: #0066FF; text-transform: uppercase; letter-spacing: 0.5px;">
             <span>✨</span> Pro Feature
@@ -757,9 +757,9 @@
           <h2 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; color: #1d1d1f;">Unlock Advanced AI Analytics</h2>
           <p style="margin: 0 0 16px 0; font-size: 14px; color: #86868b; line-height: 1.5;">See exactly which products are driving revenue, automate cross-selling, and get daily AI strategy briefings.</p>
           <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
-            <a href="/pricing" style="background: #1d1d1f; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; display: block;">Upgrade to Pro</a>
+            <a href="/pricing" style="background: #1d1d1f; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; display: block;; min-width: 44px; min-height: 44px">Upgrade to Pro</a>
             <span style="color: #86868b; font-size: 14px; text-align: center;">or</span>
-            <button id="ai-paywall-refer-btn" style="background: #0066FF; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; text-align: center; width: 100%; box-sizing: border-box; display: block;">Refer a Friend to Unlock</button>
+            <button id="ai-paywall-refer-btn" style="background: #0066FF; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; text-align: center; width: 100%; box-sizing: border-box; display: block;; min-width: 44px; min-height: 44px">Refer a Friend to Unlock</button>
           </div>
         </div>
         <div id="ai-feature-paywall-unlocked" style="display: none; align-items: center; gap: 16px;">
@@ -768,7 +768,7 @@
             <h3 style="margin: 0 0 4px 0; font-size: 18px; font-weight: 700; color: #1d1d1f;">Advanced AI Analytics Unlocked!</h3>
             <p style="margin: 0; font-size: 14px; color: #86868b;">You have 7 days of free access to Smart Cross-Selling and Deep Insights.</p>
           </div>
-          <a href="/analytics" style="background: #34C759; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; white-space: nowrap;">View Insights</a>
+          <a href="/analytics" style="background: #34C759; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; white-space: nowrap;; min-width: 44px; min-height: 44px">View Insights</a>
         </div>
       </div>
 
@@ -782,19 +782,19 @@
           <div style="background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;">Active</div>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-          <div style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px;">
+          <div style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; min-width: 44px; min-height: 44px;">
             <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Invites Sent</p>
             <p class="text-3xl" id="viral-loop-invites-sent" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">0</p>
           </div>
-          <div style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px;">
+          <div style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; min-width: 44px; min-height: 44px;">
             <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Active Referrals</p>
             <p class="text-3xl" id="viral-loop-active-referrals" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">0</p>
           </div>
-          <div style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px;">
+          <div style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; min-width: 44px; min-height: 44px;">
             <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Revenue from Referrals</p>
             <p class="text-3xl" id="viral-loop-revenue" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">$0.00</p>
           </div>
-          <div style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px;">
+          <div style="background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; min-width: 44px; min-height: 44px;">
             <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Pending Rewards</p>
             <p class="text-3xl" id="viral-loop-pending-rewards" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">$0.00</p>
           </div>
@@ -814,7 +814,7 @@
       <div class="ohc-growth-card app-card" style="margin-bottom: 20px;">
         <h2>Embed Your AI Agent</h2>
         <p>Embed a smart chat widget on your own website. Every embedded widget includes a referral link that earns you rewards.</p>
-        <button id="dashboard-embed-chat-btn" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;">
+        <button id="dashboard-embed-chat-btn" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;; min-width: 44px; min-height: 44px">
           Copy Chat Embed Code
         </button>
       </div>
@@ -823,21 +823,21 @@
         <h2>Agent Public Profile</h2>
 
         <p>Generate a shareable public card for your AI agent to build trust and acquire new customers.</p>
-        <button onclick="window.location.href='agent-card.html'" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;">
+        <button onclick="window.location.href='agent-card.html'" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;; min-width: 44px; min-height: 44px">
           Create Agent Card
         </button>
       </div>
 
       <div class="ohc-growth-card app-card">
         <h2>Grow Your Team</h2>
-        <p><a href="email-signature-generator.html" class="btn-secondary" style="text-decoration: none; padding: 6px 12px; font-size: 14px; margin-bottom: 10px; display: inline-block;">Email Signature Generator</a></p>
+        <p><a href="email-signature-generator.html" class="btn-secondary" style="text-decoration: none; padding: 6px 12px; font-size: 14px; margin-bottom: 10px; display: inline-block;; min-width: 44px; min-height: 44px">Email Signature Generator</a></p>
         <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
 
-        <a href="referrals.html" id="generate-link-btn" class="btn-primary" style="display: block; text-align: center; text-decoration: none;" data-tooltip="Click here to share access with a team member.">Referral Dashboard</a>
-        <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
-        <div style="margin-top: 15px;"><a href="integrations.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f; margin-bottom: 10px;">Integrations</a></div>
+        <a href="referrals.html" id="generate-link-btn" class="btn-primary" style="display: block; text-align: center; text-decoration: none;; min-width: 44px; min-height: 44px" data-tooltip="Click here to share access with a team member.">Referral Dashboard</a>
+        <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;; min-width: 44px; min-height: 44px">Open Widget Builder</a></div>
+        <div style="margin-top: 15px;"><a href="integrations.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Integrations</a></div>
         <div style="margin-top: 15px;"><button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Business Analytics'}, {selector: '#wrapped-summary', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Tour</button></div>
-        <div style="margin-top: 15px;"><a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;">Changelog</a></div>
+        <div style="margin-top: 15px;"><a href="changelog.html" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background-color: rgba(255, 255, 255, 0.5); color: #1d1d1f;; min-width: 44px; min-height: 44px">Changelog</a></div>
       </div>
 
 
@@ -845,23 +845,23 @@
       <div class="ohc-growth-card app-card" id="subscription-replenishment-section" style="margin-bottom: 20px;">
         <h2>Subscription Replenishment</h2>
         <p>You have <strong>12</strong> one-time buyers of consumable products. Convert them to recurring revenue.</p>
-        <a href="subscription-generator.html" class="btn-outline" style="display: block; text-align: center; text-decoration: none; margin-top: 8px;">Draft Subscription Offer</a>
+        <a href="subscription-generator.html" class="btn-outline" style="display: block; text-align: center; text-decoration: none; margin-top: 8px;; min-width: 44px; min-height: 44px">Draft Subscription Offer</a>
       </div>
 
       <div class="ohc-growth-card app-card" id="invite-earn-section">
         <h2>Invite & Earn</h2>
         <p>Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.</p>
-        <a href="referral-widget.html" id="dashboard-widget-btn" class="btn-outline" style="display: block; text-align: center; text-decoration: none; margin-top: 8px;" data-tooltip="Build a referral widget for your website.">Widget Builder</a>
-        <button id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s; display: block; text-align: center; text-decoration: none;">
+        <a href="referral-widget.html" id="dashboard-widget-btn" class="btn-outline" style="display: block; text-align: center; text-decoration: none; margin-top: 8px;; min-width: 44px; min-height: 44px" data-tooltip="Build a referral widget for your website.">Widget Builder</a>
+        <button id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s; display: block; text-align: center; text-decoration: none;; min-width: 44px; min-height: 44px">
           Generate Cloud Invite Link
         </button>
-        <div id="dashboard-invite-container" style="display: none; margin-top: 15px; padding: 16px; border-radius: 12px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(30px) saturate(210%);">
+        <div id="dashboard-invite-container" style="display: none; margin-top: 15px; padding: 16px; min-width: 44px; min-height: 44px; border-radius: 12px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(30px) saturate(210%);">
           <p style="font-size: 14px; margin-bottom: 8px; font-weight: 600; color: #1D1D1F;">Your Invite Link:</p>
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <input type="text" id="dashboard-invite-link" readonly style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.1); background: rgba(255, 255, 255, 0.9); color: #1D1D1F; font-family: Outfit, sans-serif; font-size: 13px;" />
-            <button id="dashboard-copy-btn" class="btn-primary" style="padding: 8px 16px; border-radius: 8px; white-space: nowrap;">Copy</button>
+            <input type="text" id="dashboard-invite-link" readonly style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.1); background: rgba(255, 255, 255, 0.9); color: #1D1D1F; font-family: Outfit, sans-serif; font-size: 13px;; min-width: 44px; min-height: 44px" />
+            <button id="dashboard-copy-btn" class="btn-primary" style="padding: 8px 16px; border-radius: 8px; white-space: nowrap;; min-width: 44px; min-height: 44px">Copy</button>
           </div>
-          <button id="dashboard-share-x-btn" style="width: 100%; background-color: #000000; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: Outfit, sans-serif; transition: opacity 0.2s;">Share on X</button>
+          <button id="dashboard-share-x-btn" style="width: 100%; background-color: #000000; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: Outfit, sans-serif; transition: opacity 0.2s;; min-width: 44px; min-height: 44px">Share on X</button>
         </div>
       </div>
 
@@ -874,8 +874,8 @@
           Share your agentic output securely. Provision a cloud-native workspace for your team while maintaining ultimate local sovereignty over your source data.
         </p>
         <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-            <input type="email" id="cloud-bridge-email" placeholder="Team member email (e.g., test@example.com)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(255,255,255,0.8); color: #1D1D1F; min-width: 200px; font-family: Outfit, sans-serif;" />
-            <button id="generate-cloud-bridge-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: Outfit, sans-serif; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(0,102,255,0.3);">
+            <input type="email" id="cloud-bridge-email" placeholder="Team member email (e.g., test@example.com)" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(255,255,255,0.8); color: #1D1D1F; min-width: 200px; font-family: Outfit, sans-serif;; min-width: 44px; min-height: 44px" />
+            <button id="generate-cloud-bridge-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: Outfit, sans-serif; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 12px rgba(0,102,255,0.3);; min-width: 44px; min-height: 44px">
               Unlock Cloud Collaboration
             </button>
         </div>
@@ -886,37 +886,37 @@
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
 
-        <a href="reputation-engine.html" id="reputation-engine-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
-<a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
-        <a href="viral-loyalty-widget.html" id="loyalty-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Loyalty Engine 💳</a>
-<a href="exit-intent-builder.html" id="exit-intent-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Exit-Intent Pop-up 🛑</a>
-        <a href="share-to-unlock-generator.html" id="share-to-unlock-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share-to-Unlock Generator 🔓</a>
-        <a href="footer-branding-loop.html" id="footer-branding-loop-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Footer Branding Loop ✨</a>
-        <a href="review-reward-generator.html" id="review-reward-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Review Reward Generator ⭐️</a>
-        <a href="link-in-bio-generator.html" id="link-in-bio-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Link-in-Bio Generator 🔗</a>
-        <a href="social-proof-nudge.html" id="social-proof-nudge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Proof Nudge 🔔</a>
-        <a href="win-back.html" id="win-back-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Customer Win-Back 💌</a>
-        <a href="affiliate-badge-builder.html" id="affiliate-badge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Affiliate Badge Builder 💸</a>
-        <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
-        <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Work-Intake Widget 📋</a>
-        <a href="lead-gen.html" id="lead-gen-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Hyperlocal Lead Gen 📍</a>
-        <a href="tip-jar-generator.html" id="tip-jar-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Tip Jar Generator ☕</a>
-        <a href="conversational-manager.html" id="conversational-manager-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Conversational AI Store Manager 🤖</a>
-        <a href="flash-sale-generator.html" id="flash-sale-generator-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-top: 10px;">Flash Sale Generator ⚡</a>
+        <a href="reputation-engine.html" id="reputation-engine-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Reputation & Referral Engine 🚀</a>
+<a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Viral Giveaway Generator</a>
+        <a href="viral-loyalty-widget.html" id="loyalty-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Viral Loyalty Engine 💳</a>
+<a href="exit-intent-builder.html" id="exit-intent-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Exit-Intent Pop-up 🛑</a>
+        <a href="share-to-unlock-generator.html" id="share-to-unlock-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Share-to-Unlock Generator 🔓</a>
+        <a href="footer-branding-loop.html" id="footer-branding-loop-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Footer Branding Loop ✨</a>
+        <a href="review-reward-generator.html" id="review-reward-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Review Reward Generator ⭐️</a>
+        <a href="link-in-bio-generator.html" id="link-in-bio-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Link-in-Bio Generator 🔗</a>
+        <a href="social-proof-nudge.html" id="social-proof-nudge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Social Proof Nudge 🔔</a>
+        <a href="win-back.html" id="win-back-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Customer Win-Back 💌</a>
+        <a href="affiliate-badge-builder.html" id="affiliate-badge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Affiliate Badge Builder 💸</a>
+        <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Social Share Cards ✨</a>
+        <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Work-Intake Widget 📋</a>
+        <a href="lead-gen.html" id="lead-gen-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Hyperlocal Lead Gen 📍</a>
+        <a href="tip-jar-generator.html" id="tip-jar-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;; min-width: 44px; min-height: 44px">Tip Jar Generator ☕</a>
+        <a href="conversational-manager.html" id="conversational-manager-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;; min-width: 44px; min-height: 44px">Conversational AI Store Manager 🤖</a>
+        <a href="flash-sale-generator.html" id="flash-sale-generator-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-top: 10px;; min-width: 44px; min-height: 44px">Flash Sale Generator ⚡</a>
       </div>
 
 
 
       <section aria-label="Unified Agent Feed" id="unified-agent-feed-section" style="order: -1;">
-        <div class="ohc-growth-card app-panel" id="triage-section" style="display: block; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);">
+        <div class="ohc-growth-card app-panel" id="triage-section" style="display: block; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);">
           <h2 style="font-size: 24px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.5px;">Command Center</h2>
           <p style="color: #555; margin-bottom: 20px; font-size: 14px; font-weight: 500;">AI-prepared actions and drafts that need your approval.</p>
           <div class="triage-tab-container" style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 16px;">
-            <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')" style="flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Proposals</button>
-            <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')" style="flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Activity</button>
+            <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')" style="flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Proposals</button>
+            <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')" style="flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Activity</button>
           </div>
           <div id="triage-queue">
-            <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
+            <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                 <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                     <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
                     Welcome to OHC!
@@ -924,7 +924,7 @@
                 <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                     Your business is ready. Check out your generated storefront and see what's next.
                 </p>
-                <a href="storefront.html" id="reputation-engine-link" style="display: flex; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; align-items: center; justify-content: center;">Review Storefront</a>
+                <a href="storefront.html" id="reputation-engine-link" style="display: flex; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; align-items: center; justify-content: center;; min-width: 44px; min-height: 44px">Review Storefront</a>
             </div>
           </div>
         </div>
@@ -933,8 +933,8 @@
       </div>
     </div>
 
-    <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
-      <a href="/setup.html" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+    <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
+      <a href="/setup.html" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;; min-width: 44px; min-height: 44px">
         <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
         Powered by OneHumanCorp
       </a>
@@ -1188,7 +1188,7 @@
                   <div style="width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
                     <img src="/api/v1/growth/milestone/card?milestone_id=10th_order&tenant=${tenant}" alt="10th Order Milestone" style="width: 100%; height: auto; display: block;" />
                   </div>
-                  <a href="https://wa.me/?text=I%20just%20hit%20my%2010th%20order%20on%20OHC!%20Check%20it%20out:%20https://ohc.app/invite/${tenant}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background-color: #25D366; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
+                  <a href="https://wa.me/?text=I%20just%20hit%20my%2010th%20order%20on%20OHC!%20Check%20it%20out:%20https://ohc.app/invite/${tenant}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background-color: #25D366; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; width: 100%; box-sizing: border-box; transition: transform 0.1s;; min-width: 44px; min-height: 44px">
                     <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                     Share to WhatsApp
                   </a>
@@ -1714,7 +1714,7 @@
           agentFeedItems = data.triage || data.agent_feed || (Array.isArray(data) ? data : (data.items || []));
           if (agentFeedItems.length === 0) {
             triageQueue.innerHTML = `
-              <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
+              <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                   <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                       <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
                       Welcome to OHC!
@@ -1722,7 +1722,7 @@
                   <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                       Your business is ready. Check out your generated storefront and see what's next.
                   </p>
-                  <a href="storefront.html" id="reputation-engine-link" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
+                  <a href="storefront.html" id="reputation-engine-link" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;; min-width: 44px; min-height: 44px">Review Storefront</a>
               </div>
             `;
           } else {
@@ -1733,7 +1733,7 @@
           console.error("Unified Feed load error:", err);
           // Show fallback onboarding welcome card for the "Day One" experience if API fails
           triageQueue.innerHTML = `
-            <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
+            <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                 <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                     <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
                     Welcome to OHC!
@@ -1741,7 +1741,7 @@
                 <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                     Your business is ready. Check out your generated storefront and see what's next.
                 </p>
-                <a href="storefront.html" id="reputation-engine-link" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
+                <a href="storefront.html" id="reputation-engine-link" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;; min-width: 44px; min-height: 44px">Review Storefront</a>
             </div>
           `;
         }
@@ -1823,7 +1823,7 @@
               try { payloadObj = JSON.parse(action.action_payload || '{}'); } catch(e){}
 
               return `
-              <div class="triage-item glassmorphism" data-testid="unified-triage-card-${item.thread.id}" id="triage-${action.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+              <div class="triage-item glassmorphism" data-testid="unified-triage-card-${item.thread.id}" id="triage-${action.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
                     <span style="font-size: 18px;">💬</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">${item.thread.channel}</strong>
@@ -1837,8 +1837,8 @@
                   <strong>Draft Reply:</strong><br/>${payloadObj.draft_reply || action.action_type}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${action.id}" onclick="handleTriageAction('${action.id}', true)" style="flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Send Draft</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${action.id}', false)" style="flex: 1; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${action.id}" onclick="handleTriageAction('${action.id}', true)" style="flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;; min-width: 44px; min-height: 44px">Send Draft</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${action.id}', false)" style="flex: 1; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;; min-width: 44px; min-height: 44px">Edit</button>
                 </div>
               </div>
               `;
@@ -1846,15 +1846,15 @@
 
             if (item.feature_type === 'onboarding_welcome' || item.context_payload?.feature_type === 'onboarding_welcome') {
                 return `
-                <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
+                <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                   <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px;">Welcome</div>
                     <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: #0066FF;">Action Required</div>
                   </div>
                   <div class="triage-context" style="font-size: 15px; font-weight: 600; margin-top: 8px; color: #1D1D1F; line-height: 1.4;">${description}</div>
                   <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 16px;">
-                    <button class="triage-btn-approve" onclick="window.location.href='/storefront'" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Review Storefront</button>
-                    <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="width: auto; background: rgba(0,0,0,0.05); border-radius: 8px; color: #555; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;">Dismiss</button>
+                    <button class="triage-btn-approve" onclick="window.location.href='/storefront'" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Review Storefront</button>
+                    <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="width: auto; background: rgba(0,0,0,0.05); border-radius: 8px; color: #555; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Dismiss</button>
                   </div>
                 </div>
               `;
@@ -1871,7 +1871,7 @@
               const price = payload.suggested_price || 0;
               const scope = payload.scope || '';
               return `
-                <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+                <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4);">
                   <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">Draft Quote</div>
                     <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
@@ -1880,9 +1880,9 @@
                   <div style="font-size: 14px; margin-top: 4px; color: #1D1D1F;">Calculated Total: $${price}</div>
                   <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
-                    <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Approve & Send</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;">Edit</button>
-                    <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;">Dismiss</button>
+                    <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Approve & Send</button>
+                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Dismiss</button>
                   </div>
                 </div>
               `;
@@ -1893,7 +1893,7 @@
           if (actionType === 'SocialPostDraft' || item.context_payload?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft') {
             let parsedPayload = item.proposed_action || item.context_payload || {};
             return `
-              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
@@ -1908,8 +1908,8 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Approve & Schedule</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1920,7 +1920,7 @@
             let proposedAction = item.proposed_action || {};
             let draftReply = proposedAction.draft_reply || parsedPayload.draft_reply || '';
             return `
-              <div class="triage-item glassmorphism" data-testid="instagram-dm-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+              <div class="triage-item glassmorphism" data-testid="instagram-dm-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
                     <span style="font-size: 18px;">💬</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">Instagram DM</strong>
@@ -1935,8 +1935,8 @@
                   ${draftReply}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;">Approve & Send</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">Dismiss</button>
+                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;; min-width: 44px; min-height: 44px">Approve & Send</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;; min-width: 44px; min-height: 44px">Dismiss</button>
                 </div>
               </div>
             `;
@@ -1959,7 +1959,7 @@
             const source = parsedPayload.source || item.source || 'instagram';
 
             return `
-              <div class="triage-item glassmorphism app-list-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+              <div class="triage-item glassmorphism app-list-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">💬</span> <strong>${source.replace('_', ' ')}</strong>
@@ -1980,10 +1980,10 @@
                   ${draftReply}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Send Draft</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Edit Draft</button>
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Send Draft</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Send Draft</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Send Draft</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1992,7 +1992,7 @@
           if (actionType === 'Draft Reply') {
             const draftMessage = item.action_payload || item.proposed_action?.message || 'Draft reply ready.';
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">💬</span> <strong>${(item.source || 'Message').replace('_', ' ')}</strong>
@@ -2010,8 +2010,8 @@
                   ${draftMessage}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Send Draft</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;; min-width: 44px; min-height: 44px">Send Draft</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;; min-width: 44px; min-height: 44px">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -2021,7 +2021,7 @@
             let parsedPayload = {};
             try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
@@ -2036,8 +2036,8 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Approve & Schedule</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -2045,16 +2045,16 @@
 
           if (description.includes("reschedule") || description.includes("tentatively booked")) {
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4);">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                   <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
                 <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
-                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Approve</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Edit</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Deny</button>
+                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Approve</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Edit</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;; min-width: 44px; min-height: 44px">Deny</button>
                 </div>
               </div>
             `;
@@ -2062,7 +2062,7 @@
 
           if (item.source === 'Proactive Context Agent') {
             return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 243, 230, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 165, 0, 0.4); position: relative; overflow: hidden;">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 243, 230, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 165, 0, 0.4); position: relative; overflow: hidden;">
                 <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #FF9500;"></div>
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
                   <div>
@@ -2076,23 +2076,23 @@
                   ${description}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px; flex-direction: column;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #FF9500; color: white; padding: 12px; border-radius: 16px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(255,149,0,0.3); cursor: pointer;">Approve & Execute</button>
-                  <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 16px; color: #995500; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #FF9500; color: white; padding: 12px; border-radius: 16px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(255,149,0,0.3); cursor: pointer;; min-width: 44px; min-height: 44px">Approve & Execute</button>
+                  <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 16px; color: #995500; padding: 12px; font-weight: 600; cursor: pointer;; min-width: 44px; min-height: 44px">Dismiss</button>
                 </div>
               </div>
             `;
           }
 
           return `
-            <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+            <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4);">
               <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
                 <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
               </div>
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
               <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
-                <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
+                <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;; min-width: 44px; min-height: 44px">${approveText}</button>
+                <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;; min-width: 44px; min-height: 44px">Dismiss</button>
               </div>
             </div>
             `;
@@ -2107,7 +2107,7 @@
           triageQueue.innerHTML = activities.map(activity => {
             const description = activity.proposed_action?.message || activity.proposed_action?.action_type || activity.context_payload?.description || 'Action completed';
             return `
-              <div class="triage-item glassmorphism" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 12px;">
+              <div class="triage-item glassmorphism" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); border-radius: 16px; padding: 16px; min-width: 44px; min-height: 44px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 12px;">
                 <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                   <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(76, 175, 80, 0.1); color: #4CAF50; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(activity.event_source || 'Unknown').replace('_', ' ')}</div>
                   <div class="triage-priority" style="font-size: 10px; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 8px; font-weight: 600;">${activity.lifecycle_state}</div>
@@ -2647,7 +2647,7 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; min-width: 44px; min-height: 44px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -2668,12 +2668,12 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;; min-width: 44px; min-height: 44px">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;; min-width: 44px; min-height: 44px">Back</button>' : ''}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;; min-width: 44px; min-height: 44px">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                 </div>
             `;
 
@@ -2791,7 +2791,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         #ohc-floating-help-header {
-            padding: 16px;
+            padding: 16px; min-width: 44px; min-height: 44px;
             background: rgba(248, 250, 252, 0.6);
             border-bottom: 1px solid rgba(226, 232, 240, 0.5);
             display: flex;
@@ -2836,7 +2836,7 @@ document.addEventListener('DOMContentLoaded', () => {
             display: none;
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 16px; min-width: 44px; min-height: 44px;
         }
         .ohc-help-content.active {
             display: flex;
@@ -2908,7 +2908,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         /* Tours styles */
         .ohc-tour-card {
-            padding: 16px;
+            padding: 16px; min-width: 44px; min-height: 44px;
             border: 1px solid rgba(226, 232, 240, 0.5);
             border-radius: 8px;
             margin-bottom: 12px;
@@ -2979,17 +2979,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="tab-articles" class="ohc-help-content active">
             <div style="margin-bottom: 16px;">
-                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full Help Center</a>
+                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;; min-width: 44px; min-height: 44px">Open Full Help Center</a>
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
-                <li><a href="/help_article.html?id=my-store-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
-                <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
+                <li><a href="/help_article.html?id=getting-started-1" style="color: #0066FF; text-decoration: none; font-size: 14px;; min-width: 44px; min-height: 44px">Welcome to One Human Corp</a></li>
+                <li><a href="/help_article.html?id=my-store-1" style="color: #0066FF; text-decoration: none; font-size: 14px;; min-width: 44px; min-height: 44px">Setting up your storefront</a></li>
+                <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;; min-width: 44px; min-height: 44px">Accepting your first payment</a></li>
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
-                <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
-                <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
+                <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;; min-width: 44px; min-height: 44px">API Reference for advanced users</a>
+                <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;; min-width: 44px; min-height: 44px">Tooltip Registry</a>
             </div>
         </div>
 
@@ -3195,7 +3195,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; min-width: 44px; min-height: 44px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
 
             function renderStep() {
@@ -3214,12 +3214,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;; min-width: 44px; min-height: 44px">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;; min-width: 44px; min-height: 44px">Back</button>' : ''}
+                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;; min-width: 44px; min-height: 44px">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                     </div>
                 `;
 
