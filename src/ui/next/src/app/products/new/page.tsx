@@ -152,9 +152,9 @@ function AutoCatalogContent() {
           description: productData.description,
           price: productData.price,
           item_type: productData.category,
-          is_subscription: productData.isSubscription,
-          subscription_interval: productData.subscriptionInterval,
-          subscription_discount: productData.subscriptionDiscount ? parseInt(productData.subscriptionDiscount) : undefined
+          is_subscribable: productData.isSubscription,
+          subscription_frequency: productData.subscriptionInterval,
+          subscription_discount_percent: productData.subscriptionDiscount ? parseInt(productData.subscriptionDiscount) : undefined
         })
       });
       const data = await response.json().catch(() => ({}));
