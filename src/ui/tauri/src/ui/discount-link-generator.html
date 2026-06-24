@@ -246,7 +246,7 @@
       margin-bottom: 24px;
     }
 
-    .mock-storefront {
+    .preview-storefront {
       border: 1px solid var(--card-border);
       border-radius: 16px;
       overflow: hidden;
@@ -254,14 +254,14 @@
       display: flex;
       flex-direction: column;
     }
-    .mock-storefront-header {
+    .preview-storefront-header {
       padding: 16px;
       background: var(--card-bg);
       border-bottom: 1px solid var(--card-border);
       text-align: center;
       font-weight: 600;
     }
-    .mock-storefront-banner {
+    .preview-storefront-banner {
       background: var(--primary);
       color: white;
       text-align: center;
@@ -272,37 +272,20 @@
       flex-direction: column;
       gap: 4px;
     }
-    .mock-storefront-body {
+    .preview-storefront-body {
       padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 16px;
     }
-    .mock-product {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      gap: 16px;
-    }
-    .mock-product-img {
-      width: 60px;
-      height: 60px;
-      background: rgba(134, 134, 139, 0.2);
-      border-radius: 8px;
-    }
-    .mock-product-info {
-      flex: 1;
-    }
-    .mock-storefront-footer {
+    .preview-storefront-footer {
       padding: 16px;
       text-align: center;
       font-size: 12px;
       color: #86868b;
       border-top: 1px solid var(--card-border);
     }
-    .mock-storefront-footer a {
+    .preview-storefront-footer a {
       color: inherit;
       text-decoration: none;
     }
@@ -366,22 +349,18 @@
         <div class="card glassmorphism">
           <div class="preview-badge">Live Preview</div>
 
-          <div class="mock-storefront" id="widget-preview">
-            <div class="mock-storefront-header">Your Store</div>
-            <div class="mock-storefront-banner">
+          <div class="preview-storefront" id="widget-preview">
+            <div class="preview-storefront-header">Your Store</div>
+            <div class="preview-storefront-banner">
                 <strong id="preview-code">WELCOME10</strong>
                 <span id="preview-amount">10% off your entire order automatically applied!</span>
             </div>
-            <div class="mock-storefront-body">
-                <div class="mock-product">
-                    <div class="mock-product-img"></div>
-                    <div class="mock-product-info">
-                        <div style="height: 14px; width: 80%; background: rgba(134,134,139,0.2); border-radius: 4px; margin-bottom: 8px;"></div>
-                        <div style="height: 14px; width: 40%; background: rgba(134,134,139,0.2); border-radius: 4px;"></div>
-                    </div>
+            <div class="preview-storefront-body">
+                <div style="text-align: center; color: #86868b; padding: 40px 0;">
+                    Store content goes here
                 </div>
             </div>
-            <div class="mock-storefront-footer" id="preview-branding">
+            <div class="preview-storefront-footer" id="preview-branding">
               <a href="#">⚡ Powered by OHC</a>
             </div>
           </div>

@@ -331,43 +331,12 @@
       border-color: #374151;
     }
 
-    .preview-website-mock {
+    .preview-website-container {
       padding: 30px;
       flex: 1;
       display: flex;
       flex-direction: column;
       gap: 20px;
-    }
-
-    .mock-header {
-      height: 20px;
-      background: rgba(0,0,0,0.05);
-      border-radius: 4px;
-      width: 100%;
-    }
-
-    .mock-hero {
-      height: 100px;
-      background: rgba(0,0,0,0.03);
-      border-radius: 8px;
-      width: 100%;
-    }
-
-    .mock-text {
-      height: 12px;
-      background: rgba(0,0,0,0.05);
-      border-radius: 4px;
-      width: 80%;
-    }
-
-    .mock-text.short {
-      width: 60%;
-    }
-
-    .preview-box.dark .mock-header,
-    .preview-box.dark .mock-hero,
-    .preview-box.dark .mock-text {
-      background: rgba(255,255,255,0.05);
     }
 
     /* Floating Pill Badge Style */
@@ -585,12 +554,10 @@
         </div>
 
         <div class="preview-box" id="widget-preview">
-          <div class="preview-website-mock">
-            <div class="mock-header"></div>
-            <div class="mock-hero"></div>
-            <div class="mock-text"></div>
-            <div class="mock-text short"></div>
-            <div class="mock-text"></div>
+          <div class="preview-website-container">
+            <div style="text-align: center; color: #86868b; padding: 40px 0;">
+                Your website content goes here
+            </div>
           </div>
 
           <a href="#" class="ohc-badge-pill" id="preview-badge-pill">
