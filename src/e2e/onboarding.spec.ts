@@ -244,7 +244,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await expect(generateButton).toBeDisabled();
 
     // We shouldn't see a loading state.
-    await expect(page.locator('#step-approval')).not.toBeVisible();
+    await expect(page.locator('#step-loading')).not.toBeVisible();
   });
 
   // Test 4: Smart defaults fallback on partial info

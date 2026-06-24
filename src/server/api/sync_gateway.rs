@@ -35,7 +35,7 @@ pub fn router_with_pool<S: Clone + Send + Sync + 'static>() -> Router<sqlx::PgPo
 pub async fn power_sync_pull_handler(
     State(pool): State<sqlx::PgPool>,
     headers: axum::http::HeaderMap,
-    Json(payload): Json<serde_json::Value>,
+    Json(_payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
     let mut tonic_request = tonic::Request::new(::server_ohc::orchestration::PowerSyncPullRequest {});

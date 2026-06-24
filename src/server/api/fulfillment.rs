@@ -711,8 +711,6 @@ mod tests {
     use serde_json::json;
 
     #[test]
-
-    #[test]
     fn parses_shippo_tracking_webhook_with_valid_data() {
         let payload = json!({
             "event": "track_updated",

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Wizard Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the onboarding start page
-    await page.goto('/onboarding');
+    await page.goto('/setup.html');
   });
 
   test('successfully completes the wizard with drafting and instant image url', async ({ page }) => {
