@@ -293,6 +293,15 @@ impl WorkflowExecutor {
                         Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
                             ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg)
                         }
+                        Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
+                            return Err(format!("USER_FIXABLE: {}", msg));
+                        }
+                        Err(ohc_builtin_agent_core::types::ToolError::Fatal(msg)) => {
+                            return Err(format!("Fatal tool error: {}", msg));
+                        }
+                        Err(ohc_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
+                            return Err(format!("Unexpected tool error: {}", msg));
+                        }
                         Err(e) => {
                             return Err(format!("Tool {} execution failed: {}", tool_name, e));
                         }
@@ -500,6 +509,15 @@ impl WorkflowExecutor {
                             Ok(res) => res,
                             Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
                                 ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg)
+                            }
+                            Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
+                                return Err(format!("USER_FIXABLE: {}", msg));
+                            }
+                            Err(ohc_builtin_agent_core::types::ToolError::Fatal(msg)) => {
+                                return Err(format!("Fatal tool error: {}", msg));
+                            }
+                            Err(ohc_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
+                                return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(e) => {
                                 return Err(format!("Tool {} execution failed: {}", tool_name, e));
