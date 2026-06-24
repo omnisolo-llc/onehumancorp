@@ -4,6 +4,7 @@ filegroup(
         "identity.rs",
         "mod.rs",
         "webhook.rs",
+        "customer_memory.rs",
     ],
     visibility = ["//visibility:public"],
 )

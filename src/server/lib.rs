@@ -460,6 +460,7 @@ pub mod services {
     pub mod cache_invalidator;
     pub mod inventory;
     pub mod agent_feed;
+    pub mod customer_memory_graph;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
