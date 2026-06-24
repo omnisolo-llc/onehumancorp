@@ -271,7 +271,9 @@ pub async fn reserve_inventory_handler(
         Some(info) => info.org_id.clone(),
         None => {
             let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-            if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
+            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()) {
+                tenant_override.to_string()
+            } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
                 id
             } else {
                 return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
