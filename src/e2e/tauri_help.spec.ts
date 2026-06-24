@@ -48,9 +48,9 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
 
   test('Persona: Business Owner interacts with a Tooltip', async ({ page }) => {
     await page.goto('/api/ui/dashboard.html?test_walkthrough=true');
-    const shareLink = page.locator('#generate-link-btn');
-    await expect(shareLink).toBeVisible();
-    await shareLink.hover();
-    await expect(page.locator('text=Click here to share access with a team member.').first()).toBeVisible();
+    const totalSalesLabel = page.locator('text=Total Sales').first();
+    await expect(totalSalesLabel).toBeVisible();
+    await totalSalesLabel.hover();
+    await expect(page.locator('text=Total revenue generated from all your orders.').first()).toBeVisible();
   });
 });
