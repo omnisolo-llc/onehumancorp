@@ -216,6 +216,7 @@ export function HelpWidget() {
       <div className="fixed bottom-6 right-6 z-[90]" data-ui-overlay="true">
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
+            id="ohc-floating-help-btn"
             onClick={() => setOpen(!open)}
             className="w-14 h-14 bg-blue-600/90 backdrop-blur-[20px] saturate-200 text-white rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.3)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
             aria-label="Help"
@@ -228,8 +229,8 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
-          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide">
+        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
+          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide relative pr-12">
             {helpTabs.map((t) => (
               <button
                 key={t.id}
@@ -242,6 +243,14 @@ export function HelpWidget() {
                 {t.label}
               </button>
             ))}
+            <button
+              id="ohc-floating-help-close"
+              onClick={() => setOpen(false)}
+              className="absolute right-2 top-2 p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded-full transition-colors z-10 min-h-[32px] min-w-[32px] flex items-center justify-center"
+              aria-label="Close Help Widget"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
