@@ -7,12 +7,12 @@ test.describe('Morning Briefing & Triage Feed', () => {
     await page.goto('/dashboard.html');
 
     // 2. User views the "Morning Briefing" Triage Feed.
-    await expect(page.getByText('Unified Agent Feed')).toBeVisible();
-    await expect(page.getByText('Review AI-prepared actions and reply drafts across all channels.')).toBeVisible();
+    await expect(page.getByText('Morning Briefing')).toBeVisible();
+    await expect(page.getByText('AI-prepared actions and drafts that need your approval.')).toBeVisible();
 
     // 3. User selects a "Quote Request" triage item.
     // The e2e-seed.sql adds: "Operations" / "Mark requested to reschedule his 4 PM lesson"
-    const itemButton = page.locator('[data-testid="triage-card-app-mock-ab12-34f7-e43e-7264a9c4021d"]');
+    const itemButton = page.locator('[data-testid="triage-card-app-test-ab12-34f7-e43e-7264a9c4021d"]');
     await expect(itemButton).toBeVisible();
 
     // 4. User reviews the AI-generated quote and drafted reply.
@@ -20,7 +20,7 @@ test.describe('Morning Briefing & Triage Feed', () => {
     await expect(itemButton.locator('text=Mark requested to reschedule his 4 PM lesson')).toBeVisible();
 
     // 5. User taps "Approve".
-    const approveBtn = itemButton.getByTestId('approve-proposal');
+    const approveBtn = itemButton.getByTestId('triage-approve-app-test-ab12-34f7-e43e-7264a9c4021d');
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
