@@ -632,6 +632,7 @@ body {
 }
 
 .glass-card {
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.65);
   -webkit-backdrop-filter: blur(30px) saturate(210%);
   backdrop-filter: blur(30px) saturate(210%);
@@ -764,7 +765,8 @@ button, .app-button, .charge-btn {
 
 .setup-page #setup-screen .setup-nav-button {
   width: fit-content;
-  min-height: 32px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 6px 10px;
   border: 1px solid #d8e0ea;
   border-radius: 999px;
@@ -786,7 +788,7 @@ button, .app-button, .charge-btn {
 
 .setup-page #setup-screen .setup-nav-spacer {
   width: 92px;
-  height: 32px;
+  height: 44px;
 }
 
 .setup-page #setup-screen > div:first-child h1 {
@@ -921,7 +923,8 @@ button, .app-button, .charge-btn {
 .setup-page #setup-screen button[class*="text-[#0066FF]"],
 .setup-page #setup-screen button.self-start {
   width: auto;
-  min-height: 32px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0;
   border: 0;
   background: transparent !important;
