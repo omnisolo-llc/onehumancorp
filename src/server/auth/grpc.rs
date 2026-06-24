@@ -178,9 +178,10 @@ pub fn interceptor(cfg: AuthConfig) -> impl Fn(Request<()>) -> Result<Request<()
         cfg.authenticate(&req)?;
 
         // Enhance request with SPIFFE identity / AuthInfo
-        if let Some(spiffe_id) = req.metadata().get("x-spiffe-id").and_then(|h| h.to_str().ok()) {
-            if validate_spiffe_id(spiffe_id).is_ok() {
-                let id_trimmed = spiffe_id.strip_prefix("spiffe://").unwrap_or(spiffe_id);
+        let spiffe_id_opt = req.metadata().get("x-spiffe-id").and_then(|h| h.to_str().ok()).map(|s| s.to_string());
+        if let Some(spiffe_id) = spiffe_id_opt {
+            if validate_spiffe_id(&spiffe_id).is_ok() {
+                let id_trimmed = spiffe_id.strip_prefix("spiffe://").unwrap_or(&spiffe_id);
                 let parts: Vec<&str> = id_trimmed.split('/').collect();
                 if parts.len() >= 5 && parts[1] == "org" && parts[3] == "agent" {
                     let tenant_id = parts[2].to_string();
