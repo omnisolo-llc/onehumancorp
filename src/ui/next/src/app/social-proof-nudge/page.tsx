@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function SocialProofNudgePage() {
   const router = useRouter();
@@ -190,9 +191,7 @@ export default function SocialProofNudgePage() {
 
                  {!hasPro && (
                      <div className="absolute bottom-2 left-6 z-10">
-                         <a href="/onboarding?ref=social-proof-nudge" className="text-[10px] font-bold uppercase tracking-wider opacity-60 hover:opacity-100 transition-opacity drop-shadow-sm" style={{ color: theme === 'dark' ? '#fff' : '#000' }}>
-                             ⚡ Powered by OHC
-                         </a>
+                         <PoweredByOHC tenantId="social-proof-nudge" />
                      </div>
                  )}
              </div>
