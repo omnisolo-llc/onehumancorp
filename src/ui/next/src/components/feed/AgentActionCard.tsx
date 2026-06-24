@@ -85,6 +85,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "quote_draft" ||
           (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "multi_currency_invoice_draft" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "social_post_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ||
@@ -232,6 +234,45 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       </span>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "multi_currency_invoice_draft" && (
+              <div
+                className="mb-4 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
+                data-testid="multi-currency-invoice-draft-card"
+              >
+                <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Draft Invoice Ready:{" "}
+                  {(approval.proposed_action || approval.context_payload).client_name}
+                </div>
+                <div className="flex flex-col gap-1 text-gray-900 dark:text-white font-medium text-lg">
+                  <span>
+                    {(approval.proposed_action || approval.context_payload).amount}{" "}
+                    {(approval.proposed_action || approval.context_payload).currency}
+                  </span>
+                  <span className="text-sm text-gray-500 font-normal">
+                    ≈ {(approval.proposed_action || approval.context_payload).base_amount.toFixed(2)}{" "}
+                    {(approval.proposed_action || approval.context_payload).base_currency} (Rate: {(approval.proposed_action || approval.context_payload).exchange_rate})
+                  </span>
+                  <span className="text-sm text-amber-600 font-medium">
+                    Tax Set-Aside: {(approval.proposed_action || approval.context_payload).tax_amount.toFixed(2)}{" "}
+                    {(approval.proposed_action || approval.context_payload).base_currency}
+                  </span>
                 </div>
               </div>
             )}
@@ -1397,6 +1438,42 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "multi_currency_invoice_draft" ? (
+          <>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+              aria-label="Approve & Send Invoice"
+              data-testid="approve-send-invoice"
+            >
+              Approve & Send
+            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() =>
+                  handleDecision(
+                    approval.id,
+                    false,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                aria-label="Discard Invoice"
+                data-testid="discard-invoice"
+              >
+                Discard
+              </button>
+            </div>
+          </>
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "quote_draft" ? (
           <>

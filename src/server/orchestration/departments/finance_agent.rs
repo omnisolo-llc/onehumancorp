@@ -21,7 +21,9 @@ impl Department for FinanceAgent {
         vec![
             "tenant.payment.received".to_string(),
             "payment.captured".to_string(),
-            "charge.dispute.created".to_string()
+            "charge.dispute.created".to_string(),
+            "invoice.created".to_string(),
+            "invoice.paid".to_string()
         ]
     }
 
@@ -41,12 +43,60 @@ impl Department for FinanceAgent {
             "Analyze transaction for split tags and record ledger split".to_string()
         } else if event.event_type == "charge.dispute.created" {
             "Draft dispute resolution for review".to_string()
+        } else if event.event_type == "invoice.created" {
+            "Review Multi-Currency Invoice Draft".to_string()
+        } else if event.event_type == "invoice.paid" {
+            "Record Tax Liability for Paid Invoice".to_string()
         } else {
             "Record deposit and track payment".to_string()
         };
 
         let mut payload = event.payload.clone();
-        if event.event_type == "charge.dispute.created" {
+
+        if event.event_type == "invoice.created" {
+            let amount = event.payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let target_currency = event.payload.get("currency").and_then(|v| v.as_str()).unwrap_or("USD");
+
+            // In a real app we'd fetch from redis `exchange_rate:EUR_USD` via a helper.
+            // For MVP we assume standard rate if not USD.
+            let exchange_rate = if target_currency == "EUR" { 1.08 } else if target_currency == "GBP" { 1.25 } else { 1.0 };
+            let base_amount = amount / exchange_rate;
+            let tax_rate = 0.10; // 10% flat tax for MVP
+            let tax_amount = base_amount * tax_rate;
+
+            payload = serde_json::json!({
+                "feature_type": "multi_currency_invoice_draft",
+                "invoice_id": event.payload.get("id").and_then(|v| v.as_str()).unwrap_or(""),
+                "client_name": event.payload.get("client_name").and_then(|v| v.as_str()).unwrap_or("Client"),
+                "currency": target_currency,
+                "amount": amount,
+                "base_currency": "USD",
+                "exchange_rate": exchange_rate,
+                "base_amount": base_amount,
+                "tax_amount": tax_amount,
+                "tax_type": "VAT",
+                "original_message": format!("Draft Invoice ready for {}", event.payload.get("client_name").and_then(|v| v.as_str()).unwrap_or("Client"))
+            });
+        } else if event.event_type == "invoice.paid" {
+            // Usually we'd do a DB call here or the orchestrator does it
+            let amount = event.payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let target_currency = event.payload.get("currency").and_then(|v| v.as_str()).unwrap_or("USD");
+            let exchange_rate = if target_currency == "EUR" { 1.08 } else if target_currency == "GBP" { 1.25 } else { 1.0 };
+            let base_amount = amount / exchange_rate;
+            let tax_rate = 0.10;
+            let tax_amount = base_amount * tax_rate;
+
+            payload = serde_json::json!({
+                "feature_type": "record_tax_ledger",
+                "invoice_id": event.payload.get("id").and_then(|v| v.as_str()).unwrap_or(""),
+                "base_amount": base_amount,
+                "tax_amount": tax_amount,
+                "tax_type": "VAT",
+                "currency": target_currency,
+                "base_currency": "USD",
+                "exchange_rate": exchange_rate
+            });
+        } else if event.event_type == "charge.dispute.created" {
             // Reconstruct the simulated payload the UI expects for dispute resolution
             payload = serde_json::json!({
                 "feature_type": "dispute_resolution",

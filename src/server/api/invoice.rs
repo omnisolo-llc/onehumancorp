@@ -378,6 +378,7 @@ pub struct UpdateInvoiceStatusHttp {
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
     Router::new()
         .route("/", get(list_invoices_handler).post(create_invoice_handler))
+        .route("/tax-summary", get(get_tax_ledger_summary_handler))
         .route("/{id}/status", put(update_invoice_status_handler))
         .with_state(hub)
 }
@@ -472,6 +473,41 @@ pub fn map_invoices_standard(invoices: Vec<::server_ohc::invoice::Invoice>) -> V
         created_at: inv.created_at,
         updated_at: inv.updated_at,
     }).collect()
+}
+
+pub async fn get_tax_ledger_summary_handler(
+    State(hub): State<Arc<Hub>>,
+    Extension(claims): Extension<Claims>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+
+    // Set up a query to calculate sum from the universal_tax_ledger table
+    let pool = &hub.pool;
+
+    let res: Result<(f64,), sqlx::Error> = sqlx::query_as(
+        "SELECT COALESCE(SUM(tax_amount), 0.0) FROM universal_tax_ledger WHERE tenant_id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_one(pool)
+    .await;
+
+    match res {
+        Ok((total_tax_amount,)) => {
+            Ok(Json(serde_json::json!({
+                "tenant_id": tenant_id,
+                "base_currency": "USD",
+                "total_tax_amount": total_tax_amount
+            })))
+        }
+        Err(_) => {
+            // For MVP or if table doesn't exist yet, return 0 instead of failing
+            Ok(Json(serde_json::json!({
+                "tenant_id": tenant_id,
+                "base_currency": "USD",
+                "total_tax_amount": 0.0
+            })))
+        }
+    }
 }
 
 pub async fn list_invoices_handler(

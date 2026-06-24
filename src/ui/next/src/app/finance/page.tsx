@@ -5,6 +5,7 @@ import { AppShell } from '../components/AppShell';
 
 export default function FinancePage() {
     const [invoices, setInvoices] = useState<any[]>([]);
+    const [taxSummary, setTaxSummary] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [showDraftModal, setShowDraftModal] = useState(false);
     const [draftInvoice, setDraftInvoice] = useState<any>(null);
@@ -18,13 +19,23 @@ export default function FinancePage() {
             }
         } catch (e) {
             console.error("Failed to fetch invoices", e);
-        } finally {
-            setLoading(false);
+        }
+    };
+
+    const fetchTaxSummary = async () => {
+        try {
+            const res = await fetch('/api/v1/invoices/tax-summary');
+            if (res.ok) {
+                const data = await res.json();
+                setTaxSummary(data);
+            }
+        } catch (e) {
+            console.error("Failed to fetch tax summary", e);
         }
     };
 
     useEffect(() => {
-        fetchInvoices();
+        Promise.all([fetchInvoices(), fetchTaxSummary()]).finally(() => setLoading(false));
     }, []);
 
     const handleCreateInvoice = async () => {
@@ -64,6 +75,26 @@ export default function FinancePage() {
                     <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">Finance & Invoicing</h1>
                     <p className="text-gray-500 mt-2 text-sm">Manage your cash flow, invoices, and deposits.</p>
                 </header>
+
+                {taxSummary && (
+                    <div className="mb-6 p-6 rounded-[16px] bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-gray-800 border border-indigo-100 dark:border-indigo-800/50 shadow-sm" data-testid="tax-summary-card">
+                        <h3 className="text-lg font-bold font-outfit text-indigo-900 dark:text-indigo-200 mb-2">Tax Liability Summary</h3>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex-1">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Total Tax Set-Aside</p>
+                                <p className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">
+                                    ${(taxSummary.total_tax_amount || 0).toFixed(2)}
+                                </p>
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Base Currency</p>
+                                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {taxSummary.base_currency || "USD"}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Triage Feed Simulation */}
                 <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-4 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors" onClick={handleCreateInvoice}>

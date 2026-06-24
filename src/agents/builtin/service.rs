@@ -201,7 +201,8 @@ impl AgentServiceImpl {
                             Arc::new(ConsolidationWorker::new(
                                 repo.clone(),
                                 Duration::from_secs(3600),
-                                180, None,
+                                180,
+                                None,
                             ))
                             .spawn_background_task(),
                         );
@@ -219,7 +220,8 @@ impl AgentServiceImpl {
                             Arc::new(ConsolidationWorker::new(
                                 repo.clone(),
                                 Duration::from_secs(3600),
-                                180, None,
+                                180,
+                                None,
                             ))
                             .spawn_background_task(),
                         );
@@ -677,16 +679,16 @@ impl AgentServiceImpl {
             long_term_memory,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
-                        manually_approved_tool_calls: vec![],
-                        enable_openai_3_hook_guardrails: false,
-                        openai_input_max_length: 1000000,
-                        openai_input_require_patterns: vec![],
-                        openai_input_deny_patterns: vec![],
-                        openai_output_min_length: 0,
-                        openai_output_require_json: false,
-                        openai_output_deny_patterns: vec![],
-                        openai_tool_allowed_tools: vec![],
-                        openai_tool_block_args: vec![],
+            manually_approved_tool_calls: vec![],
+            enable_openai_3_hook_guardrails: false,
+            openai_input_max_length: 1000000,
+            openai_input_require_patterns: vec![],
+            openai_input_deny_patterns: vec![],
+            openai_output_min_length: 0,
+            openai_output_require_json: false,
+            openai_output_deny_patterns: vec![],
+            openai_tool_allowed_tools: vec![],
+            openai_tool_block_args: vec![],
             enable_tao_orchestration_loop: req.enable_tao_orchestration_loop,
         }
     }

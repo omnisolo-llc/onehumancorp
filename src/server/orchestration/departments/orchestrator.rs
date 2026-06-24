@@ -979,6 +979,55 @@ impl DepartmentOrchestrator {
                             {
                                 tracing::error!("Failed to insert invoice: {}", e);
                             }
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("multi_currency_invoice_draft") {
+                        // Actually create the invoice using the approved data
+                        let invoice_id = payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or_else(|| "");
+                        let client_name = payload.get("client_name").and_then(|v| v.as_str()).unwrap_or("Client");
+                        let currency = payload.get("currency").and_then(|v| v.as_str()).unwrap_or("USD");
+                        let amount = payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let exchange_rate = payload.get("exchange_rate").and_then(|v| v.as_f64()).unwrap_or(1.0);
+                        let tax_amount = payload.get("tax_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let now = chrono::Utc::now().timestamp();
+
+                        let invoice_uuid = if invoice_id.is_empty() { uuid::Uuid::new_v4().to_string() } else { invoice_id.to_string() };
+
+                        let mut tx = self.db.pool.begin().await.unwrap();
+                        let _ = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents, exchange_rate, tax_amount) VALUES ($1, $2, 'Client', $3, 'draft', $4, $5, $6, 0, 'draft', 0, 0, $7, $8) ON CONFLICT(id) DO UPDATE SET exchange_rate = EXCLUDED.exchange_rate, tax_amount = EXCLUDED.tax_amount")
+                            .bind(&invoice_uuid)
+                            .bind(tenant_id)
+                            .bind(client_name)
+                            .bind(now + 7 * 24 * 60 * 60)
+                            .bind(currency)
+                            .bind(amount)
+                            .bind(exchange_rate)
+                            .bind(tax_amount)
+                            .execute(&mut *tx)
+                            .await;
+                        let _ = tx.commit().await;
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("record_tax_ledger") {
+                        let invoice_id = payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let tax_amount = payload.get("tax_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let base_amount = payload.get("base_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let currency = payload.get("currency").and_then(|v| v.as_str()).unwrap_or("USD");
+                        let base_currency = payload.get("base_currency").and_then(|v| v.as_str()).unwrap_or("USD");
+                        let exchange_rate = payload.get("exchange_rate").and_then(|v| v.as_f64()).unwrap_or(1.0);
+                        let entry_id = uuid::Uuid::new_v4().to_string();
+
+                        let mut tx = self.db.pool.begin().await.unwrap();
+                        let _ = ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await;
+
+                        let _ = sqlx::query("INSERT INTO universal_tax_ledger (id, tenant_id, invoice_id, currency, base_currency, exchange_rate, total_amount, tax_amount, tax_type, direction) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'VAT', 'CREDIT')")
+                            .bind(&entry_id)
+                            .bind(tenant_id)
+                            .bind(invoice_id)
+                            .bind(currency)
+                            .bind(base_currency)
+                            .bind(exchange_rate)
+                            .bind(base_amount)
+                            .bind(tax_amount)
+                            .execute(&mut *tx)
+                            .await;
+                        let _ = tx.commit().await;
 
                             if !inbox_message_id.is_empty() {
                                 if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")

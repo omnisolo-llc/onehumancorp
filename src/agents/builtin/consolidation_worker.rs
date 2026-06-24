@@ -31,9 +31,15 @@ impl ConsolidationWorker {
         let conflicts_resolved = match self.repository.auto_resolve_conflicts().await {
             Ok(count) => count,
             Err(e) => {
-                tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
+                tracing::error!(
+                    "Consolidation Worker: Failed to resolve memory conflicts: {}",
+                    e
+                );
                 if let Some(ref cb) = self.telemetry_error_callback {
-                    cb("Consolidation Worker: Failed to resolve memory conflicts", &e);
+                    cb(
+                        "Consolidation Worker: Failed to resolve memory conflicts",
+                        &e,
+                    );
                 }
                 return Err(e);
             }
@@ -151,7 +157,7 @@ mod tests {
             repo.clone(),
             Duration::from_millis(50),
             180,
-            None
+            None,
         ));
 
         let handle = worker.spawn_background_task();
@@ -219,7 +225,12 @@ mod tests {
         repo.upsert(&conflict_loser).await.unwrap();
         repo.upsert(&conflict_winner).await.unwrap();
 
-        let worker = Arc::new(ConsolidationWorker::new(repo.clone(), std::time::Duration::from_millis(10), 180, None));
+        let worker = Arc::new(ConsolidationWorker::new(
+            repo.clone(),
+            std::time::Duration::from_millis(10),
+            180,
+            None,
+        ));
         let handle = worker.spawn_background_task();
 
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
@@ -240,7 +251,10 @@ mod tests {
 
         assert_eq!(id, "conflict_winner", "The winner must be preserved");
         // Loser has 1, winner has 2, logic increments winner by loser + 1 -> 2 + 1 + 1 = 4.
-        assert_eq!(ref_count, 4, "The winner should inherit the loser's reference count");
+        assert_eq!(
+            ref_count, 4,
+            "The winner should inherit the loser's reference count"
+        );
         handle.abort();
     }
 }

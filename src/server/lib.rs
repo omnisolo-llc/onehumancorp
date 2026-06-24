@@ -460,6 +460,7 @@ pub mod services {
     pub mod cache_invalidator;
     pub mod inventory;
     pub mod agent_feed;
+    pub mod customer_memory_graph;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2561,6 +2562,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     promoter_worker.start();
 
     ops_worker.start();
+
+    let exchange_rate_worker = crate::workers::exchange_rate_worker::ExchangeRateWorker::new(db.clone());
+    exchange_rate_worker.start();
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 

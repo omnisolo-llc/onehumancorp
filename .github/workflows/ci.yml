@@ -374,6 +374,7 @@ jobs:
       - name: Test Playwright UI E2E target
         run: |
           bazelisk test "${{ matrix.target }}" \
+            --test_env=SOURCE_REPO_ROOT="$GITHUB_WORKSPACE" \
             --local_test_jobs="$(nproc)" \
             --jobs="$(nproc)" \
             --nocache_test_results

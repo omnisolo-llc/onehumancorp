@@ -125,7 +125,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
      await customerPage.getByRole('button', { name: "Pay" }).click();
 
      // Should fail since it's already reserved by POS
-     await expect(customerPage.getByText('Item just sold out.')).toBeVisible();
+     await expect(customerPage.getByText('Item is currently being checked out.')).toBeVisible();
      await customerContext.close();
   });
 

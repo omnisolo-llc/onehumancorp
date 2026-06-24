@@ -186,7 +186,7 @@ async fn list_workspaces(
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let mut workspaces = match &db.store {
+    let workspaces = match &db.store {
         DbStore::Sqlite(pool) => {
             let rows = sqlx::query(
                 "SELECT id, name, default_work_dir, default_model, 
@@ -369,7 +369,7 @@ async fn list_tasks(
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let mut tasks = match &db.store {
+    let tasks = match &db.store {
         DbStore::Sqlite(pool) => {
             let rows = sqlx::query(
                 "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived, 

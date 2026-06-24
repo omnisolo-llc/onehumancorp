@@ -361,6 +361,7 @@ where
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
         .route("/referrals/stats", get(handle_referral_stats))
+        .route("/referrals/leaderboard", get(handle_referral_leaderboard))
         .route("/referrals/click", post(handle_referral_click_post).get(handle_referral_click_get))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/referrals/tier", get(handle_referral_tier))
@@ -1577,8 +1578,8 @@ async fn handle_storefront_embed(
     let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
 
     let mut has_pro = false;
-    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
-        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+    if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
             .await
@@ -1767,8 +1768,8 @@ async fn handle_og_card(
     }
 
     let mut has_pro = false;
-    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
-        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+    if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
             .await
@@ -1990,8 +1991,8 @@ async fn handle_get_milestone_card(
     // Fetch business name - handle "DEFAULT" and ID vs tenant_id
     let mut business_name = "My Awesome Store".to_string();
     let mut has_pro = false;
-    if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(tenant_id).is_ok() {
-        let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT business_name, plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+    if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(&tenant_id).is_ok() {
+        let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT name as business_name, plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant_id)
             .fetch_optional(&state.pool)
             .await
@@ -2262,7 +2263,46 @@ async fn handle_referral_click_get(
     Ok(axum::response::Redirect::to(&redirect_url).into_response())
 }
 
+
+#[derive(Debug, Serialize)]
+pub struct LeaderboardEntry {
+    pub user_id: String,
+    pub conversions: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReferralLeaderboardResponse {
+    pub leaderboard: Vec<LeaderboardEntry>,
+}
+
+async fn handle_referral_leaderboard(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<ReferralLeaderboardResponse>, StatusCode> {
+    let rows = sqlx::query("SELECT user_id, conversions FROM referrals WHERE tenant_id = $1 ORDER BY conversions DESC LIMIT 5")
+        .bind(&auth_info.org_id)
+        .fetch_all(&state.pool)
+        .await;
+
+    let mut leaderboard = Vec::new();
+
+    if let Ok(results) = rows {
+        use sqlx::Row;
+        for row in results {
+            let user_id: String = row.get(0);
+            let conversions: i32 = row.get(1);
+            leaderboard.push(LeaderboardEntry {
+                user_id,
+                conversions: conversions as i64,
+            });
+        }
+    }
+
+    Ok(Json(ReferralLeaderboardResponse { leaderboard }))
+}
+
 async fn handle_referral_stats(
+
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
@@ -2745,6 +2785,67 @@ mod tests {
 
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_generated"));
+    }
+
+
+    #[tokio::test]
+    async fn test_referral_leaderboard() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+
+        let tenant_id = "test-org";
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO NOTHING")
+            .bind(tenant_id)
+            .execute(&pool).await.unwrap();
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: tenant_id.to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        // Insert some dummy referrals with different conversions
+        sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, $5, 0) ON CONFLICT DO NOTHING")
+            .bind("test-ref-1")
+            .bind(tenant_id)
+            .bind("user1")
+            .bind("code1")
+            .bind(10)
+            .execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, $5, 0) ON CONFLICT DO NOTHING")
+            .bind("test-ref-2")
+            .bind(tenant_id)
+            .bind("user2")
+            .bind("code2")
+            .bind(5)
+            .execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, $5, 0) ON CONFLICT DO NOTHING")
+            .bind("test-ref-3")
+            .bind(tenant_id)
+            .bind("user3")
+            .bind("code3")
+            .bind(20)
+            .execute(&pool).await.unwrap();
+
+        let res = handle_referral_leaderboard(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
+        let leaderboard = res.0.leaderboard;
+
+        assert_eq!(leaderboard.len(), 3);
+        assert_eq!(leaderboard[0].user_id, "user3");
+        assert_eq!(leaderboard[0].conversions, 20);
+        assert_eq!(leaderboard[1].user_id, "user1");
+        assert_eq!(leaderboard[1].conversions, 10);
+        assert_eq!(leaderboard[2].user_id, "user2");
+        assert_eq!(leaderboard[2].conversions, 5);
     }
 
     #[tokio::test]
