@@ -21,7 +21,7 @@ impl CustomerMemoryGraphService {
         Self { pool }
     }
 
-    pub async fn ingest_interaction(&self, tenant_id: &str, customer_id: Uuid, channel: &str, raw_content: &str) -> Result<Uuid, sqlx::Error> {
+    pub async fn ingest_interaction(&self, tenant_id: &str, customer_id: &str, channel: &str, raw_content: &str) -> Result<Uuid, sqlx::Error> {
         let event_id = Uuid::new_v4();
 
         let mut tx = self.pool.begin().await?;
@@ -56,7 +56,7 @@ impl CustomerMemoryGraphService {
         Ok(event_id)
     }
 
-    pub async fn get_profile_summary(&self, tenant_id: &str, customer_id: Uuid) -> Result<CustomerProfileSummary, sqlx::Error> {
+    pub async fn get_profile_summary(&self, tenant_id: &str, customer_id: &str) -> Result<CustomerProfileSummary, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(tenant_id)
@@ -140,7 +140,7 @@ impl CustomerMemoryGraphService {
             .fetch_one(&mut *tx)
             .await?;
 
-            let customer_id: Uuid = event.get("customer_id");
+            let customer_id: String = event.get("customer_id");
             let content: String = event.get("raw_content");
 
             // Add a mock snippet based on content
@@ -163,7 +163,7 @@ impl CustomerMemoryGraphService {
             )
             .bind(snippet_id)
             .bind(&tenant_id)
-            .bind(customer_id)
+            .bind(&customer_id)
             .bind(category)
             .bind(extracted_value)
             .execute(&mut *tx)
@@ -182,7 +182,7 @@ impl CustomerMemoryGraphService {
                 "UPDATE customers SET profile_summary = $1 WHERE id = $2"
             )
             .bind(sqlx::types::Json(summary))
-            .bind(customer_id)
+            .bind(&customer_id)
             .execute(&mut *tx)
             .await?;
 

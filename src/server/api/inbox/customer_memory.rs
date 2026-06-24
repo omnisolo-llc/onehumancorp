@@ -18,7 +18,7 @@ pub struct CustomerMemoryState {
 #[derive(Deserialize)]
 pub struct IngestEventPayload {
     pub tenant_id: String,
-    pub customer_id: Uuid,
+    pub customer_id: String,
     pub channel: String,
     pub raw_content: String,
 }
@@ -34,7 +34,7 @@ pub async fn ingest_event(
 ) -> Result<Json<IngestEventResponse>, StatusCode> {
     let service = CustomerMemoryGraphService::new(state.db.pool.clone());
 
-    match service.ingest_interaction(&payload.tenant_id, payload.customer_id, &payload.channel, &payload.raw_content).await {
+    match service.ingest_interaction(&payload.tenant_id, &payload.customer_id, &payload.channel, &payload.raw_content).await {
         Ok(event_id) => Ok(Json(IngestEventResponse { event_id })),
         Err(e) => {
             tracing::error!("Failed to ingest event: {:?}", e);
@@ -45,11 +45,11 @@ pub async fn ingest_event(
 
 pub async fn get_profile_summary(
     State(state): State<CustomerMemoryState>,
-    Path((tenant_id, customer_id)): Path<(String, Uuid)>,
+    Path((tenant_id, customer_id)): Path<(String, String)>,
 ) -> Result<Json<CustomerProfileSummary>, StatusCode> {
     let service = CustomerMemoryGraphService::new(state.db.pool.clone());
 
-    match service.get_profile_summary(&tenant_id, customer_id).await {
+    match service.get_profile_summary(&tenant_id, &customer_id).await {
         Ok(summary) => Ok(Json(summary)),
         Err(e) => {
             tracing::error!("Failed to fetch profile summary: {:?}", e);
