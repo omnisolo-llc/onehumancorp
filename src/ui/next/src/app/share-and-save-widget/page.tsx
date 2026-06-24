@@ -26,7 +26,7 @@ export default function ShareAndSaveWidgetPage() {
 
   useEffect(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.onehumancorp.com';
-    const iframeCode = `<iframe src="${origin}/embed/share-and-save?tenant=${tenant}&theme=${theme}&discount=${discountAmount}${discountType === '%' ? 'pct' : 'flat'}&hideBranding=${removeBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Share and Save Widget"></iframe>`;
+    const iframeCode = `<iframe src="${origin}/embed/share-and-save?tenant=${tenant}&theme=${theme}&discount=${discountAmount}${discountType === '%' ? 'pct' : 'flat'}&hideBranding=${removeBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Share and Save Widget"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
     setEmbedCode(iframeCode);
   }, [tenant, theme, discountAmount, discountType, removeBranding]);
 
