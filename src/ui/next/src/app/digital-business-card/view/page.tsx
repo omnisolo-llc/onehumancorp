@@ -72,7 +72,7 @@ function VCardContent() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7] font-inter">
-        <p className="text-red-500 bg-red-50 p-4 rounded-xl">Error: Invalid or corrupted card data.</p>
+        <p className="text-[#FF3B30] bg-red-50 p-4 rounded-xl">Error: Invalid or corrupted card data.</p>
       </div>
     );
   }

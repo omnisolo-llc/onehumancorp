@@ -85,7 +85,7 @@ export default function ChaosReportPage() {
           <div className="h-64 flex items-end gap-3 p-4 rounded-xl relative" style={{ background: isDarkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)' }}>
             <div className="absolute left-0 bottom-0 w-full h-full border-b border-l border-current opacity-10 m-4"></div>
 
-            {error && <div className="absolute inset-0 flex items-center justify-center text-red-500 font-bold">{error}</div>}
+            {error && <div className="absolute inset-0 flex items-center justify-center text-[#FF3B30] font-bold">{error}</div>}
             {!data && !error && <div className="absolute inset-0 flex items-center justify-center">Loading...</div>}
 
             {data?.latencyHistograms?.map((val: number, i: number) => (
@@ -124,7 +124,7 @@ export default function ChaosReportPage() {
           <div className="h-64 relative p-4 rounded-xl flex items-end" style={{ background: isDarkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)' }}>
             <div className="absolute left-0 bottom-0 w-full h-full border-b border-l border-current opacity-10 m-4"></div>
 
-            {error && <div className="absolute inset-0 flex items-center justify-center text-red-500 font-bold z-20">{error}</div>}
+            {error && <div className="absolute inset-0 flex items-center justify-center text-[#FF3B30] font-bold z-20">{error}</div>}
             {!data && !error && <div className="absolute inset-0 flex items-center justify-center z-20">Loading...</div>}
 
             <svg className="w-full h-full absolute inset-0 p-4" preserveAspectRatio="none" viewBox="0 0 100 100">
@@ -148,7 +148,7 @@ export default function ChaosReportPage() {
               {data?.errorRate?.map((val: number, i: number) => (
                 <div
                   key={i}
-                  className={`absolute w-3 h-3 rounded-full -ml-1.5 -mb-1.5 cursor-pointer z-10 transition-transform hover:scale-150 ${isDarkMode ? 'bg-red-400 ring-2 ring-gray-900' : 'bg-red-500 ring-2 ring-white'}`}
+                  className={`absolute w-3 h-3 rounded-full -ml-1.5 -mb-1.5 cursor-pointer z-10 transition-transform hover:scale-150 ${isDarkMode ? 'bg-red-400 ring-2 ring-gray-900' : 'bg-[#FF3B30] ring-2 ring-white'}`}
                   style={{ left: `${i * 25}%`, bottom: `${val * 1000}%` }}
                   title={`${(val * 100).toFixed(1)}% error rate`}
                 ></div>
