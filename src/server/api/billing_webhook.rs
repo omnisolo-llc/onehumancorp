@@ -610,6 +610,30 @@ pub async fn stripe_webhook_handler(
                 StatusCode::BAD_REQUEST.into_response()
             }
         },
+        "invoice.payment_succeeded" | "invoice.paid" => {
+            let stripe_invoice_id = payload.data.object.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            if !stripe_invoice_id.is_empty() {
+                match &webhook_state.db.store {
+                    crate::db::DbStore::Postgres => {
+                        if let Ok(internal_invoice) = sqlx::query_scalar::<_, String>("SELECT id FROM invoices WHERE stripe_invoice_id = $1 OR id = $1").bind(&stripe_invoice_id).fetch_optional(&webhook_state.db.pool).await {
+                            if let Some(id) = internal_invoice {
+                                let _ = sqlx::query("UPDATE invoices SET payment_status = 'paid', status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE id = $1").bind(&id).execute(&webhook_state.db.pool).await;
+                                let _ = sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE action_type = 'Approve Draft' AND action_payload LIKE '%' || $1 || '%'").bind(&id).execute(&webhook_state.db.pool).await;
+                            }
+                        }
+                    },
+                    crate::db::DbStore::Sqlite(_) => {
+                        if let Ok(internal_invoice) = sqlx::query_scalar::<_, String>("SELECT id FROM invoices WHERE stripe_invoice_id = ? OR id = ?").bind(&stripe_invoice_id).bind(&stripe_invoice_id).fetch_optional(&webhook_state.db.pool).await {
+                            if let Some(id) = internal_invoice {
+                                let _ = sqlx::query("UPDATE invoices SET payment_status = 'paid', status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(&id).execute(&webhook_state.db.pool).await;
+                                let _ = sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE action_type = 'Approve Draft' AND action_payload LIKE '%' || ? || '%'").bind(&id).execute(&webhook_state.db.pool).await;
+                            }
+                        }
+                    }
+                }
+            }
+            StatusCode::OK.into_response()
+        }
         "invoice.payment_failed" => {
             let obj = &payload.data.object;
             match process_invoice_payment_failed(

@@ -21,7 +21,8 @@ impl Department for FinanceAgent {
         vec![
             "tenant.payment.received".to_string(),
             "payment.captured".to_string(),
-            "charge.dispute.created".to_string()
+            "charge.dispute.created".to_string(),
+            "invoice.overdue".to_string()
         ]
     }
 
@@ -41,6 +42,8 @@ impl Department for FinanceAgent {
             "Analyze transaction for split tags and record ledger split".to_string()
         } else if event.event_type == "charge.dispute.created" {
             "Draft dispute resolution for review".to_string()
+        } else if event.event_type == "invoice.overdue" {
+            "Draft personalized invoice follow-up for review".to_string()
         } else {
             "Record deposit and track payment".to_string()
         };
@@ -57,6 +60,16 @@ impl Department for FinanceAgent {
                 "operational_action": "Mark transaction as disputed in ledger",
                 "sender_id": "@customer",
                 "customer_id": event.payload.get("customer").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+        } else if event.event_type == "invoice.overdue" {
+            let invoice_id = event.payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            payload = serde_json::json!({
+                "feature_type": "invoice_followup",
+                "invoice_id": invoice_id,
+                "original_message": format!("Invoice {} is overdue.", invoice_id),
+                "generated_response": format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id),
+                "operational_action": "Draft personalized reminder",
+                "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
             });
         }
 
