@@ -5,6 +5,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Master Catalog A: Framework Implementation Archetypes: AutoGen.
+/// AutoGen Unique Harness Innovations: Block-based visual workflow, Agent Marketplace, Agent Protocol
+/// Implements 5 mechanical patterns: sequential, concurrent (fan-out/fan-in), group chat, handoff, and magentic (manager agent dynamically updating a task ledger).
 
 /// Configuration for an Agent participating in the Group Chat.
 #[derive(Clone)]

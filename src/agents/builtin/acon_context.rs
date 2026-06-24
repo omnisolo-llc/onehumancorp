@@ -5,12 +5,15 @@ use crate::types::{Message, Role};
 pub struct AconConfig {
     /// Number of recent messages to preserve completely.
     pub preserve_recent_messages_count: usize,
+    /// Do not omit outputs shorter than this length (in chars) as it wastes tokens.
+    pub preserve_short_outputs: Option<usize>,
 }
 
 impl Default for AconConfig {
     fn default() -> Self {
         Self {
             preserve_recent_messages_count: 2,
+            preserve_short_outputs: Some(100),
         }
     }
 }
@@ -39,9 +42,17 @@ impl AconStrategy {
                             && !tr.content.starts_with("[ACON:")
                             && !tr.content.is_empty()
                         {
-                            tr.content =
-                                "[ACON: Tool output omitted to prioritize reasoning traces.]"
-                                    .to_string();
+                            let content_len = tr.content.len();
+                            // Do not mask short outputs to avoid wasting tokens on the omission message
+                            if let Some(short_threshold) = self.config.preserve_short_outputs {
+                                if content_len <= short_threshold {
+                                    continue;
+                                }
+                            }
+                            tr.content = format!(
+                                "[ACON: Tool output omitted to prioritize reasoning traces. Original length: {} chars.]",
+                                content_len
+                            );
                         }
                     }
                 }
@@ -69,7 +80,7 @@ mod tests {
                 tool_calls: vec![],
                 tool_results: vec![ToolResult {
                     tool_call_id: "call_1".to_string(),
-                    content: "Massive log output".to_string(),
+                    content: "Massive log output that exceeds the one hundred character limit to ensure that it gets properly truncated by the ACON strategy. We need to be absolutely sure this is long enough.".to_string(),
                     error: String::new(),
                 }],
                 response_id: None,
@@ -89,7 +100,7 @@ mod tests {
                 tool_calls: vec![],
                 tool_results: vec![ToolResult {
                     tool_call_id: "call_2".to_string(),
-                    content: "Another tool result".to_string(),
+                    content: "Another tool result that is also very long, much longer than a hundred characters, because if it's too short, it will simply be preserved completely due to the short output threshold!".to_string(),
                     error: String::new(),
                 }],
                 response_id: None,
@@ -107,14 +118,15 @@ mod tests {
 
         let config = AconConfig {
             preserve_recent_messages_count: 2,
+            preserve_short_outputs: Some(100),
         };
         apply_acon_strategy(&mut messages, &config);
 
         // First tool message should be masked (it is outside the preserved count)
-        assert_eq!(
-            messages[0].tool_results[0].content,
-            "[ACON: Tool output omitted to prioritize reasoning traces.]"
+        assert!(
+            messages[0].tool_results[0].content.contains("[ACON: Tool output omitted to prioritize reasoning traces.")
         );
+        assert!(messages[0].tool_results[0].content.contains("Original length:"));
 
         // Assistant message reasoning is preserved
         assert_eq!(
@@ -123,6 +135,41 @@ mod tests {
         );
 
         // Second tool message is within the recent preserved count
-        assert_eq!(messages[2].tool_results[0].content, "Another tool result");
+        assert_eq!(messages[2].tool_results[0].content, "Another tool result that is also very long, much longer than a hundred characters, because if it's too short, it will simply be preserved completely due to the short output threshold!");
+    }
+
+    #[test]
+    fn test_apply_acon_strategy_preserves_short_outputs() {
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_1".to_string(),
+                    content: "Short output".to_string(),
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Final reasoning".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let config = AconConfig {
+            preserve_recent_messages_count: 0,
+            preserve_short_outputs: Some(100),
+        };
+        apply_acon_strategy(&mut messages, &config);
+
+        // Short tool message should NOT be masked, because it's under 100 chars
+        assert_eq!(messages[0].tool_results[0].content, "Short output");
     }
 }

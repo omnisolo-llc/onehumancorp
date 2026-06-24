@@ -1,5 +1,5 @@
 //! goose (Agentic AI) Implementation Pattern
-//! SOTA Harness Innovations: Rust + TypeScript UI, 70+ MCP extensions
+//! goose (Agentic AI) Unique Harness Innovations: Rust + TypeScript UI, 70+ MCP extensions
 //!
 //! This module implements a basic bridge and UI stub pattern that enables
 //! the agent to interact with a theoretical TypeScript UI and host MCP extensions.
