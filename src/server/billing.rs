@@ -1,5 +1,4 @@
 use crate::integrations::mercadopago::client::MercadoPagoClient;
-// Billing module stub - provides Tracker struct used by hub.rs
 use ::server_pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
 use crate::integrations::stripe::client::StripeClient;
 use redis::Client;
@@ -40,10 +39,6 @@ impl Tracker {
             if let Ok(l) = Arc::try_unwrap(limiter) {
                 self.rate_limiter = Some(Arc::new(l.with_db(pool)));
             } else {
-                // If it can't be unwrapped, we can't easily modify the inner struct,
-                // but since this is called right after initialization it should work.
-                // Alternatively, we could wrap the `db_pool` inside `RwLock` or similar,
-                // but `Arc::try_unwrap` will succeed here.
             }
         }
         self
@@ -54,7 +49,7 @@ impl Tracker {
     }
 
     fn fail_open_status() -> RateLimitStatus {
-        tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
+        tracing::debug!("RateLimiter error. Failing open to avoid blocking users.");
         RateLimitStatus {
             is_allowed: true,
             soft_limit_reached: false,
@@ -102,7 +97,7 @@ impl Tracker {
             match limiter.record_product_added(tenant_id).await {
                 Ok(_) => Ok(()),
                 Err(_) => {
-                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
+                    tracing::debug!("RateLimiter error. Failing open to avoid blocking users.");
                     Ok(())
                 }
             }
@@ -138,7 +133,7 @@ impl Tracker {
             match limiter.record_agent_added(tenant_id).await {
                 Ok(_) => Ok(()),
                 Err(_) => {
-                    tracing::warn!("RateLimiter error. Failing open to avoid blocking users.");
+                    tracing::debug!("RateLimiter error. Failing open to avoid blocking users.");
                     Ok(())
                 }
             }
@@ -237,7 +232,6 @@ impl Tracker {
     }
 
     pub fn track_outbound_api_call(&self, tenant_id: &str, endpoint: &str) {
-        // pii-safe
         tracing::info!("💰 Miser telemetry: Recording outbound API call for tenant: {}, endpoint: {}", tenant_id, endpoint);
         if let Some(ref auditor) = self.auditor {
             auditor.record_api_call(tenant_id, endpoint);
@@ -245,7 +239,6 @@ impl Tracker {
     }
 
     pub fn track_email_send(&self, tenant_id: &str) {
-        // pii-safe
         tracing::info!("💰 Miser telemetry: Recording communication metric for tenant: {}", tenant_id);
         if let Some(ref auditor) = self.auditor {
             auditor.record_email_send(tenant_id);
