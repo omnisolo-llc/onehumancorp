@@ -25,6 +25,7 @@ impl TerminalSessionManager {
         product_id: Option<&str>,
         quantity: Option<i32>,
         order_id: Option<&str>,
+        inventory_lock_id: Option<&str>,
     ) -> Result<String, String> {
         if tenant_id.is_empty() {
             return Err("Unauthenticated: Missing tenant ID".to_string());
@@ -35,7 +36,8 @@ impl TerminalSessionManager {
             currency,
             product_id,
             quantity,
-            order_id
+            order_id,
+            inventory_lock_id
         ).await
     }
 }
@@ -76,6 +78,7 @@ impl StripeClient {
         product_id: Option<&str>,
         quantity: Option<i32>,
         order_id: Option<&str>,
+        inventory_lock_id: Option<&str>,
     ) -> Result<String, String> {
         let api_key = self.require_api_key()?;
         if amount_cents <= 0 {
@@ -101,6 +104,11 @@ impl StripeClient {
         }
         if let Some(oid) = order_id {
             form.insert("metadata[order_id]".to_string(), oid.to_string());
+        }
+        if let Some(lock_id) = inventory_lock_id {
+            if !lock_id.is_empty() {
+                form.insert("metadata[inventory_lock_id]".to_string(), lock_id.to_string());
+            }
         }
 
         let res = reqwest::Client::new().post(format!("{}/v1/payment_intents", Self::api_base()))

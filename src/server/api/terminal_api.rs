@@ -695,6 +695,7 @@ pub async fn create_payment_intent_handler(
             req_data.product_id.as_deref(),
             req_data.quantity,
             req_data.order_id.as_deref(),
+            lock_id_out.as_deref(),
         ).await {
             Ok(client_secret) => {
                 let pool = crate::db::get_pool();
