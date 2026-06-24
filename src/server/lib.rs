@@ -3803,8 +3803,8 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
-                    } else if action_type == "ProposedInvoice" {
-                        tracing::info!("Executing proposed action: ProposedInvoice, payload: {}", action_payload);
+                    } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
+                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload);
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
@@ -3820,58 +3820,53 @@ pub async fn update_ui_triage_action_handler(
                         let client_id = triage_customer_id.or_else(|| json_payload.get("client_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
 
                         if let Some(cid) = client_id {
-                            let client_name = json_payload.get("client_name").and_then(|v| v.as_str()).unwrap_or("Client").to_string();
-                            let total_amount = json_payload.get("total_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                            let due_date = json_payload.get("due_date").and_then(|v| v.as_i64()).unwrap_or_else(|| chrono::Utc::now().timestamp() + 30 * 24 * 3600);
-                            let currency = json_payload.get("currency").and_then(|v| v.as_str()).unwrap_or("USD").to_string();
+                            let total_amount_cents = json_payload.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                            let required_deposit_cents = json_payload.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
 
-                            let invoice_id = format!("inv-{}", uuid::Uuid::new_v4());
+                            let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
 
                             if let Err(e) = sqlx::query(
-                                "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7, 0, 'draft', 0, 0)"
+                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NULL, NOW(), NOW())"
                             )
-                            .bind(&invoice_id)
+                            .bind(&quote_id)
                             .bind(&tenant_id)
                             .bind(&cid)
-                            .bind(&client_name)
-                            .bind(due_date)
-                            .bind(&currency)
-                            .bind(total_amount)
+                            .bind(total_amount_cents)
+                            .bind(required_deposit_cents)
                             .execute(&mut *tx)
                             .await {
-                                tracing::error!("Failed to insert proposed invoice for triage item {}: {:?}", payload.triage_item_id, e);
-                                // For now, we continue even if action fails to resolve the triage item.
+                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e);
                             } else {
                                 if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
                                     for item in items {
                                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Item");
                                         let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
-                                        let unit_price = item.get("unit_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                                        let amount = item.get("amount").and_then(|v| v.as_f64()).unwrap_or(qty as f64 * unit_price);
+                                        let unit_price_cents = item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                                        let is_optional = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
 
                                         let item_id = format!("item-{}", uuid::Uuid::new_v4());
+
                                         if let Err(e) = sqlx::query(
-                                            "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
                                         )
                                         .bind(&item_id)
-                                        .bind(&tenant_id)
-                                        .bind(&invoice_id)
+                                        .bind(&quote_id)
                                         .bind(desc)
+                                        .bind(unit_price_cents)
                                         .bind(qty as i32)
-                                        .bind(unit_price)
-                                        .bind(amount)
+                                        .bind(is_optional)
                                         .execute(&mut *tx)
                                         .await {
-                                            tracing::error!("Failed to insert invoice line item for invoice {}: {:?}", invoice_id, e);
+                                            tracing::error!("Failed to insert quote line item for quote {}: {:?}", quote_id, e);
                                         }
                                     }
                                 }
                             }
                         } else {
-                            tracing::warn!("Could not extract a client_id for ProposedInvoice action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
                         }
-                    } else if action_type == "SuggestedCalendarSlot" {
-                        tracing::info!("Executing proposed action: SuggestedCalendarSlot, payload: {}", action_payload);
+                    } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
+                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
@@ -3885,7 +3880,7 @@ pub async fn update_ui_triage_action_handler(
                         let customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok()).or_else(|| json_payload.get("customer_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
 
                         if let Some(cid) = customer_id {
-                            let product_id = json_payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
+                            let product_id = json_payload.get("service_id").or_else(|| json_payload.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
 
                             let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
                             let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
@@ -3914,7 +3909,7 @@ pub async fn update_ui_triage_action_handler(
                                 tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e);
                             }
                         } else {
-                            tracing::warn!("Could not extract a customer_id for SuggestedCalendarSlot action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload);
                         }
                     }
                 }
@@ -4021,6 +4016,122 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
+                    } else if action_type == "SocialPostDraft" {
+                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                        // In a real implementation we would send this to AYRSHARE or similar buffer here
+                        // For MVP, we simply mark it resolved.
+                    } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
+                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = ? AND tenant_id = ?")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .ok()
+                            .flatten();
+
+                        let triage_customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok());
+
+                        let client_id = triage_customer_id.or_else(|| json_payload.get("client_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
+
+                        if let Some(cid) = client_id {
+                            let total_amount_cents = json_payload.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                            let required_deposit_cents = json_payload.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+
+                            let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
+
+                            // Quotes ID is UUID format in Postgres and String in Sqlite, handle based on backend.
+                            let sqlite_quote_id = quote_id.clone();
+                            let sqlite_cid = cid.clone();
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(sqlite_quote_id)
+                            .bind(&tenant_id)
+                            .bind(sqlite_cid)
+                            .bind(total_amount_cents)
+                            .bind(required_deposit_cents)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e);
+                            } else {
+                                if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
+                                    for item in items {
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Item");
+                                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
+                                        let unit_price_cents = item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                                        let is_optional = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
+
+                                        let item_id = format!("item-{}", uuid::Uuid::new_v4());
+
+                                        if let Err(e) = sqlx::query(
+                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                        )
+                                        .bind(&item_id)
+                                        .bind(&quote_id)
+                                        .bind(desc)
+                                        .bind(unit_price_cents)
+                                        .bind(qty as i32)
+                                        .bind(is_optional)
+                                        .execute(&mut *tx)
+                                        .await {
+                                            tracing::error!("Failed to insert quote line item for quote {}: {:?}", quote_id, e);
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
+                        }
+                    } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
+                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = ? AND tenant_id = ?")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .ok()
+                            .flatten();
+
+                        let customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok()).or_else(|| json_payload.get("customer_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
+
+                        if let Some(cid) = customer_id {
+                            let product_id = json_payload.get("service_id").or_else(|| json_payload.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
+
+                            let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                            let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                            let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str)
+                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(1));
+
+                            let end_time = chrono::DateTime::parse_from_rfc3339(end_time_str)
+                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                .unwrap_or_else(|_| start_time + chrono::Duration::hours(1));
+
+                            let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'scheduled', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(&booking_id)
+                            .bind(&tenant_id)
+                            .bind(&cid)
+                            .bind(&product_id)
+                            .bind(start_time.to_rfc3339())
+                            .bind(end_time.to_rfc3339())
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e);
+                            }
+                        } else {
+                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload);
+                        }
                     }
                 }
             }
