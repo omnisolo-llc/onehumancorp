@@ -10,6 +10,98 @@ pub mod grpc;
 
 use std::collections::HashMap;
 
+use axum::{
+    extract::Request as AxumRequest,
+    middleware::Next,
+    response::{IntoResponse, Response as AxumResponse},
+    http::StatusCode,
+};
+use serde_json::json;
+
+pub async fn auth_middleware(
+    mut req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let path = req.uri().path();
+    if path.starts_with("/api/public") || path.starts_with("/api/v1/auth") || path.starts_with("/api/webhook") || path.starts_with("/api/agents/webhook") || path.starts_with("/api/v1/webhook") || path.starts_with("/health") || path.starts_with("/metrics") {
+        return next.run(req).await;
+    }
+
+    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+    let spiffe_id = req.headers().get("x-spiffe-id").and_then(|h| h.to_str().ok());
+
+    let token = if let Some(header_str) = auth_header {
+        if header_str.to_lowercase().starts_with("bearer ") {
+            Some(&header_str[7..])
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let mut is_authenticated = false;
+
+    if let Some(jwt) = token {
+        let store = Store::new();
+        if let Ok(claims) = store.validate_token(jwt).await {
+            is_authenticated = true;
+
+            req.extensions_mut().insert(claims.clone());
+            req.extensions_mut().insert(crate::orchestration::AuthInfo {
+                org_id: claims.organization_id.unwrap_or_default(),
+                agent_id: claims.sub,
+                spiffe_id: spiffe_id.unwrap_or("").to_string(),
+            });
+        }
+    }
+
+    if !is_authenticated {
+        if let Some(id) = spiffe_id {
+            if crate::auth::grpc::validate_spiffe_id(id).is_ok() {
+                // Safely parse SPIFFE ID that we know starts with spiffe:// and has correct parts
+                let id_trimmed = id.strip_prefix("spiffe://").unwrap_or(id);
+                let parts: Vec<&str> = id_trimmed.split('/').collect();
+                if parts.len() >= 5 && parts[1] == "org" && parts[3] == "agent" {
+                    let tenant_id = parts[2].to_string();
+                    let agent_id = parts[4].to_string();
+                    is_authenticated = true;
+
+                    let claims = ::server_common::Claims {
+                        sub: agent_id.clone(),
+                        exp: chrono::Utc::now().timestamp() + 3600,
+                        iat: chrono::Utc::now().timestamp(),
+                        organization_id: Some(tenant_id.clone()),
+                        username: agent_id.clone(),
+                        email: format!("{}@agent.local", agent_id),
+                        roles: vec!["ADMIN".to_string()],
+                        session_id: None,
+                        jti: uuid::Uuid::new_v4().to_string(),
+                    };
+                    req.extensions_mut().insert(claims);
+                    req.extensions_mut().insert(crate::orchestration::AuthInfo {
+                        org_id: tenant_id,
+                        agent_id,
+                        spiffe_id: id.to_string(),
+                    });
+                }
+            }
+        }
+    }
+
+    if is_authenticated {
+        next.run(req).await
+    } else {
+        (
+            StatusCode::UNAUTHORIZED,
+            axum::Json(json!({
+                "error": "UNAUTHORIZED",
+                "message": "Missing or invalid authentication token/SPIFFE identity."
+            }))
+        ).into_response()
+    }
+}
+
 pub async fn guest_auth_middleware(
     mut req: axum::extract::Request,
     next: axum::middleware::Next,
@@ -970,3 +1062,48 @@ mod store_tests {
 
 #[cfg(test)]
 mod multitenancy_isolation;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{body::Body, http::Request, routing::get, Router};
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_auth_middleware_passthrough() {
+        let app = Router::new()
+            .route("/api/public/status", get(|| async { "ok" }))
+            .layer(axum::middleware::from_fn(auth_middleware));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/public/status")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_auth_middleware_unauthorized() {
+        let app = Router::new()
+            .route("/api/secure/data", get(|| async { "secure" }))
+            .layer(axum::middleware::from_fn(auth_middleware));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/secure/data")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+}

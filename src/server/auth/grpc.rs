@@ -174,8 +174,39 @@ pub fn validate_spiffe_id(id: &str) -> Result<(), Status> {
 }
 
 pub fn interceptor(cfg: AuthConfig) -> impl Fn(Request<()>) -> Result<Request<()>, Status> + Clone {
-    move |req: Request<()>| {
+    move |mut req: Request<()>| {
         cfg.authenticate(&req)?;
+
+        // Enhance request with SPIFFE identity / AuthInfo
+        if let Some(spiffe_id) = req.metadata().get("x-spiffe-id").and_then(|h| h.to_str().ok()) {
+            if validate_spiffe_id(spiffe_id).is_ok() {
+                let id_trimmed = spiffe_id.strip_prefix("spiffe://").unwrap_or(spiffe_id);
+                let parts: Vec<&str> = id_trimmed.split('/').collect();
+                if parts.len() >= 5 && parts[1] == "org" && parts[3] == "agent" {
+                    let tenant_id = parts[2].to_string();
+                    let agent_id = parts[4].to_string();
+
+                    req.extensions_mut().insert(crate::orchestration::AuthInfo {
+                        org_id: tenant_id.clone(),
+                        agent_id: agent_id.clone(),
+                        spiffe_id: spiffe_id.to_string(),
+                    });
+
+                    req.extensions_mut().insert(::server_common::Claims {
+                        sub: agent_id.clone(),
+                        exp: chrono::Utc::now().timestamp() + 3600,
+                        iat: chrono::Utc::now().timestamp(),
+                        organization_id: Some(tenant_id),
+                        username: agent_id.clone(),
+                        email: format!("{}@agent.local", agent_id),
+                        roles: vec!["ADMIN".to_string()],
+                        session_id: None,
+                        jti: uuid::Uuid::new_v4().to_string(),
+                    });
+                }
+            }
+        }
+
         Ok(req)
     }
 }
@@ -199,6 +230,26 @@ mod tests {
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/org-1/agent-1").is_err()); // Missing /org/ and /agent/ structure
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/org//agent/agent-1").is_err()); // Empty org_id
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/").is_err()); // Empty agent_id
+    }
+
+    #[test]
+    fn test_interceptor_valid_spiffe() {
+        let cfg = AuthConfig { mode: AuthMode::SPIFFE { allowed_id: None } };
+        let interceptor_fn = interceptor(cfg);
+        let mut req = Request::new(());
+        req.metadata_mut().insert("x-spiffe-id", MetadataValue::from_str("spiffe://onehumancorp.io/org/tenant-123/agent/agent-456").unwrap());
+
+        let res = interceptor_fn(req);
+        assert!(res.is_ok());
+        let final_req = res.unwrap();
+
+        let auth_info = final_req.extensions().get::<crate::orchestration::AuthInfo>().expect("AuthInfo should be injected");
+        assert_eq!(auth_info.org_id, "tenant-123");
+        assert_eq!(auth_info.agent_id, "agent-456");
+
+        let claims = final_req.extensions().get::<::server_common::Claims>().expect("Claims should be injected");
+        assert_eq!(claims.organization_id.as_deref(), Some("tenant-123"));
+        assert_eq!(claims.sub, "agent-456");
     }
 
     #[test]

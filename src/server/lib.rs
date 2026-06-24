@@ -6429,6 +6429,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
         .route_layer(axum::middleware::from_fn(::server_utils::tenant_middleware::tenant_middleware))
+        .route_layer(axum::middleware::from_fn(crate::auth::auth_middleware))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,

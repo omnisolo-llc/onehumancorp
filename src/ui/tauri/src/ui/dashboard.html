@@ -590,7 +590,85 @@
     </div>
 
     <div class="container glassmorphism app-panel">
-      <div class="status-badge">🟢 Standalone Mode (Zero Data Leakage)</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <div class="status-badge">🟢 Standalone Mode (Zero Data Leakage)</div>
+        <button id="workspace-switcher-btn" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(0,0,0,0.1); border-radius: 20px; padding: 6px 16px; font-family: Outfit, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; color: #1d1d1f; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: background 0.2s;">
+          <span id="active-workspace-name">My Workspace</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+      </div>
+
+      <!-- Workspace Switcher Bottom Sheet -->
+      <div id="workspace-switcher-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1001; justify-content: center; align-items: flex-end;">
+        <div id="workspace-switcher-sheet" style="background: rgba(255,255,255,0.9); backdrop-filter: blur(30px) saturate(210%); border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 24px; width: 100%; max-width: 400px; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 -10px 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 12px; margin-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #1d1d1f; letter-spacing: -0.5px;">Switch Workspace</h3>
+            <button id="workspace-switcher-close" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #86868b; line-height: 1;">&times;</button>
+          </div>
+
+          <div id="workspace-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+            <!-- Dynamically populated workspaces via JS fetch -->
+          </div>
+
+          <button id="add-workspace-btn" style="margin-top: 12px; background: none; border: 2px dashed rgba(0,0,0,0.1); border-radius: 12px; padding: 12px; font-family: Outfit, sans-serif; font-weight: 600; color: #555; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Create New Workspace
+          </button>
+        </div>
+      </div>
+
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const btn = document.getElementById('workspace-switcher-btn');
+          const overlay = document.getElementById('workspace-switcher-overlay');
+          const sheet = document.getElementById('workspace-switcher-sheet');
+          const closeBtn = document.getElementById('workspace-switcher-close');
+
+          btn.addEventListener('click', async () => {
+            overlay.style.display = 'flex';
+            // Slight delay to allow display:flex to apply before animating transform
+            setTimeout(() => {
+              sheet.style.transform = 'translateY(0)';
+            }, 10);
+
+            // Fetch workspaces dynamically
+            try {
+              const res = await fetch('/api/v1/auth/users/me', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('ohc_token')}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                const list = document.getElementById('workspace-list');
+                list.innerHTML = '';
+                // Since this is a simple mock fetch mapping, create a dynamic entry
+                const orgId = data.organization_id || 'system';
+                const el = document.createElement('div');
+                el.className = 'workspace-item';
+                el.setAttribute('data-id', orgId);
+                el.style.cssText = 'padding: 12px 16px; border-radius: 12px; background: rgba(0,0,0,0.03); cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(0,0,0,0.05); font-weight: 600; color: #1d1d1f;';
+                el.innerHTML = `${orgId} <span style="color: #0066FF; font-size: 18px;">✓</span>`;
+                list.appendChild(el);
+              }
+            } catch (err) {
+              console.error('Failed to fetch workspaces', err);
+            }
+          });
+
+          const closeSheet = () => {
+            sheet.style.transform = 'translateY(100%)';
+            setTimeout(() => {
+              overlay.style.display = 'none';
+            }, 300);
+          };
+
+          closeBtn.addEventListener('click', closeSheet);
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+              closeSheet();
+            }
+          });
+        });
+      </script>
 
       <div class="ohc-growth-card app-card" id="promoter-card" style="margin-top: 20px;">
         <h2>The Promoter Agent</h2>
