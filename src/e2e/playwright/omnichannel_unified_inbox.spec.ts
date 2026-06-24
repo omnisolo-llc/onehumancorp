@@ -8,11 +8,11 @@ test.describe('Unified Inbox & Agentic Triage', () => {
     const identifier = 'maya_insta';
     const messageContent = 'Do you have vegan cupcakes for this Saturday?';
 
-    const webhookRes = await request.post('/api/v1/webhooks/unified_inbox', {
+    const webhookRes = await request.post('/api/v1/omnichannel/webhook', {
       data: {
         tenant_id: tenantId,
-        source: 'instagram_dm',
-        identifier: identifier,
+        channel: 'instagram_dm',
+        sender_id: identifier,
         message: messageContent
       }
     });
