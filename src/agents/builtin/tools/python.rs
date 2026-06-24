@@ -28,9 +28,9 @@ impl PydanticToolExecutor<PythonArgs> for PythonExecutor {
     async fn execute_typed(&self, args: PythonArgs) -> Result<String, ToolError> {
         let code = args.code;
         let timeout_secs = args.timeout;
-        let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
+        let timeout = Duration::from_secs_f64(timeout_secs.clamp(1.0, 600.0));
 
-        let wd = self.working_dir.clone().unwrap_or_else(|| std::env::temp_dir());
+        let wd = self.working_dir.clone().unwrap_or_else(std::env::temp_dir);
 
         let temp_file_path = wd.join(format!(".tmp_py_{}.py", uuid::Uuid::new_v4()));
 

@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use crate::memory_store::VectorRepository;
 use chrono::Utc;
 use std::sync::Arc;

@@ -23,6 +23,7 @@ pub trait OutputParser<T> {
 /// 6. Output Parsing: Rely entirely on native `tool_calls` API objects. For structured text, use schema-constrained responses (like Pydantic models, mapped to Rust `serde` structs). Fallback mechanic: Legacy `RetryWithErrorOutputParser` (feed the original prompt, the failed completion, and the parsing error back to the model).
 /// This implementation fulfills the exact mechanic requested by the Roulette Protocol.
 
+#[allow(clippy::empty_line_after_doc_comments)]
 pub trait PydanticSchemaValidator<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String>;
 }
@@ -50,14 +51,7 @@ impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
             if let Some(data) = call.arguments.get("data") {
-                return match serde_json::from_value::<T>(data.clone()) {
-                    Ok(parsed) => Ok(parsed),
-                    Err(e) => {
-                        // Serialize Pydantic-like schemas and feed validation errors back to LLM for self-correction
-                        let args_str = serde_json::to_string(data).unwrap_or_default();
-                        Err(crate::types::format_pydantic_error(&e, Some(&args_str), Some("Please strictly follow the Pydantic-first tool schema and try again.")))
-                    }
-                };
+                return self.validate_schema(data);
             } else {
                 return Err(
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
@@ -999,5 +993,21 @@ mod tests_clamped {
 
         // It tries once initially, then retries twice (clamped), making 3 calls total.
         assert_eq!(*failing_client.call_count.lock().await, 3);
+    }
+}
+
+impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for AdvancedPydanticOutputParser<T> {
+    fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
+        match serde_json::from_value::<T>(data.clone()) {
+            Ok(parsed) => Ok(parsed),
+            Err(e) => {
+                let args_str = serde_json::to_string(data).unwrap_or_default();
+                Err(crate::types::format_pydantic_error(
+                    &e,
+                    Some(&args_str),
+                    Some("Please strictly follow the Pydantic-first tool schema and try again."),
+                ))
+            }
+        }
     }
 }

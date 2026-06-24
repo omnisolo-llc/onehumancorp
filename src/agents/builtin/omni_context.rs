@@ -1,3 +1,4 @@
+#![allow(clippy::empty_line_after_doc_comments)]
 use std::fs;
 use std::path::PathBuf;
 
