@@ -77,6 +77,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(networkCost).toBeVisible();
     expect(await networkCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 
+
     // Verify Milestones Page and Embed code generation
     await page.goto('/milestones');
     await expect(page.locator('h1', { hasText: 'Success Milestones 🏆' }).first()).toBeVisible({ timeout: 15000 });
@@ -94,5 +95,23 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
         expect(embedValue).toContain('<a href="');
         expect(embedValue).toContain('source=milestone_embed');
         expect(embedValue).toContain('<img src="');
+    }
+
+    // Verify Referral Leaderboard Generator
+    await page.goto('/referral-leaderboard-generator.html');
+    await expect(page.locator('h1', { hasText: 'Referral Leaderboard' }).first()).toBeVisible({ timeout: 15000 });
+
+    // Check that there is either a leaderboard or an empty state loaded
+    await page.waitForTimeout(2000); // Allow fetch to settle
+
+    const hasCodeBlock = await page.locator('#embed-code').isVisible();
+    const hasEmptyState = await page.locator('.empty-state').isVisible();
+
+    expect(hasCodeBlock || hasEmptyState).toBeTruthy();
+
+    if (hasCodeBlock) {
+        const codeText = await page.locator('#embed-code').innerText();
+        expect(codeText).toContain('<div id="ohc-leaderboard"></div>');
+        expect(codeText).toContain('ohc.app/api/v1/growth/embed/widget?type=leaderboard');
     }
 }
