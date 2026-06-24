@@ -80,6 +80,24 @@ impl InventoryService {
                     .execute(&pool)
                     .await;
 
+                // Operations Agent: trigger push notification for out-of-stock/lock failure
+                let job_id = Uuid::new_v4().to_string();
+                let message = format!("{} sold out. Would you like to draft a restock order?", product_id);
+                let job_payload = serde_json::json!({
+                    "product_id": product_id,
+                    "product_title": product_id,
+                    "remaining_stock": 0,
+                    "threshold": 5,
+                    "message": message
+                }).to_string();
+
+                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+                    .bind(job_id)
+                    .bind(tenant_id)
+                    .bind(&job_payload)
+                    .execute(&pool)
+                    .await;
+
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
