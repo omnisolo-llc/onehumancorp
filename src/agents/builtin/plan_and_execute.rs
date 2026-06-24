@@ -221,6 +221,15 @@ impl PlanAndExecuteOrchestrator {
                                 ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg),
                             ))
                         }
+                        Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
+                            Err(format!("USER_FIXABLE: {}", msg))
+                        }
+                        Err(ohc_builtin_agent_core::types::ToolError::Fatal(msg)) => {
+                            Err(format!("Fatal tool error: {}", msg))
+                        }
+                        Err(ohc_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
+                            Err(format!("Unexpected tool error: {}", msg))
+                        }
                         Err(e) => Err(format!("Tool execution failed: {}", e)),
                     }
                 });
