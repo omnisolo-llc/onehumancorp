@@ -539,8 +539,9 @@ async fn simulate_autonomous_booking_quote(
     match orchestrator.execute_action(
         crate::orchestration::departments::types::DepartmentType::Sales,
         "Draft quote and propose schedule for Emergency Handyman Service".to_string(),
+        tenant_id.clone(),
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
         payload,
-        &tenant_id,
     ).await {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
