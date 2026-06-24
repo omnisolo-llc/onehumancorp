@@ -2306,14 +2306,16 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             : activity.payload;
                         // Fallback logic specific to Paused state that gets stored inside proposed_content
                         if (
-                          p?.original_payload?.proposed_content?.includes(
+                          p?.action?.proposed_content?.includes(
+                            "System is paused",
+                          ) || p?.original_payload?.proposed_content?.includes(
                             "System is paused",
                           )
                         ) {
-                          return p.original_payload.proposed_content;
+                          return p?.action?.proposed_content || p?.original_payload?.proposed_content;
                         }
                         return (
-                          p?.original_payload?.description || "Action completed"
+                          p?.context?.description || p?.original_payload?.description || "Action completed"
                         );
                       } catch (e) {
                         return "Action completed";
