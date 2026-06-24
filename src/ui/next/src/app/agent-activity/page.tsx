@@ -93,7 +93,7 @@ export default function AgentActivityPage() {
                                 {job.status === 'PROCESSING' && (
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-[16px]"></div>
                                 )}
-                                <div className={`w-16 flex flex-col items-center justify-center shrink-0 ${job.status === 'COMPLETED' ? 'text-green-500' : job.status === 'FAILED' ? 'text-red-500' : ''}`}>
+                                <div className={`w-16 flex flex-col items-center justify-center shrink-0 ${job.status === 'COMPLETED' ? 'text-green-500' : job.status === 'FAILED' ? 'text-[#FF3B30]' : ''}`}>
                                     {job.status === 'PROCESSING' ? (
                                         <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
                                     ) : job.status === 'COMPLETED' ? (

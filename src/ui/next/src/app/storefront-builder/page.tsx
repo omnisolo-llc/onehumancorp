@@ -497,7 +497,7 @@ export default function StorefrontBuilderPage() {
                       {editingBlockContent[key].map((item: any, idx: number) => (
                         <div key={idx} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg space-y-2 relative">
                            <button
-                             className="absolute top-2 right-2 text-red-500 text-xs font-bold"
+                             className="absolute top-2 right-2 text-[#FF3B30] text-xs font-bold"
                              onClick={() => {
                                const newItems = [...editingBlockContent[key]];
                                newItems.splice(idx, 1);

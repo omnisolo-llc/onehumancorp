@@ -96,7 +96,7 @@ export function VoiceAssistantFAB() {
         disabled={isProcessing}
         className={`w-16 h-16 min-w-[44px] min-h-[44px] rounded-full shadow-2xl flex items-center justify-center text-2xl transition-all duration-200 border-2 ${
           isListening
-            ? 'bg-red-500 scale-110 border-red-400 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)]'
+            ? 'bg-[#FF3B30] scale-110 border-red-400 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)]'
             : 'bg-indigo-600 hover:bg-indigo-500 hover:scale-105 border-indigo-400/50 backdrop-blur-[30px] saturate-[210%] bg-opacity-80'
         } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
         aria-label="Voice Command Assistant"

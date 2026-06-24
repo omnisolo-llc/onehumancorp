@@ -99,7 +99,7 @@ export default function CustomerSubscriptionPortal() {
   if (!subscription) {
      return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 font-inter">
-        <p className="text-red-500 font-medium">Subscription not found.</p>
+        <p className="text-[#FF3B30] font-medium">Subscription not found.</p>
       </div>
     );
   }

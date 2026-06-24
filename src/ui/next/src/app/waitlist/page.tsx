@@ -180,7 +180,7 @@ export default function WaitlistPage() {
                   {isSubmitting ? "Joining..." : "Join the Waitlist"}
                 </button>
                 {errorMessage && (
-                  <p className="text-red-500 text-sm mt-2">{errorMessage}</p>
+                  <p className="text-[#FF3B30] text-sm mt-2">{errorMessage}</p>
                 )}
               </div>
             </form>

@@ -97,7 +97,7 @@ export default function QuoteReviewPage() {
   };
 
   if (loading) return <AppShell title="Loading Quote..."><div className="p-4 text-center">Loading...</div></AppShell>;
-  if (error) return <AppShell title="Error"><div className="p-4 text-center text-red-500">{error}</div></AppShell>;
+  if (error) return <AppShell title="Error"><div className="p-4 text-center text-[#FF3B30]">{error}</div></AppShell>;
   if (!quote) return <AppShell title="Not Found"><div className="p-4 text-center">Quote not found</div></AppShell>;
 
   return (

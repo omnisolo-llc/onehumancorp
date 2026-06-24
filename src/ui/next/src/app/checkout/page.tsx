@@ -370,7 +370,7 @@ function CheckoutContent() {
                   </button>
                 </div>
                 {deliveryError && (
-                  <p className="text-xs text-red-500 mt-1">{deliveryError}</p>
+                  <p className="text-xs text-[#FF3B30] mt-1">{deliveryError}</p>
                 )}
                 {deliveryFee !== null && (
                   <p className="text-xs text-green-600 mt-1 font-medium">

@@ -34,7 +34,7 @@ export default function SonaPatternsPage() {
       ) : patterns.length === 0 ? (
         <div className="text-gray-500">No patterns recorded yet.</div>
       ) : error ? (
-        <div className="text-red-500 bg-red-50 p-4 rounded-lg">{error}</div>
+        <div className="text-[#FF3B30] bg-red-50 p-4 rounded-lg">{error}</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {patterns.map((p) => (
