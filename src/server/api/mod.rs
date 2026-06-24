@@ -4,6 +4,7 @@ pub mod offline_sync;
 pub mod mesh_handler;
 pub mod twilio_webhook;
 pub mod twilio_voice;
+pub mod twilio_whatsapp_setup;
 pub mod omnichannel_webhook;
 pub mod autodream;
 pub mod terminal_api;

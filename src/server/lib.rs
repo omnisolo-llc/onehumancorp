@@ -2964,6 +2964,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(twilio_voice_webhook_state);
 
     let twilio_webhook_router = axum::Router::new()
+        .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::twilio_whatsapp_setup::twilio_whatsapp_setup_handler))
         .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
         .route("/api/v1/webhooks/twilio/voice", axum::routing::post(api::twilio_webhook::twilio_voice_webhook_handler))
         .with_state(twilio_webhook_state);
