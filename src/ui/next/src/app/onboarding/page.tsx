@@ -756,7 +756,7 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <textarea
-                  id="instant-bio" enterKeyHint="next"
+                  id="instant-bio"
                   data-testid="instant-bio"
                   className={`glassmorphism rounded-[8px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] ${error === "Please tell us about your business." || error ? "border border-[#FF3B30]" : "border border-white/20 focus:border-[#0066FF]"}`}
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
@@ -772,7 +772,7 @@ export default function OnboardingWizard() {
 
                 <input
                   id="instant-image-url"
-                  data-testid="instant-image-url" enterKeyHint="next"
+                  data-testid="instant-image-url"
                   type="url"
                   className="glassmorphism rounded-[8px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none border border-white/20 focus:border-[#0066FF] transition-all duration-[250ms] rounded-[8px] min-h-[44px]"
                   placeholder="Image URL (Optional)"

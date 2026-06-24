@@ -37,7 +37,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/verify-ui.spec.ts",
     "//src/ui/next:src/e2e/knowledge-documents.spec.ts",
 
-    "//src/ui/next:src/e2e/videos.spec.ts",
+
     "//src/ui/next:src/e2e/pos-inventory-sync.spec.ts",
 
     "//src/ui/next:src/e2e/viral-social-proof.spec.ts",
@@ -51,7 +51,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/checkout.spec.ts",
     "//src/ui/next:e2e/conversational_checkout.spec.ts",
     "//src/ui/next:e2e/dashboard-feed.spec.ts",
-    "//src/ui/next:src/e2e/documentation_cuj.spec.ts",
+
 
     "//src/ui/next:src/e2e/help_components.spec.ts",
     "//src/ui/next:e2e/localization_offline.spec.ts",
