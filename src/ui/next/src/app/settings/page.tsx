@@ -34,6 +34,8 @@ export default function SettingsPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [agentName, setAgentName] = useState("Agent One");
+  const [seoReports, setSeoReports] = useState<any[]>([]);
+  const [hitRate, setHitRate] = useState<string>("");
 
 
   useEffect(() => {
@@ -70,7 +72,21 @@ export default function SettingsPage() {
             });
           }
         })
-        .catch(e => console.error("Failed to load voice settings", e))
+        .catch(e => console.error("Failed to load voice settings", e)),
+
+      fetch("/api/local_seo/discovery_report")
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setSeoReports(data);
+            if (data.length > 0 && data[0].metrics && data[0].metrics.edge_cache_hit_rate !== undefined) {
+              setHitRate(`${(data[0].metrics.edge_cache_hit_rate * 100).toFixed(1)}% Hit Rate`);
+            } else {
+              setHitRate(""); // No data available
+            }
+          }
+        })
+        .catch(e => console.error("Failed to load seo reports", e))
     ]).finally(() => {
       setIsLoading(false);
     });
@@ -482,6 +498,19 @@ export default function SettingsPage() {
               <Link href="/api-docs" className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 font-bold rounded-lg shadow-sm transition-all active:scale-95 text-xs">
                 View API Docs
               </Link>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-800">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Edge Cache & SEO Optimization</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Autonomous edge caching and agentic SEO pre-rendering are actively managing your storefront.</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1" id="seo-recent-updates">{seoReports.length > 0 ? seoReports[0].plain_language_summary : ""}</p>
+              </div>
+              {hitRate && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-mono text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded" id="edge-cache-hit-rate">{hitRate}</span>
+                </div>
+              )}
             </div>
           </div>
         </section>

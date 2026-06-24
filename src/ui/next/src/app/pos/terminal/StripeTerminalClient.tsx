@@ -403,7 +403,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                {pendingReconciliation.map((pr, idx) => (
                  <li key={idx} className="text-xs text-gray-800 bg-gray-100/50 p-3 rounded-xl flex justify-between border border-gray-200">
                    <span className="font-medium">Product: {pr.product_id}</span>
-                   <span className="font-bold text-red-500">Shortage: {pr.shortage}</span>
+                   <span className="font-bold text-[#FF3B30]">Shortage: {pr.shortage}</span>
                  </li>
                ))}
              </ul>

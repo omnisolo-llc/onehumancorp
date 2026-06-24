@@ -132,7 +132,7 @@ pub async fn bench_api_response_time() {
     let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    tokio::spawn(async move {
+    let bg_handle = tokio::spawn(async move {
         while let Some(_) = rx.recv().await {}
     });
 
@@ -227,6 +227,7 @@ pub async fn bench_api_response_time() {
     }
     standalone_mobile_times.sort();
     println!("API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us", standalone_mobile_times[iterations / 2], standalone_mobile_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], standalone_mobile_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    bg_handle.abort();
 }
 
 pub async fn bench_agent_snapshot() {
@@ -336,7 +337,7 @@ pub async fn bench_agent_snapshot() {
 pub async fn bench_dashboard_snapshot() {
     println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    tokio::spawn(async move {
+    let bg_handle = tokio::spawn(async move {
         while let Some(_) = rx.recv().await {}
     });
 
@@ -452,6 +453,7 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     println!("Parallel Fetch Dashboard Optimized: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    bg_handle.abort();
 }
 
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
@@ -533,7 +535,7 @@ pub async fn bench_get_analytics() {
     };
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    tokio::spawn(async move {
+    let bg_handle = tokio::spawn(async move {
         while let Some(_) = rx.recv().await {}
     });
     let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
@@ -582,6 +584,7 @@ pub async fn bench_get_analytics() {
         fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
         fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
     );
+    bg_handle.abort();
 }
 #[cfg(test)]
 mod tests {

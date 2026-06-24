@@ -68,7 +68,7 @@ export default function BusinessAnalytics() {
             <div className="app-card glassmorphism p-5 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Conversion Rate</div>
               <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">4.2%</div>
-              <div className="text-xs font-semibold text-red-500 mt-2 flex items-center gap-1">
+              <div className="text-xs font-semibold text-[#FF3B30] mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
                  -1.5% from last month
               </div>

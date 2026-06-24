@@ -692,10 +692,10 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let row_sqlite = sqlx::query("SELECT sync_error FROM agent_missions WHERE id = 'stuck_mission_sqlite_cat'")
             .fetch_one(&sqlite_pool).await.unwrap();
         use sqlx::Row;
-        assert!(row_sqlite.get::<String, _>("sync_error").contains("[bug]"));
+        assert!(row_sqlite.get::<String, _>("sync_error").contains("bug:"));
 
         // Verify PG mission failure category
         let row_pg = sqlx::query("SELECT sync_error FROM agent_missions WHERE id = 'stuck_mission_pg_cat'")
             .fetch_one(&pg_pool).await.unwrap();
-        assert!(row_pg.get::<String, _>("sync_error").contains("[bug]"));
+        assert!(row_pg.get::<String, _>("sync_error").contains("bug:"));
     }
