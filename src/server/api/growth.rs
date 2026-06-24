@@ -1578,8 +1578,8 @@ async fn handle_storefront_embed(
     let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
 
     let mut has_pro = false;
-    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
-        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+    if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
             .await
@@ -1768,8 +1768,8 @@ async fn handle_og_card(
     }
 
     let mut has_pro = false;
-    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
-        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+    if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant)
             .fetch_optional(&state.pool)
             .await
@@ -1991,8 +1991,8 @@ async fn handle_get_milestone_card(
     // Fetch business name - handle "DEFAULT" and ID vs tenant_id
     let mut business_name = "My Awesome Store".to_string();
     let mut has_pro = false;
-    if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(tenant_id).is_ok() {
-        let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT business_name, plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+    if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(&tenant_id).is_ok() {
+        let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT name as business_name, plan_tier FROM tenants WHERE id = $1::uuid")
             .bind(tenant_id)
             .fetch_optional(&state.pool)
             .await
