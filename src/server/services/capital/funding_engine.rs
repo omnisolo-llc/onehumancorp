@@ -1,11 +1,11 @@
 use sqlx::PgPool;
 
 pub struct FundingEngine {
-    pool: PgPool,
+    _pool: sqlx::PgPool,
 }
 
 impl FundingEngine {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self { _pool: pool }
     }
 }
