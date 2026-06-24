@@ -617,7 +617,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   return (
     <section
       id="triage-queue"
-      className="mb-6 w-full overflow-hidden"
+      className="mb-6 w-full max-w-[375px] mx-auto overflow-hidden"
       aria-label="Unified Agent Feed"
     >
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">
