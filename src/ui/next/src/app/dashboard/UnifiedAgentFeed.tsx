@@ -568,6 +568,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     modified_content?: string,
     event_source?: string,
   ) => {
+    // Optimistic UI update
+    setItems((prev) => prev.filter((app) => app.id !== id));
+
     if (isOffline) {
       // Enqueue offline action
       await enqueueAction({
@@ -580,9 +583,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       setQueuedActionIds((prev) => new Set(prev).add(id));
       return;
     }
-
-    // Optimistic UI update
-    setItems((prev) => prev.filter((app) => app.id !== id));
 
     try {
       await submitDecision(id, approved, modified_content, event_source);
