@@ -365,8 +365,321 @@ pub async fn offline_sync_handler(
     ).into_response()
 }
 
+
+#[derive(Deserialize, Debug, Clone, Serialize)]
+pub struct SyncEvent {
+    pub id: String,
+    pub entity_id: String,
+    pub entity_type: String,
+    pub action_type: String,
+    pub payload: serde_json::Value,
+    pub base_version: i64,
+}
+
+#[derive(Deserialize, Debug)]
+#[derive(Clone)]
+pub struct SyncEventsRequest {
+    pub events: Vec<SyncEvent>,
+}
+
+#[derive(Serialize)]
+pub struct SyncEventsResponse {
+    pub success: bool,
+    pub applied_count: i32,
+    pub conflict_count: i32,
+}
+
+pub async fn sync_events_handler(
+    State(pool): State<sqlx::PgPool>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<SyncEventsRequest>,
+) -> impl IntoResponse {
+    tracing::info!("Received {} generic sync events.", payload.events.len());
+
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+
+    if tenant_id.is_empty() {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(SyncEventsResponse { success: false, applied_count: 0, conflict_count: 0 }),
+        ).into_response();
+    }
+
+    let mut applied_count = 0;
+    let mut conflict_count = 0;
+
+    for event in payload.events {
+        let mut tx = match pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                tracing::error!("Failed to begin transaction for sync event {}: {}", event.id, e);
+                continue;
+            }
+        };
+
+        // Idempotency check
+        let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sync_events WHERE id = $1 AND tenant_id = $2")
+            .bind(&event.id)
+            .bind(&tenant_id)
+            .fetch_one(&mut *tx)
+            .await
+            .unwrap_or((0,));
+
+        if exists.0 > 0 {
+            let _ = tx.rollback().await;
+            continue; // Already processed
+        }
+
+        // Version checking against test_sync_entities (demonstrative entity)
+        let mut is_conflict = false;
+        let mut current_version = 1;
+
+        if event.entity_type == "test_sync_entity" {
+            let row_res: Result<(i64,), sqlx::Error> = sqlx::query_as("SELECT version FROM test_sync_entities WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                .bind(&event.entity_id)
+                .bind(&tenant_id)
+                .fetch_one(&mut *tx)
+                .await;
+
+            match row_res {
+                Ok((ver,)) => {
+                    current_version = ver;
+                    if current_version > event.base_version {
+                        is_conflict = true;
+                    }
+                }
+                Err(sqlx::Error::RowNotFound) => {
+                    // Entity does not exist, so version is essentially 1 (or 0)
+                    // Let's create it with version 1
+                    let _ = sqlx::query("INSERT INTO test_sync_entities (id, tenant_id, version) VALUES ($1, $2, 1)")
+                        .bind(&event.entity_id)
+                        .bind(&tenant_id)
+                        .execute(&mut *tx)
+                        .await;
+                }
+                Err(e) => {
+                    tracing::error!("Failed to fetch test_sync_entities version for sync event {}: {}", event.id, e);
+                    let _ = tx.rollback().await;
+                    continue;
+                }
+            }
+        }
+
+        if is_conflict {
+            let res1 = sqlx::query(
+                "INSERT INTO sync_conflict_queue (id, tenant_id, event_id, entity_id, entity_type, base_version, current_version, payload) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+            )
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&tenant_id)
+            .bind(&event.id)
+            .bind(&event.entity_id)
+            .bind(&event.entity_type)
+            .bind(event.base_version)
+            .bind(current_version)
+            .bind(&event.payload)
+            .execute(&mut *tx)
+            .await;
+
+            let res2 = sqlx::query(
+                "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'sync_conflict_alert', $3::jsonb, 'PENDING')"
+            )
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&tenant_id)
+            .bind(serde_json::json!({
+                "event_id": event.id,
+                "entity_id": event.entity_id,
+                "entity_type": event.entity_type,
+                "message": "A data synchronization conflict occurred and requires Operations review."
+            }).to_string())
+            .execute(&mut *tx)
+            .await;
+
+            if res1.is_ok() && res2.is_ok() {
+                if tx.commit().await.is_ok() {
+                    conflict_count += 1;
+                }
+            } else {
+                let _ = tx.rollback().await;
+            }
+        } else {
+            let res1 = sqlx::query(
+                "INSERT INTO sync_events (id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4)"
+            )
+            .bind(&event.id)
+            .bind(&tenant_id)
+            .bind(&event.action_type)
+            .bind(event.payload.to_string())
+            .execute(&mut *tx)
+            .await;
+
+            let mut res2 = Ok(sqlx::postgres::PgQueryResult::default());
+            if event.entity_type == "test_sync_entity" {
+                res2 = sqlx::query("UPDATE test_sync_entities SET version = version + 1 WHERE id = $1 AND tenant_id = $2")
+                    .bind(&event.entity_id)
+                    .bind(&tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+            }
+
+            if res1.is_ok() && res2.is_ok() {
+                if tx.commit().await.is_ok() {
+                    applied_count += 1;
+                }
+            } else {
+                let _ = tx.rollback().await;
+            }
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(SyncEventsResponse { success: true, applied_count, conflict_count }),
+    ).into_response()
+}
+
+
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_sync_events_success() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
+
+        // Setup test data
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-sync-1', 'Sync Test Tenant 1') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM sync_events WHERE tenant_id = 'tenant-sync-1'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM test_sync_entities WHERE tenant_id = 'tenant-sync-1'").execute(&pool).await.unwrap();
+
+        let req = SyncEventsRequest {
+            events: vec![
+                SyncEvent {
+                    id: "se1".to_string(),
+                    entity_id: "test-ent-1".to_string(),
+                    entity_type: "test_sync_entity".to_string(),
+                    action_type: "update_status".to_string(),
+                    payload: serde_json::json!({"status": "completed"}),
+                    base_version: 1,
+                },
+            ],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync-1/agent/x".parse().unwrap());
+
+        let response = sync_events_handler(State(pool.clone()), headers.clone(), Json(req)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(body_json["success"], true);
+        assert_eq!(body_json["applied_count"], 1);
+        assert_eq!(body_json["conflict_count"], 0);
+
+        let (ver,): (i64,) = sqlx::query_as("SELECT version FROM test_sync_entities WHERE id = 'test-ent-1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(ver, 2);
+    }
+
+    #[tokio::test]
+    async fn test_sync_events_idempotent() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-sync-2', 'Sync Test Tenant 2') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM sync_events WHERE tenant_id = 'tenant-sync-2'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM test_sync_entities WHERE tenant_id = 'tenant-sync-2'").execute(&pool).await.unwrap();
+
+        let req = SyncEventsRequest {
+            events: vec![
+                SyncEvent {
+                    id: "se2".to_string(),
+                    entity_id: "test-ent-2".to_string(),
+                    entity_type: "test_sync_entity".to_string(),
+                    action_type: "update_status".to_string(),
+                    payload: serde_json::json!({"status": "completed"}),
+                    base_version: 1,
+                },
+            ],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync-2/agent/x".parse().unwrap());
+
+        // First call
+        let response1 = sync_events_handler(State(pool.clone()), headers.clone(), Json(req.clone())).await.into_response();
+        assert_eq!(response1.status(), StatusCode::OK);
+
+        // Second call
+        let response2 = sync_events_handler(State(pool.clone()), headers.clone(), Json(req)).await.into_response();
+        assert_eq!(response2.status(), StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response2.into_body(), usize::MAX).await.unwrap();
+        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(body_json["success"], true);
+        assert_eq!(body_json["applied_count"], 0);
+        assert_eq!(body_json["conflict_count"], 0);
+    }
+
+    #[tokio::test]
+    async fn test_sync_events_conflict() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-sync-3', 'Sync Test Tenant 3') ON CONFLICT DO NOTHING")
+            .execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM sync_events WHERE tenant_id = 'tenant-sync-3'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM test_sync_entities WHERE tenant_id = 'tenant-sync-3'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM sync_conflict_queue WHERE tenant_id = 'tenant-sync-3'").execute(&pool).await.unwrap();
+
+        // Preset entity with version 5
+        sqlx::query("INSERT INTO test_sync_entities (id, tenant_id, version) VALUES ('test-ent-3', 'tenant-sync-3', 5)")
+            .execute(&pool).await.unwrap();
+
+        let req = SyncEventsRequest {
+            events: vec![
+                SyncEvent {
+                    id: "se3".to_string(),
+                    entity_id: "test-ent-3".to_string(),
+                    entity_type: "test_sync_entity".to_string(),
+                    action_type: "update_status".to_string(),
+                    payload: serde_json::json!({"status": "completed"}),
+                    base_version: 1, // Conflict! DB has 5
+                },
+            ],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync-3/agent/x".parse().unwrap());
+
+        let response = sync_events_handler(State(pool.clone()), headers.clone(), Json(req)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+        assert_eq!(body_json["success"], true);
+        assert_eq!(body_json["applied_count"], 0);
+        assert_eq!(body_json["conflict_count"], 1);
+
+        let (c_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sync_conflict_queue WHERE event_id = 'se3'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(c_count, 1);
+    }
     use super::*;
     use axum::http::HeaderMap;
     use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
