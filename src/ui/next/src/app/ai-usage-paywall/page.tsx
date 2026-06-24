@@ -117,7 +117,7 @@ export default function AiUsagePaywallPage() {
                   <div className="w-2/3">
                     <div className="h-2 w-full overflow-hidden rounded-md bg-gray-100">
                       <div
-                        className={`h-full rounded-md transition-all duration-700 ${isLimitReached ? 'bg-red-500' : 'bg-[#0f766e]'}`}
+                        className={`h-full rounded-md transition-all duration-700 ${isLimitReached ? 'bg-[#FF3B30]' : 'bg-[#0f766e]'}`}
                         style={{ width: `${overallPercent}%` }}
                       />
                     </div>

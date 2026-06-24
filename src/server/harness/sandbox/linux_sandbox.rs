@@ -47,11 +47,9 @@ impl LinuxSandbox {
         args.push("--tmpfs".to_string());
         args.push("/tmp".to_string());
 
-        // Handle network restrictions. For strict isolation, if there are ANY blocked domains,
-        // we drop the network entirely by not providing `--share-net`.
-        if self.policy.blocked_domains.is_empty() {
-            args.push("--share-net".to_string());
-        }
+        // Enforce strict network isolation: NEVER share the network namespace (--share-net).
+        // If agents require network access, it must be brokered securely via socat proxies.
+        // Dropping --share-net prevents SSRF to internal K8s services (e.g. cnpg, redis).
 
         // Now, for every read-only path, we bind it as ro-bind to restrict writes.
         // In bwrap, later bind mounts override earlier ones. So binding / as rw,
@@ -157,7 +155,7 @@ mod tests {
         let args = sandbox.generate_bwrap_args();
         assert!(args.contains(&"--unshare-all".to_string()));
         assert!(args.contains(&"--die-with-parent".to_string()));
-        assert!(args.contains(&"--share-net".to_string()));
+        assert!(!args.contains(&"--share-net".to_string()));
         assert!(args.contains(&"--ro-bind".to_string()));
         assert!(args.contains(&"--tmpfs".to_string()));
         assert!(args.contains(&"--cap-drop".to_string()));
