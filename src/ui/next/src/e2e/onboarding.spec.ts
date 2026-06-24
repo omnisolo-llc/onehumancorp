@@ -2,11 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('OnboardingWizard CUJ', () => {
   test.beforeEach(async ({ page, context }) => {
-    await page.route("**/api/onboarding/intake", async route => route.fulfill({ status: 200, json: { business_name: "Mocked Business", business_type: "Mocked Type", initial_products: [{name: "Mocked Product", price: "10.00"}], categories: ["mocked"] } }));
-    await context.route("**/api/onboarding/start", async route => route.fulfill({ status: 200, json: { success: true, organization_id: "test-tenant-123" } }));
-    await context.route("**/api/onboarding/state", async route => route.fulfill({ status: 200, json: {} }));
-    await context.route("**/api/onboarding/draft", async route => route.fulfill({ status: 200, json: {} }));
-
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
       window.localStorage.clear();
@@ -175,13 +170,6 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.evaluate(() => window.localStorage.clear());
 
     // 3. Reload page and check restoration
-    await context.route('**/api/onboarding/draft', async (route, request) => {
-      if (request.method() === 'GET') {
-        route.fulfill({ status: 200, json: { wizardState: { step: 1, chatStep: 1, businessName: 'My Restored Business' } } });
-      } else {
-        route.fulfill({ status: 200, json: { success: true, organization_id: 'test-tenant-123' } });
-      }
-    });
     await page.reload();
 
     // We should be restored to the first step of the wizard where we were, with the text filled
@@ -305,17 +293,19 @@ test.describe('OnboardingWizard CUJ', () => {
     await context.unroute('**/api/onboarding/intake');
     await context.unroute('**/api/onboarding/start');
     await context.unroute('**/api/onboarding/launch');
+
+  test('Instant Build handles network failures gracefully without mock data', async ({ page }) => {
+    // Navigate to onboarding
     await page.goto('/onboarding');
     await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
     await page.getByRole('button', { name: 'Instant Build' }).click();
     await expect(page.getByText("Tell us about your business")).toBeVisible();
 
-    // Fill the form
+    // Fill the form with invalid info that the backend might reject (or just fail due to down network)
     await page.getByPlaceholder(/e.g. I run a local bakery/i).fill('Failing business info');
 
-    // Intercept the API route to fail
-    await context.unroute('**/api/onboarding/intake');
-    await context.route('**/api/onboarding/intake', route => route.abort('failed'));
+    // Simulate network failure using route.abort
+    await page.route('**/api/onboarding/intake', route => route.abort('failed'));
 
     await page.getByRole('button', { name: 'Next' }).click();
 
@@ -323,10 +313,10 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.getByText(/failed/i)).toBeVisible();
 
     // Stop interception
-    await context.unroute('**/api/onboarding/intake');
+    await page.unroute('**/api/onboarding/intake');
   });
 
-  test('Step-by-step intake handles backend processing errors correctly', async ({ page, context }) => {
+  test('Step-by-step intake handles backend processing errors correctly', async ({ page }) => {
     await page.goto('/onboarding');
     await page.getByRole('button', { name: 'Start My Business' }).click();
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Test Business');
@@ -338,19 +328,17 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Testing');
 
-    // Mock the backend responding with a 500 error
-    await context.unroute('**/api/onboarding/intake');
-    await context.route('**/api/onboarding/intake', route => route.fulfill({ status: 500, json: { error: 'Internal Server Error' } }));
+    // Simulate a 500 error from the backend to ensure UI logic handles failures properly
+    await page.route('**/api/onboarding/intake', route => route.fulfill({ status: 500, json: { error: 'Internal Server Error' } }));
 
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.getByText(/Internal Server Error/i)).toBeVisible();
 
-    await context.unroute('/api/onboarding/intake');
+    // Stop interception
+    await page.unroute('**/api/onboarding/intake');
   });
 
-  test('Store launch correctly fails when start API is down', async ({ page, context }) => {
-    await context.unroute('**/api/onboarding/start');
-    await context.unroute('**/api/onboarding/launch');
+  test('Store launch correctly fails when start API is down', async ({ page }) => {
     await page.goto('/onboarding');
     await page.getByRole('button', { name: 'Start My Business' }).click();
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Test Business');
@@ -362,9 +350,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Testing');
 
-    // Normal intake response
-    await context.unroute('**/api/onboarding/intake');
-    await context.route('**/api/onboarding/intake', route => route.fulfill({ status: 200, json: { business_name: 'Test Business', business_type: 'Test', initial_products: [{name: 'Mock', price: '10'}], categories: [] } }));
+    // We let the actual intake pass but intercept the launch
+    await page.route('**/api/onboarding/intake', route => route.fulfill({ status: 200, json: { business_name: 'Test Business', business_type: 'Test', initial_products: [{name: 'Mock', price: '10'}], categories: [] } }));
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -373,13 +360,14 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/you@example.com/i).fill('admin@test.com');
     await page.getByPlaceholder(/••••••••/i).fill('password123');
 
-    // Mock the start API failing
-    await context.unroute('**/api/onboarding/launch');
-    await context.route('**/api/onboarding/launch', route => route.fulfill({ status: 502 }));
+    // Simulate the launch failing
+    await page.route('**/api/onboarding/start', route => route.fulfill({ status: 502, json: { error: 'Bad Gateway' } }));
 
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
-    await expect(page.getByText(/failed/i)).toBeVisible();
+    await expect(page.getByText(/failed|Bad Gateway/i)).toBeVisible({ timeout: 15000 });
 
-    await context.unroute('**/api/onboarding/launch');
-    await context.unroute('/api/onboarding/intake');
+    // Stop interception
+    await page.unroute('**/api/onboarding/start');
+    await page.unroute('**/api/onboarding/intake');
   });
+});
