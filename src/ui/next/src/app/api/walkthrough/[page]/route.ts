@@ -14,11 +14,11 @@ export async function GET(
     }
     const data = await res.json();
 
-    // Map backend `selector` and `text` to frontend `targetId` and `content`
+    // Map backend `target_id`, `selector`, `text` and `content` to frontend `targetId` and `content`
     const mappedData = data.map((step: any) => ({
-      targetId: step.selector ? step.selector.replace('#', '') : step.targetId,
+      targetId: step.target_id || step.targetId || (step.selector ? step.selector.replace('#', '') : ''),
       title: step.title,
-      content: step.text || step.content,
+      content: step.content || step.text,
       position: step.position || 'bottom'
     }));
 
