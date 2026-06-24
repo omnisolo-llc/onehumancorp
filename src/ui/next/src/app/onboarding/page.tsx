@@ -181,8 +181,9 @@ export default function OnboardingWizard() {
         .catch(() => null)
     ])
     .then(([draftData, stateData]) => {
-      let data = draftData || stateData;
-      if (data) {
+      const isValid = (d: any) => d && Object.keys(d).length > 0;
+      let data = isValid(draftData) ? draftData : stateData;
+      if (isValid(data)) {
         if (data.wizardState) data = data.wizardState;
         if (data.step !== undefined) updateState({ step: data.step === 4 ? 3 : data.step });
         if (data.chatStep !== undefined) updateState({ chatStep: data.chatStep });
