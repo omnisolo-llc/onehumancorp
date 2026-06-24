@@ -158,8 +158,8 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.goto('/onboarding');
     await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
 
-    // Check for glassmorphism
-    await expect(page.locator('#setup-screen')).toHaveClass(/glassmorphism/);
+    // Check for glassmorphism classes
+    await expect(page.locator('#setup-screen')).toHaveClass(/bg-white\/65/);
 
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
@@ -242,7 +242,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     const businessNameInput = page.getByPlaceholder(/Maya's Custom Cake/i);
     await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
-    await expect(businessNameInput).toHaveClass(/border-\[#FF3B30\]/);
+    await expect(businessNameInput).toHaveClass(/border-\[#FF3B30\]/); // Note: We verify the visual class directly here
 
     // Proceed to Step 2
     await businessNameInput.fill('Valid Business Name');
