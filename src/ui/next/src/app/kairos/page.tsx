@@ -183,7 +183,7 @@ function KairosContent() {
             <div className="app-panel-body">
               <div className="grid grid-cols-1 gap-3">
                 {Object.entries(memoryStats).map(([key, value]) => (
-                  <div key={key} className="app-card">
+                  <div key={key} className="app-card glass-card">
                     <div className="app-metric-label">{key.replaceAll("_", " ")}</div>
                     <div className="app-metric-value">{String(value)}</div>
                   </div>

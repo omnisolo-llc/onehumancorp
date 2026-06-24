@@ -99,7 +99,7 @@ export default function AiUsagePaywallPage() {
           </div>
           <div className="app-panel-body">
             <div className="app-grid two">
-              <div className="app-card p-4 glassmorphism border border-white/40 dark:border-white/10">
+              <div className="app-card glass-card p-4 glassmorphism border border-white/40 dark:border-white/10">
                 <div className="app-metric-label">Actions Used</div>
                 <div className="app-metric-value">
                   {totalUsed}
@@ -108,7 +108,7 @@ export default function AiUsagePaywallPage() {
                 <div className="app-metric-note">Current billing period</div>
               </div>
 
-              <div className="app-card p-4 glassmorphism border border-white/40 dark:border-white/10">
+              <div className="app-card glass-card p-4 glassmorphism border border-white/40 dark:border-white/10">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="app-metric-label">Capacity</div>

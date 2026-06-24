@@ -66,7 +66,7 @@ export default function DiscountCodeGeneratorPage() {
 
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col md:flex-row gap-8">
         <div className="w-full md:w-1/2 flex flex-col gap-6">
-            <div className="app-card rounded-[16px] p-6 shadow-sm border border-gray-100">
+            <div className="app-card glass-card rounded-[16px] p-6 shadow-sm border border-gray-100">
                 <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900">Configure Discount</h2>
 
                 <div className="space-y-4">
@@ -140,7 +140,7 @@ export default function DiscountCodeGeneratorPage() {
       {/* Embed Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
-            <div className="app-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in bg-white">
+            <div className="app-card glass-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in bg-white">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
@@ -183,7 +183,7 @@ export default function DiscountCodeGeneratorPage() {
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="app-card w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center bg-white">
+          <div className="app-card glass-card w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center bg-white">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-end mb-2">

@@ -216,11 +216,11 @@ function InboxWorkspace({
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="app-card">
+                  <div className="app-card glass-card">
                     <div className="app-metric-label">Status</div>
                     <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{formatStatus(selected.status)}</span></div>
                   </div>
-                  <div className="app-card">
+                  <div className="app-card glass-card">
                     <div className="app-metric-label">Created</div>
                     <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
                   </div>

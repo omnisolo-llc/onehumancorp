@@ -1,55 +1,16 @@
-# docker-compose.e2e.yml — Lean E2E infrastructure stack.
-#
-# Starts ONLY the shared infrastructure services (postgres and Valkey).
-# The OHC server binary is intentionally NOT run as a
-# container here: it is started directly by run-playwright.mjs from the
-# Bazel-built binary so that no Docker image rebuild is required.
-#
-# Usage (managed automatically by run-playwright.mjs):
-#   docker compose -f deploy/docker-compose.e2e.yml up -d
+version: "3.8"
 
 services:
-  # ─── Infrastructure ───────────────────────────────────────────────────────
-  postgres:
-    image: pgvector/pgvector:pg15
-    command: ["postgres", "-c", "wal_level=logical"]
+  db:
+    image: postgres:15-alpine
     environment:
-      POSTGRES_USER: ohc
-      POSTGRES_PASSWORD: ohc
-      POSTGRES_DB: ohc
-      POSTGRES_MULTIPLE_DATABASES: ohc,chatwoot
-    volumes:
-      - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ohc"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
-    security_opt:
-      - seccomp:unconfined
-      - apparmor:unconfined
-    cap_add:
-      - SYS_ADMIN
-      - DAC_READ_SEARCH
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: miser_test_db
     ports:
       - "5432:5432"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
 
-  valkey:
-    image: mirror.gcr.io/library/redis:7
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
+  redis:
+    image: redis:7-alpine
     ports:
       - "6379:6379"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 64M

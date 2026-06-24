@@ -287,7 +287,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     Schedule a post?
                   </span>
                 </div>
-                <div className="app-card dark:bg-gray-800 p-3 rounded-[8px] border border-pink-100 dark:border-pink-900/50">
+                <div className="app-card glass-card dark:bg-gray-800 p-3 rounded-[8px] border border-pink-100 dark:border-pink-900/50">
                   <div className="text-[10px] uppercase font-bold text-gray-400 mb-2 flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-pink-500"></span>{" "}
                     Instagram / TikTok Draft

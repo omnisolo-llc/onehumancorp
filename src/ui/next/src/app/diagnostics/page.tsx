@@ -83,11 +83,11 @@ export default function DiagnosticsPage() {
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 p-6 rounded-2xl">
           <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-4">Business Telemetry</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="p-4 rounded-xl app-card glassmorphism border border-white/40 dark:border-white/10">
+            <div className="p-4 rounded-xl app-card glass-card glassmorphism border border-white/40 dark:border-white/10">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</h4>
                 <div className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">{metricsData?.total_revenue || '$0.00'}</div>
             </div>
-            <div className="p-4 rounded-xl app-card glassmorphism border border-white/40 dark:border-white/10">
+            <div className="p-4 rounded-xl app-card glass-card glassmorphism border border-white/40 dark:border-white/10">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Sales</h4>
                 <div className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">{metricsData?.total_sales || '0'}</div>
             </div>

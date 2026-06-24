@@ -119,7 +119,7 @@ export default function KDSPage() {
           <h2 className="text-lg font-bold text-gray-800 mb-3">{texts.orders}</h2>
           <div className="flex flex-col gap-4 mb-6">
             {orders.map(order => (
-              <div key={order.id} className="app-card backdrop-blur-[30px] rounded-2xl p-4 shadow-sm border border-gray-100">
+              <div key={order.id} className="app-card glass-card backdrop-blur-[30px] rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-bold text-lg text-gray-900">#{order.id} - {order.customer_name}</h3>
                   <span className={`px-2 py-1 rounded text-xs font-bold ${
@@ -175,7 +175,7 @@ export default function KDSPage() {
           <h2 className="text-lg font-bold text-gray-800 mb-3">{texts.inventory}</h2>
           <div className="flex flex-col gap-3">
              {inventory.map(item => (
-                <div key={item.id} className="app-card backdrop-blur-[30px] rounded-xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
+                <div key={item.id} className="app-card glass-card backdrop-blur-[30px] rounded-xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
                    <span className="font-bold text-gray-800 text-lg">{language === 'en' ? item.name_en : item.name_ar}</span>
                    <button
                      id={`sold-out-toggle-${item.id}`}

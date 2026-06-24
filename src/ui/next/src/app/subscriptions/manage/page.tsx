@@ -69,7 +69,7 @@ function SubscriptionManageContent() {
   if (success) {
     return (
       <div className="flex flex-col items-center justify-center p-8 min-h-screen bg-gray-50 font-inter">
-        <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-xl border border-green-100 bg-white">
+        <div className="app-card glass-card w-full max-w-md rounded-2xl p-6 shadow-xl border border-green-100 bg-white">
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl shadow-inner text-green-600">
               ✅
@@ -84,7 +84,7 @@ function SubscriptionManageContent() {
 
   return (
     <div className="flex flex-col items-center justify-center p-4 min-h-screen bg-gray-50 font-inter">
-      <div className="app-card w-full max-w-md rounded-2xl p-8 shadow-xl border border-gray-200 bg-white relative overflow-hidden">
+      <div className="app-card glass-card w-full max-w-md rounded-2xl p-8 shadow-xl border border-gray-200 bg-white relative overflow-hidden">
         {/* Background embellishment */}
         <div className="absolute top-0 left-0 w-32 h-32 bg-indigo-50 rounded-br-full -z-10"></div>
 

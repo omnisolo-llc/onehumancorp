@@ -178,7 +178,7 @@ export default function BookingWidgetBuilder() {
       {/* Embed Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
-            <div className="app-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="app-card glass-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}

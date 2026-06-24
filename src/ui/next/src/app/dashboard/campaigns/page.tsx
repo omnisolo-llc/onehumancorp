@@ -235,22 +235,22 @@ export default function CampaignOrchestrationPage() {
       actions={[{ label: "Dashboard", href: "/dashboard", icon: "dashboard" }]}
     >
       <section className="app-grid metrics !grid-cols-2 lg:!grid-cols-4 mb-6">
-        <div className="app-card">
+        <div className="app-card glass-card">
           <div className="app-metric-label">Customers</div>
           <div className="app-metric-value">{metrics.active_customers || 0}</div>
           <div className="app-metric-note">From dashboard metrics</div>
         </div>
-        <div className="app-card">
+        <div className="app-card glass-card">
           <div className="app-metric-label">Orders</div>
           <div className="app-metric-value">{orders.length}</div>
           <div className="app-metric-note">{loading ? "Loading order rows" : "Available targets"}</div>
         </div>
-        <div className="app-card">
+        <div className="app-card glass-card">
           <div className="app-metric-label">Open Inbox</div>
           <div className="app-metric-value">{openMessages}</div>
           <div className="app-metric-note">Customer context</div>
         </div>
-        <div className="app-card">
+        <div className="app-card glass-card">
           <div className="app-metric-label">Low Stock</div>
           <div className="app-metric-value">{lowStockCount}</div>
           <div className="app-metric-note">Supply risk before promotions</div>

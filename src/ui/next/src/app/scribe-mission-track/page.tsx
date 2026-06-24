@@ -65,7 +65,7 @@ export default function MissionTrackPage() {
         {/* Mission List */}
         <main className="flex-1 p-5 overflow-y-auto pb-24 space-y-4">
           {filteredMissions.map(mission => (
-            <div key={mission.id} className="app-card border border-white/60 shadow-sm p-4 rounded-2xl hover:shadow-md transition-all active:scale-[0.98] cursor-pointer">
+            <div key={mission.id} className="app-card glass-card border border-white/60 shadow-sm p-4 rounded-2xl hover:shadow-md transition-all active:scale-[0.98] cursor-pointer">
               <div className="flex justify-between items-start mb-3">
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider ${
                   mission.status === 'completed' ? 'bg-green-100 text-green-800' :

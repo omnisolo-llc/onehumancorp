@@ -211,7 +211,7 @@ export default function ActionCenterPage() {
               const title = cleanDescription(approval.description);
 
               return (
-                <div key={approval.id} className="app-card flex flex-col gap-4 p-4 border border-blue-100 bg-blue-50/30 rounded-2xl shadow-sm">
+                <div key={approval.id} className="app-card glass-card flex flex-col gap-4 p-4 border border-blue-100 bg-blue-50/30 rounded-2xl shadow-sm">
                   <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                     Pending Approval

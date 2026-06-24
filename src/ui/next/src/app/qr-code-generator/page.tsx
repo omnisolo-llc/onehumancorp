@@ -56,7 +56,7 @@ export default function QRCodeGeneratorPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           {/* Controls */}
-          <div className="app-card bg-white p-6 rounded-2xl shadow-xl w-full border border-gray-100">
+          <div className="app-card glass-card bg-white p-6 rounded-2xl shadow-xl w-full border border-gray-100">
             <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Customize Your QR Code</h3>
 
             <div className="space-y-6">
@@ -117,7 +117,7 @@ export default function QRCodeGeneratorPage() {
           </div>
 
           {/* Preview */}
-          <div className="app-card bg-white p-6 rounded-2xl shadow-xl w-full flex flex-col justify-center min-h-[400px] relative overflow-hidden group border border-gray-100">
+          <div className="app-card glass-card bg-white p-6 rounded-2xl shadow-xl w-full flex flex-col justify-center min-h-[400px] relative overflow-hidden group border border-gray-100">
              <div className="absolute top-4 right-4 px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full tracking-wide">LIVE PREVIEW</div>
 
              <div className="text-center flex flex-col items-center">
