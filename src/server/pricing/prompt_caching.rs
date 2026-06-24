@@ -207,27 +207,22 @@ impl PromptCache {
             return context.to_string();
         }
 
-        let mut truncated = String::from(&context[..byte_index]);
+        let mut slice = &context[..byte_index];
 
         // Try to truncate at a word boundary to keep it "intelligent"
-        if let Some(last_space) = truncated.rfind(char::is_whitespace) {
+        if let Some(last_space) = slice.rfind(char::is_whitespace) {
             // Keep at least some content if the last space is too early.
             // Using char_count / 2 to avoid slicing a UTF-8 character based on bytes.
-            let space_char_count = truncated[..last_space].chars().count();
+            let space_char_count = slice[..last_space].chars().count();
             if space_char_count > char_count / 2 {
-                truncated.truncate(last_space);
+                slice = &slice[..last_space];
             }
         }
 
         // Clean up trailing whitespace and punctuation before appending ellipsis
-        while truncated.ends_with(char::is_whitespace)
-            || truncated.ends_with(|c: char| c.is_ascii_punctuation())
-        {
-            truncated.pop();
-        }
+        slice = slice.trim_end_matches(|c: char| c.is_whitespace() || c.is_ascii_punctuation());
 
-        truncated.push_str("...");
-        truncated
+        format!("{}...", slice)
     }
 }
 
