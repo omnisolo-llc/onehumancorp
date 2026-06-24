@@ -21,14 +21,6 @@ test.describe('Interactive Trial Extension', () => {
     // Setup to handle new pages (window.open for X/Twitter)
     const pagePromise = context.waitForEvent('page');
 
-    // Setup API mock since we shouldn't hit real external Twitter APIs and might need local auth mocked
-    await page.route('/api/v1/growth/trial-extension/claim', async (route) => {
-        await route.fulfill({
-            status: 200,
-            json: { success: true, message: 'Trial successfully extended to pro' },
-        });
-    });
-
     // Click the share button
     await page.click('button:has-text("Share on X to Unlock 7 Days")');
 

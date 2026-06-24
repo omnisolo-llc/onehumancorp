@@ -1,29 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test('Staff Manager handles data format correctly without crashing', async ({ page }) => {
-  // Mock the /api/staff endpoint to return the format the backend uses
-  await page.route('**/api/staff', async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          staff: [
-            {
-              id: '1',
-              name: 'Test Staff',
-              phone_number: '123-456-7890',
-              role: 'Cashier',
-              pin_hash: '1234'
-            }
-          ]
-        })
-      });
-    } else {
-      await route.continue();
-    }
-  });
-
   // Navigate to the team page which contains the StaffManager component
   await page.goto('/team');
 

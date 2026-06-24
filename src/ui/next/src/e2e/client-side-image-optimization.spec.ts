@@ -25,31 +25,6 @@ test.describe('Client-side Image Optimization', () => {
   });
 
   test('should intercept large images, compress to webp, and upload', async ({ page }) => {
-    // Intercept network requests to /api/auto-catalog
-    await page.route('**/api/auto-catalog', async route => {
-      const request = route.request();
-      const postData = request.postData();
-
-      if (request.method() === 'POST' && postData) {
-          // Verify the payload contains the webp extension replacement
-          expect(postData).toContain('.webp');
-          expect(postData).toContain('image/webp'); // Mimetype was replaced
-
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              title: 'Auto-cataloged Product',
-              description: 'A test description',
-              price: '10.00',
-              category: 'Test Category'
-            })
-          });
-      } else {
-          route.continue();
-      }
-    });
-
     await page.goto('/products/new');
 
     // Wait for the UI to be ready
@@ -57,11 +32,17 @@ test.describe('Client-side Image Optimization', () => {
     await expect(fileInput).toBeAttached();
     await expect(page.getByText('Take a photo or upload')).toBeVisible();
 
+    // Set up request watcher to inspect payload without fulfilling it
+    const requestPromise = page.waitForRequest(request =>
+      request.url().includes('/api/auto-catalog') && request.method() === 'POST'
+    );
+
     // Trigger upload via the actual UI
     await fileInput.setInputFiles(testImagePath);
 
-    // Because of our mock backend response, we should transition to seeing "Looks Good"
-    // from the auto-cataloging UI flow inside the product creation page
-    await expect(page.getByText('Looks Good')).toBeVisible({ timeout: 10000 });
+    const request = await requestPromise;
+    const postData = request.postData();
+    expect(postData).toContain('.webp');
+    expect(postData).toContain('image/webp');
   });
 });

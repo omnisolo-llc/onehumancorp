@@ -2,20 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Viral Loop Dashboard Widget', () => {
     test('dashboard surfaces viral loop metrics correctly and increments on invite generation', async ({ page }) => {
-        // Mock the dashboard stats API so we start with 0
-        await page.route('/api/v1/growth/team-invites/aggregated-metrics', async route => {
-            await route.fulfill({
-                json: {
-                    total_invites: 0,
-                    metrics: {
-                        active_referrals: 0,
-                        revenue: 0,
-                        pending_rewards: 0
-                    }
-                }
-            });
-        });
-
         // Go through the login flow
         await page.goto('/login');
         await page.fill('input[type="text"]', 'test-user');
@@ -45,27 +31,9 @@ test.describe('Viral Loop Dashboard Widget', () => {
         const initialInvitesSent = parseInt(initialInvitesSentText, 10);
         expect(isNaN(initialInvitesSent)).toBe(false);
 
-        // Now mock it to return 1 when we navigate back
-        await page.route('/api/v1/growth/team-invites/aggregated-metrics', async route => {
-            await route.fulfill({
-                json: {
-                    total_invites: initialInvitesSent + 1,
-                    metrics: {
-                        active_referrals: 0,
-                        revenue: 0,
-                        pending_rewards: 0
-                    }
-                }
-            });
-        });
-
         // Next, go to the Team page and generate an invite to trigger a change
         await page.goto('/team');
         const generateInviteBtn = page.locator('button:has-text("Invite to Cloud Team")');
-
-        await page.route('/api/v1/growth/cloud-bridge/invite', async route => {
-            await route.fulfill({ json: { invite_link: 'https://ohc.app/invite/test' } });
-        });
 
         await expect(generateInviteBtn).toBeVisible();
         await generateInviteBtn.click();

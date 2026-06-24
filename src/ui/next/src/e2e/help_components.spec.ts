@@ -1,37 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Help Components', () => {
-  test.beforeEach(async ({ page }) => {
-    // Mock the backend API responses required for the help center to load correctly
-    await page.route('**/api/help', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { category: "Getting Started", id: "getting-started-1", title: "Getting Started with Your Store", desc: "Welcome to OneHumanCorp!", link: "/help/getting-started-1" }
-        ])
-      });
-    });
-
-    await page.route('**/api/videos', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([{ id: 1, title: "Set up your store", duration: "1:15", video_url: "https://example.com/video.mp4" }])
-      });
-    });
-
-    await page.route('**/api/tooltips', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          "pricing-tier-tooltip": "Select the plan that best fits your business needs."
-        })
-      });
-    });
-  });
-
   test('Help Center page loads with articles', async ({ page }) => {
     await page.goto('/help');
 

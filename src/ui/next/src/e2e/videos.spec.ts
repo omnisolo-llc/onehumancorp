@@ -1,30 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("In-App Video Tutorials", () => {
-  test.beforeEach(async ({ page }) => {
-    // Mock backend API response for videos
-    await page.route("**/api/videos", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            id: 1,
-            title: "How to set up your first store easily",
-            duration: "1:15",
-            video_url: "https://example.com/video1.mp4",
-          },
-          {
-            id: 2,
-            title: "Connecting a bank account to accept payments",
-            duration: "0:45",
-            video_url: "https://example.com/video2.mp4",
-          },
-        ]),
-      });
-    });
-  });
-
   test("renders videos tab, fetches videos, and opens/closes the modal player", async ({
     page,
   }) => {
@@ -47,7 +23,7 @@ test.describe("In-App Video Tutorials", () => {
 
     // Wait for the videos to be fetched and rendered
     const firstVideoTitle = page.locator("p", {
-      hasText: "How to set up your first store easily",
+      hasText: "How to set up your store in 5 minutes",
     });
     await expect(firstVideoTitle).toBeVisible();
 
@@ -73,7 +49,7 @@ test.describe("In-App Video Tutorials", () => {
     // Verify the video title is shown in the modal header
     await expect(
       modalContainer.locator("h3", {
-        hasText: "How to set up your first store easily",
+        hasText: "How to set up your store in 5 minutes",
       }),
     ).toBeVisible();
 

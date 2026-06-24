@@ -1,44 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test('Verify onboarding UI', async ({ page }) => {
-  // Mock external API responses to eliminate backend dependencies
-  await page.route('**/api/onboarding/intake', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
-  });
-
-  await page.route('**/api/onboarding/start', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: "Success!" })
-    });
-  });
-
-  await page.route('**/api/onboarding/state', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ wizardState: {} })
-    });
-  });
-
-  await page.route('**/api/onboarding/draft', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ wizardState: {} })
-    });
-  });
-
   await page.goto('/onboarding');
   await page.locator('button:has-text("Start My Business")').click();
   await page.waitForTimeout(1000);
@@ -76,22 +38,6 @@ test('Verify onboarding UI', async ({ page }) => {
 });
 
 test('Verify Instant Build UI', async ({ page }) => {
-  await page.route('**/api/onboarding/start', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: "Success!" })
-    });
-  });
-
-  await page.route('**/api/onboarding/state', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ wizardState: {} })
-    });
-  });
-
   await page.goto('/onboarding');
   await page.locator('button:has-text("Instant Build")').click();
   await page.locator('textarea[placeholder="e.g. I run a local bakery that sells custom vegan cakes..."]').fill('I run a test business');

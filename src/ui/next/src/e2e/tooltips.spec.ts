@@ -1,44 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Tooltips", () => {
-  test.beforeEach(async ({ page }) => {
-    // Catch-all route to prevent network requests hanging the page load
-    await page.route("**/*", async (route, request) => {
-      const url = request.url();
-      if (url.includes("/api/tooltips")) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            "api-docs-tooltip": "Direct API access is only for custom integrations.",
-            "settings-delivery-tooltip": "Turn this on to offer local delivery to your customers.",
-          }),
-        });
-      } else if (url.includes("/api/api-docs-spec")) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            openapi: "3.0.0",
-            info: {
-              title: "OHC Advanced API Reference",
-              version: "1.0.0",
-            },
-            paths: {},
-          }),
-        });
-      } else if (url.includes("/api/ui/swagger-ui.css") || url.includes("/api/ui/swagger-ui-bundle.js")) {
-        await route.fulfill({
-          status: 200,
-          contentType: "text/plain",
-          body: "",
-        });
-      } else {
-        await route.continue();
-      }
-    });
-  });
-
   test("renders tooltip on hover", async ({ page }) => {
     // Navigate to a page that contains a tooltip
     await page.goto("/api-docs");

@@ -2,19 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Interactive Walkthroughs', () => {
 
-  test.beforeEach(async ({ page }) => {
-    await page.route('**/api/walkthrough/store-setup', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { targetId: "bio-input-tooltip", title: "Business Description", text: "Enter your business description." },
-          { targetId: "generate-btn-tooltip", title: "Generate", text: "Click to generate!" }
-        ])
-      });
-    });
-  });
-
   test('renders help widget and completes the store setup walkthrough', async ({ page }) => {
     await page.goto('/builder');
 
