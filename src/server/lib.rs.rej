@@ -1,0 +1,19 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -4130,13 +4130,12 @@
+         (r1.unwrap_or(Err(sqlx::Error::RowNotFound)), r2.unwrap_or(Err(sqlx::Error::RowNotFound)), r3.unwrap_or(Err(sqlx::Error::RowNotFound)), r4.unwrap_or(Err(sqlx::Error::RowNotFound)))
+     };
+
+-    let active_customers = active_customers_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or(0);
++    let active_customers = active_customers_res.unwrap_or(0);
+     let (pending_orders, total_sales) = match orders_metrics_res {
+-        Ok(Ok((p, s))) => (p.unwrap_or(0), s.unwrap_or(0.0)),
+         Ok((p, s)) => (p.unwrap_or(0), s.unwrap_or(0.0)),
+         _ => (0, 0.0)
+     };
+-    let total_campaigns_sent = campaigns_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or(0);
+-    let auto_replied = auto_replied_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or(0);
++    let total_campaigns_sent = campaigns_res.unwrap_or(0);
++    let auto_replied = auto_replied_res.unwrap_or(0);
+
+     Ok(UiDashboardMetrics {
