@@ -1,3 +1,4 @@
+type OnErrorCallback = std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>;
 use crate::memory_store::VectorRepository;
 use chrono::Utc;
 use std::sync::Arc;
@@ -8,7 +9,7 @@ pub struct ConsolidationWorker {
     pub repository: Arc<VectorRepository>,
     pub poll_interval: Duration,
     pub pruning_threshold_days: i64,
-    pub telemetry_error_callback: Option<Arc<dyn Fn(&str, &str) + Send + Sync>>,
+    pub telemetry_error_callback: Option<OnErrorCallback>,
 }
 
 impl ConsolidationWorker {
@@ -16,7 +17,7 @@ impl ConsolidationWorker {
         repository: Arc<VectorRepository>,
         poll_interval: Duration,
         pruning_threshold_days: i64,
-        telemetry_error_callback: Option<Arc<dyn Fn(&str, &str) + Send + Sync>>,
+        telemetry_error_callback: Option<OnErrorCallback>,
     ) -> Self {
         Self {
             repository,
