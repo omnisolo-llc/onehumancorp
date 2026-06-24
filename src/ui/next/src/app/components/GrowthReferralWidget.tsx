@@ -121,7 +121,7 @@ export default function GrowthReferralWidget() {
               </button>
             </div>
           )}
-          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          {error && <p className="text-[#FF3B30] text-sm mt-2">{error}</p>}
         </div>
         </div>
       </div>

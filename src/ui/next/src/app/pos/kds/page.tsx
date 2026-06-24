@@ -101,7 +101,7 @@ export default function KDSPage() {
         <div className="pt-12 pb-4 px-6 bg-white/65 backdrop-blur-[30px] shadow-sm border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold text-gray-900">{texts.kds}</h1>
-            {isOffline && <span className="text-red-500 font-bold text-sm bg-red-100 px-2 py-1 rounded-md">{texts.offline}</span>}
+            {isOffline && <span className="text-[#FF3B30] font-bold text-sm bg-red-100 px-2 py-1 rounded-md">{texts.offline}</span>}
           </div>
           <button
             onClick={toggleLanguage}
@@ -180,7 +180,7 @@ export default function KDSPage() {
                    <button
                      id={`sold-out-toggle-${item.id}`}
                      onClick={() => handleToggleSoldOut(item.id, !item.is_sold_out)}
-                     className={`px-6 py-4 rounded-xl font-bold text-lg shadow active:scale-95 transition min-w-[120px] ${item.is_sold_out ? 'bg-red-500 text-white' : 'bg-green-100 text-green-700'}`}
+                     className={`px-6 py-4 rounded-xl font-bold text-lg shadow active:scale-95 transition min-w-[120px] ${item.is_sold_out ? 'bg-[#FF3B30] text-white' : 'bg-green-100 text-green-700'}`}
                      data-testid={`toggle-soldout-${item.id}`}
                    >
                      {item.is_sold_out ? texts.soldOut : texts.available}
