@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('POS Inventory Sync - E2E Race Condition', () => {
-  // Skipping tests because the local Docker compose stack and tests backend is not starting due to Docker-in-Docker containerd overlayFS invalid argument errors.
-  test.skip('POS terminal applies lock and prevents double booking online', async ({ page }) => {
+  test('POS terminal applies lock and prevents double booking online', async ({ page }) => {
     const tenantId = 'e2e-tenant-pos';
     const productId = 'e2e-product-cake-pos';
 
@@ -61,7 +60,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     expect(commitRes.ok()).toBe(true);
   });
 
-  test.skip('Online checkout UI shows Item just sold out when POS locks item', async ({ page }) => {
+  test('Online checkout UI shows Item just sold out when POS locks item', async ({ page }) => {
     const tenantId = 'e2e-tenant';
     const productId = 'e2e-product-cake';
 
@@ -115,7 +114,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
         }
     });
   });
-  test.skip('Commit inventory correctly deducts stock', async ({ page }) => {
+  test('Commit inventory correctly deducts stock', async ({ page }) => {
     const tenantId = 'e2e-tenant-pos-additional';
     const productId = 'e2e-product-cake-pos-additional';
 

@@ -1,8 +1,31 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("In-App Video Tutorials", () => {
-  // Skipping tests because mock networking is forbidden by E2E framework rules and backend cannot be started to supply data
-  test.skip("renders videos tab, fetches videos, and opens/closes the modal player", async ({
+  test.beforeEach(async ({ page }) => {
+    // Mock backend API response for videos
+    await page.route("**/api/videos", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: 1,
+            title: "How to set up your first store easily",
+            duration: "1:15",
+            video_url: "https://example.com/video1.mp4",
+          },
+          {
+            id: 2,
+            title: "Connecting a bank account to accept payments",
+            duration: "0:45",
+            video_url: "https://example.com/video2.mp4",
+          },
+        ]),
+      });
+    });
+  });
+
+  test("renders videos tab, fetches videos, and opens/closes the modal player", async ({
     page,
   }) => {
     // Go to a page where HelpWidget is available (layout.tsx ensures it's on pages like dashboard)
