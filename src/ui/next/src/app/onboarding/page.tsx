@@ -154,7 +154,7 @@ export default function OnboardingWizard() {
           'X-Tenant-ID': tenantId,
           'X-User-ID': userId,
         },
-        body: JSON.stringify({ wizardState })
+        body: JSON.stringify({ step, ...wizardState })
       });
 
       setSaveMessage('Draft Saved!');
@@ -181,29 +181,30 @@ export default function OnboardingWizard() {
         .catch(() => null)
     ])
     .then(([draftData, stateData]) => {
-      const data = (draftData && draftData.wizardState) ? draftData : stateData;
-      if (data && data.wizardState) {
-        if (data.wizardState.step !== undefined) updateState({ step: data.wizardState.step === 4 ? 3 : data.wizardState.step });
-        if (data.wizardState.chatStep !== undefined) updateState({ chatStep: data.wizardState.chatStep });
-        if (data.wizardState.businessDescription !== undefined) updateState({ businessDescription: data.wizardState.businessDescription });
-        if (data.wizardState.businessGoal !== undefined) updateState({ businessGoal: data.wizardState.businessGoal });
-        if (data.wizardState.bio !== undefined) updateState({ bio: data.wizardState.bio });
-        if (data.wizardState.businessName !== undefined) updateState({ businessName: data.wizardState.businessName });
-        if (data.wizardState.whatYouSell !== undefined) updateState({ whatYouSell: data.wizardState.whatYouSell });
-        if (data.wizardState.location !== undefined) updateState({ location: data.wizardState.location });
-        if (data.wizardState.targetAudience !== undefined) updateState({ targetAudience: data.wizardState.targetAudience });
-        if (data.wizardState.businessType !== undefined) updateState({ businessType: data.wizardState.businessType });
-        if (data.wizardState.categories !== undefined) updateState({ categories: data.wizardState.categories });
-        if (data.wizardState.websiteTemplate !== undefined) updateState({ websiteTemplate: data.wizardState.websiteTemplate });
-        if (data.wizardState.firstProductName !== undefined) updateState({ firstProductName: data.wizardState.firstProductName });
-        if (data.wizardState.firstProductPrice !== undefined) updateState({ firstProductPrice: data.wizardState.firstProductPrice });
-        if (data.wizardState.adminName !== undefined) updateState({ adminName: data.wizardState.adminName });
-        if (data.wizardState.adminEmail !== undefined) updateState({ adminEmail: data.wizardState.adminEmail });
-        if (data.wizardState.adminPassword !== undefined) updateState({ adminPassword: data.wizardState.adminPassword });
-        if (data.wizardState.domainChoice !== undefined) updateState({ domainChoice: data.wizardState.domainChoice });
-        if (data.wizardState.aiAgents !== undefined) updateState({ aiAgents: data.wizardState.aiAgents });
-        if (data.wizardState.aiAutoRespond !== undefined) updateState({ aiAutoRespond: data.wizardState.aiAutoRespond });
-        if (data.wizardState.instantImageUrl !== undefined) updateState({ instantImageUrl: data.wizardState.instantImageUrl });
+      let data = draftData || stateData;
+      if (data) {
+        if (data.wizardState) data = data.wizardState;
+        if (data.step !== undefined) updateState({ step: data.step === 4 ? 3 : data.step });
+        if (data.chatStep !== undefined) updateState({ chatStep: data.chatStep });
+        if (data.businessDescription !== undefined) updateState({ businessDescription: data.businessDescription });
+        if (data.businessGoal !== undefined) updateState({ businessGoal: data.businessGoal });
+        if (data.bio !== undefined) updateState({ bio: data.bio });
+        if (data.businessName !== undefined) updateState({ businessName: data.businessName });
+        if (data.whatYouSell !== undefined) updateState({ whatYouSell: data.whatYouSell });
+        if (data.location !== undefined) updateState({ location: data.location });
+        if (data.targetAudience !== undefined) updateState({ targetAudience: data.targetAudience });
+        if (data.businessType !== undefined) updateState({ businessType: data.businessType });
+        if (data.categories !== undefined) updateState({ categories: data.categories });
+        if (data.websiteTemplate !== undefined) updateState({ websiteTemplate: data.websiteTemplate });
+        if (data.firstProductName !== undefined) updateState({ firstProductName: data.firstProductName });
+        if (data.firstProductPrice !== undefined) updateState({ firstProductPrice: data.firstProductPrice });
+        if (data.adminName !== undefined) updateState({ adminName: data.adminName });
+        if (data.adminEmail !== undefined) updateState({ adminEmail: data.adminEmail });
+        if (data.adminPassword !== undefined) updateState({ adminPassword: data.adminPassword });
+        if (data.domainChoice !== undefined) updateState({ domainChoice: data.domainChoice });
+        if (data.aiAgents !== undefined) updateState({ aiAgents: data.aiAgents });
+        if (data.aiAutoRespond !== undefined) updateState({ aiAutoRespond: data.aiAutoRespond });
+        if (data.instantImageUrl !== undefined) updateState({ instantImageUrl: data.instantImageUrl });
         initialStateLoaded.current = true;
       }
     })
@@ -251,7 +252,7 @@ export default function OnboardingWizard() {
       fetch('/api/onboarding/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-        body: JSON.stringify({ wizardState })
+        body: JSON.stringify({ step, ...wizardState })
       }).catch(err => console.error('Failed to sync onboarding state', err));
     }, 1000); // debounce 1s
 
@@ -439,7 +440,6 @@ export default function OnboardingWizard() {
     }
     updateState({ isLoading: true });
     updateState({ error: '' });
-    updateState({ step: 4 }); syncStateToBackend({ step: 4 });
 
     try {
       const backendUrl = (typeof window !== 'undefined' && (window.location.origin.includes('localhost') || window.location.protocol === 'file:')) ? 'http://127.0.0.1:18789' : '';
@@ -471,14 +471,21 @@ export default function OnboardingWizard() {
       updateState({ location: intakeData.location || 'Local' });
       updateState({ targetAudience: intakeData.target_audience || 'General' });
       updateState({ adminName: intakeData.business_name || 'Admin' });
-      updateState({ adminEmail: 'admin@mybusiness.com' });
-      updateState({ adminPassword: 'password123' });
       updateState({ domainChoice: 'subdomain' });
       updateState({ websiteTemplate: 'auto' });
 
-      setTimeout(() => {
-        handleStartOnboarding(intakeData);
-      }, 100);
+      if (intakeData.initial_products) {
+         localStorage.setItem('onboarding_initial_products', JSON.stringify(intakeData.initial_products));
+      }
+
+      updateState({ step: 3 }); syncStateToBackend({
+        step: 3,
+        firstProductName: intakeData.initial_products?.[0]?.name || 'First Product',
+        firstProductPrice: intakeData.initial_products?.[0]?.price || '0.00',
+        businessType: intakeData.business_type || 'Online Store',
+        businessName: intakeData.business_name || 'My Business',
+        categories: intakeData.categories || ['physical']
+      });
     } catch (err: any) {
       console.error(err);
       updateState({ error: err.message || 'Failed to generate your business' });
@@ -488,65 +495,7 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleStartOnboarding = async (intakeDataOverride?: any) => {
-    if (intakeDataOverride && intakeDataOverride.business_name) {
-      updateState({ isLoading: true });
-      updateState({ error: '' });
-      updateState({ step: 4 }); syncStateToBackend({
-        step: 4,
-        firstProductName: intakeDataOverride.initial_products?.[0]?.name || 'First Product',
-        firstProductPrice: intakeDataOverride.initial_products?.[0]?.price || '0.00'
-      });
-      try {
-        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-        const startRes = await fetchWithRetry('/api/onboarding/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-          body: JSON.stringify({
-            business_type: intakeDataOverride.business_type || 'Online Store',
-            company_name: intakeDataOverride.business_name || 'My Business',
-            company_description: bio,
-            selling_categories: intakeDataOverride.categories || ['physical'],
-            payment_pref: 'online',
-            admin_email: 'admin@mybusiness.com',
-            admin_name: intakeDataOverride.business_name || 'Admin',
-            admin_password: 'password123',
-            website_template: 'auto',
-            first_product_name: intakeDataOverride.initial_products?.[0]?.name || 'First Product',
-            first_product_price: intakeDataOverride.initial_products?.[0]?.price || '0.00',
-            domain_choice: 'subdomain',
-            price_type: 'fixed',
-            location: intakeDataOverride.location || 'Local',
-            target_audience: intakeDataOverride.target_audience || 'General',
-            ai_agents: [],
-            ai_auto_respond: true,
-            initial_products: intakeDataOverride.initial_products || []
-          })
-        });
-
-        const result = await startRes.json().catch(() => ({}));
-        if (!startRes.ok) throw new Error(result.error || result.message || 'Failed to start onboarding');
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-        updateState({ startResult: result });
-        localStorage.setItem('has_onboarded', 'true');
-        if (result.organization_id) {
-          localStorage.setItem('tenant_id', result.organization_id);
-          localStorage.setItem('tenant', result.organization_id);
-        }
-        updateState({ step: 5 }); syncStateToBackend({ step: 5 });
-        fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
-        return;
-      } catch (err: any) {
-        console.error(err);
-        updateState({ error: err.message || 'Failed to start onboarding' });
-        updateState({ step: 3 }); syncStateToBackend({ step: 3 });
-        updateState({ isLoading: false });
-        return;
-      }
-    }
-
+  const handleStartOnboarding = async () => {
     const errors: Record<string, string> = {};
     if (!adminName.trim()) {
       errors.adminName = 'Admin Name is required';
@@ -807,7 +756,7 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <textarea
-                  id="instant-bio"
+                  id="instant-bio" enterKeyHint="next"
                   data-testid="instant-bio"
                   className={`glassmorphism rounded-[8px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] ${error === "Please tell us about your business." || error ? "border border-[#FF3B30]" : "border border-white/20 focus:border-[#0066FF]"}`}
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
@@ -823,7 +772,7 @@ export default function OnboardingWizard() {
 
                 <input
                   id="instant-image-url"
-                  data-testid="instant-image-url"
+                  data-testid="instant-image-url" enterKeyHint="next"
                   type="url"
                   className="glassmorphism rounded-[8px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none border border-white/20 focus:border-[#0066FF] transition-all duration-[250ms] rounded-[8px] min-h-[44px]"
                   placeholder="Image URL (Optional)"

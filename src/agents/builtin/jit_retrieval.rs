@@ -5,8 +5,8 @@
 /// And dynamically pull relevant past sessions, tool docs, or code snippets before LLM calls.
 use crate::memory_store::LongTermMemory;
 use ohc_builtin_agent_core::types::Message;
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub struct JitContextRetriever {
     memory_store: Arc<dyn LongTermMemory>,
@@ -137,7 +137,11 @@ mod tests {
     #[async_trait]
     impl LongTermMemory for MockMemoryStore {
         async fn retrieve(&self, query: &str, _limit: usize) -> Result<Vec<String>, String> {
-            if query.contains("rust") || query.contains("systems") || query.contains("server") || query.contains("programming") {
+            if query.contains("rust")
+                || query.contains("systems")
+                || query.contains("server")
+                || query.contains("programming")
+            {
                 Ok(vec!["Rust is a systems programming language.".to_string()])
             } else {
                 Ok(vec![])
@@ -155,7 +159,8 @@ mod tests {
             _limit: usize,
             _summarize: bool,
         ) -> Result<Vec<String>, String> {
-            if query.contains("error") || query.contains("compiling") || query.contains("compiler") {
+            if query.contains("error") || query.contains("compiling") || query.contains("compiler")
+            {
                 Ok(vec![
                     "User previously encountered a compiler error in main.rs".to_string(),
                 ])

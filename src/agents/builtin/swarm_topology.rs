@@ -75,7 +75,7 @@ impl SwarmCoordinator {
                 let current_votes = self
                     .pending_consensus
                     .entry(message_id.to_string())
-                    .or_insert_with(HashSet::new);
+                    .or_default();
 
                 current_votes.insert(from.to_string());
 
@@ -86,7 +86,8 @@ impl SwarmCoordinator {
                 } else {
                     Err(format!(
                         "Pending consensus. Current votes: {}, Required: {}",
-                        current_votes.len(), threshold
+                        current_votes.len(),
+                        threshold
                     ))
                 }
             }

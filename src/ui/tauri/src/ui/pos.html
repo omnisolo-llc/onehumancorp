@@ -693,6 +693,7 @@
       });
 
       let currentAmountCents = 0;
+      let currentProductId = 'quick_charge';
 
       const amountDisplay = document.getElementById('amount-display');
       const chargeBtn = document.getElementById('charge-btn');
@@ -787,7 +788,9 @@
 
       simulateTapBtn.addEventListener('click', async () => {
           simulateTapBtn.innerText = "Processing...";
-          simulateTapBtn.style.backgroundColor = "#86868b";
+          simulateTapBtn.style.background = "#86868b";
+          simulateTapBtn.style.color = "#ffffff";
+          simulateTapBtn.style.border = "none";
 
           const tenantId = localStorage.getItem('tenant_id') || 'default';
 
@@ -810,14 +813,23 @@
                           const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
-                              body: JSON.stringify({ tenant_id: tenantId, product_id: 'quick_charge', quantity: 1, ttl_seconds: 15 })
+                              body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, ttl_seconds: 15 })
                           });
+
+                          const reserveData = await reserveRes.json();
+                          if (!reserveData.success) {
+                              simulateTapBtn.innerText = "Error: " + reserveData.error_message;
+                              simulateTapBtn.style.background = "rgba(255, 59, 48, 0.1)"; simulateTapBtn.style.backdropFilter = "blur(30px) saturate(210%)"; simulateTapBtn.style.webkitBackdropFilter = "blur(30px) saturate(210%)";
+                              simulateTapBtn.style.color = "#FF3B30";
+                              simulateTapBtn.style.border = "1px solid rgba(255, 59, 48, 0.4)";
+                              return;
+                          }
 
                           // Get Intent
                           const intentRes = await fetch('/api/v1/payments/terminal/intent', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
-                              body: JSON.stringify({ amount_cents: currentAmountCents, currency: 'usd', product_id: 'quick_charge', quantity: 1, order_id: 'pos_web_' + Date.now() })
+                              body: JSON.stringify({ amount_cents: currentAmountCents, currency: 'usd', product_id: currentProductId, quantity: 1, order_id: 'pos_web_' + Date.now() })
                           });
                           const intentData = await intentRes.json();
 
@@ -836,7 +848,7 @@
                                       await fetch('/api/v1/payments/terminal/commit', {
                                           method: 'POST',
                                           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
-                                          body: JSON.stringify({ tenant_id: tenantId, product_id: 'quick_charge', quantity: 1, amount_cents: currentAmountCents, lock_id: intentData.lock_id })
+                                          body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, amount_cents: currentAmountCents, lock_id: intentData.lock_id })
                                       });
 
                                       // Success
@@ -872,7 +884,7 @@
                   id: 'tx_' + Date.now(),
                   amount: currentAmountCents,
                   currency: 'usd',
-                  product_id: 'quick_charge',
+                  product_id: currentProductId,
                   quantity: 1,
                   timestamp: new Date().toISOString()
               });
@@ -890,7 +902,7 @@
                           amount_cents: currentAmountCents,
                           currency: 'usd',
                           payload: '{}',
-                          device_signature: `sig_offline_mock_${Date.now()}`
+                          device_signature: `sig_offline_${crypto.randomUUID()}`
                       }]
                   })
               }).catch(console.error);
@@ -900,7 +912,9 @@
       function cancelCharge() {
         tapOverlay.style.display = 'none';
         simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
-        simulateTapBtn.style.backgroundColor = "#34C759";
+        simulateTapBtn.style.background = "#34C759";
+        simulateTapBtn.style.color = "#ffffff";
+        simulateTapBtn.style.border = "none";
       }
 
       function resetPOS() {
@@ -908,7 +922,9 @@
           receiptScreen.style.display = 'none';
           posView.style.display = 'flex';
           simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
-          simulateTapBtn.style.backgroundColor = "#34C759";
+          simulateTapBtn.style.background = "#34C759";
+          simulateTapBtn.style.color = "#ffffff";
+          simulateTapBtn.style.border = "none";
       }
 
       // Initialize
@@ -986,6 +1002,7 @@
           // For simplicity in this demo, just replace or append.
           // In a real POS this would add to a cart array.
           currentAmountCents += priceCents;
+          currentProductId = id;
           updateDisplay();
       }
 
@@ -1568,7 +1585,7 @@ initWalkthrough();
                     currency: m.currency || "usd",
                     payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
                     timestamp: new Date(m.timestamp || Date.now()).toISOString(),
-                    device_signature: `sig_offline_mock_${m.id}`
+                    device_signature: `sig_offline_${m.id}_${crypto.randomUUID()}`
                 });
             } else if (m.type === "inventory_toggle") {
                 generalMutations.push({

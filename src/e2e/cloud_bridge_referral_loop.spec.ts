@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('Cloud-Bridge Referral Loop', () => {
+test.describe('Cloud-Bridge Referral Loop', () => {
   // Skipping because the headless shell is missing in CI environment causing flaky test runs.
   test('should navigate to team page and generate a cloud bridge referral link', async ({ page }) => {
     // Navigate to the team page in Next.js
