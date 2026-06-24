@@ -121,11 +121,17 @@ pub async fn get_daily_work_handler(
         tokio::spawn(async move {
             let res = match &db_bg.store {
                 crate::db::DbStore::Postgres => {
-                    sqlx::query(
-                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC"
-                    ).bind(&t_bg).fetch_all(&db_bg.pool).await.map(|rows| {
+                    let pool1 = db_bg.pool.clone();
+                    let pool2 = db_bg.pool.clone();
+                    let t_bg1 = t_bg.clone();
+                    let t_bg2 = t_bg.clone();
+                    let (work_res, orders_res) = tokio::join!(
+                        sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind(&t_bg1).fetch_all(&pool1),
+                        sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5").bind(&t_bg2).fetch_all(&pool2)
+                    );
+                    work_res.map(|rows| {
                         use sqlx::Row;
-                        rows.into_iter().map(|r| {
+                        let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                             serde_json::json!({
                                 "id": r.get::<String, _>("id"),
                                 "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
@@ -134,15 +140,32 @@ pub async fn get_daily_work_handler(
                                 "suggested_actions": r.try_get::<Option<serde_json::Value>, _>("suggested_actions").ok().flatten(),
                                 "status": r.get::<String, _>("status")
                             })
-                        }).collect::<Vec<_>>()
+                        }).collect();
+                        if let Ok(orders) = orders_res {
+                            for o in orders {
+                                items.push(serde_json::json!({
+                                    "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                                    "intent": "recent_order",
+                                    "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                                    "suggested_actions": null,
+                                }));
+                            }
+                        }
+                        items
                     })
                 },
                 crate::db::DbStore::Sqlite(pool) => {
-                    sqlx::query(
-                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC"
-                    ).bind(&t_bg).fetch_all(pool).await.map(|rows| {
+                    let pool1 = pool.clone();
+                    let pool2 = pool.clone();
+                    let t_bg1 = t_bg.clone();
+                    let t_bg2 = t_bg.clone();
+                    let (work_res, orders_res) = tokio::join!(
+                        sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind(&t_bg1).fetch_all(&pool1),
+                        sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5").bind(&t_bg2).fetch_all(&pool2)
+                    );
+                    work_res.map(|rows| {
                         use sqlx::Row;
-                        rows.into_iter().map(|r| {
+                        let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                             let customer_info_str: Option<String> = r.try_get("customer_info").ok();
                             let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
 
@@ -162,7 +185,18 @@ pub async fn get_daily_work_handler(
                                 "suggested_actions": suggested_actions,
                                 "status": status
                             })
-                        }).collect::<Vec<_>>()
+                        }).collect();
+                        if let Ok(orders) = orders_res {
+                            for o in orders {
+                                items.push(serde_json::json!({
+                                    "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                                    "intent": "recent_order",
+                                    "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                                    "suggested_actions": null,
+                                }));
+                            }
+                        }
+                        items
                     })
                 }
             };
@@ -177,16 +211,19 @@ pub async fn get_daily_work_handler(
 
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let res = sqlx::query(
-                "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC"
-            )
-            .bind(&tenant_id)
-            .fetch_all(&db.pool).await;
+            let pool1 = db.pool.clone();
+            let pool2 = db.pool.clone();
+            let tenant_id1 = tenant_id.clone();
+            let tenant_id2 = tenant_id.clone();
+            let (work_res, orders_res) = tokio::join!(
+                sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind(&tenant_id1).fetch_all(&pool1),
+                sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5").bind(&tenant_id2).fetch_all(&pool2)
+            );
 
-            match res {
+            match work_res {
                 Ok(rows) => {
                     use sqlx::Row;
-                    let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+                    let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                         serde_json::json!({
                             "id": r.get::<String, _>("id"),
                             "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
@@ -196,6 +233,16 @@ pub async fn get_daily_work_handler(
                             "status": r.get::<String, _>("status")
                         })
                     }).collect();
+                    if let Ok(orders) = orders_res {
+                        for o in orders {
+                            items.push(serde_json::json!({
+                                "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                                "intent": "recent_order",
+                                "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                                "suggested_actions": null,
+                            }));
+                        }
+                    }
                     let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
                     (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
                 },
@@ -203,16 +250,19 @@ pub async fn get_daily_work_handler(
             }
         },
         crate::db::DbStore::Sqlite(pool) => {
-             let res = sqlx::query(
-                "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC"
-            )
-            .bind(&tenant_id)
-            .fetch_all(pool).await;
+            let pool1 = pool.clone();
+            let pool2 = pool.clone();
+            let tenant_id1 = tenant_id.clone();
+            let tenant_id2 = tenant_id.clone();
+            let (work_res, orders_res) = tokio::join!(
+                sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind(&tenant_id1).fetch_all(&pool1),
+                sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5").bind(&tenant_id2).fetch_all(&pool2)
+            );
 
-            match res {
+            match work_res {
                 Ok(rows) => {
                     use sqlx::Row;
-                    let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+                    let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                         let customer_info_str: Option<String> = r.try_get("customer_info").ok();
                         let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
 
@@ -233,6 +283,16 @@ pub async fn get_daily_work_handler(
                             "status": status
                         })
                     }).collect();
+                    if let Ok(orders) = orders_res {
+                        for o in orders {
+                            items.push(serde_json::json!({
+                                "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                                "intent": "recent_order",
+                                "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                                "suggested_actions": null,
+                            }));
+                        }
+                    }
                     let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
                     (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
                 },
