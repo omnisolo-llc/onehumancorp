@@ -22,7 +22,7 @@ struct CacheValue<T> {
     access_count: std::sync::atomic::AtomicU64,
 }
 
-pub struct HybridCache<T> {
+pub struct HybridCacheInner<T> {
     local: OnceLock<DashMap<String, CacheValue<T>>>,
     local_tags: OnceLock<DashMap<String, DashSet<String>>>,
     flight_group: OnceLock<DashMap<String, broadcast::Sender<T>>>,
@@ -31,35 +31,40 @@ pub struct HybridCache<T> {
     max_local_capacity: usize,
 }
 
+#[derive(Clone)]
+pub struct HybridCache<T> {
+    inner: std::sync::Arc<HybridCacheInner<T>>,
+}
+
 impl<T> HybridCache<T>
 where
     T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static
 {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
-        Self {
+        Self { inner: std::sync::Arc::new(HybridCacheInner {
             local: OnceLock::new(),
             local_tags: OnceLock::new(),
             flight_group: OnceLock::new(),
             redis_client,
             redis_conn: tokio::sync::OnceCell::new(),
             max_local_capacity: 1000,
-        }
+        }) }
     }
 
     pub fn with_capacity(redis_client: Option<redis::Client>, capacity: usize) -> Self {
-        Self {
+        Self { inner: std::sync::Arc::new(HybridCacheInner {
             local: OnceLock::new(),
             local_tags: OnceLock::new(),
             flight_group: OnceLock::new(),
             redis_client,
             redis_conn: tokio::sync::OnceCell::new(),
             max_local_capacity: capacity,
-        }
+        }) }
     }
 
     async fn get_redis_conn(&self) -> Option<redis::aio::MultiplexedConnection> {
-        if let Some(client) = &self.redis_client {
-            let conn = self.redis_conn.get_or_try_init(|| async {
+        if let Some(client) = &self.inner.redis_client {
+            let conn = self.inner.redis_conn.get_or_try_init(|| async {
                 client.get_multiplexed_tokio_connection().await
             }).await.ok()?;
             Some(conn.clone())
@@ -69,15 +74,15 @@ where
     }
 
     fn get_local(&self) -> &DashMap<String, CacheValue<T>> {
-        self.local.get_or_init(|| DashMap::new())
+        self.inner.local.get_or_init(|| DashMap::new())
     }
 
     fn get_local_tags(&self) -> &DashMap<String, DashSet<String>> {
-        self.local_tags.get_or_init(|| DashMap::new())
+        self.inner.local_tags.get_or_init(|| DashMap::new())
     }
 
     fn get_flight_group(&self) -> &DashMap<String, broadcast::Sender<T>> {
-        self.flight_group.get_or_init(|| DashMap::new())
+        self.inner.flight_group.get_or_init(|| DashMap::new())
     }
 
     pub async fn get(&self, key: &str) -> Option<T> {
@@ -88,7 +93,7 @@ where
     /// Ensures that only one fetch happens concurrently for a given key.
     pub async fn get_or_fetch_with_swr<F, Fut>(&self, key: &str, ttl: Duration, fetch: F) -> Option<T>
     where
-        F: FnOnce() -> Fut,
+        F: FnOnce() -> Fut + Send + 'static,
         Fut: std::future::Future<Output = Option<T>> + Send + 'static,
     {
         let res = self.get_with_swr(key).await;
@@ -108,19 +113,15 @@ where
                 flight_group.insert(key.to_string(), tx.clone());
 
                 if let Some((v, true)) = res {
-                    // Stale hit: return immediately but fetch in background
-                    // To do this we must clone self, which isn't possible because self is a reference.
-                    // Wait, HybridCache doesn't have an Arc wrapper internally.
-                    // Instead, we will just block and fetch for now since we can't easily spawn a task
-                    // without an Arc<HybridCache>. We will return the result.
-
-                    if let Some(val) = fetch().await {
-                        self.set(key, val.clone(), ttl).await;
-                        let _ = tx.send(val.clone());
-                        flight_group.remove(key);
-                        return Some(val);
-                    }
-                    flight_group.remove(key);
+                    let cache_clone = self.clone();
+                    let key_clone = key.to_string();
+                    tokio::spawn(async move {
+                        if let Some(val) = fetch().await {
+                            cache_clone.set(&key_clone, val.clone(), ttl).await;
+                            let _ = tx.send(val.clone());
+                        }
+                        cache_clone.get_flight_group().remove(&key_clone);
+                    });
                     return Some(v);
                 } else {
                     // Miss
@@ -198,7 +199,7 @@ where
         let local = self.get_local();
         let now = std::time::Instant::now();
 
-        if local.len() >= self.max_local_capacity && !local.contains_key(key) {
+        if local.len() >= self.inner.max_local_capacity && !local.contains_key(key) {
             let mut removed_keys = Vec::new();
             let mut has_expired = false;
 
@@ -224,7 +225,7 @@ where
                     local.remove(k);
                 }
             } else {
-                if local.len() >= self.max_local_capacity {
+                if local.len() >= self.inner.max_local_capacity {
                     if let Some(key_to_remove) = least_accessed_key {
                         local.remove(&key_to_remove);
                         removed_keys.push(key_to_remove);
