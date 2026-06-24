@@ -51,16 +51,12 @@ test.describe('Distributed Inventory Sync via UI', () => {
       expect(onlineLockData.success).toBeTruthy();
       const lockId = onlineLockData.lock_id;
 
-    // We now click "New Order" in the UI which also hits /reserve
-    await page.getByText('New Order').click();
+    // We now click "Charge" in the UI which also hits /reserve
+    await page.locator('#charge-btn').click();
+    await page.locator('#simulate-tap-btn').click();
 
     // We expect an optimistic lock failure indicating it is checked out by another customer
-    await expect(page.getByText(/Failed to reserve:|Processing\/Reserving.../)).toBeVisible();
-
-    // Check for specific error message
-    // If the mock backend is fast, it will show "Item is currently being checked out by another customer"
-    const statusText = await page.getByRole('status').textContent();
-    expect(statusText).toContain('Failed to reserve') || expect(statusText).toContain('Reserving');
+    await expect(page.getByText(/Error: Item is currently being checked out|Processing\/Reserving.../)).toBeVisible();
 
     // 3. We commit the background api checkout
     const commitReq = await request.post('/api/v1/payments/terminal/commit', {
@@ -110,9 +106,12 @@ test.describe('Distributed Inventory Sync via UI', () => {
      // The user should now be logged in
      await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 }).catch(() => {});
 
-     // 3. Click new order which reserves the item
-     await page.getByText('New Order').click();
-     await expect(page.getByRole('status')).toHaveText(/New Order Total/);
+     // 3. Click charge which reserves the item
+     await page.locator('#charge-btn').click();
+     await page.locator('#simulate-tap-btn').click();
+
+     // wait for the UI to update with "Tap card..."
+     await expect(page.getByText(/Tap card/)).toBeVisible();
 
      // 4. Concurrently simulate an online checkout via the UI
      const customerContext = await page.context().browser()!.newContext();
