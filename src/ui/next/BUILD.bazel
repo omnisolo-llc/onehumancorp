@@ -6,7 +6,7 @@ npm_link_all_packages(name = "node_modules")
 exports_files(glob([
     "package.json",
     "e2e/*.spec.ts",
-    "src/e2e/*.spec.ts",
+    "src/e2e/**/*.spec.ts",
     "src/e2e/fixtures/*",
 ]))
 
@@ -14,7 +14,7 @@ filegroup(
     name = "next_e2e_specs",
     srcs = glob([
         "e2e/*.spec.ts",
-        "src/e2e/*.spec.ts",
+        "src/e2e/**/*.spec.ts",
         "src/e2e/fixtures/*",
     ]),
     visibility = ["//visibility:public"],
