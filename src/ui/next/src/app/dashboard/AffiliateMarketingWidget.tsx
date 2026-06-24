@@ -28,7 +28,7 @@ export default function AffiliateMarketingWidget() {
   const commissionDollars = (stats.total_commission_cents / 100).toFixed(2);
 
   return (
-    <div className="glassmorphism app-card rounded-2xl p-6 shadow-sm border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30 font-inter">
+    <div className="macos-translucent-glass app-card rounded-2xl p-6 shadow-sm border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30 font-inter">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-gray-900 font-outfit text-lg flex items-center gap-2">
           <span className="text-xl">💰</span> Viral Growth
@@ -47,11 +47,11 @@ export default function AffiliateMarketingWidget() {
           </p>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="glassmorphism p-4 rounded-xl border border-gray-100 shadow-sm text-center">
+            <div className="macos-translucent-glass p-4 rounded-xl border border-gray-100 shadow-sm text-center">
               <div className="text-2xl font-bold font-outfit text-gray-900">{stats.total_affiliates}</div>
               <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Active Affiliates</div>
             </div>
-            <div className="glassmorphism p-4 rounded-xl border border-gray-100 shadow-sm text-center">
+            <div className="macos-translucent-glass p-4 rounded-xl border border-gray-100 shadow-sm text-center">
               <div className="text-2xl font-bold font-outfit text-gray-900">${commissionDollars}</div>
               <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Paid Commissions</div>
             </div>

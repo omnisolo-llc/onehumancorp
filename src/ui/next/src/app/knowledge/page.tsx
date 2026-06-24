@@ -95,7 +95,7 @@ export default function KnowledgePage() {
       <PageHeader title={t("Knowledge & Documents")} />
 
       <div className="p-4">
-        <div className="glassmorphism p-6 rounded-2xl mb-6">
+        <div className="macos-translucent-glass p-6 rounded-2xl mb-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Document Library</h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
             Upload policies, FAQs, and business documents. The Knowledge Assistant will use these to answer customer questions and draft accurate responses.
@@ -117,7 +117,7 @@ export default function KnowledgePage() {
           </button>
         </div>
 
-        <div className="glassmorphism rounded-2xl overflow-hidden">
+        <div className="macos-translucent-glass rounded-2xl overflow-hidden">
           {documents.length === 0 ? (
             <div className="p-12 text-center text-gray-500">
               No documents uploaded yet.

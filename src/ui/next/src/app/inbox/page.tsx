@@ -137,7 +137,7 @@ function InboxWorkspace({
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none">
         <div className="app-grid two gap-4">
-          <section className="app-panel glassmorphism rounded-[16px] overflow-hidden">
+          <section className="app-panel macos-translucent-glass rounded-[16px] overflow-hidden">
             <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
               <div>
                 <div className="app-panel-title font-bold text-gray-900 dark:text-white">Message Queue</div>
@@ -167,7 +167,7 @@ function InboxWorkspace({
             </div>
           </section>
 
-          <section className="app-panel glassmorphism rounded-[16px] overflow-hidden">
+          <section className="app-panel macos-translucent-glass rounded-[16px] overflow-hidden">
             <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
               <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
             </div>

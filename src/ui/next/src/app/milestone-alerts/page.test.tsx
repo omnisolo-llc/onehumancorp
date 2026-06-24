@@ -54,7 +54,7 @@ describe('MilestoneAlertsPage', () => {
     });
 
     const milestoneTitle = screen.getByText('First Sale!');
-    const container = milestoneTitle.closest('div.glassmorphism');
+    const container = milestoneTitle.closest('div.macos-translucent-glass');
     expect(container).toBeDefined();
 
     await act(async () => {
@@ -76,7 +76,7 @@ describe('MilestoneAlertsPage', () => {
     });
 
     const milestoneTitle = screen.getByText('First Sale!');
-    const container = milestoneTitle.closest('div.glassmorphism');
+    const container = milestoneTitle.closest('div.macos-translucent-glass');
 
     await act(async () => {
         fireEvent.click(container!);
@@ -98,7 +98,7 @@ describe('MilestoneAlertsPage', () => {
     });
 
     const milestoneTitle = screen.getByText('First Sale!');
-    const container = milestoneTitle.closest('div.glassmorphism');
+    const container = milestoneTitle.closest('div.macos-translucent-glass');
 
     await act(async () => {
         fireEvent.click(container!);

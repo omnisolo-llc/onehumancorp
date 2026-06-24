@@ -52,7 +52,7 @@ export default function InteractiveQuoteGeneratorPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Configuration Panel */}
             <div className="space-y-6">
-                <div className="glassmorphism p-6 rounded-[24px] border border-white/40 shadow-sm bg-white/60 backdrop-blur-[30px] saturate-[210%]">
+                <div className="macos-translucent-glass p-6 rounded-[24px] border border-white/40 shadow-sm bg-white/60 backdrop-blur-[30px] saturate-[210%]">
                     <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Widget Settings</h2>
 
                     <div className="space-y-4">
@@ -121,7 +121,7 @@ export default function InteractiveQuoteGeneratorPage() {
                     </div>
                 </div>
 
-                <div className="glassmorphism p-6 rounded-[24px] border border-white/40 shadow-sm bg-white/60 backdrop-blur-[30px] saturate-[210%]">
+                <div className="macos-translucent-glass p-6 rounded-[24px] border border-white/40 shadow-sm bg-white/60 backdrop-blur-[30px] saturate-[210%]">
                     <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Embed Code</h2>
                     <p className="text-sm text-gray-600 mb-4">Copy this HTML snippet to embed the interactive calculator on your website or blog.</p>
                     <div className="relative">

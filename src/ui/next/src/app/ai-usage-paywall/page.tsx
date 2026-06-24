@@ -68,7 +68,7 @@ export default function AiUsagePaywallPage() {
   if (loading) {
     return (
       <AppShell title="AI Usage" subtitle="Monitor AI actions across active departments.">
-        <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
+        <div className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10">
           <div className="app-empty">Loading AI usage...</div>
         </div>
       </AppShell>
@@ -89,7 +89,7 @@ export default function AiUsagePaywallPage() {
   return (
     <AppShell title="AI Usage" subtitle="Monitor AI actions across active departments.">
       <div className="app-grid">
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
+        <section className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10 shadow-sm">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
               <div className="app-panel-title">Plan Usage</div>
@@ -99,7 +99,7 @@ export default function AiUsagePaywallPage() {
           </div>
           <div className="app-panel-body">
             <div className="app-grid two">
-              <div className="app-card p-4 glassmorphism border border-white/40 dark:border-white/10">
+              <div className="app-card p-4 macos-translucent-glass border border-white/40 dark:border-white/10">
                 <div className="app-metric-label">Actions Used</div>
                 <div className="app-metric-value">
                   {totalUsed}
@@ -108,7 +108,7 @@ export default function AiUsagePaywallPage() {
                 <div className="app-metric-note">Current billing period</div>
               </div>
 
-              <div className="app-card p-4 glassmorphism border border-white/40 dark:border-white/10">
+              <div className="app-card p-4 macos-translucent-glass border border-white/40 dark:border-white/10">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="app-metric-label">Capacity</div>
@@ -129,7 +129,7 @@ export default function AiUsagePaywallPage() {
           </div>
         </section>
 
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
+        <section className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10 shadow-sm">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
               <div className="app-panel-title">Department Breakdown</div>
@@ -154,7 +154,7 @@ export default function AiUsagePaywallPage() {
           </div>
         </section>
 
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
+        <section className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10 shadow-sm">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
               <div className="app-panel-title">Plan Actions</div>

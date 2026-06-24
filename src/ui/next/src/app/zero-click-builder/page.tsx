@@ -88,7 +88,7 @@ export default function ZeroClickBuilderPage() {
         </div>
 
         {!generatedStore ? (
-          <div className="glassmorphism p-8 mb-8 relative overflow-hidden">
+          <div className="macos-translucent-glass p-8 mb-8 relative overflow-hidden">
             {isGenerating && (
               <div className="absolute inset-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-[30px] saturate-[210%] flex flex-col items-center justify-center">
                 <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
@@ -126,7 +126,7 @@ export default function ZeroClickBuilderPage() {
             </form>
           </div>
         ) : (
-          <div className="glassmorphism p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="macos-translucent-glass p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full mb-4">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">

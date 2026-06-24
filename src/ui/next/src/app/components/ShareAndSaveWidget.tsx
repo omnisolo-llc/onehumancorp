@@ -30,7 +30,7 @@ export function ShareAndSaveWidget({ tenantId, discountPercentage, onShareComple
 
   if (isShared) {
     return (
-      <div className="mb-6 p-4 rounded-xl glassmorphism border border-green-200/50 dark:border-green-800/30 bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 shadow-sm" data-testid="share-and-save-success">
+      <div className="mb-6 p-4 rounded-xl macos-translucent-glass border border-green-200/50 dark:border-green-800/30 bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 shadow-sm" data-testid="share-and-save-success">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-green-100 dark:bg-green-800/50 rounded-full flex items-center justify-center shrink-0">
             <span className="text-green-600 dark:text-green-400 font-bold text-lg">✓</span>
@@ -47,7 +47,7 @@ export function ShareAndSaveWidget({ tenantId, discountPercentage, onShareComple
   }
 
   return (
-    <div className="mb-6 p-5 rounded-xl glassmorphism border border-indigo-200/60 dark:border-indigo-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden group" data-testid="share-and-save-widget">
+    <div className="mb-6 p-5 rounded-xl macos-translucent-glass border border-indigo-200/60 dark:border-indigo-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden group" data-testid="share-and-save-widget">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
         <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center shrink-0 shadow-sm border border-indigo-200 dark:border-indigo-800 group-hover:scale-110 transition-transform">
           <span className="text-xl">🎁</span>

@@ -43,7 +43,7 @@ export function WorkTriageFeed({
 }) {
   if (error) {
     return (
-      <div className="w-full mb-4 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center min-h-[44px] flex items-center justify-center">
+      <div className="w-full mb-4 p-4 macos-translucent-glass rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center min-h-[44px] flex items-center justify-center">
         {error}
       </div>
     );
@@ -60,7 +60,7 @@ export function WorkTriageFeed({
   if (!loading && items.length === 0) {
     return (
       <div
-        className="glassmorphism flex flex-col items-center justify-center p-12 text-center border border-white/40 dark:border-white/10 shadow-sm"
+        className="macos-translucent-glass flex flex-col items-center justify-center p-12 text-center border border-white/40 dark:border-white/10 shadow-sm"
         data-testid="triage-feed-empty"
       >
         <div className="w-16 h-16 bg-[#e8f7ef] dark:bg-[rgba(23,166,106,0.2)] rounded-full flex items-center justify-center mb-4">
@@ -98,7 +98,7 @@ export function WorkTriageFeed({
         .map((item) => (
           <div
             key={item.id}
-            className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden"
+            className="mb-6 p-6 rounded-[16px] macos-translucent-glass border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden"
             data-testid={`triage-card-${item.id}`}
           >
             <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
@@ -137,7 +137,7 @@ export function WorkTriageFeed({
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
-                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
+                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer macos-translucent-glass"
                 data-testid={`triage-dismiss-${item.id}`}
               >
                 Dismiss
@@ -151,7 +151,7 @@ export function WorkTriageFeed({
         .map((item) => (
           <div
             key={item.id}
-            className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden flex flex-col gap-4"
+            className="mb-6 p-6 rounded-[16px] macos-translucent-glass border border-white/40 dark:border-white/10 shadow-sm overflow-hidden flex flex-col gap-4"
             data-testid={`triage-card-${item.id}`}
           >
             <div className="flex justify-between items-start">
@@ -191,7 +191,7 @@ export function WorkTriageFeed({
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
-                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/40 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
+                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/40 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer macos-translucent-glass"
                 data-testid={`triage-dismiss-${item.id}`}
               >
                 Dismiss

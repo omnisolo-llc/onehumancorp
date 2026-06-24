@@ -593,7 +593,7 @@ body {
   }
 }
 
-.glassmorphism {
+.macos-translucent-glass {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.65);
   -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -602,7 +602,7 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
-  .glassmorphism {
+  .macos-translucent-glass {
     border-radius: 16px;
     background: rgba(22, 22, 26, 0.7);
     -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -631,7 +631,7 @@ body {
 
 .app-shell .app-card,
 .app-shell .app-panel,
-.app-shell .glassmorphism,
+.app-shell .macos-translucent-glass,
 .app-shell .glass-card,
 
 
@@ -887,7 +887,7 @@ button, .app-button, .charge-btn {
   cursor: not-allowed;
 }
 
-.setup-page #setup-screen button[class*="glassmorphism"][class*="border-[#0066FF]"] {
+.setup-page #setup-screen button[class*="macos-translucent-glass"][class*="border-[#0066FF]"] {
   width: 100%;
   padding: 13px 18px;
   border: 1px solid #b7cae8;
@@ -1017,8 +1017,8 @@ button,
 [role="button"],
 a.button,
 .app-button,
-.glassmorphism button,
-.glassmorphism a,
+.macos-translucent-glass button,
+.macos-translucent-glass a,
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -1063,4 +1063,40 @@ html.dark .ohc-growth-card {
 
 .app-panel {
   border-radius: 16px;
+}
+
+/* Proactive Performance Optimization / Translucent Glass Standards */
+.macos-translucent-glass {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.65);
+  -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+@media (prefers-color-scheme: dark) {
+  .macos-translucent-glass {
+    background: rgba(22, 22, 26, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Proactive Performance Optimization / Translucent Glass Standards */
+.macos-translucent-glass {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.65);
+  -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+@media (prefers-color-scheme: dark) {
+  .macos-translucent-glass {
+    background: rgba(22, 22, 26, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  }
 }

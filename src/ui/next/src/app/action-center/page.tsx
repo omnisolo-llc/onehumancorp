@@ -183,12 +183,12 @@ export default function ActionCenterPage() {
     >
       <div className="w-full max-w-[375px] mx-auto md:max-w-none">
         {isOffline && (
-          <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+          <div className="mb-4 w-full p-2 macos-translucent-glass rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
             <span>📡</span> You are offline. Actions will sync when online.
           </div>
         )}
         {offlineActionsCount > 0 && (
-          <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+          <div className="mb-4 w-full p-2 macos-translucent-glass rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
             <span>🔄</span> Pending Sync ({offlineActionsCount})
           </div>
         )}

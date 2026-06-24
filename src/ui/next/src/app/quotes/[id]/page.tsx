@@ -103,7 +103,7 @@ export default function QuoteReviewPage() {
   return (
     <AppShell title="Review Estimate" subtitle={`Quote #${id.slice(0, 8)}`}>
       <div className="w-full max-w-md mx-auto p-4 space-y-6">
-        <div className="glassmorphism p-6 space-y-4">
+        <div className="macos-translucent-glass p-6 space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-gray-500">Status</span>
             <span className={`text-xs font-bold px-2 py-1 rounded-full ${quote.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>

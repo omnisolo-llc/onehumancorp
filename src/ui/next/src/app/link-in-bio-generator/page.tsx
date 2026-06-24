@@ -108,7 +108,7 @@ export default function LinkInBioGeneratorPage() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Builder Controls */}
           <div className="flex-1 space-y-6">
-            <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
+            <div className="macos-translucent-glass rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
               <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-4">Profile Info</h2>
 
               <div className="space-y-4">
@@ -136,7 +136,7 @@ export default function LinkInBioGeneratorPage() {
               </div>
             </div>
 
-            <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
+            <div className="macos-translucent-glass rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
               <div className="flex items-center justify-between mb-4">
                  <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white">Your Links</h2>
                  <button onClick={handleAddLink} className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">+ Add Link</button>
@@ -172,7 +172,7 @@ export default function LinkInBioGeneratorPage() {
               </div>
             </div>
 
-            <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
+            <div className="macos-translucent-glass rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
               <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-4">Theme</h2>
               <div className="flex gap-4">
                 <button

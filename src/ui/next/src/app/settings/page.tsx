@@ -199,13 +199,13 @@ export default function SettingsPage() {
   return (
     <AppShell title="Settings">
       <div className="mx-auto max-w-4xl space-y-8 font-inter">
-        <header className="mb-8 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
+        <header className="mb-8 p-6 macos-translucent-glass border border-white/40 dark:border-white/10 shadow-sm">
           <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Workspace Settings</h1>
           <p className="mt-2 text-sm text-gray-650 dark:text-gray-400">Manage integrations, local routing, communication rules, and system security.</p>
         </header>
 
         {/* SMS Notifications Card */}
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+        <section className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
               <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">SMS Notifications & Security</div>
@@ -304,7 +304,7 @@ export default function SettingsPage() {
 
         {/* Local Delivery and Voice Receptionist side-by-side */}
         <section className="app-grid two gap-6">
-          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between">
+          <div className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between">
             <div>
               <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
@@ -354,7 +354,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between">
+          <div className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between">
             <div>
               <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
@@ -426,7 +426,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Agent Settings Card */}
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+        <section className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
               <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Agent Settings</div>
@@ -448,7 +448,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Change Password Card */}
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+        <section className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
               <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Security & Credentials</div>
@@ -466,7 +466,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Advanced Section */}
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
+        <section className="app-panel macos-translucent-glass border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
               <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Advanced Settings</div>
