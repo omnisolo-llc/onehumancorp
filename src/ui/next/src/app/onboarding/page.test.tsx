@@ -875,4 +875,76 @@ describe('OnboardingWizard', () => {
     expect(startRequestPayload).toBeDefined();
     expect(startRequestPayload.initial_products).toEqual([{ name: 'Custom AI Product', price: '99' }]);
   });
+
+  it('Step 1: shows validation error when location is empty', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 1, chatStep: 3, businessName: 'Bakery', whatYouSell: 'Cakes', location: '' });
+    });
+
+    let view: any;
+    await act(async () => {
+      view = render(
+        <TooltipProvider>
+          <OnboardingWizard />
+        </TooltipProvider>
+      );
+    });
+
+    const continueButton = screen.getByRole('button', { name: /Next/i });
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Please tell us your location.')).toBeInTheDocument();
+    });
+  });
+
+  it('Step 1: shows validation error when target audience is empty', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 1, chatStep: 4, businessName: 'Bakery', whatYouSell: 'Cakes', location: 'City', targetAudience: '' });
+    });
+
+    let view: any;
+    await act(async () => {
+      view = render(
+        <TooltipProvider>
+          <OnboardingWizard />
+        </TooltipProvider>
+      );
+    });
+
+    const continueButton = screen.getByRole('button', { name: /Next/i });
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Please tell us your target audience.')).toBeInTheDocument();
+    });
+  });
+
+  it('Step 1: shows validation error when what you sell is empty', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: 1, chatStep: 2, businessName: 'Bakery', whatYouSell: '' });
+    });
+
+    let view: any;
+    await act(async () => {
+      view = render(
+        <TooltipProvider>
+          <OnboardingWizard />
+        </TooltipProvider>
+      );
+    });
+
+    const continueButton = screen.getByRole('button', { name: /Next/i });
+    await user.click(continueButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Please tell us what you sell.')).toBeInTheDocument();
+    });
+  });
 });
