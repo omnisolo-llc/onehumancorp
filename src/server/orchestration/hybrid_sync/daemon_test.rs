@@ -564,6 +564,72 @@ async fn test_hybrid_sync_pos_offline_transactions() {
     }
 
     #[tokio::test]
+    async fn test_prune_stuck_pending_missions() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (
+                id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                payload TEXT,
+                synced_to_cloud BOOLEAN DEFAULT false,
+                sync_error TEXT,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                last_synced_at TEXT
+            )").execute(&sqlite_pool).await.unwrap();
+
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
+        let pg_pool = match tokio::time::timeout(
+            std::time::Duration::from_millis(50),
+            sqlx::postgres::PgPoolOptions::new().connect(&database_url),
+        )
+        .await
+        {
+            Ok(Ok(p)) => p,
+            _ => return,
+        };
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_missions (
+                id VARCHAR PRIMARY KEY,
+                status VARCHAR NOT NULL,
+                payload TEXT,
+                tenant_id VARCHAR,
+                sync_error TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_synced_at TIMESTAMP
+            )",
+        )
+        .execute(&pg_pool)
+        .await
+        .unwrap();
+
+        // Insert stuck pending tasks (last_synced_at older than 24 hours)
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at) VALUES ('stuck_pending_sqlite', 'PENDING', datetime('now', '-25 hour'))")
+            .execute(&sqlite_pool).await.unwrap();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at) VALUES ('stuck_pending_pg', 'PENDING', NOW() - INTERVAL '25 hours')")
+            .execute(&pg_pool).await.unwrap();
+
+        let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+        daemon.prune_stuck_agent_missions().await.unwrap();
+
+        // Verify SQLite mission is deleted
+        let row_sqlite = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_pending_sqlite'")
+            .fetch_optional(&sqlite_pool).await.unwrap();
+        assert!(row_sqlite.is_none());
+
+        // Verify PG mission is deleted
+        let row_pg = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_pending_pg'")
+            .fetch_optional(&pg_pool).await.unwrap();
+        assert!(row_pg.is_none());
+    }
+
+    #[tokio::test]
     async fn test_prune_stuck_queued_items() {
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect("sqlite::memory:")

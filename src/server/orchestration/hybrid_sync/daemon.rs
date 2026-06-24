@@ -443,7 +443,7 @@ impl HybridSyncDaemon {
 
     pub async fn prune_stuck_agent_missions(&self) -> Result<(), Box<dyn std::error::Error>> {
         // Find and fail stuck missions in sqlite pool
-        let res_sqlite = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = '[bug] Mission became stuck', last_synced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hour') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hour')))")
+        let res_sqlite = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = '[bug] Mission became stuck', last_synced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hour') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hour')))")
             .execute(&self.sqlite_pool)
             .await;
         if let Ok(res) = res_sqlite {
@@ -452,13 +452,33 @@ impl HybridSyncDaemon {
             }
         }
 
+        // Clean up stagnant PENDING items older than 24 hours in SQLite
+        let res_pending_sqlite = sqlx::query("DELETE FROM agent_missions WHERE status = 'PENDING' AND (last_synced_at < datetime('now', '-24 hour') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-24 hour')))")
+            .execute(&self.sqlite_pool)
+            .await;
+        if let Ok(res) = res_pending_sqlite {
+            if res.rows_affected() > 0 {
+                info!("Pruned {} stuck PENDING agent missions from SQLite", res.rows_affected());
+            }
+        }
+
         // Find and fail stuck missions in pg pool
-        let res_pg = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = '[bug] Mission became stuck', last_synced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))")
+        let res_pg = sqlx::query("UPDATE agent_missions SET status = 'FAILED', sync_error = '[bug] Mission became stuck', last_synced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))")
             .execute(&self.pg_pool)
             .await;
         if let Ok(res) = res_pg {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from PostgreSQL", res.rows_affected());
+            }
+        }
+
+        // Clean up stagnant PENDING items older than 24 hours in PostgreSQL
+        let res_pending_pg = sqlx::query("DELETE FROM agent_missions WHERE status = 'PENDING' AND (last_synced_at < NOW() - INTERVAL '24 hours' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '24 hours'))")
+            .execute(&self.pg_pool)
+            .await;
+        if let Ok(res) = res_pending_pg {
+            if res.rows_affected() > 0 {
+                info!("Pruned {} stuck PENDING agent missions from PostgreSQL", res.rows_affected());
             }
         }
 
