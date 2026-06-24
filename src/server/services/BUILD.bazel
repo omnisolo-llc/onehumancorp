@@ -11,6 +11,8 @@ exports_files(
         "inventory_sync.rs",
         "inventory/mod.rs",
         "inventory/service.rs",
+        "customer_memory_graph/mod.rs",
+        "customer_memory_graph/service.rs",
         ],
     visibility = ["//visibility:public"],
 )
@@ -27,6 +29,8 @@ rust_library(
         "inventory_sync.rs",
         "inventory/mod.rs",
         "inventory/service.rs",
+        "customer_memory_graph/mod.rs",
+        "customer_memory_graph/service.rs",
         "//src/server/services/agent:department/mod.rs",
         "//src/server/services/agent:department/service.rs",
         "//src/server/services/agent:mod.rs",
