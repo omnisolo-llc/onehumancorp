@@ -151,7 +151,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(managePlanButton).toBeVisible({ timeout: 15000 });
   });
 
-  test('Budget Alert triggers on projected cost threshold with real data', async ({ page, loginAs }) => {
+  test('Soft Limit Approaching triggers on projected cost threshold with real data', async ({ page, loginAs }) => {
     const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" };
     await loginAs(page, starterUser as any);
 
@@ -168,6 +168,6 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/cost-dashboard');
 
     // The threshold should trigger given a $2,000 spend on the Starter plan.
-    await expect(page.locator('text=Budget Alert')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Soft Limit Approaching')).toBeVisible({ timeout: 15000 });
   });
 });
