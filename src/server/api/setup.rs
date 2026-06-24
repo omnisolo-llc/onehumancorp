@@ -45,7 +45,7 @@ async fn create_initial_admin(
 
     // Check if an admin already exists.
     // Assuming the bootstrap process uses a fixed system tenant or default tenant
-    let tenant_id = "system";
+    let tenant_id = crate::common::auth_utils::get_default_tenant();
 
     // Check if admin user exists in DB directly
     let admin_count: Result<i64, _> = match &db.store {
@@ -116,7 +116,7 @@ async fn create_initial_admin(
             .bind(&hashed_pw)
             .bind(&roles_json)
             .bind(true)
-            .bind(tenant_id)
+            .bind(&tenant_id)
             .bind(now)
             .bind(now)
             .execute(&db.pool)
@@ -137,7 +137,7 @@ async fn create_initial_admin(
             .bind(&hashed_pw)
             .bind(&roles_json)
             .bind(true)
-            .bind(tenant_id)
+            .bind(&tenant_id)
             .bind(now)
             .bind(now)
             .execute(pool)
