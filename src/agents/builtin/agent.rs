@@ -202,20 +202,26 @@ impl AgentRunConfig {
                 self.openai_input_require_patterns.clone(),
                 self.openai_input_deny_patterns.clone(),
             );
-            registry.input_guardrails.push(std::sync::Arc::new(input_validator));
+            registry
+                .input_guardrails
+                .push(std::sync::Arc::new(input_validator));
 
             let output_auditor = crate::guardrails::openai_hooks::OpenAiOutputAuditor::new(
                 self.openai_output_min_length,
                 self.openai_output_require_json,
                 self.openai_output_deny_patterns.clone(),
             );
-            registry.output_guardrails.push(std::sync::Arc::new(output_auditor));
+            registry
+                .output_guardrails
+                .push(std::sync::Arc::new(output_auditor));
 
             let tool_enforcer = crate::guardrails::openai_hooks::OpenAiToolPolicyEnforcer::new(
                 self.openai_tool_allowed_tools.clone(),
                 self.openai_tool_block_args.clone(),
             );
-            registry.tool_guardrails.push(std::sync::Arc::new(tool_enforcer));
+            registry
+                .tool_guardrails
+                .push(std::sync::Arc::new(tool_enforcer));
 
             self.guardrails = Some(registry);
         }
@@ -656,8 +662,14 @@ impl Agent {
                             error: self_correct_msg,
                         };
 
-                        for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1) {
-                            let sub_idx = msg.tool_calls.iter().position(|t| t.id == subsequent_tc.id).unwrap();
+                        for subsequent_tc in
+                            mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
+                        {
+                            let sub_idx = msg
+                                .tool_calls
+                                .iter()
+                                .position(|t| t.id == subsequent_tc.id)
+                                .unwrap();
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -680,8 +692,14 @@ impl Agent {
                             error: String::new(),
                         };
 
-                        for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1) {
-                            let sub_idx = msg.tool_calls.iter().position(|t| t.id == subsequent_tc.id).unwrap();
+                        for subsequent_tc in
+                            mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
+                        {
+                            let sub_idx = msg
+                                .tool_calls
+                                .iter()
+                                .position(|t| t.id == subsequent_tc.id)
+                                .unwrap();
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -749,8 +767,14 @@ impl Agent {
                             error: self_correct_msg,
                         };
 
-                        for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1) {
-                            let sub_idx = msg.tool_calls.iter().position(|t| t.id == subsequent_tc.id).unwrap();
+                        for subsequent_tc in
+                            mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
+                        {
+                            let sub_idx = msg
+                                .tool_calls
+                                .iter()
+                                .position(|t| t.id == subsequent_tc.id)
+                                .unwrap();
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -773,8 +797,14 @@ impl Agent {
                             error: String::new(),
                         };
 
-                        for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1) {
-                            let sub_idx = msg.tool_calls.iter().position(|t| t.id == subsequent_tc.id).unwrap();
+                        for subsequent_tc in
+                            mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
+                        {
+                            let sub_idx = msg
+                                .tool_calls
+                                .iter()
+                                .position(|t| t.id == subsequent_tc.id)
+                                .unwrap();
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -830,7 +860,14 @@ impl Agent {
     {
         // SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
         if cfg.enable_actor_model_message_passing {
-            return self.run_actor_model_message_passing(cfg, initial_message, session_tools.to_vec(), on_event).await;
+            return self
+                .run_actor_model_message_passing(
+                    cfg,
+                    initial_message,
+                    session_tools.to_vec(),
+                    on_event,
+                )
+                .await;
         }
 
         let mut active_cfg_cloned = cfg.clone();
@@ -1204,7 +1241,10 @@ impl Agent {
             let mut current_checkpoint_id = None;
             if let Some(checkpointer) = &self.checkpointer {
                 if let Some(thread_id) = &cfg.thread_id {
-                    let checkpoint_id = msg.response_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                    let checkpoint_id = msg
+                        .response_id
+                        .clone()
+                        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
                     let metadata = serde_json::json!({
                         "iteration": turn_count,
                         "tool_calls": msg.tool_calls.len()
@@ -1326,8 +1366,14 @@ impl Agent {
                                     if let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
                                         if let Some(thread_id) = &cfg.thread_id {
-                                            if let Ok(Some(cp)) = checkpointer.get_checkpoint(thread_id, cp_id).await {
-                                                if let Ok(restored_msgs) = serde_json::from_value::<Vec<crate::types::Message>>(cp.data) {
+                                            if let Ok(Some(cp)) =
+                                                checkpointer.get_checkpoint(thread_id, cp_id).await
+                                            {
+                                                if let Ok(restored_msgs) = serde_json::from_value::<
+                                                    Vec<crate::types::Message>,
+                                                >(
+                                                    cp.data
+                                                ) {
                                                     messages = restored_msgs;
                                                 }
                                             }
@@ -1373,8 +1419,14 @@ impl Agent {
                                     if let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
                                         if let Some(thread_id) = &cfg.thread_id {
-                                            if let Ok(Some(cp)) = checkpointer.get_checkpoint(thread_id, cp_id).await {
-                                                if let Ok(restored_msgs) = serde_json::from_value::<Vec<crate::types::Message>>(cp.data) {
+                                            if let Ok(Some(cp)) =
+                                                checkpointer.get_checkpoint(thread_id, cp_id).await
+                                            {
+                                                if let Ok(restored_msgs) = serde_json::from_value::<
+                                                    Vec<crate::types::Message>,
+                                                >(
+                                                    cp.data
+                                                ) {
                                                     messages = restored_msgs;
                                                 }
                                             }
@@ -2100,7 +2152,7 @@ impl Agent {
             total_tokens: 0,
             error_counts: std::collections::HashMap::new(),
             last_message: None,
-                    is_revert: false,
+            is_revert: false,
         };
 
         let compiled = graph.compile().unwrap();
@@ -4475,8 +4527,12 @@ impl Agent {
                 };
 
                 if !error.is_empty() {
-                    for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1) {
-                        let sub_idx = tool_calls.iter().position(|t| t.id == subsequent_tc.id).unwrap();
+                    for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
+                    {
+                        let sub_idx = tool_calls
+                            .iter()
+                            .position(|t| t.id == subsequent_tc.id)
+                            .unwrap();
                         tool_results[sub_idx] = ToolResult {
                             tool_call_id: subsequent_tc.id.clone(),
                             content: String::new(),
@@ -5121,17 +5177,17 @@ mod tests {
             total_tokens: 10,
             error_counts: std::collections::HashMap::new(),
             last_message: None,
-                    is_revert: false,
+            is_revert: false,
         };
 
         let update = AgentState {
-				messages: vec![crate::types::Message::assistant("Hi")],
-				has_tool_calls: true,
-				total_tokens: 20,
-				error_counts: [("toolA".to_string(), 1)].into_iter().collect(),
-				last_message: Some(crate::types::Message::assistant("Hi")),
-				is_revert: false,
-			};
+            messages: vec![crate::types::Message::assistant("Hi")],
+            has_tool_calls: true,
+            total_tokens: 20,
+            error_counts: [("toolA".to_string(), 1)].into_iter().collect(),
+            last_message: Some(crate::types::Message::assistant("Hi")),
+            is_revert: false,
+        };
 
         let reducer = AgentStateReducer;
         crate::langgraph::Reducer::reduce(&reducer, &mut state, update);
@@ -11096,12 +11152,13 @@ mod e2e_verification_tests {
     }
 }
 
-
 #[cfg(test)]
 mod fail_fast_tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
     use crate::tools::{Tool, ToolExecutor};
+    use ohc_builtin_agent_core::types::{
+        ChatRequest, ChatResponse, Message, Role, ToolCall, ToolError, Usage,
+    };
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -11111,7 +11168,10 @@ mod fail_fast_tests {
 
     #[async_trait::async_trait]
     impl crate::llm::LlmClient for DummyLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut count = self.call_count.lock().await;
             *count += 1;
 
@@ -11124,8 +11184,16 @@ mod fail_fast_tests {
                         role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
-                            ToolCall { id: "1".to_string(), name: "failing_tool".to_string(), arguments: serde_json::json!({}) },
-                            ToolCall { id: "2".to_string(), name: "dummy_tool".to_string(), arguments: serde_json::json!({}) }
+                            ToolCall {
+                                id: "1".to_string(),
+                                name: "failing_tool".to_string(),
+                                arguments: serde_json::json!({}),
+                            },
+                            ToolCall {
+                                id: "2".to_string(),
+                                name: "dummy_tool".to_string(),
+                                arguments: serde_json::json!({}),
+                            },
                         ],
                         tool_results: vec![],
                         response_id: Some("1".to_string()),
@@ -11159,7 +11227,8 @@ mod fail_fast_tests {
     #[async_trait::async_trait]
     impl ToolExecutor for DummyMutatingToolExecutor {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-            self.call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            self.call_count
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             Ok("Success".to_string())
         }
     }
@@ -11180,20 +11249,28 @@ mod fail_fast_tests {
             description: "dummy".to_string(),
             parameters: serde_json::json!({}),
             is_read_only: false,
-            execute: Arc::new(DummyMutatingToolExecutor { call_count: dummy_count.clone() }),
+            execute: Arc::new(DummyMutatingToolExecutor {
+                call_count: dummy_count.clone(),
+            }),
         };
 
-        let llm = Arc::new(DummyLlmClient { call_count: Mutex::new(0) });
+        let llm = Arc::new(DummyLlmClient {
+            call_count: Mutex::new(0),
+        });
         let agent = Agent::new(llm, vec![failing_tool.clone(), dummy_tool.clone()]);
 
         let mut cfg = AgentRunConfig::default();
         cfg.max_retries = 0; // Disable retries to see immediate fail
 
         let mut events = vec![];
-        let mut on_event = |e: AgentEvent| { events.push(e); };
+        let mut on_event = |e: AgentEvent| {
+            events.push(e);
+        };
 
         // Use run_anthropic_dumb_loop because it processes tool_calls natively in a single loop
-        let _res = agent.run_anthropic_dumb_loop(&cfg, "start", &[failing_tool, dummy_tool], &mut on_event).await;
+        let _res = agent
+            .run_anthropic_dumb_loop(&cfg, "start", &[failing_tool, dummy_tool], &mut on_event)
+            .await;
 
         // Should contain tool events indicating failure
         let mut tool_results = vec![];

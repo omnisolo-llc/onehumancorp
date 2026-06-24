@@ -102,11 +102,8 @@ pub trait AgentState: Clone + Send + Sync + 'static {
 impl<S: AgentState> StateGraph<S> {
     /// Mechanically: uses `llm_call` and `tool_node` connected by conditional edges
     /// (if tool calls present -> route to `tool_node`; if absent -> route to `END`).
-    pub fn build_standard_agent_harness<F1, Fut1, F2, Fut2>(
-        &mut self,
-        llm_call: F1,
-        tool_node: F2,
-    ) where
+    pub fn build_standard_agent_harness<F1, Fut1, F2, Fut2>(&mut self, llm_call: F1, tool_node: F2)
+    where
         F1: Fn(S) -> Fut1 + Send + Sync + 'static,
         Fut1: Future<Output = Result<S, String>> + Send + 'static,
         F2: Fn(S) -> Fut2 + Send + Sync + 'static,

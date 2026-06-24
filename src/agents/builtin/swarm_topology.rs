@@ -86,7 +86,8 @@ impl SwarmCoordinator {
                 } else {
                     Err(format!(
                         "Pending consensus. Current votes: {}, Required: {}",
-                        current_votes.len(), threshold
+                        current_votes.len(),
+                        threshold
                     ))
                 }
             }
