@@ -6217,26 +6217,34 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
         .route("/api/ui/supply/bom-items", axum::routing::post(create_ui_bom_item_handler).with_state(db.clone()))
-        .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
+        .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer({
+            let db_for_auth = db.clone();
             axum::middleware::from_fn(
-                |req: axum::extract::Request, next: axum::middleware::Next| async move {
-                    use axum::response::IntoResponse;
-                    let store = std::sync::Arc::new(crate::auth::Store::new());
-                    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
-                    let token = match auth_header {
-                        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
-                        _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
-                    };
-                    let claims = match store.validate_token(token).await {
-                        Ok(c) => c,
-                        Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
-                    };
-                    let mut req = req;
-                    req.extensions_mut().insert(claims);
-                    next.run(req).await
+                move |req: axum::extract::Request, next: axum::middleware::Next| {
+                    let db = db_for_auth.clone();
+                    async move {
+                        use axum::response::IntoResponse;
+                        let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
+                            crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
+                            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
+                        };
+                        let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
+                        let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                        let token = match auth_header {
+                            Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                            _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                        };
+                        let claims = match store.validate_token(token).await {
+                            Ok(c) => c,
+                            Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                        };
+                        let mut req = req;
+                        req.extensions_mut().insert(claims);
+                        next.run(req).await
+                    }
                 }
             )
-        ))
+        }))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
         .route("/readyz", axum::routing::get(|| async { "ok" }))
         .route(
@@ -6502,7 +6510,11 @@ async fn create_ui_bom_item_handler(
         .route(
             "/api/v1/auth/login",
             axum::routing::post({
-                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
+                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
+                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
+                };
+                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
                 move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
                     let db = db_for_login.clone();
                     let store = store.clone();
@@ -6514,7 +6526,11 @@ async fn create_ui_bom_item_handler(
             "/api/v1/ai/draft-reply",
             axum::routing::post({
                 let db = db.clone();
-                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
+                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
+                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
+                };
+                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
                 move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
                     draft_reply_handler(db, store, headers, payload).await
                 }
@@ -6525,7 +6541,11 @@ async fn create_ui_bom_item_handler(
             "/api/v1/dashboard/metrics",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
+                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
+                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
+                };
+                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
@@ -6543,7 +6563,11 @@ async fn create_ui_bom_item_handler(
             "/api/v1/advisory/insights",
             axum::routing::get({
                 let db = db.clone();
-                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
+                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
+                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
+                };
+                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
                 move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, headers).await }
             }),
         )
@@ -6756,7 +6780,11 @@ async fn create_ui_bom_item_handler(
     let viral_loop_tracker = std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone(), dept_orchestrator.clone(), viral_loop_tracker.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(crate::auth::Store::new());
+    let repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> = match &db.store {
+                    crate::db::DbStore::Postgres => std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(db.pool.clone())),
+                    crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone())),
+                };
+                let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {

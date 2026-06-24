@@ -1,5 +1,5 @@
 use tonic::{Request, Response, Status};
-use funding_proto::{
+use funding_proto::ohc::funding::{
     funding_service_server::FundingService,
     ListFundingOpportunitiesRequest, ListFundingOpportunitiesResponse,
     ApproveFundingOpportunityRequest, ApproveFundingOpportunityResponse,

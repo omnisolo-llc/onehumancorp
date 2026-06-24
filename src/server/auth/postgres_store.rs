@@ -2,19 +2,7 @@ use async_trait::async_trait;
 use sqlx::PgPool;
 use super::User;
 
-#[async_trait::async_trait]
-pub trait UserRepository: Send + Sync {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String>;
-    async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String>;
-    async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String>;
-    async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String>;
-    async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String>;
-    async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String>;
-    async fn update_user(&self, user: User, org_id: &str) -> Result<(), String>;
-    async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String>;
-    async fn revoke_token(&self, jti: String, exp: chrono::DateTime<chrono::Utc>, org_id: &str) -> Result<(), String>;
-    async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String>;
-}
+use super::user_repository::UserRepository;
 
 use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
@@ -57,32 +45,53 @@ impl PgUserRepository {
 
 #[async_trait]
 impl UserRepository for PgUserRepository {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+            async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
 
-        sqlx::query(
-            r#"
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
+
+        if should_bypass {
+            let query = r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
-            "#
-        )
-        .bind(&user.id)
-        .bind(&user.username)
-        .bind(&user.email)
-        .bind(&user.password_hash)
-        .bind(roles_json) // Using JSON string for simplicity, assuming TEXT or JSONB column
-        .bind(user.active)
-        .bind(org_id)
-        .bind(&user.oidc_subject)
-        .bind(user.created_at)
-        .bind(user.updated_at)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+            "#;
+            sqlx::query(query)
+            .bind(&user.id)
+            .bind(&user.username)
+            .bind(&user.email)
+            .bind(&user.password_hash)
+            .bind(roles_json)
+            .bind(user.active)
+            .bind(org_id)
+            .bind(&user.oidc_subject)
+            .bind(user.created_at)
+            .bind(user.updated_at)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+        } else {
+            let query = r#"
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5::jsonb, $6, current_setting('app.current_tenant')::text, $7, $8, $9)
+            "#;
+            sqlx::query(query)
+            .bind(&user.id)
+            .bind(&user.username)
+            .bind(&user.email)
+            .bind(&user.password_hash)
+            .bind(roles_json)
+            .bind(user.active)
+            .bind(&user.oidc_subject)
+            .bind(user.created_at)
+            .bind(user.updated_at)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
 
         tx.commit().await.map_err(|e| e.to_string())?;
 

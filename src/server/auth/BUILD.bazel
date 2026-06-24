@@ -10,6 +10,7 @@ rust_library(
         "orchestration.rs",
         "postgres_store.rs",
         "sqlite_store.rs",
+        "user_repository.rs",
         "multitenancy_isolation.rs",
     ],
     edition = "2024",
