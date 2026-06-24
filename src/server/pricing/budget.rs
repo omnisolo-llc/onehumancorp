@@ -38,27 +38,21 @@ impl BudgetManager {
             return Ok(self.get_remaining() >= 0.0);
         }
 
-        let mut current_bits = self.current.load(Ordering::Relaxed);
-        let final_current;
         if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
             tracing::info!("💰 Miser telemetry: Recording budget spend for tenant {}", tid);
         }
-        loop {
-            let current = f64::from_bits(current_bits);
-            let next = current + amount;
-            match self.current.compare_exchange_weak(
-                current_bits,
-                next.to_bits(),
-                Ordering::SeqCst,
-                Ordering::Relaxed,
-            ) {
-                Ok(_) => {
-                    final_current = next;
-                    break;
-                },
-                Err(b) => current_bits = b,
+
+        let final_current_bits = self.current.fetch_update(
+            Ordering::SeqCst,
+            Ordering::Relaxed,
+            |bits| {
+                let current = f64::from_bits(bits);
+                let next = current + amount;
+                Some(next.to_bits())
             }
-        }
+        ).unwrap(); // safe because the closure always returns Some
+
+        let final_current = f64::from_bits(final_current_bits) + amount;
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
             let cents = (amount * 100.0).round() as u64;
