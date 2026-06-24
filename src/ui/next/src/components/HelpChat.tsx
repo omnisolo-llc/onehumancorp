@@ -174,7 +174,7 @@ export function HelpChat() {
           <button
             id="ai-chat-trigger"
             onClick={() => setIsOpen(true)}
-            className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[30px] saturate-[210%]"
+            className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group "
             aria-label="Open help chat"
             aria-expanded={isOpen}
             aria-controls="ai-chat-interface"
@@ -189,7 +189,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/60 dark:bg-[#16161a]/70 backdrop-blur-[40px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/60 dark:border-white/20 animate-slide-up-chat text-gray-800 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto glassmorphism rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-800 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
@@ -251,8 +251,8 @@ export function HelpChat() {
                 <div
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_4px_16px_rgba(0,0,0,0.04)] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/95 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
-                      : "bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 text-gray-800 dark:text-gray-100 rounded-bl-sm"
+                      ? "bg-blue-600/95  text-white rounded-br-sm border border-blue-500/50"
+                      : "glassmorphism text-gray-800 dark:text-gray-100 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
@@ -270,7 +270,7 @@ export function HelpChat() {
             ))}
             {isLoading && (
               <div className="flex flex-col items-start animate-pulse">
-                <div className="px-4 py-3 rounded-2xl max-w-[85%] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 text-gray-800 rounded-bl-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex gap-1">
+                <div className="px-4 py-3 rounded-2xl max-w-[85%] glassmorphism text-gray-800 rounded-bl-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex gap-1">
                   <div
                     className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
                     style={{ animationDelay: "0ms" }}
@@ -292,7 +292,7 @@ export function HelpChat() {
           {/* Input */}
           <form
             onSubmit={handleSend}
-            className="p-3 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border-t border-white/40 dark:border-white/10 flex gap-2 items-center"
+            className="p-3 glassmorphism flex gap-2 items-center"
           >
             <input
               id="ohc-help-input-area"
@@ -301,7 +301,7 @@ export function HelpChat() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask anything..."
               disabled={isLoading}
-              className="flex-1 bg-white/65 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-xl px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
+              className="flex-1 glassmorphism rounded-xl px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
             />
             <button
               type="submit"
