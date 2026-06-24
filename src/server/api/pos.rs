@@ -19,8 +19,34 @@ where
     Router::new()
         .route("/orders", get(get_orders_handler).post(post_orders_handler))
         .route("/inventory", get(get_inventory_handler).post(post_inventory_handler))
+        .route("/inventory/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/auth", axum::routing::post(pos_auth_handler))
         .with_state(hub)
+}
+
+#[derive(serde::Deserialize)]
+pub struct ReserveRequest {
+    pub product_id: String,
+    pub quantity: i32,
+}
+
+async fn reserve_inventory_handler(
+    State(hub): State<Arc<Hub>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<ReserveRequest>,
+) -> Json<Value> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+    let result = inventory_service.reserve_inventory(tenant_id, &payload.product_id, payload.quantity, 30).await;
+
+    match result {
+        Ok(res) => Json(json!({ "success": res.success, "lock_id": res.lock_id, "error": res.error_message })),
+        Err(e) => Json(json!({ "success": false, "error": e }))
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -60,7 +86,7 @@ async fn post_orders_handler(
             }
         }
     }
-    let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+    let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(hub.redis_client.clone()));
     cache.invalidate_by_tag("pos_orders").await;
     Json(json!({"status": "ok"}))
 }
@@ -107,7 +133,7 @@ async fn get_orders_handler(
 ) -> Json<Value> {
     let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
     let cache_key = format!("pos_orders:{}", tenant_id);
-    let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+    let cache = POS_ORDERS_CACHE.get_or_init(|| HybridCache::new(hub.redis_client.clone()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {

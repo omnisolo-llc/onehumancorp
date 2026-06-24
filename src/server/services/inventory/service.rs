@@ -117,6 +117,16 @@ impl InventoryService {
                                 .execute(&mut *tx)
                                 .await;
                         }
+
+                        let _ = sqlx::query("INSERT INTO inventory_reservations (id, tenant_id, product_id, quantity, expires_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + ($5 || ' seconds')::interval)")
+                            .bind(Uuid::parse_str(&lock_id).unwrap_or_else(|_| Uuid::new_v4()))
+                            .bind(tenant_id)
+                            .bind(product_id)
+                            .bind(quantity)
+                            .bind(ttl.to_string())
+                            .execute(&mut *tx)
+                            .await;
+
                     } else {
                         let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
                             .bind(product_id)
@@ -142,6 +152,15 @@ impl InventoryService {
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(tenant_id)
+                                    .execute(&mut *tx)
+                                    .await;
+
+                                let _ = sqlx::query("INSERT INTO inventory_reservations (id, tenant_id, product_id, quantity, expires_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + ($5 || ' seconds')::interval)")
+                                    .bind(Uuid::parse_str(&lock_id).unwrap_or_else(|_| Uuid::new_v4()))
+                                    .bind(tenant_id)
+                                    .bind(product_id)
+                                    .bind(quantity)
+                                    .bind(ttl.to_string())
                                     .execute(&mut *tx)
                                     .await;
                             }
@@ -255,6 +274,12 @@ impl InventoryService {
                     let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(quantity)
                         .bind(product_id)
+                        .bind(tenant_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    let _ = sqlx::query("DELETE FROM inventory_reservations WHERE id = $1 AND tenant_id = $2")
+                        .bind(Uuid::parse_str(lock_id).unwrap_or_default())
                         .bind(tenant_id)
                         .execute(&mut *tx)
                         .await;

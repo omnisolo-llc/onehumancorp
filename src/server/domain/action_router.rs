@@ -25,6 +25,24 @@ pub async fn dispatch_action(
                 tracing::info!("Omnichannel Dispatcher sent: {}", msg);
             }
         }
+        "inventory_conflict_resolution" => {
+            tracing::info!("Operations Agent resolved inventory conflict for tenant: {}", tenant_id);
+            if let Some(action) = payload.get("action").and_then(|v| v.as_str()) {
+                if action == "approve_reorder" {
+                    if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
+                        tracing::info!("Drafting vendor reorder request for product {}", product_id);
+                        // Mark the action request as approved
+                        if let Some(request_id) = payload.get("request_id").and_then(|v| v.as_str()) {
+                            let _ = sqlx::query("UPDATE agent_action_requests SET status = 'Approved', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+                                .bind(request_id)
+                                .bind(tenant_id)
+                                .execute(pool)
+                                .await;
+                        }
+                    }
+                }
+            }
+        }
         "social_post_draft" => {
             // Real implementation would buffer post here to AYRSHARE.
             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
