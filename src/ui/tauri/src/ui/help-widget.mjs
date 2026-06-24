@@ -345,10 +345,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     const vl = document.getElementById("video-list");
                     vl.innerHTML = "";
                     data.forEach(v => {
-                        vl.innerHTML += `<div style="background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}'); } else { alert('Playing video: ' + '${v.title.replace(/'/g, "\\'")}' + '\\nURL: ' + '${v.video_url}'); }">` +
-                            `<h4 style="margin: 0 0 4px 0; font-size: 14px;">${v.title}</h4>` +
-                            `<span style="font-size: 12px; color: #64748b;">${v.duration}</span>` +
-                            `</div>`;
+                        const card = document.createElement('div');
+                        card.style.background = 'white';
+                        card.style.border = '1px solid rgba(0,0,0,0.1)';
+                        card.style.borderRadius = '8px';
+                        card.style.padding = '12px';
+                        card.style.cursor = 'pointer';
+
+                        card.onclick = () => {
+                            if (window.openVideo) {
+                                window.openVideo(v.video_url, v.title, v.duration);
+                            }
+                        };
+
+                        const titleEl = document.createElement('h4');
+                        titleEl.style.margin = '0 0 4px 0';
+                        titleEl.style.fontSize = '14px';
+                        titleEl.textContent = v.title;
+
+                        const durationEl = document.createElement('span');
+                        durationEl.style.fontSize = '12px';
+                        durationEl.style.color = '#64748b';
+                        durationEl.textContent = v.duration;
+
+                        card.appendChild(titleEl);
+                        card.appendChild(durationEl);
+                        vl.appendChild(card);
                     });
                 }).catch(e => { document.getElementById("video-list").innerHTML = "Error loading videos."; });
             }
@@ -404,6 +426,54 @@ document.addEventListener('DOMContentLoaded', () => {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleSend();
     });
+
+
+    // --- Video Modal Logic ---
+    if (!document.getElementById('video-modal')) {
+        const modalHtml = `
+        <div id="video-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2147483647; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
+            <div style="background:#fff; border-radius:12px; width:90%; max-width:800px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+                <div style="padding:16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; background:#f8fafc;">
+                    <div>
+                        <h3 id="video-modal-title" style="margin:0; font-size:18px; color:#1e293b;"></h3>
+                        <p id="video-modal-duration" style="margin:4px 0 0 0; font-size:14px; color:#64748b;"></p>
+                    </div>
+                    <button id="close-video" style="background:none; border:none; cursor:pointer; padding:8px; border-radius:50%; display:flex; align-items:center; justify-content:center;" aria-label="Close video">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div style="width:100%; aspect-ratio:9/16; max-height:80vh; background:#000;">
+                    <video id="video-player" controls style="width:100%; height:100%; object-fit:contain;">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    if (!window.openVideo) {
+        window.openVideo = function(url, title, duration) {
+            const videoModal = document.getElementById('video-modal');
+            const videoPlayer = document.getElementById('video-player');
+            const videoModalTitle = document.getElementById('video-modal-title');
+            const videoModalDuration = document.getElementById('video-modal-duration');
+            const closeVideoBtn = document.getElementById('close-video');
+
+            videoPlayer.src = url;
+            videoModalTitle.innerText = title;
+            videoModalDuration.innerText = duration;
+            videoModal.style.display = 'flex';
+            videoPlayer.play().catch(e => console.warn("Auto-play prevented", e));
+
+            closeVideoBtn.onclick = () => {
+                videoPlayer.pause();
+                videoPlayer.src = "";
+                videoModal.style.display = 'none';
+            };
+        };
+    }
 
     // --- Global Tooltip & Walkthrough Logic ---
 
