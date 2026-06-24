@@ -3304,7 +3304,7 @@ pub async fn handle_zero_click_generate(
     let tasks_to_insert = intake_data.initial_tasks.unwrap_or_else(|| vec!["Follow up with new leads".to_string()]);
     for task_title in tasks_to_insert {
         let task_id = uuid::Uuid::new_v4().to_string();
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, description, status) VALUES ($1, $2, $3, $4, 'PENDING')")
+        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title, description, status) VALUES ($1, $2, $3, $4, 'PENDING')")
             .bind(&task_id)
             .bind(&_start_res.organization_id)
             .bind(&task_title)
