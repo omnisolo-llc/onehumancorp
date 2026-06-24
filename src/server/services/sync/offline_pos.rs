@@ -34,7 +34,7 @@ impl CRDTOfflineSynchronizer {
             let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
             // CRDT Operation: PN-Counter decrement (increment pn_counter_n) and re-calculate inventory_count
-            let query = "
+            let _query = "
                 UPDATE products
                 SET pn_counter_n = pn_counter_n + $1,
                     inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1))
