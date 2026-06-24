@@ -53,4 +53,33 @@ assert_fails_with \
     --all "$skip_root/src/e2e/skipped.spec.ts" \
     --ci "$skip_root/src/e2e/skipped.spec.ts"
 
+only_root="$TMP_ROOT/only-source"
+mkdir -p "$only_root/src/e2e"
+cat >"$only_root/src/e2e/focused.spec.ts" <<'SPEC'
+import { test } from '@playwright/test';
+test.only('focused flow', async () => {});
+SPEC
+
+assert_fails_with \
+  "focused Playwright tests are forbidden: src/e2e/focused.spec.ts" \
+  env SOURCE_REPO_ROOT="$only_root" "$SCRIPT" \
+    --all "$only_root/src/e2e/focused.spec.ts" \
+    --ci "$only_root/src/e2e/focused.spec.ts"
+
+runtime_skip_root="$TMP_ROOT/runtime-skip-source"
+mkdir -p "$runtime_skip_root/src/e2e"
+cat >"$runtime_skip_root/src/e2e/runtime_skip.spec.ts" <<'SPEC'
+import { test } from '@playwright/test';
+test('runtime skip', async ({ page }, testInfo) => {
+  testInfo.skip();
+  await page.goto('/');
+});
+SPEC
+
+assert_fails_with \
+  "runtime Playwright skips are forbidden: src/e2e/runtime_skip.spec.ts" \
+  env SOURCE_REPO_ROOT="$runtime_skip_root" "$SCRIPT" \
+    --all "$runtime_skip_root/src/e2e/runtime_skip.spec.ts" \
+    --ci "$runtime_skip_root/src/e2e/runtime_skip.spec.ts"
+
 echo "Playwright coverage check tests passed."
