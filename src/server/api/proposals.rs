@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use ohc_builtin_agent::gpt_researcher::{GptResearcherManager, PlannerAgent, ExecutionAgent, ResearcherLlmClient};
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, Message};
+use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
 
 #[derive(Deserialize)]
 pub struct DraftRequest {
