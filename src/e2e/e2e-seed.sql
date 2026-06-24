@@ -621,3 +621,6 @@ SET username = EXCLUDED.username,
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
 VALUES ('m-e2e-1', 'e2e-tenant', 'first_sale', CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
+
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('e2e-tenant', 'ohc_llm_cost_total_cents', 'gauge', 200000, '{"agent_id": "agent_test_high_usage"}', CURRENT_TIMESTAMP, 'PENDING');
