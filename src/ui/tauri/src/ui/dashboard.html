@@ -2480,14 +2480,15 @@ document.addEventListener('DOMContentLoaded', () => {
               });
             } else {
               try {
-                  const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-                  const res = await fetch('/api/v1/growth/team-invites', {
+                  const res = await fetch('/api/v1/growth/referrals/generate', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+                      headers: {
+                        'authorization': `Bearer ${localStorage.getItem('ohc_token')}`,
+                        'Content-Type': 'application/json'
+                      }
                   });
                   const data = await res.json();
-                  linkInput.value = data.invite_link || "";
+                  linkInput.value = data.referral_link || "";
               } catch(e) {
                   console.error(e);
                   linkInput.value = "";
