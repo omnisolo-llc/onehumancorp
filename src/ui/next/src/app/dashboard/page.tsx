@@ -117,6 +117,7 @@ export default function Dashboard() {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [initialTriage, setInitialTriage] = useState<any[]>([]);
@@ -147,6 +148,15 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    fetch("/api/walkthrough/dashboard")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setWalkthroughSteps(data);
+        }
+      })
+      .catch((err) => console.error("Walkthrough fetch failed:", err));
+
     try {
       const storedName = localStorage.getItem("user_name");
       if (storedName) {
@@ -337,20 +347,6 @@ export default function Dashboard() {
     { label: "Growth", value: "Active", tone: "good" as const },
   ];
 
-  const walkthroughSteps = [
-    {
-      targetId: "sales-card-target",
-      title: "Business Analytics",
-      content: "This panel shows your current sales and customer counts.",
-      position: "bottom" as const,
-    },
-    {
-      targetId: "operations-map-target",
-      title: "Operations Map",
-      content: "Use this area to see the live state of your orders, messages, and inventory.",
-      position: "bottom" as const,
-    },
-  ];
 
   return (
     <>

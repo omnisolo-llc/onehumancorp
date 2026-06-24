@@ -30,6 +30,17 @@ test.describe('Help Components', () => {
         })
       });
     });
+
+    await page.route('**/api/walkthrough/dashboard', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { target_id: "sales-card-target", title: "Business Analytics", content: "This panel shows your current sales and customer counts.", position: "bottom" },
+          { target_id: "operations-map-target", title: "Operations Map", content: "Use this area to see the live state of your orders, messages, and inventory.", position: "bottom" }
+        ])
+      });
+    });
   });
 
   test('Help Center page loads with articles', async ({ page }) => {
