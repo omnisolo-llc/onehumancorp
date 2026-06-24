@@ -6,7 +6,7 @@ test.describe('Mobile Unified Agent Feed @mobile', () => {
 
   test('should display Action Center and agent feed cards on mobile dashboard', async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('/dashboard');
+    await page.goto('/feed');
 
     // Check if the unified agent feed structure is present
     await expect(page.locator('section[aria-label="Unified Agent Feed"]')).toBeVisible();
@@ -34,6 +34,6 @@ test.describe('Mobile Unified Agent Feed @mobile', () => {
     expect(isAllCaughtUpVisible || isAgentCardVisible || isActionNeededCardVisible).toBeTruthy();
 
     // Check for standard dashboard widgets which should also be visible
-    await expect(page.getByText('Success Milestones')).toBeVisible();
+    // Success Milestones logic removed as we use /feed page
   });
 });

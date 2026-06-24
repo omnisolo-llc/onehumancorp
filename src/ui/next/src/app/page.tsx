@@ -8,13 +8,13 @@ function HomeContent() {
 
   useEffect(() => {
     if (searchParams.get('dashboard') === '1') {
-      router.push('/dashboard');
+      router.push('/feed');
       return;
     }
 
     const hasOnboarded = localStorage.getItem('has_onboarded');
     if (hasOnboarded) {
-      router.push('/dashboard');
+      router.push('/feed');
     } else {
       router.push('/onboarding');
     }

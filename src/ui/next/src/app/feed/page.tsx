@@ -214,11 +214,13 @@ export default function FeedPage() {
 
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
+      <section aria-label="Unified Agent Feed" className="w-full h-full">
       <div className="w-full max-w-[375px] mx-auto p-4 space-y-4" data-testid="agent-feed">
+<div className="flex w-full mb-4 border-b border-gray-200 dark:border-gray-800"><button className="flex-1 pb-2 border-b-2 border-[#0066FF] font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Activity Feed</button><button className="flex-1 pb-2 text-gray-500 font-medium hover:text-gray-700">Proposals</button></div>
         {items.find(i => i.proposed_action?.action_type === "Draft Proposal") && <ProposalDraftCard item={items.find(i => i.proposed_action?.action_type === "Draft Proposal") as any} />}
         {loading && (
           <div className="flex justify-center items-center py-12">
-            <p className="text-gray-500 font-medium">Checking your feed...</p>
+            <p className="text-gray-500 font-medium">Loading Agent Proposals...</p>
           </div>
         )}
 
@@ -489,6 +491,7 @@ export default function FeedPage() {
           </button>
         </div>
       </div>
+    </section>
     </AppShell>
   );
 }
