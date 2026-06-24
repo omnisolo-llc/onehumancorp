@@ -1,5 +1,15 @@
 exports_files([
     "playwright_spec_coverage_check.sh",
+    "playwright_spec_coverage_check_test.sh",
     "playwright_test.sh",
     "run_playwright.sh",
 ])
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_test(
+    name = "playwright_spec_coverage_check_test",
+    srcs = ["playwright_spec_coverage_check_test.sh"],
+    args = ["$(rootpath :playwright_spec_coverage_check.sh)"],
+    data = [":playwright_spec_coverage_check.sh"],
+)

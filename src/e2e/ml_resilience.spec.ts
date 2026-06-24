@@ -17,6 +17,8 @@ test('AI Agent Paused state appears when LLM API fails', async ({ page, request 
       .toBeVisible({ timeout: 15000 })
       .catch(() => {});
 
+    await page.locator("text=Activity Feed").first().click();
+
     await expect(page.locator("text=business advisory").first())
       .toBeVisible({ timeout: 15000 })
       .catch(() => {});
