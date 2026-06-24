@@ -129,7 +129,11 @@ impl Anthropic3TierMemory {
     }
 
     /// Performs a simple substring search across all transcripts.
-    pub async fn search_transcripts(&self, query: &str, limit: usize) -> std::io::Result<Vec<String>> {
+    pub async fn search_transcripts(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> std::io::Result<Vec<String>> {
         let mut results = Vec::new();
         let query_lower = query.to_lowercase();
 

@@ -90,8 +90,8 @@ impl VectorRepository {
     }
 
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
-        let emb_str =
-            serde_json::to_string(&record.embedding).map_err(|e| format!("VectorRepository Upsert JSON Serialization Error: {}", e))?;
+        let emb_str = serde_json::to_string(&record.embedding)
+            .map_err(|e| format!("VectorRepository Upsert JSON Serialization Error: {}", e))?;
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
@@ -175,7 +175,12 @@ impl VectorRepository {
         query_embedding: &[f32],
         limit: i64,
     ) -> Result<Vec<EmbeddingRecord>, String> {
-        let emb_str = serde_json::to_string(query_embedding).map_err(|e| format!("VectorRepository Semantic Search JSON Serialization Error: {}", e))?;
+        let emb_str = serde_json::to_string(query_embedding).map_err(|e| {
+            format!(
+                "VectorRepository Semantic Search JSON Serialization Error: {}",
+                e
+            )
+        })?;
 
         let mut results = Vec::new();
 
@@ -546,7 +551,8 @@ impl VectorRepository {
         let mut updated_winner = winner.clone();
         updated_winner.reference_count += loser.reference_count + 1;
         updated_winner.last_referenced_at = chrono::Utc::now();
-        updated_winner.reliability_score = std::cmp::max(winner.reliability_score, loser.reliability_score);
+        updated_winner.reliability_score =
+            std::cmp::max(winner.reliability_score, loser.reliability_score);
         if loser.owner_override && !updated_winner.owner_override {
             updated_winner.owner_override = true;
         }
@@ -558,7 +564,10 @@ impl VectorRepository {
     /// It uses explicit owner override, reliability score, and recency to determine the winner.
     pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
         let conflicts = self.get_conflicting_pairs().await?;
-        tracing::info!("Found {} conflicting memory pairs during auto_resolve_conflicts", conflicts.len());
+        tracing::info!(
+            "Found {} conflicting memory pairs during auto_resolve_conflicts",
+            conflicts.len()
+        );
         let mut resolved_count = 0;
         let mut deleted_ids = std::collections::HashSet::new();
 
@@ -1201,10 +1210,8 @@ impl std::fmt::Debug for Anthropic3TierMemoryStore {
 
 impl Anthropic3TierMemoryStore {
     pub fn new<P: AsRef<std::path::Path>>(base_dir: P) -> Result<Self, String> {
-        let memory = crate::memory::anthropic_tier::Anthropic3TierMemory::new_sync(
-            base_dir,
-        )
-        .map_err(|e| e.to_string())?;
+        let memory = crate::memory::anthropic_tier::Anthropic3TierMemory::new_sync(base_dir)
+            .map_err(|e| e.to_string())?;
 
         Ok(Self { memory })
     }
@@ -1238,7 +1245,10 @@ impl Anthropic3TierMemoryStore {
 #[async_trait]
 impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
-        self.memory.write_topic(topic_name, content).await.map_err(|e| e.to_string())?;
+        self.memory
+            .write_topic(topic_name, content)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let mut existing_index = self.get_lightweight_index().await?;
         let char_count = content.chars().count();
@@ -1271,7 +1281,10 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
     }
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        self.memory.search_transcripts(query, limit).await.map_err(|e| e.to_string())
+        self.memory
+            .search_transcripts(query, limit)
+            .await
+            .map_err(|e| e.to_string())
     }
 }
 
@@ -1341,7 +1354,10 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
     }
 
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        self.memory.search_transcripts(query, limit).await.map_err(|e| e.to_string())
+        self.memory
+            .search_transcripts(query, limit)
+            .await
+            .map_err(|e| e.to_string())
     }
     fn as_anthropic_accessor(
         &self,
@@ -3743,4 +3759,4 @@ mod reliability_score_tests {
         );
     }
 }
-    // Consolidated Memory: Auto-resolves by recency, reliability, and override.
+// Consolidated Memory: Auto-resolves by recency, reliability, and override.

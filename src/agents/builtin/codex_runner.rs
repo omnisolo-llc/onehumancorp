@@ -313,7 +313,8 @@ impl AppServer {
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
             let marketplace = crate::marketplace::Marketplace::new();
-            let agent: Result<crate::marketplace::AgentDefinition, _> = serde_json::from_value(req.params.clone());
+            let agent: Result<crate::marketplace::AgentDefinition, _> =
+                serde_json::from_value(req.params.clone());
             let response_obj = match agent {
                 Ok(a) => match marketplace.publish_agent(a) {
                     Ok(_) => JsonRpcResponse {
@@ -346,7 +347,6 @@ impl AppServer {
                 },
             };
             return serde_json::to_string(&response_obj).unwrap_or_default();
-
         } else if req.method == "ap_execute_step" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let task_id = req
@@ -1240,7 +1240,10 @@ mod tests {
         let resp_am_publish: JsonRpcResponse = serde_json::from_str(&resp_json_am_publish).unwrap();
         assert!(resp_am_publish.error.is_none());
         let publish_result = resp_am_publish.result.unwrap();
-        assert_eq!(publish_result.get("status").unwrap().as_str().unwrap(), "success");
+        assert_eq!(
+            publish_result.get("status").unwrap().as_str().unwrap(),
+            "success"
+        );
 
         // Test Agent Protocol ap_execute_step method
         let req_json_ap_execute = format!(
@@ -1331,7 +1334,10 @@ mod tests {
 
         let agent = Arc::new(Agent::new(Arc::new(DummyLlmClient), vec![]));
 
-        let config = AgentRunConfig { guardrails: Some(registry), ..Default::default() };
+        let config = AgentRunConfig {
+            guardrails: Some(registry),
+            ..Default::default()
+        };
 
         let core = Arc::new(CodexCore::new(agent, config));
         let runner = Runner::new_with_core(core);

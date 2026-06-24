@@ -27,8 +27,13 @@ pub enum Observation {
     AgentReply {
         content: String,
     },
-    UrlContent { url: String, text: String },
-    FilesFound { paths: Vec<String> },
+    UrlContent {
+        url: String,
+        text: String,
+    },
+    FilesFound {
+        paths: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

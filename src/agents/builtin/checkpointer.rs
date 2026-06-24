@@ -147,13 +147,18 @@ impl GitCheckpointer {
                 if let Ok(mut ralph_prog) =
                     serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content)
                 {
-                    ralph_prog.notes.push(format!("Checkpoint {}", checkpoint_id));
+                    ralph_prog
+                        .notes
+                        .push(format!("Checkpoint {}", checkpoint_id));
                     scratchpad_json_val = serde_json::to_value(&ralph_prog).unwrap();
                 } else if let Ok(mut generic_json) =
                     serde_json::from_str::<serde_json::Value>(&content)
                 {
                     if let Some(obj) = generic_json.as_object_mut() {
-                        obj.insert("current_objective".to_string(), serde_json::Value::String(format!("Checkpoint {}", checkpoint_id)));
+                        obj.insert(
+                            "current_objective".to_string(),
+                            serde_json::Value::String(format!("Checkpoint {}", checkpoint_id)),
+                        );
                     }
                     scratchpad_json_val = generic_json;
                 }
@@ -168,7 +173,6 @@ impl GitCheckpointer {
         Ok(scratchpad_json_val)
     }
 }
-
 
 #[async_trait]
 impl CheckpointSaver for GitCheckpointer {
@@ -227,7 +231,8 @@ impl CheckpointSaver for GitCheckpointer {
             .await
             .map_err(|e| e.to_string())?;
 
-        let scratchpad_json_val = Self::merge_scratchpad_state(&scratchpad_path, &checkpoint.checkpoint_id).await?;
+        let scratchpad_json_val =
+            Self::merge_scratchpad_state(&scratchpad_path, &checkpoint.checkpoint_id).await?;
 
         let scratchpad_json =
             serde_json::to_string_pretty(&scratchpad_json_val).map_err(|e| e.to_string())?;
@@ -334,7 +339,10 @@ impl CheckpointSaver for GitCheckpointer {
             .map_err(|e| e.to_string())?;
 
         if !pre_clean.status.success() {
-            tracing::warn!("Pre-clean failed: {}", String::from_utf8_lossy(&pre_clean.stderr));
+            tracing::warn!(
+                "Pre-clean failed: {}",
+                String::from_utf8_lossy(&pre_clean.stderr)
+            );
         }
 
         // 2. Reset HEAD to ensure we are in a clean state before checkout
@@ -348,7 +356,10 @@ impl CheckpointSaver for GitCheckpointer {
             .map_err(|e| e.to_string())?;
 
         if !reset_head.status.success() {
-            tracing::warn!("Reset HEAD failed: {}", String::from_utf8_lossy(&reset_head.stderr));
+            tracing::warn!(
+                "Reset HEAD failed: {}",
+                String::from_utf8_lossy(&reset_head.stderr)
+            );
         }
 
         let branch_name = format!(
@@ -557,11 +568,13 @@ impl CheckpointSaver for PgCheckpointer {
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
         // Fetch the target checkpoint's thread_id and created_at timestamp
-        let row_opt = sqlx::query("SELECT thread_id, created_at FROM swarm_checkpoints WHERE checkpoint_id = $1")
-            .bind(checkpoint_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(
+            "SELECT thread_id, created_at FROM swarm_checkpoints WHERE checkpoint_id = $1",
+        )
+        .bind(checkpoint_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         if let Some(row) = row_opt {
             let thread_id: String = row.get("thread_id");
@@ -692,7 +705,9 @@ mod tests {
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS swarm_checkpoints (thread_id TEXT, checkpoint_id TEXT, parent_id TEXT, checkpoint BYTEA, metadata BYTEA, created_at TIMESTAMPTZ, PRIMARY KEY (thread_id, checkpoint_id))").execute(&pool).await;
 
         // Clean up previous runs
-        let _ = sqlx::query("DELETE FROM swarm_checkpoints WHERE thread_id = 'thread-restore-1'").execute(&pool).await;
+        let _ = sqlx::query("DELETE FROM swarm_checkpoints WHERE thread_id = 'thread-restore-1'")
+            .execute(&pool)
+            .await;
 
         let saver = PgCheckpointer::new(pool.clone());
 

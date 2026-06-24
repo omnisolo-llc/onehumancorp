@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use std::sync::OnceLock;
+use std::sync::{Arc, Mutex};
 
 /// AutoGPT Unique Harness Innovations: Agent Marketplace
 /// Pre-built agent distribution.
@@ -75,7 +75,10 @@ impl Marketplace {
         let registry = get_registry();
         let mut guard = registry.lock().unwrap();
         if guard.contains_key(&agent.name) {
-            return Err(format!("Agent '{}' already exists in the marketplace.", agent.name));
+            return Err(format!(
+                "Agent '{}' already exists in the marketplace.",
+                agent.name
+            ));
         }
         guard.insert(agent.name.clone(), agent);
         Ok(())
