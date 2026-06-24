@@ -767,7 +767,6 @@ export default function OnboardingWizard() {
                     updateState({ bio: e.target.value });
                     if (error) updateState({ error: '' });
                   }}
-                  enterKeyHint="done"
                 />
 
                 <input
@@ -780,7 +779,6 @@ export default function OnboardingWizard() {
                   onChange={(e) => updateState({ instantImageUrl: e.target.value })}
                   inputMode="url"
                   autoComplete="url"
-                  enterKeyHint="next"
                 />
 
                 <div className="mt-4">
@@ -1396,7 +1394,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Launching...
                     </span>
-                  ) : <IconLabel icon="launch">Approve & Go Live</IconLabel>}
+                  ) : <IconLabel icon="launch">Approve & Publish</IconLabel>}
                 </button>
               </div>
             </div>

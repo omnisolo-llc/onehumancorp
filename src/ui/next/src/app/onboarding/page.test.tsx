@@ -257,7 +257,7 @@ describe('OnboardingWizard', () => {
     const passwordInput = screen.getByPlaceholderText(/••••••••/i);
     await user.type(passwordInput, 'mypassword123');
 
-    const launchButton = screen.getByRole('button', { name: /Approve & Go Live/i });
+    const launchButton = screen.getByRole('button', { name: /Approve & Publish/i });
     await user.click(launchButton);
 
     // Verify it transitions to Step 5 (Live Screen) on success
@@ -356,7 +356,7 @@ describe('OnboardingWizard', () => {
 
     await renderOnboardingWizard();
 
-    const launchButton = screen.getByRole('button', { name: /Approve & Go Live/i });
+    const launchButton = screen.getByRole('button', { name: /Approve & Publish/i });
 
     await user.click(launchButton);
 
@@ -869,7 +869,7 @@ describe('OnboardingWizard', () => {
 
     render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
-    const launchButton = await screen.findByRole('button', { name: /Approve & Go Live/i });
+    const launchButton = await screen.findByRole('button', { name: /Approve & Publish/i });
     await user.click(launchButton);
 
     expect(startRequestPayload).toBeDefined();
