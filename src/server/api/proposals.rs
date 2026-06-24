@@ -91,7 +91,7 @@ async fn draft_proposal(Json(payload): Json<DraftRequest>) -> impl IntoResponse 
 mod tests {
     use super::*;
     use axum::body::Body;
-    use axum::http::{Request, StatusCode};
+    use axum::http::Request;
     use tower::ServiceExt;
     use serde_json::json;
 
