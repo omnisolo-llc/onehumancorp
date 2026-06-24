@@ -4,7 +4,7 @@ test.describe('POS Checkout - Centralized Inventory', () => {
   test('Prevents double booking with Redis lock', async ({ page }) => {
     // We mock the /api/v1/payments/terminal/reserve to simulate Redis lock failure
     await page.route('/api/v1/payments/terminal/reserve', async route => {
-      const json = { success: false, error_message: 'Insufficient inventory. Available: 0' };
+      const json = { success: false, error_message: 'Item is currently being checked out by another customer' };
       await route.fulfill({ json });
     });
 
@@ -23,7 +23,7 @@ test.describe('POS Checkout - Centralized Inventory', () => {
 
   test('Shows out of stock message when lock fails', async ({ page }) => {
     await page.route('/api/v1/payments/terminal/reserve', async route => {
-      const json = { success: false, error_message: 'Item is currently being purchased elsewhere' };
+      const json = { success: false, error_message: 'Item is currently being checked out by another customer' };
       await route.fulfill({ json });
     });
 
@@ -31,6 +31,6 @@ test.describe('POS Checkout - Centralized Inventory', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Assuming the user discovers and connects to a reader, and clicks 'Charge'
-    // We'd look for: await expect(page.locator('text=Reservation failed: Item is currently being purchased elsewhere')).toBeVisible();
+    // We'd look for: await expect(page.locator('text=Failed to reserve: Item is currently being checked out by another customer')).toBeVisible();
   });
 });

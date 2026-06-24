@@ -507,7 +507,7 @@ function CheckoutContent() {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900 mb-1 font-outfit">
-                        Oops! Item just sold out.
+                        Oops! Item is currently being checked out by another customer.
                       </h3>
                       <p className="text-gray-600 text-sm leading-relaxed mb-4">
                         Someone at our physical store is buying the last one

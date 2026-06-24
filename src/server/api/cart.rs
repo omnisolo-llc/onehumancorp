@@ -220,7 +220,7 @@ pub async fn add_cart_item_handler(
     // but typically we can do a reserve here if needed.
     // For simplicity, let's just do a reserve
     let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
-    let reserve_result = inventory_service.reserve_inventory(&tenant_id, &req_data.product_id, req_data.quantity, 900).await;
+    let reserve_result = inventory_service.reserve_inventory(&tenant_id, &req_data.product_id, req_data.quantity, 300).await;
 
     match reserve_result {
         Ok(res) if !res.success => {

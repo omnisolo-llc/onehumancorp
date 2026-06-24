@@ -63,16 +63,18 @@ impl InventoryService {
                     e
                 }).unwrap_or(false);
 
+
             if !acquired {
                 let pool = crate::db::get_pool();
                 let action_request_id = Uuid::new_v4().to_string();
                 let payload = serde_json::json!({
                     "product_id": product_id,
-                    "suggested_action": "Restock Item",
+                    "suggested_action": "Notify Customer Success",
                     "reason": "Lock contention on limited item"
                 }).to_string();
 
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                // Alert Customer Success / Operations Agent
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Alert', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)
@@ -80,10 +82,21 @@ impl InventoryService {
                     .execute(&pool)
                     .await;
 
+                // Operations Agent invalidates edge CDN cache directly
+                let invalidation_topic = "cache_invalidation_events";
+                let invalidation_payload = serde_json::json!({
+                    "event": "inventory.sold_out_contention",
+                    "tags": [
+                        format!("tenant-id:{}", tenant_id),
+                        format!("entity:product:{}", product_id)
+                    ]
+                }).to_string();
+                let _: () = redis::cmd("PUBLISH").arg(invalidation_topic).arg(&invalidation_payload).query_async(&mut conn).await.unwrap_or(());
+
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
-                    error_message: "Item just sold out".to_string(),
+                    error_message: "Item is currently being checked out by another customer".to_string(),
                 });
             }
 
