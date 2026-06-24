@@ -248,3 +248,150 @@ fn test_json_fallback_bug() {
     let parsed = serde_json::from_str::<Value>(result).unwrap();
     assert!(parsed.get("_masked_observation").is_some());
 }
+
+#[test]
+fn test_plain_text_masking_fallback() {
+    use ohc_builtin_agent::types::{Message, Role, ToolResult};
+    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+
+    let plain_text = "This is a very long plain text output. ".repeat(50);
+    let mut messages = vec![
+        Message {
+            role: Role::Tool,
+            content: String::new(),
+            tool_calls: vec![],
+            tool_results: vec![ToolResult {
+                tool_call_id: "plain_test".to_string(),
+                content: plain_text.clone(),
+                error: String::new(),
+            }],
+            response_id: None,
+            previous_response_id: None,
+        },
+        Message {
+            role: Role::Assistant,
+            content: "End".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            response_id: None,
+            previous_response_id: None,
+        },
+    ];
+
+    let masker = JetBrainsObservationMasker::new(0, 50, 10);
+    masker.apply_masking(&mut messages);
+
+    let masked = &messages[0].tool_results[0].content;
+    assert!(masked.contains("[Observation Masked to save context. Output was"));
+    assert!(masked.contains("plain_test"));
+}
+
+#[test]
+fn test_no_masking_for_short_content() {
+    use ohc_builtin_agent::types::{Message, Role, ToolResult};
+    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+
+    let short_json = "{\"a\": 1}";
+    let mut messages = vec![
+        Message {
+            role: Role::Tool,
+            content: String::new(),
+            tool_calls: vec![],
+            tool_results: vec![ToolResult {
+                tool_call_id: "short_test".to_string(),
+                content: short_json.to_string(),
+                error: String::new(),
+            }],
+            response_id: None,
+            previous_response_id: None,
+        },
+        Message {
+            role: Role::Assistant,
+            content: "End".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            response_id: None,
+            previous_response_id: None,
+        },
+    ];
+
+    let masker = JetBrainsObservationMasker::new(0, 100, 10);
+    masker.apply_masking(&mut messages);
+
+    let masked = &messages[0].tool_results[0].content;
+    assert_eq!(masked, short_json);
+}
+
+#[test]
+fn test_no_masking_for_errors() {
+    use ohc_builtin_agent::types::{Message, Role, ToolResult};
+    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+
+    let error_text = "Error! ".repeat(50);
+    let mut messages = vec![
+        Message {
+            role: Role::Tool,
+            content: String::new(),
+            tool_calls: vec![],
+            tool_results: vec![ToolResult {
+                tool_call_id: "error_test".to_string(),
+                content: error_text.clone(),
+                error: "Execution failed".to_string(),
+            }],
+            response_id: None,
+            previous_response_id: None,
+        },
+        Message {
+            role: Role::Assistant,
+            content: "End".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            response_id: None,
+            previous_response_id: None,
+        },
+    ];
+
+    let masker = JetBrainsObservationMasker::new(0, 10, 10);
+    masker.apply_masking(&mut messages);
+
+    let result = &messages[0].tool_results[0].content;
+    assert_eq!(result, &error_text);
+}
+
+
+#[test]
+fn test_plain_text_masking_exact_boundary() {
+    use ohc_builtin_agent::types::{Message, Role, ToolResult};
+    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+
+    let plain_text = "This is a short output.".repeat(5);
+    let mut messages = vec![
+        Message {
+            role: Role::Tool,
+            content: String::new(),
+            tool_calls: vec![],
+            tool_results: vec![ToolResult {
+                tool_call_id: "plain_test".to_string(),
+                content: plain_text.clone(),
+                error: String::new(),
+            }],
+            response_id: None,
+            previous_response_id: None,
+        },
+        Message {
+            role: Role::Assistant,
+            content: "End".to_string(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            response_id: None,
+            previous_response_id: None,
+        },
+    ];
+
+    let masker = JetBrainsObservationMasker::new(0, 50, 10);
+    masker.apply_masking(&mut messages);
+
+    let masked = &messages[0].tool_results[0].content;
+    assert!(masked.contains("[Observation Masked to save context. Output was"));
+    assert!(masked.contains("plain_test"));
+}
