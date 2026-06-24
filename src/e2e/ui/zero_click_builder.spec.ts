@@ -63,7 +63,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     await page.waitForTimeout(500);
     const content = await page.content();
     if (!content.includes('Tell us about your business')) {
-        console.log("PAGE CONTENT DOES NOT HAVE HEADING:", content);
+        throw new Error(`PAGE CONTENT DOES NOT HAVE HEADING: ${content}`);
     }
 
     // 2. Verify we are in the instant step
