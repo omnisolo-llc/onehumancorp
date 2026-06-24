@@ -592,9 +592,9 @@ Your response:",
 
         sqlx::query(
             r#"
-            INSERT INTO tenants (tenant_id, business_name, tier, subdomain)
+            INSERT INTO tenants (id, name, plan_tier, subdomain)
             VALUES ($1, $2, 'free', $3)
-            ON CONFLICT (tenant_id) DO UPDATE SET subdomain = EXCLUDED.subdomain
+            ON CONFLICT (id) DO UPDATE SET subdomain = EXCLUDED.subdomain
             "#
         )
         .bind(&org_id)
@@ -606,7 +606,7 @@ Your response:",
 
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
         )
