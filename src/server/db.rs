@@ -639,7 +639,7 @@ impl DB {
         let mut backoff = std::time::Duration::from_millis(1);
 
         // Enforce the 60-second ML-Resilience rule for database operations
-        let start_time = std::time::Instant::now();
+        let start_time = tokio::time::Instant::now();
         let timeout_duration = std::time::Duration::from_secs(60);
 
         loop {
