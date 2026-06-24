@@ -54,6 +54,7 @@ where
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
         .route("/simulate-dispute-resolution", post(simulate_dispute_resolution))
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
+        .route("/simulate-autonomous-booking-quote", post(simulate_autonomous_booking_quote))
         .route("/stream", get(stream_agent_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
@@ -508,5 +509,43 @@ mod tests {
 
         let cached_val = cache.get(&cache_key).await;
         assert!(cached_val.is_some(), "Cache should hit after set");
+    }
+}
+
+async fn simulate_autonomous_booking_quote(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "autonomous_quote",
+        "service": "Emergency Handyman Service",
+        "customer_inquiry": "My sink is leaking, can you come today?",
+        "suggested_price": 180.00,
+        "scope": "Emergency leak repair including standard parts.",
+        "proposed_slots": [
+            { "start_time": "2024-10-15T14:00:00Z", "end_time": "2024-10-15T15:00:00Z" },
+            { "start_time": "2024-10-15T16:00:00Z", "end_time": "2024-10-15T17:00:00Z" }
+        ],
+        "require_deposit": true,
+        "deposit_amount_cents": 9000,
+        "inbox_message_id": "msg_simulated_quote_123"
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::Sales,
+        "Draft quote and propose schedule for Emergency Handyman Service".to_string(),
+        payload,
+        &tenant_id,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate autonomous booking quote: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
     }
 }
