@@ -1,6 +1,7 @@
 pub mod sync;
 pub mod oauth;
 pub mod offline_sync;
+pub mod sync_events;
 pub mod mesh_handler;
 pub mod twilio_webhook;
 pub mod twilio_voice;
