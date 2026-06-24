@@ -2,19 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Interactive Walkthroughs', () => {
 
-  test.beforeEach(async ({ page }) => {
-    await page.route('**/api/walkthrough/store-setup', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { targetId: "bio-input-tooltip", title: "Business Description", text: "Enter your business description." },
-          { targetId: "generate-btn-tooltip", title: "Generate", text: "Click to generate!" }
-        ])
-      });
-    });
-  });
-
   test('renders help widget and completes the store setup walkthrough', async ({ page }) => {
     await page.goto('/builder');
 
@@ -31,13 +18,19 @@ test.describe('Interactive Walkthroughs', () => {
     // Assert the first step is shown
     const speechBubble = page.locator('div[role="dialog"]');
     await expect(speechBubble).toBeVisible();
-    await expect(page.getByText('Enter your business description.')).toBeVisible();
+    await expect(page.getByText('Learn how to easily set up your store and accept your first payment.')).toBeVisible();
 
     // Click Next
     await page.getByRole('button', { name: 'Next' }).click();
 
     // Assert the second step is shown
-    await expect(page.getByText('Click to generate!')).toBeVisible();
+    await expect(page.getByText('Tell us what you sell so we can create the perfect storefront for you.')).toBeVisible();
+
+    // Click Next
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Assert the third step is shown
+    await expect(page.getByText('Click here and watch our AI build your store from scratch.')).toBeVisible();
 
     // Click Finish
     await page.getByRole('button', { name: 'Finish' }).click();

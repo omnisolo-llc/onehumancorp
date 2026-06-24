@@ -25,30 +25,31 @@ pub struct SearchQuery {
 
 #[derive(Serialize, Clone)]
 pub struct WalkthroughStep {
-    pub selector: String,
+    #[serde(rename = "targetId")]
+    pub target_id: String,
     pub title: String,
-    pub text: String,
+    pub content: String,
 }
 
 
 pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<String>) -> Json<Vec<WalkthroughStep>> {
     let steps = match page.as_str() {
         "store-setup" => vec![
-            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Set up your store".to_string(), text: "Learn how to easily set up your store and accept your first payment.".to_string() },
-            WalkthroughStep { selector: "#bio-input-tooltip".to_string(), title: "Describe your business".to_string(), text: "Tell us what you sell so we can create the perfect storefront for you.".to_string() },
-            WalkthroughStep { selector: "#generate-btn-tooltip".to_string(), title: "Generate Store".to_string(), text: "Click here and watch our AI build your store from scratch.".to_string() },
+            WalkthroughStep { target_id: "dashboard-title".to_string(), title: "Set up your store".to_string(), content: "Learn how to easily set up your store and accept your first payment.".to_string() },
+            WalkthroughStep { target_id: "bio-input-tooltip".to_string(), title: "Describe your business".to_string(), content: "Tell us what you sell so we can create the perfect storefront for you.".to_string() },
+            WalkthroughStep { target_id: "generate-btn-tooltip".to_string(), title: "Generate Store".to_string(), content: "Click here and watch our AI build your store from scratch.".to_string() },
         ],
         "dashboard" => vec![
-            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Welcome".to_string(), text: "Welcome to your dashboard! This is your control center.".to_string() },
-            WalkthroughStep { selector: "#wrapped-summary".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
+            WalkthroughStep { target_id: "dashboard-title".to_string(), title: "Welcome".to_string(), content: "Welcome to your dashboard! This is your control center.".to_string() },
+            WalkthroughStep { target_id: "wrapped-summary".to_string(), title: "AI Savings".to_string(), content: "Here you can see the time and effort your agents have saved you.".to_string() }
         ],
         "pos" => vec![
-            WalkthroughStep { selector: "#pos-keypad".to_string(), title: "Enter Amount".to_string(), text: "Type in the total sale amount using the keypad.".to_string() },
-            WalkthroughStep { selector: "#charge-btn".to_string(), title: "Charge Customer".to_string(), text: "Tap here to process the payment. It's that easy!".to_string() }
+            WalkthroughStep { target_id: "pos-keypad".to_string(), title: "Enter Amount".to_string(), content: "Type in the total sale amount using the keypad.".to_string() },
+            WalkthroughStep { target_id: "charge-btn".to_string(), title: "Charge Customer".to_string(), content: "Tap here to process the payment. It's that easy!".to_string() }
         ],
         "assistant" => vec![
-            WalkthroughStep { selector: "#ai-chat-trigger".to_string(), title: "Open Assistant".to_string(), text: "Click here to open your AI Support Agent.".to_string() },
-            WalkthroughStep { selector: "#ohc-help-input-area".to_string(), title: "Ask Anything".to_string(), text: "Type your request here and the agent will handle it while you sleep.".to_string() }
+            WalkthroughStep { target_id: "ai-chat-trigger".to_string(), title: "Open Assistant".to_string(), content: "Click here to open your AI Support Agent.".to_string() },
+            WalkthroughStep { target_id: "ohc-help-input-area".to_string(), title: "Ask Anything".to_string(), content: "Type your request here and the agent will handle it while you sleep.".to_string() }
         ],
         _ => vec![],
     };
