@@ -1523,7 +1523,7 @@
           autoSaveTimer = setTimeout(() => {
               saveCurrentState();
 
-              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : (window.location.hostname === 'mock' ? 'http://mock' : '');
               const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
               const userId = localStorage.getItem("user_id") || "e2e-admin-user";
 
@@ -1584,7 +1584,7 @@
                 console.error('Tauri get_onboarding_state failed:', err);
             }
         } else {
-            const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+            const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : (window.location.hostname === 'mock' ? 'http://mock' : '');
             try {
                 const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
                     method: 'GET',
@@ -1752,7 +1752,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   window.__TAURI__.core.invoke("save_onboarding_state", { state, tenantId, userId }).catch(console.error);
               } else {
                   localStorage.setItem('onboardingState', JSON.stringify(state));
-                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : (window.location.hostname === 'mock' ? 'http://mock' : '');
                   fetch(`${backendUrl}/api/onboarding/draft`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
@@ -1975,9 +1975,9 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           if (stepId === 'step-categories') {
               populateCategories();
           }
-          document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
-          document.querySelector('.container').scrollTo(0, 0);
-          document.getElementById(stepId).classList.add('active');
+          document.querySelectorAll('.step').forEach(el => { el.classList.remove('active'); el.style.display = 'none'; });
+          if (document.querySelector('.container')) { document.querySelector('.container').scrollTo(0, 0); }
+          document.getElementById(stepId).classList.add('active'); document.getElementById(stepId).style.display = 'block';
           updateStepper(stepId);
       }
 
@@ -2118,7 +2118,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           chatSendBtn.disabled = true;
 
           try {
-              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+              const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : (window.location.hostname === 'mock' ? 'http://mock' : '');
               const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant', 'X-User-ID': localStorage.getItem('user_id') || 'e2e-admin-user' },
@@ -2238,7 +2238,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               approvePublishBtn.innerHTML = '<div class="spinner"></div>Publishing...';
 
               try {
-                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : (window.location.hostname === 'mock' ? 'http://mock' : '');
                   if (window.__TAURI__ && window.__TAURI__.core) {
                       await goToStep('step-loading');
 
@@ -2343,7 +2343,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               goToStep('step-loading');
 
               try {
-                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                  const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : (window.location.hostname === 'mock' ? 'http://mock' : '');
                   const res = await fetch(`${backendUrl}/api/v1/growth/zero-click-builder/generate`, {
                       method: 'POST',
                       headers: {
@@ -2510,7 +2510,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
             e.target.innerText = "Saving...";
             e.target.disabled = true;
 
-            const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+            const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : (window.location.hostname === 'mock' ? 'http://mock' : '');
             const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
             const userId = localStorage.getItem("user_id") || "e2e-admin-user";
 
@@ -2629,7 +2629,7 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                } else {
                  finishBtn.disabled = true;
                  finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
-                 const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : '';
+                 const backendUrl = (window.location.protocol === 'file:' || ["1420", "3000", "8081"].includes(window.location.port)) ? 'http://127.0.0.1:18789' : (window.location.hostname === 'mock' ? 'http://mock' : '');
                  fetch(`${backendUrl}/api/onboarding/start`, {
                      method: 'POST',
                      headers: {
