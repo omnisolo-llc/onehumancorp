@@ -381,6 +381,45 @@ impl DepartmentOrchestrator {
             ApprovalStatus::Paused => "PAUSED",
         };
 
+        if req.action_risk == ActionRisk::DraftForReview {
+            if let Some(payload) = &req.payload {
+                if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") {
+                    let task_id = uuid::Uuid::new_v4().to_string();
+                    let action_payload_str = serde_json::to_string(payload).unwrap_or_default();
+                    let context_msg = req.description.clone();
+                    let db = self.db.clone();
+                    let tenant_id = req.tenant_id.clone();
+
+                    tokio::spawn(async move {
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query(
+                                    "INSERT INTO triage_items (id, tenant_id, source, priority, context, action_type, action_payload, status) VALUES ($1, $2, 'The Accountant', 'high', $3, 'Approve Draft', $4, 'pending')"
+                                )
+                                .bind(&task_id)
+                                .bind(&tenant_id)
+                                .bind(&context_msg)
+                                .bind(&action_payload_str)
+                                .execute(&db.pool)
+                                .await;
+                            },
+                            crate::db::DbStore::Sqlite(_) => {
+                                let _ = sqlx::query(
+                                    "INSERT INTO triage_items (id, tenant_id, source, priority, context, action_type, action_payload, status) VALUES (?, ?, 'The Accountant', 'high', ?, 'Approve Draft', ?, 'pending')"
+                                )
+                                .bind(&task_id)
+                                .bind(&tenant_id)
+                                .bind(&context_msg)
+                                .bind(&action_payload_str)
+                                .execute(&db.pool)
+                                .await;
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
         let lifecycle_state = match req.status {
             ApprovalStatus::PendingApproval => "PENDING_APPROVAL",
             ApprovalStatus::Approved => "APPROVED",
@@ -1199,6 +1238,12 @@ impl DepartmentOrchestrator {
                         if let Err(e) = self.dispatch_event(approved_event).await {
                             tracing::error!("Failed to dispatch agent:customer_success:approved event: {}", e);
                         }
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") {
+                        let invoice_id = payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let _generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
+                        tracing::info!("Simulated sending of personalized invoice reminder for {} to customer {}", invoice_id, customer_id);
+                        let _action_id = uuid::Uuid::new_v4().to_string();
                     } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("dispute_resolution") {
                         let dispute_id = payload.get("dispute_id").and_then(|v| v.as_str()).unwrap_or("");
                         let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
