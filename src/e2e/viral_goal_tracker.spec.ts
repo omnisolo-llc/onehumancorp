@@ -6,7 +6,13 @@ test.describe('Viral Goal Tracker Loop', () => {
 
     // Navigate to the dashboard or go directly to the builder
     // We go directly here to the newly created page.
-    await page.goto('/ui/viral-goal-tracker.html');
+    await page.waitForURL('**/dashboard');
+    const goalTrackerBtn = page.locator('a[href="viral-goal-tracker.html"]');
+    if (await goalTrackerBtn.isVisible()) {
+        await goalTrackerBtn.click();
+    } else {
+        await page.goto('/viral-goal-tracker.html');
+    }
 
     await expect(page.locator('h1')).toHaveText('Viral Goal Tracker Builder');
 
