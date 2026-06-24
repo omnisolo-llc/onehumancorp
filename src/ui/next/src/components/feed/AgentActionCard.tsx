@@ -155,7 +155,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "instagram_dm" && (
-              <InstagramDMCard approval={approval} />
+              <InstagramDMCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} />
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "ambassador_reply" && (

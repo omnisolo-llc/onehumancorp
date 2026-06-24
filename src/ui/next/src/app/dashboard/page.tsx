@@ -369,6 +369,11 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
+      <div className="mb-6 w-full overflow-hidden">
+        {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
+        <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [] }} />
+      </div>
+
       <AIUsageLimitWidget />
       <DashboardViralInviteWidget />
 
@@ -433,11 +438,6 @@ export default function Dashboard() {
       </div>
 
       <div className="flex flex-col md:flex-col">
-        <div className="order-first md:order-last mb-6 w-full overflow-hidden">
-          {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-          <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [] }} />
-        </div>
-
         <div className="order-last md:order-first">
           <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
