@@ -37,8 +37,7 @@ impl ResearcherLlmClient for AdapterLlm {
             prompt.push_str(&msg.content);
         }
 
-        let is_test_mode =
-            cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
+        let is_test_mode = std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok() || cfg!(test);
 
         let response_text = if is_test_mode {
             // Test mode override to ensure hermetic E2E runs without network flakiness or API costs
