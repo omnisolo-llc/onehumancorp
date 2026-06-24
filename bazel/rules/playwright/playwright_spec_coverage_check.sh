@@ -64,7 +64,7 @@ find_spec_relpaths() {
   done < <(find_spec_files "$root") | sort -u
 }
 
-check_forbidden_skips() {
+check_forbidden_markers() {
   local spec
   local failed=false
   for spec in "$@"; do
@@ -73,6 +73,14 @@ check_forbidden_skips() {
     fi
     if grep -Eq '(^|[^A-Za-z0-9_$])(test|describe)\.(skip|fixme)[[:space:]]*\(' "$spec"; then
       echo "Playwright Bazel coverage check failed: skipped Playwright tests are forbidden: $(display_spec "$spec")"
+      failed=true
+    fi
+    if grep -Eq '(^|[^A-Za-z0-9_$])(test|describe)\.only[[:space:]]*\(' "$spec"; then
+      echo "Playwright Bazel coverage check failed: focused Playwright tests are forbidden: $(display_spec "$spec")"
+      failed=true
+    fi
+    if grep -Eq '\.(skip|fixme)[[:space:]]*\(' "$spec"; then
+      echo "Playwright Bazel coverage check failed: runtime Playwright skips are forbidden: $(display_spec "$spec")"
       failed=true
     fi
   done
@@ -120,7 +128,7 @@ if [[ "$scan_runfiles" == true ]]; then
     exit 1
   fi
 
-  check_forbidden_skips "${runfile_specs[@]}"
+  check_forbidden_markers "${runfile_specs[@]}"
 
   if [[ -n "${SOURCE_REPO_ROOT:-}" && -d "${SOURCE_REPO_ROOT:-}" ]]; then
     source_unique="$(find_spec_relpaths "$SOURCE_REPO_ROOT")"
@@ -142,7 +150,7 @@ if (( ${#all_specs[@]} == 0 )); then
   exit 1
 fi
 
-check_forbidden_skips "${all_specs[@]}"
+check_forbidden_markers "${all_specs[@]}"
 
 all_unique="$(printf '%s\n' "${all_specs[@]}" | sort -u)"
 ci_unique="$(printf '%s\n' "${ci_specs[@]}" | sort -u)"
