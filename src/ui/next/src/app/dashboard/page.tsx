@@ -117,6 +117,7 @@ export default function Dashboard() {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [initialTriage, setInitialTriage] = useState<any[]>([]);
@@ -147,6 +148,15 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    fetch("/api/walkthrough/dashboard")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setWalkthroughSteps(data);
+        }
+      })
+      .catch((err) => console.error("Walkthrough fetch failed:", err));
+
     try {
       const storedName = localStorage.getItem("user_name");
       if (storedName) {
@@ -337,20 +347,6 @@ export default function Dashboard() {
     { label: "Growth", value: "Active", tone: "good" as const },
   ];
 
-  const walkthroughSteps = [
-    {
-      targetId: "sales-card-target",
-      title: "Business Analytics",
-      content: "This panel shows your current sales and customer counts.",
-      position: "bottom" as const,
-    },
-    {
-      targetId: "operations-map-target",
-      title: "Operations Map",
-      content: "Use this area to see the live state of your orders, messages, and inventory.",
-      position: "bottom" as const,
-    },
-  ];
 
   return (
     <>
@@ -367,6 +363,11 @@ export default function Dashboard() {
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
+      </div>
+
+      <div className="mb-6 w-full overflow-hidden">
+        {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
+        <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [] }} />
       </div>
 
       <AIUsageLimitWidget />
@@ -433,11 +434,6 @@ export default function Dashboard() {
       </div>
 
       <div className="flex flex-col md:flex-col">
-        <div className="order-first md:order-last mb-6 w-full overflow-hidden">
-          {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-          <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [] }} />
-        </div>
-
         <div className="order-last md:order-first">
           <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
