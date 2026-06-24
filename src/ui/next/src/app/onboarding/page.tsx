@@ -1394,7 +1394,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Launching...
                     </span>
-                  ) : <IconLabel icon="launch">Approve & Go Live</IconLabel>}
+                  ) : <IconLabel icon="launch">Approve & Publish</IconLabel>}
                 </button>
               </div>
             </div>
