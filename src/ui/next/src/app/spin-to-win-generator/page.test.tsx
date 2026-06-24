@@ -7,6 +7,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+vi.mock('../components/PoweredByOHC', () => ({
+  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+}));
+
 describe('SpinToWinGeneratorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();

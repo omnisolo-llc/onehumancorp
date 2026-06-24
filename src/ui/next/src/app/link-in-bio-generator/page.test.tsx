@@ -10,6 +10,10 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+vi.mock('../components/PoweredByOHC', () => ({
+  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+}));
+
 describe('LinkInBioGeneratorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();

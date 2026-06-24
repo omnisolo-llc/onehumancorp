@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function SpinToWinGeneratorPage() {
   const router = useRouter();
@@ -142,9 +143,7 @@ export default function SpinToWinGeneratorPage() {
 
                 {!hasPro && (
                     <div className="mt-6 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <a href={`/onboarding?ref=${tenant}&source=spin_widget`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
-                            ⚡ Powered by OHC
-                        </a>
+                        <PoweredByOHC tenantId={tenant} />
                     </div>
                 )}
             </div>
