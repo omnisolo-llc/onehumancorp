@@ -425,6 +425,24 @@
         <button class="back-btn" onclick="cancelCharge()" style="border: 1px solid rgba(0,0,0,0.1);">Cancel</button>
       </div>
 
+
+      <!-- Payment Method Bottom Sheet -->
+      <div id="payment-method-sheet" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px); border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 24px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.3s ease-out;">
+        <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px; text-align: center;">Select Payment Method</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="method-btn contactless" onclick="window.triggerTapToPay()" style="background: #0066FF; color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H3a2 2 0 00-2 2v12a2 2 0 002 2h18a2 2 0 002-2V6a2 2 0 00-2-2zM1 10h22"/></svg>
+                Tap to Pay on Phone
+            </button>
+            <button style="background: white; border: 1px solid #ddd; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">Send Payment Link</button>
+            <button style="background: white; border: 1px solid #ddd; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;">Cash</button>
+        </div>
+        <button onclick="window.closePaymentSheet()" style="margin-top: 20px; width: 100%; padding: 16px; background: transparent; border: none; color: #86868b; font-size: 16px; cursor: pointer;">Cancel</button>
+      </div>
+
+      <!-- Screen dimmer -->
+      <div id="sheet-dimmer" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 999; opacity: 0; transition: opacity 0.3s ease-out;" onclick="window.closePaymentSheet()"></div>
+
       <!-- Receipt Screen -->
       <div class="receipt-screen" id="receipt-screen">
         <div class="success-icon">
@@ -735,179 +753,44 @@
       }
 
 
-      async function initiateCharge() {
-        tapOverlay.style.display = 'flex';
-
-        simulateTapBtn.innerText = "Simulate Customer Tap (Test)";
-
-        // Request Terminal Token
-          const tokenRes = await fetch('/api/v1/payments/terminal/token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-            }
-          });
-          if (!tokenRes.ok) {
-              console.warn("Terminal token API returned an error status");
-          } else {
-              const tokenData = await tokenRes.json();
-          }
-
-          // Request Payment Intent
-          const res = await fetch('/api/v1/payments/terminal/intent', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-            },
-            body: JSON.stringify({
-              amount_cents: currentAmountCents,
-              currency: 'usd',
-              product_id: 'pos_custom_amount', // Using a placeholder for custom amounts
-              quantity: 1,
-              order_id: 'pos_web_' + Date.now()
-            })
-          });
-
-          // Even if it fails (unauthorized in test), we allow simulation for UI testing purposes
-          if (res.ok) {
-              const data = await res.json();
-              if (data.client_secret && typeof window !== 'undefined' && window.Terminal) {
-                  // Terminal SDK setup
-              }
-          } else {
-              console.warn("Payment intent API returned error");
-          }
-
-        } catch (e) {
-          console.error("Failed to create intent", e);
+      async
+      function closePaymentSheet() {
+        const sheet = document.getElementById('payment-method-sheet');
+        const dimmer = document.getElementById('sheet-dimmer');
+        if (sheet && dimmer) {
+            sheet.style.transform = 'translateY(100%)';
+            dimmer.style.opacity = '0';
+            setTimeout(() => {
+                sheet.style.display = 'none';
+                dimmer.style.display = 'none';
+            }, 300);
         }
       }
+      window.closePaymentSheet = closePaymentSheet;
 
+      function initiateCharge() {
+        if (currentAmountCents === 0) return;
 
-      simulateTapBtn.addEventListener('click', async () => {
-          simulateTapBtn.innerText = "Processing...";
-          simulateTapBtn.style.background = "#86868b";
-          simulateTapBtn.style.color = "#ffffff";
-          simulateTapBtn.style.border = "none";
+        // Format for display
+        const dollars = (currentAmountCents / 100).toFixed(2);
+        const formattedAmount = `$${dollars}`;
 
-          const tenantId = localStorage.getItem('tenant_id') || 'default';
-
-          if (stripeTerminal) {
-              try {
-                  simulateTapBtn.innerText = "Discovering Readers...";
-                  const discoverResult = await stripeTerminal.discoverReaders({ simulated: true });
-                  if (discoverResult.error) {
-                      console.error('Discover failed:', discoverResult.error);
-                  } else if (discoverResult.discoveredReaders.length > 0) {
-                      simulateTapBtn.innerText = "Connecting...";
-                      const connectResult = await stripeTerminal.connectReader(discoverResult.discoveredReaders[0]);
-                      if (connectResult.error) {
-                          console.error('Connect failed:', connectResult.error);
-                      } else {
-                          connectedReader = connectResult.reader;
-                          simulateTapBtn.innerText = "Reserving...";
-
-                          // Reserve inventory
-                          const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
-                              body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, ttl_seconds: 15 })
-                          });
-
-                          const reserveData = await reserveRes.json();
-                          if (!reserveData.success) {
-                              simulateTapBtn.innerText = "Error: " + reserveData.error_message;
-                              simulateTapBtn.style.background = "rgba(255, 59, 48, 0.1)"; simulateTapBtn.style.backdropFilter = "blur(30px) saturate(210%)"; simulateTapBtn.style.webkitBackdropFilter = "blur(30px) saturate(210%)";
-                              simulateTapBtn.style.color = "#FF3B30";
-                              simulateTapBtn.style.border = "1px solid rgba(255, 59, 48, 0.4)";
-                              return;
-                          }
-
-                          // Get Intent
-                          const intentRes = await fetch('/api/v1/payments/terminal/intent', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
-                              body: JSON.stringify({ amount_cents: currentAmountCents, currency: 'usd', product_id: currentProductId, quantity: 1, order_id: 'pos_web_' + Date.now() })
-                          });
-                          const intentData = await intentRes.json();
-
-                          if (intentData && intentData.client_secret) {
-                              simulateTapBtn.innerText = "Tap card...";
-                              const collectResult = await stripeTerminal.collectPaymentMethod(intentData.client_secret);
-                              if (collectResult.error) {
-                                  console.error('Collect failed:', collectResult.error);
-                              } else {
-                                  simulateTapBtn.innerText = "Confirming...";
-                                  const processResult = await stripeTerminal.processPayment(collectResult.paymentIntent);
-                                  if (processResult.error) {
-                                      console.error('Process failed:', processResult.error);
-                                  } else {
-                                      // Commit inventory
-                                      await fetch('/api/v1/payments/terminal/commit', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
-                                          body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, amount_cents: currentAmountCents, lock_id: intentData.lock_id })
-                                      });
-
-                                      // Success
-                                      tapOverlay.style.display = 'none';
-                                      posView.style.display = 'none';
-                                      receiptScreen.style.display = 'flex';
-                                      document.querySelector('.receipt-text').innerText = "Payment Successful";
-                                      return; // done!
-                                  }
-                              }
-                          }
-                      }
-                  }
-              } catch (e) {
-                  console.error("Stripe Terminal error during charge:", e);
-              }
-          }
-
-          // Fallback logic for offline or when Stripe Terminal SDK fails
-
-
-          // Tap Success
-          tapOverlay.style.display = 'none';
-          posView.style.display = 'none';
-          receiptScreen.style.display = 'flex';
-
-          // In real flow, we'd confirm the intent and sync offline txs.
-          // We simulate the offline sync for E2E validation:
-          if (!navigator.onLine) {
-              document.querySelector('.receipt-text').innerText = "Offline Quick Charge Saved.";
-              enqueueOfflineMutation({
-                  type: 'tap_to_pay',
-                  id: 'tx_' + Date.now(),
-                  amount: currentAmountCents,
-                  currency: 'usd',
-                  product_id: currentProductId,
-                  quantity: 1,
-                  timestamp: new Date().toISOString()
-              });
-          } else {
-              document.querySelector('.receipt-text').innerText = "Payment Successful";
-              const tenantId = localStorage.getItem('tenant_id') || 'default';
-              fetch('/api/v1/payments/terminal/sync_offline', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      session_id: 'web_session',
-                      transactions: [{
-                          id: 'tx_' + Date.now(),
-                          client_id: 'web_client',
-                          amount_cents: currentAmountCents,
-                          currency: 'usd',
-                          payload: '{}',
-                          device_signature: `sig_offline_${crypto.randomUUID()}`
-                      }]
-                  })
-              }).catch(console.error);
-          }
-      });
+        const sheet = document.getElementById('payment-method-sheet');
+        const dimmer = document.getElementById('sheet-dimmer');
+        if (sheet && dimmer) {
+            sheet.style.display = 'block';
+            dimmer.style.display = 'block';
+            // Trigger reflow
+            void sheet.offsetWidth;
+            sheet.style.transform = 'translateY(0)';
+            dimmer.style.opacity = '1';
+        } else {
+            // Fallback if UI is missing
+            posView.style.display = 'none';
+            tapOverlay.style.display = 'flex';
+            tapAmountSubtitle.innerText = formattedAmount;
+        }
+      }
 
       function cancelCharge() {
         tapOverlay.style.display = 'none';
@@ -1674,6 +1557,196 @@ initWalkthrough();
     window.addEventListener("ohc_queue_updated", updateOfflineStatus);
     updateOfflineStatus();
 </script>
+
+
+    <script src="https://js.stripe.com/terminal/v1/"></script>
+    <script>
+      let stripeTerminal = null;
+      let connectedReader = null;
+
+
+      async function hybridInvoke(cmd, args) {
+          const token = localStorage.getItem('access_token');
+
+          if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
+              return await window.__TAURI__.core.invoke(cmd, { ...args, token: token || "" });
+          }
+
+          // Fallback to fetch for web/PWA
+          let url = "";
+          let method = "POST";
+          let body = args;
+
+          if (cmd === 'create_terminal_connection_token') {
+              url = "/api/v1/payments/terminal/token";
+          } else if (cmd === 'create_terminal_payment_intent') {
+              url = "/api/v1/payments/terminal/intent";
+          } else if (cmd === 'capture_terminal_payment_intent') {
+              url = "/api/v1/payments/terminal/intent/capture";
+          }
+
+          const response = await fetch(url, {
+              method,
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(body)
+          });
+
+          if (!response.ok) {
+              const text = await response.text();
+              throw new Error(text || `Backend returned ${response.status}`);
+          }
+          const json = await response.json();
+          if (cmd === 'create_terminal_connection_token') return json.secret || json.token; // Handle standard wrapper
+          if (cmd === 'create_terminal_payment_intent') return json.client_secret;
+          if (cmd === 'capture_terminal_payment_intent') return json.status;
+          return null;
+      }
+
+      async function setupTerminal() {
+        if (!window.StripeTerminal) {
+            console.error('Stripe Terminal SDK not loaded');
+            return;
+        }
+
+        const tenantId = window.__tenant_id || document.querySelector('meta[name="tenant-id"]')?.content || localStorage.getItem('tenant_id') || "";
+
+        stripeTerminal = StripeTerminal.create({
+            onFetchConnectionToken: async () => {
+                try {
+                    const token = await hybridInvoke('create_terminal_connection_token', { tenant_id: tenantId });
+                    return token;
+                } catch (e) {
+                    console.error("Failed to fetch connection token", e);
+                    throw e;
+                }
+            },
+            onUnexpectedReaderDisconnect: () => {
+                console.log("Reader disconnected");
+                connectedReader = null;
+            }
+        });
+
+        // Use simulated reader for web tests/dev
+        try {
+          const discoverResult = await stripeTerminal.discoverReaders({
+            simulated: true,
+            discoveryMethod: 'internet'
+          });
+
+          if (discoverResult.discoveredReaders.length > 0) {
+            const connectResult = await stripeTerminal.connectInternetReader({
+              reader: discoverResult.discoveredReaders[0]
+            });
+            connectedReader = connectResult.reader;
+            console.log("Connected to reader:", connectedReader);
+          }
+        } catch(e) {
+            console.error("Reader connection failed:", e);
+        }
+      }
+
+      // Export for testing
+      window.setupTerminal = setupTerminal;
+
+      document.addEventListener('DOMContentLoaded', () => {
+        setupTerminal();
+      });
+
+      async function triggerTapToPay() {
+        if (window.closePaymentSheet) window.closePaymentSheet();
+        try {
+            const posView = document.getElementById('pos-view');
+            const overlay = document.getElementById('tap-overlay');
+            if (posView) posView.style.display = 'none';
+            if (overlay) {
+                overlay.style.display = 'flex';
+                // Trigger reflow
+                void overlay.offsetWidth;
+                overlay.classList.add('visible');
+            }
+
+            const tenantId = window.__tenant_id || document.querySelector('meta[name="tenant-id"]')?.content || localStorage.getItem('tenant_id') || "";
+
+            // Use existing variable currentAmountCents instead of DOM manipulation
+            const amountCentsToCharge = (typeof currentAmountCents !== 'undefined') ? currentAmountCents : 1000;
+
+            // 1. Create Payment Intent via Tauri backend
+            const clientSecret = await hybridInvoke('create_terminal_payment_intent', {
+                tenant_id: tenantId,
+                amount_cents: amountCentsToCharge,
+                currency: "usd"
+            });
+
+            if (!stripeTerminal) {
+              await setupTerminal();
+            }
+
+            // 2. Process payment with Stripe Terminal
+            const result = await stripeTerminal.collectPaymentMethod(clientSecret);
+            if (result.error) {
+                throw new Error(result.error.message);
+            }
+
+            const processResult = await stripeTerminal.processPayment(result.paymentIntent);
+            if (processResult.error) {
+                throw new Error(processResult.error.message);
+            }
+
+
+            // 3. Capture payment on backend
+            await hybridInvoke('capture_terminal_payment_intent', {
+                payment_intent_id: processResult.paymentIntent.id
+            });
+
+            // 4. Optimistically update inventory/cart (sync offline)
+            if (typeof enqueueOfflineMutation === 'function' && currentProductId) {
+                enqueueOfflineMutation({
+                    id: crypto.randomUUID(),
+                    tenant_id: tenantId,
+                    type: 'inventory_reservation',
+                    payload: {
+                        product_id: currentProductId,
+                        quantity: 1, // simplified for fast checkout
+                        payment_intent_id: processResult.paymentIntent.id
+                    },
+                    timestamp: new Date().toISOString(),
+                    status: 'pending_sync'
+                });
+            }
+
+
+            // Show Success screen via existing logic
+            if (overlay) {
+                overlay.style.display = 'none';
+                overlay.classList.remove('visible');
+            }
+
+            const receiptScreen = document.getElementById('receipt-screen');
+            if (receiptScreen) {
+                receiptScreen.style.display = 'flex';
+            } else {
+                alert('Payment successful!');
+            }
+        } catch (e) {
+            console.error("Payment failed", e);
+            alert("Payment failed: " + e.message);
+            const overlay = document.getElementById('tap-overlay');
+            const posView = document.getElementById('pos-view');
+            if (overlay) {
+                overlay.style.display = 'none';
+                overlay.classList.remove('visible');
+            }
+            if (posView) posView.style.display = 'flex';
+        }
+      }
+
+      window.triggerTapToPay = triggerTapToPay;
+    </script>
+
+
 </body>
 </html>
 

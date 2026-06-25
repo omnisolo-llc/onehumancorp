@@ -541,6 +541,94 @@ async fn get_changelog() -> Result<serde_json::Value, String> {
     }
 }
 
+
+#[tauri::command]
+async fn create_terminal_connection_token(tenant_id: String, token: String) -> Result<String, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/v1/payments/terminal/token", backend_url);
+
+    let body = serde_json::json!({
+        "tenant_id": tenant_id
+    });
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", token))
+        .json(&body);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json["secret"].as_str().unwrap_or("").to_string())
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
+#[tauri::command]
+async fn create_terminal_payment_intent(
+    tenant_id: String,
+    amount_cents: i64,
+    currency: String,
+    token: String,
+) -> Result<String, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/v1/payments/terminal/intent", backend_url);
+
+    let body = serde_json::json!({
+        "tenant_id": tenant_id,
+        "amount_cents": amount_cents,
+        "currency": currency
+    });
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", token))
+        .json(&body);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json["client_secret"].as_str().unwrap_or("").to_string())
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
+#[tauri::command]
+async fn capture_terminal_payment_intent(payment_intent_id: String, token: String) -> Result<String, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/v1/payments/terminal/intent/capture", backend_url);
+    let body = serde_json::json!({
+        "payment_intent_id": payment_intent_id
+    });
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", token))
+        .json(&body);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json["status"].as_str().unwrap_or("").to_string())
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
 #[cfg(ohc_bazel_tauri_context)]
 macro_rules! tauri_build_context {
     () => {
@@ -562,7 +650,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![
+                .invoke_handler(tauri::generate_handler![
             greet,
             generate_cloud_invite,
             generate_cloud_bridge_invite,
@@ -577,6 +665,9 @@ pub fn run() {
             get_help_article,
             get_help_videos,
             get_changelog,
+            create_terminal_connection_token,
+            create_terminal_payment_intent,
+            capture_terminal_payment_intent,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
