@@ -169,6 +169,56 @@ Your response:",
         }
     }
 
+    pub async fn generate_zero_click(&self, prompt: &str) -> Result<StartOnboardingResponse, String> {
+        let intake_data = self.process_intake(prompt).await?;
+
+        let req = StartOnboardingRequest {
+            business_type: intake_data.business_type.clone(),
+            company_name: intake_data.business_name.clone(),
+            company_description: prompt.to_string(),
+            selling_categories: intake_data.categories.clone(),
+            payment_pref: "online".to_string(),
+            admin_email: format!("admin{}@test.com", uuid::Uuid::new_v4().to_string().replace("-", "").chars().take(8).collect::<String>()),
+            admin_name: intake_data.business_name.clone(),
+            admin_password: format!("P@ssw0rd123{}", uuid::Uuid::new_v4().to_string().chars().take(4).collect::<String>()),
+            website_template: "auto".to_string(),
+            first_product_name: intake_data.initial_products.get(0).map(|p| p.name.clone()).unwrap_or_else(|| "First Product".to_string()),
+            first_product_price: intake_data.initial_products.get(0).map(|p| p.price.clone()).unwrap_or_else(|| "0.00".to_string()),
+            domain_choice: "subdomain".to_string(),
+            price_type: "fixed".to_string(),
+            location: intake_data.location.clone().unwrap_or_else(|| "".to_string()),
+            target_audience: intake_data.target_audience.clone().unwrap_or_else(|| "".to_string()),
+            initial_products: intake_data.initial_products.iter().map(|p| {
+                ::server_ohc::orchestration::IntakeProductProto {
+                    name: p.name.clone(),
+                    price: p.price.clone(),
+                    description: p.description.clone().unwrap_or_default(),
+                    variants: p.variants.as_ref().map(|v| v.iter().map(|variant| ::server_ohc::orchestration::IntakeProductVariantProto {
+                        name: variant.name.clone(),
+                        price_modifier: variant.price_modifier.clone(),
+                    }).collect()).unwrap_or_default()
+                }
+            }).collect(),
+            ai_agents: vec![],
+            ai_auto_respond: true,
+        };
+
+        let response = self.start_onboarding(req).await?;
+
+        let state_json = serde_json::json!({
+            "status": "launched",
+            "businessName": intake_data.business_name,
+            "businessType": intake_data.business_type,
+            "step": 5
+        });
+
+        if let Err(e) = self.save_onboarding_state(&response.organization_id, &response.user_id, 5, &state_json).await {
+            tracing::warn!("Failed to save launched state for zero-click generation: {}", e);
+        }
+
+        Ok(response)
+    }
+
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
         let minimax = match self.minimax.as_ref() {
             Some(m) => m,

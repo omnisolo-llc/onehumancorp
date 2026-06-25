@@ -12,6 +12,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
         .route("/chat", post(process_chat_handler))
+        .route("/generate", post(generate_zero_click_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
@@ -39,6 +40,11 @@ async fn setup_health_check(
 }
 
 #[derive(serde::Deserialize)]
+pub struct GenerateRequest {
+    pub prompt: String,
+}
+
+#[derive(serde::Deserialize)]
 pub struct IntakeRequest {
     pub description: String,
     pub image_url: Option<String>,
@@ -61,6 +67,19 @@ async fn process_intake_handler(
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::error!("onboarding intake agent error: {}", error);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn generate_zero_click_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<GenerateRequest>,
+) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
+    match agent.generate_zero_click(&payload.prompt).await {
+        Ok(res) => Ok(Json(res)),
+        Err(e) => {
+            tracing::error!("Failed to zero-click generate onboarding: {}", e);
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
