@@ -848,6 +848,7 @@ impl Agent {
     /// 3. Token budget exhausted.
     /// 4. Guardrail tripwire fires.
     /// 5. Safety refusal.
+    // Orchestration Loop: TAO Cycle
     pub async fn run_tao_orchestration_loop<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -3312,7 +3313,10 @@ impl Agent {
                 || model_lower.contains("o1")
                 || model_lower.contains("o3-mini")
             {
-                tracing::info!("C. 7. Harness Thickness Mechanic: Bypassing LLMCompiler and explicit planning steps for smart model {}", final_cfg.model);
+                tracing::info!(
+                    "C. 7. Harness Thickness Mechanic: Bypassing LLMCompiler and explicit planning steps for smart model {}",
+                    final_cfg.model
+                );
                 final_cfg.enable_llmcompiler_plan_and_execute = false;
                 final_cfg.server_system_message = final_cfg
                     .server_system_message
@@ -6475,7 +6479,10 @@ mod tests {
         assert!(!reqs_o3[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
         assert!(!reqs_o3[0].system.contains("You must think step by step"));
         // Assert that the explicit planning logic is routed correctly based on C. 7. metric.
-        assert_eq!(cfg_o3.enable_llmcompiler_plan_and_execute, true, "Config remains true initially");
+        assert_eq!(
+            cfg_o3.enable_llmcompiler_plan_and_execute, true,
+            "Config remains true initially"
+        );
     }
     #[tokio::test]
     async fn test_4_type_error_handling() {
