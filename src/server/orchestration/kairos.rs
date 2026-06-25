@@ -60,7 +60,7 @@ pub struct SharedTask {
 
 use opentelemetry::global;
 use opentelemetry::KeyValue;
-use opentelemetry::metrics::{Counter, Histogram};
+use opentelemetry::metrics::{Counter, Histogram, UpDownCounter};
 use std::time::Instant;
 
 pub struct KairosOrchestrator {
@@ -68,6 +68,7 @@ pub struct KairosOrchestrator {
     pub sqlite_mutex: Mutex<()>,
     transitions_total: Counter<u64>,
     transition_duration: Histogram<f64>,
+    task_queue_depth: UpDownCounter<i64>,
 }
 
 impl KairosOrchestrator {
@@ -75,12 +76,14 @@ impl KairosOrchestrator {
         let meter = global::meter("orchestration.kairos");
         let transitions_total = meter.u64_counter("ohc_kairos_transitions_total").build();
         let transition_duration = meter.f64_histogram("ohc_kairos_transition_duration_seconds").build();
+        let task_queue_depth = meter.i64_up_down_counter("ohc_agent_task_queue_depth").build();
 
         Self {
             db,
             sqlite_mutex: Mutex::new(()),
             transitions_total,
             transition_duration,
+            task_queue_depth,
         }
     }
 
@@ -92,6 +95,11 @@ impl KairosOrchestrator {
         } else {
             "standalone"
         }
+    }
+
+    pub fn record_task_queue_depth(&self, depth: i64) {
+        let mode = self.get_mode();
+        self.task_queue_depth.add(depth, &[KeyValue::new("mode", mode)]);
     }
 
     pub async fn complete_task(&self, task_id: &str, task_type: &str, agent_id: &str) -> Result<(), KairosError> {

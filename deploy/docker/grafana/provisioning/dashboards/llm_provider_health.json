@@ -31,7 +31,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Total Tokens by Tenant",
+      "title": "Total Requests by Provider",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -41,8 +41,8 @@
       "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "sum(rate(ohc_tenant_token_usage_total[5m])) by (tenant_id)",
-          "legendFormat": "{{tenant_id}}",
+          "expr": "sum(rate(ohc_llm_network_latency_seconds_count[5m])) by (model)",
+          "legendFormat": "{{model}}",
           "refId": "A"
         }
       ],
@@ -50,7 +50,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Agent Cost",
+      "title": "Global Error Rate",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -60,8 +60,8 @@
       "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "sum(rate(ohc_agent_cost[5m])) by (organization_id)",
-          "legendFormat": "{{organization_id}}",
+          "expr": "sum(rate(ohc_agent_api_errors_total[5m])) / sum(rate(ohc_llm_network_latency_seconds_count[5m]))",
+          "legendFormat": "Global Error Rate",
           "refId": "A"
         }
       ],
@@ -69,7 +69,7 @@
     },
     {
       "type": "timeseries",
-      "title": "API Response Latency",
+      "title": "API Response Latency (P50, P90, P99)",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -79,16 +79,26 @@
       "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "rate(ohc_swarm_job_latency_by_entity_seconds_sum[5m]) / rate(ohc_swarm_job_latency_by_entity_seconds_count[5m])",
-          "legendFormat": "Latency - {{entity}}",
+          "expr": "histogram_quantile(0.50, sum by(le, model) (rate(ohc_llm_network_latency_seconds_bucket[5m])))",
+          "legendFormat": "P50 - {{model}}",
           "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum by(le, model) (rate(ohc_llm_network_latency_seconds_bucket[5m])))",
+          "legendFormat": "P90 - {{model}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by(le, model) (rate(ohc_llm_network_latency_seconds_bucket[5m])))",
+          "legendFormat": "P99 - {{model}}",
+          "refId": "C"
         }
       ],
       "transparent": true
     },
     {
       "type": "timeseries",
-      "title": "API Call Costs",
+      "title": "HTTP 4xx and 5xx Error Rates by Provider",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -98,8 +108,8 @@
       "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "sum(rate(ohc_api_call_cost[5m])) by (entity)",
-          "legendFormat": "{{entity}}",
+          "expr": "sum(rate(ohc_agent_api_errors_total[5m])) by (api)",
+          "legendFormat": "{{api}}",
           "refId": "A"
         }
       ],

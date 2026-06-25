@@ -1,0 +1,90 @@
+{
+  "title": "KAIROS Analytics Dashboard",
+  "uid": "kairos-dashboard",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "KAIROS",
+    "OHC",
+    "Observability",
+    "Orchestration"
+  ],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
+      },
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "Task Queue Depth",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 2
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "ohc_agent_task_queue_depth",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "State Machine Transitions Rate",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_kairos_transitions_total[1m])) by (mode, status)",
+          "legendFormat": "{{mode}} - {{status}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "Transition Duration (Average)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(ohc_kairos_transition_duration_seconds_sum[1m]) / rate(ohc_kairos_transition_duration_seconds_count[1m])",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    }
+  ]
+}
