@@ -53,3 +53,20 @@ pub fn get_default_tenant() -> String {
         "system".to_string()
     }
 }
+
+#[derive(serde::Deserialize)]
+pub struct UiTenantQuery {
+    pub tenant_id: Option<String>,
+    pub tenant: Option<String>,
+    pub mobile_optimized: Option<bool>,
+}
+
+pub fn ui_tenant_id(query: &UiTenantQuery) -> String {
+    query
+        .tenant_id
+        .as_deref()
+        .or(query.tenant.as_deref())
+        .map(str::trim)
+        .unwrap_or("")
+        .to_string()
+}
