@@ -48,6 +48,18 @@ impl ActorSystem {
         }
     }
 
+    /// SOTA Harness Patterns (2025-2026): 1. Actor-model message passing
+    /// Spawns a new actor and returns its handle, encapsulating the channel setup
+    /// and registration logic required by the actor framework.
+    pub async fn spawn<A: Actor + 'static>(self: &Arc<Self>, actor: A) -> tokio::task::JoinHandle<()> {
+        let (tx, rx) = mpsc::channel(100);
+        let name = actor.name();
+
+        self.register(name.clone(), tx).await;
+
+        actor.start(rx, self.clone())
+    }
+
     pub async fn get_dead_letters(&self) -> Vec<ActorMessage> {
         let dlq = self.dead_letters.lock().await;
         dlq.clone()
@@ -910,5 +922,26 @@ mod tests {
         let received2 = rx2.recv().await.expect("Actor2 should receive message");
         assert_eq!(received2.recipient, "Actor2");
         assert_eq!(received2.content, "Broadcast message");
+    }
+
+    #[tokio::test]
+    async fn test_actor_system_spawn_convenience() {
+        let system = Arc::new(ActorSystem::new());
+
+        struct DummyActor;
+        impl Actor for DummyActor {
+            fn name(&self) -> String { "dummy".to_string() }
+            fn start(&self, mut rx: mpsc::Receiver<ActorMessage>, _sys: Arc<ActorSystem>) -> tokio::task::JoinHandle<()> {
+                tokio::spawn(async move {
+                    while let Some(_) = rx.recv().await {}
+                })
+            }
+        }
+
+        let handle = system.spawn(DummyActor).await;
+
+        assert!(system.mailboxes.lock().await.contains_key("dummy"));
+        system.unregister("dummy").await;
+        handle.abort();
     }
 }
