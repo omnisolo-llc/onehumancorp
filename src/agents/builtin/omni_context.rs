@@ -4,7 +4,6 @@ use std::path::PathBuf;
 /// Omni-Context Sub-agent Routing
 /// Automatically reads project-level grounding (AGENTS.md / CLAUDE.md)
 /// and injects it into task context.
-
 pub struct OmniContextRouter {
     context_root: PathBuf,
 }

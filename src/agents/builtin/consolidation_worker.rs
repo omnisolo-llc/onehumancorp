@@ -8,7 +8,7 @@ pub struct ConsolidationWorker {
     pub repository: Arc<VectorRepository>,
     pub poll_interval: Duration,
     pub pruning_threshold_days: i64,
-    pub telemetry_error_callback: Option<Arc<dyn Fn(&str, &str) + Send + Sync>>,
+    pub telemetry_error_callback: Option<crate::types::ConsolidationCallback>,
 }
 
 impl ConsolidationWorker {
@@ -16,7 +16,7 @@ impl ConsolidationWorker {
         repository: Arc<VectorRepository>,
         poll_interval: Duration,
         pruning_threshold_days: i64,
-        telemetry_error_callback: Option<Arc<dyn Fn(&str, &str) + Send + Sync>>,
+        telemetry_error_callback: Option<crate::types::ConsolidationCallback>,
     ) -> Self {
         Self {
             repository,

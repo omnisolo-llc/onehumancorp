@@ -662,6 +662,7 @@ impl AgentServiceImpl {
             enable_visual_verification: false,
             enable_hnsw_memory: false,
             visual_verification_command: String::new(),
+            hooks: Vec::new(),
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
             workspace_path: Some(Self::workspace_path().to_string_lossy().to_string()),
@@ -1152,6 +1153,7 @@ impl AgentService for AgentServiceImpl {
                 enable_visual_verification: false,
                 enable_hnsw_memory: false,
                 visual_verification_command: String::new(),
+            hooks: Vec::new(),
                 enable_state_checkpointing: false,
                 state_scratchpad_path: None,
                 workspace_path: Some(if sub_req.working_dir.is_empty() {

@@ -22,7 +22,6 @@ pub trait OutputParser<T> {
 /// The 12 Components of a Production Harness (How they are actually built)
 /// 6. Output Parsing: Rely entirely on native `tool_calls` API objects. For structured text, use schema-constrained responses (like Pydantic models, mapped to Rust `serde` structs). Fallback mechanic: Legacy `RetryWithErrorOutputParser` (feed the original prompt, the failed completion, and the parsing error back to the model).
 /// This implementation fulfills the exact mechanic requested by the Roulette Protocol.
-
 pub trait PydanticSchemaValidator<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String>;
 }

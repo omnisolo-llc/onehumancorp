@@ -414,3 +414,5 @@ mod tests_custom {
         assert!(!msg_semantic.contains("Please strictly follow the tool's JSON schema and try again."));
     }
 }
+
+pub type ConsolidationCallback = std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>;
