@@ -39,6 +39,30 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
                 ).into_response();
             }
         }
+
+        // Validate query parameters to prevent Tenant Leakage (IDOR)
+        if ::server_config::get().multitenant {
+            if let Some(query_str) = req.uri().query() {
+                for part in query_str.split('&') {
+                    let mut kv = part.splitn(2, '=');
+                    if let (Some(k), Some(v)) = (kv.next(), kv.next()) {
+                        if k == "tenant_id" || k == "tenant" {
+                            // Basic comparison without url-decoding (since UUIDs are alphanumeric)
+                            if !v.trim().is_empty() && v.trim() != tenant_id {
+                                return (
+                                    StatusCode::FORBIDDEN,
+                                    axum::Json(json!({
+                                        "error": "FORBIDDEN",
+                                        "message": "Tenant mismatch."
+                                    }))
+                                ).into_response();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Valid context, inject into request if needed, but it's already in Claims.
         // Also ensure immutable context (already done via Claims being immutable).
         return next.run(req).await;
