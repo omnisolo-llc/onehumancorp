@@ -395,6 +395,11 @@ impl GatherActVerifyHarness {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
+
     #[tokio::test]
     async fn test_gather_act_verify_compounding_error_prevention() {
         use crate::tools::ToolExecutor;
@@ -472,13 +477,6 @@ impl GatherActVerifyHarness {
 
         assert!(error_msg.contains("Fatal tool error: Tool 'fail_tool' failed consecutively beyond max_retries limit"));
     }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
 
     struct MockLlm {
         responses: tokio::sync::Mutex<Vec<ChatResponse>>,
