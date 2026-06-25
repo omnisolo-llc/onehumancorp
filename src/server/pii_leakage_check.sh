@@ -12,7 +12,7 @@ SRCDIR=${1:-src/server}
 FILES=$(find "$SRCDIR" -name "*.rs" 2>/dev/null || true)
 
 # comprehensive PII keyword list based on src/server/telemetry/mod.rs
-PII_KEYWORDS="password|secret|key|token|auth|cookie|credential|email|phone|ssn|address|pii|credit_card"
+PII_KEYWORDS="\b(password|secret|key|token|auth|cookie|credential|email|phone|ssn|address|name|pii|jwt|bearer|sessionid|payload|credit|card|cvv|dob|birth|passport|bank|account|stripe|billing|ipaddress|macaddress|geolocation|medical|health|salary|tax|socialsecurity|creditcard|deviceid|gps|latitude|longitude)\b"
 
 for FILE in $FILES; do
     # Exclude the telemetry modules and tests from the leakage check as they deal with these strings intentionally
