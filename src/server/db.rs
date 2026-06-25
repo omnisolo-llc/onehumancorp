@@ -731,6 +731,13 @@ impl DB {
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
+                    CREATE TABLE IF NOT EXISTS settings (
+                        tenant_id TEXT PRIMARY KEY,
+                        sms_critical_phone TEXT,
+                        voice_receptionist_number TEXT,
+                        twilio_whatsapp_config TEXT,
+                        meta_whatsapp_config TEXT
+                    );
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
                         agent_id TEXT NOT NULL,

@@ -6113,6 +6113,8 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
+        .route("/api/v1/settings/integrations/whatsapp", axum::routing::post({ let pool = db.pool.clone(); move |claims, payload| api::settings_integrations::whatsapp_handler(axum::extract::State(pool), claims, payload) }))
+        .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post({ let pool = db.pool.clone(); move |claims, payload| api::settings_integrations::whatsapp_cloud_api_handler(axum::extract::State(pool), claims, payload) }))
         .route("/api/settings/voice/provision", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
