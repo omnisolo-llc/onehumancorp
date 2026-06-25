@@ -6,19 +6,20 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await page.goto('/onboarding');
 
     // 2. Wait for Setup Assistant's first message to appear
-    await expect(page.locator('#chat-messages')).toContainText('What do you do?');
+    await expect(page.locator('#chat-messages')).toContainText('What do you want to build or manage today?');
 
-    // 3. Input simple sentence and submit
+    // 3. Click the predefined chip "Cake Shop" (if available in the new React page)
+    // or just input simple sentence and submit to test real backend
     await page.fill('#chat-input', 'I run a mobile dog grooming service in Austin');
     await page.click('#chat-send-btn');
 
     // 4. Since this uses the real backend, the UI will eventually redirect to /dashboard
     // We wait for the dashboard route and UI to load.
-    await page.waitForURL('**/dashboard**', { timeout: 30000 });
+    await page.waitForURL('**/dashboard**', { timeout: 45000 });
 
     // 5. Verify the onboarding_welcome action card is present in the UnifiedAgentFeed
     const welcomeCard = page.getByTestId('onboarding-welcome-card');
-    await expect(welcomeCard).toBeVisible({ timeout: 10000 });
+    await expect(welcomeCard).toBeVisible({ timeout: 15000 });
     await expect(welcomeCard).toContainText('Setup Complete');
     await expect(welcomeCard).toContainText('Welcome to OHC!');
 

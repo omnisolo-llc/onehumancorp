@@ -113,6 +113,9 @@ You need to know at least:
 1. What they sell or what service they provide.
 2. A rough idea of their business type (e.g. bakery, handyman, tutor).
 
+Once you have this, you must propose an action plan directly to the user before finishing. For example: \"I'll create a Cake Catalog, set up a custom deposit workflow, and generate a booking link. Sound good?\"
+If they approve, or if you already have enough information to proceed, output '{{\"is_complete\": true, \"reply\": \"Great, building your workspace...\", ...}}'.
+
 Review the following conversation history:
 {}
 
