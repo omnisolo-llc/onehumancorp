@@ -33,6 +33,7 @@ static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static AUTODREAM_SYNC_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
 static TOKEN_USAGE_BY_OUTCOME: OnceLock<Counter<u64>> = OnceLock::new();
+static PRUNED_MISSIONS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
 static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
 
@@ -273,6 +274,26 @@ pub fn record_meeting_event(event_type: &str) {
             "event_type",
             event_type.to_string(),
         )],
+    );
+}
+
+pub fn get_pruned_missions_counter() -> &'static Counter<u64> {
+    PRUNED_MISSIONS_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.orchestration");
+        meter.u64_counter("ohc_pruned_missions_total")
+            .with_description("Total number of stuck missions pruned from the queue")
+            .build()
+    })
+}
+
+pub fn record_pruned_missions(count: u64, deployment_mode: &str, table: &str) {
+    let counter = get_pruned_missions_counter();
+    counter.add(
+        count,
+        &[
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+            opentelemetry::KeyValue::new("table", table.to_string()),
+        ],
     );
 }
 

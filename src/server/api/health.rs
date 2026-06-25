@@ -30,6 +30,15 @@ pub async fn health_handler(
         "hybrid_mode_ready": health.get("hybrid_mode_ready").unwrap_or(&serde_json::json!(false)),
         "last_successful_prune_ts": last_prune,
         "mesh_active": health.get("mesh_active").unwrap_or(&serde_json::json!(false)),
+        "local_runtime": if crate::is_standalone_runtime() {
+            serde_json::json!({
+                "sidecar_active": true,
+                "sqlite_path": crate::config::get().database_url.clone().unwrap_or_default(),
+                "last_heartbeat": Utc::now().to_rfc3339()
+            })
+        } else {
+            serde_json::json!("cloud_managed")
+        },
         "checklist": health.get("checklist").unwrap_or(&serde_json::json!(Vec::<String>::new()))
     }))
 }

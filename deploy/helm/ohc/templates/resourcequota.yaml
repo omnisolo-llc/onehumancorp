@@ -14,4 +14,5 @@ spec:
     limits.memory: {{ .Values.resourceQuota.limits.memory | quote }}
     limits.ephemeral-storage: {{ .Values.resourceQuota.limits.ephemeralStorage | quote }}
     pods: {{ .Values.resourceQuota.limits.pods | quote }}
+    services: "50"
 {{- end }}

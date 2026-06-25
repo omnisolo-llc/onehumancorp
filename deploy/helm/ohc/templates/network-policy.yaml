@@ -45,6 +45,13 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: spiffe
+          podSelector:
+            matchLabels:
+              app: spire-agent
+    - to:
+        - namespaceSelector:
+            matchLabels:
               kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
@@ -129,6 +136,13 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: spiffe
+          podSelector:
+            matchLabels:
+              app: spire-agent
+    - to:
+        - namespaceSelector:
+            matchLabels:
               kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
@@ -188,6 +202,13 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: spiffe
+          podSelector:
+            matchLabels:
+              app: spire-agent
+    - to:
+        - namespaceSelector:
+            matchLabels:
               kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
@@ -244,6 +265,13 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spiffe
+          podSelector:
+            matchLabels:
+              app: spire-agent
     - to:
         - namespaceSelector:
             matchLabels:
