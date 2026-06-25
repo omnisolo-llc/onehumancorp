@@ -4182,7 +4182,7 @@ pub(crate) async fn load_ui_dashboard_metrics(
     let t_id = tenant_id.to_string();
 
     let (active_customers_res, orders_metrics_res, campaigns_res, auto_replied_res) = if mobile_optimized {
-        let (r1, r2) = tokio::join!(
+        tokio::join!(
             async {
                 match &db.store {
                     crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
@@ -4194,9 +4194,20 @@ pub(crate) async fn load_ui_dashboard_metrics(
                     crate::db::DbStore::Postgres => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
                     crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id).fetch_one(pool).await,
                 }
+            },
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(pool).await,
+                }
+            },
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id).fetch_one(pool).await,
+                }
             }
-        );
-        (r1, r2, Ok(0), Ok(0))
+        )
     } else {
         tokio::join!(
             async {
@@ -4776,7 +4787,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             match &db1.store {
                 crate::db::DbStore::Postgres => {
                     let query_str = if mobile_optimized {
-                        "SELECT id, tenant_id, customer_id, source, priority, status, CAST(created_at AS text) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
+                        "SELECT id, status, CAST(created_at AS text) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
                     } else {
                         "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS text) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, '' AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
                     };
@@ -4786,10 +4797,6 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             let item = if mobile_optimized {
                                     serde_json::json!({
                                         "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
                                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
                                         "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
@@ -4814,7 +4821,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     let query_str = if mobile_optimized {
-                        "SELECT id, tenant_id, customer_id, source, priority, status, CAST(created_at AS TEXT) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
+                        "SELECT id, status, CAST(created_at AS TEXT) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
                     } else {
                         "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS TEXT) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, '' AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
                     };
@@ -4824,10 +4831,6 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             let item = if mobile_optimized {
                                     serde_json::json!({
                                         "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
                                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
                                         "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
@@ -5131,7 +5134,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5142,6 +5145,8 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
+                        "context_payload": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("context_payload"),
+                        "proposed_action": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("proposed_action"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })
                 }).collect::<Vec<_>>())
@@ -5170,7 +5175,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5181,6 +5186,8 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
+                        "context_payload": row.try_get::<String, _>("context_payload").map(|s| serde_json::from_str::<serde_json::Value>(&s).unwrap_or(serde_json::json!({}))).ok(),
+                        "proposed_action": row.try_get::<String, _>("proposed_action").map(|s| serde_json::from_str::<serde_json::Value>(&s).unwrap_or(serde_json::json!({}))).ok(),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })
                 }).collect::<Vec<_>>())

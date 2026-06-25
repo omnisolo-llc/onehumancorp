@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border: 1px solid rgba(255, 255, 255, 0.5);
             color: #0f172a;
             padding: 8px 12px;
-            border-radius: 6px;
+            border-radius: 16px;
             font-size: 13px;
             font-family: Outfit, sans-serif;
             z-index: 100000;
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         #ohc-help-chat-input {
             flex: 1;
-            padding: 10px 14px;
+            padding: 10px 14px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-start;
             border: 1px solid #cbd5e1;
             border-radius: 20px;
             font-size: 14px;
@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
             color: white;
             border: none;
             border-radius: 20px;
-            padding: 0 16px;
+            padding: 0 16px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
             font-weight: 500;
             cursor: pointer;
         }
@@ -226,10 +226,13 @@ document.addEventListener('DOMContentLoaded', () => {
         /* Tooltip Styles */
         .ohc-tooltip {
             position: fixed;
-            background: #333;
-            color: white;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #1d1d1f;
             padding: 8px 12px;
-            border-radius: 6px;
+            border-radius: 16px;
             font-size: 13px;
             font-family: Outfit, sans-serif;
             z-index: 100000;
@@ -260,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
     widget.innerHTML = `
         <div id="ohc-floating-help-header">
             <h3>In-App Help Center</h3>
-            <button id="ohc-floating-help-close" aria-label="Close">
+            <button id="ohc-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
@@ -282,8 +285,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
-                <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
-                <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
+                <div style="margin-bottom: 8px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500;">
+                    <input type="checkbox" onchange="document.getElementById('help-widget-advanced-links').style.display = this.checked ? 'block' : 'none';" />
+                    Advanced Settings
+                  </label>
+                </div>
+                <div id="help-widget-advanced-links" style="display: none;">
+                    <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
+                    <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
+                </div>
             </div>
         </div>
 
@@ -506,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
 
             function renderStep() {
