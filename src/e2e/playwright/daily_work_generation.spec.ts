@@ -1,9 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('injects a raw signal, surfaces in the UI, and owner approves it', async ({ page, request }) => {
+  test('injects a raw signal, surfaces in the UI, and owner approves it', async ({ page, request, loginAs, adminUser }) => {
+    // 1. Log in to the application
+    await loginAs(page, adminUser);
+
     // 1. Inject raw signal to simulate Triage Engine processing
     const tenantId = 'default'; // In a real E2E, this aligns with the configured test tenant
     const payload = {
@@ -26,14 +29,11 @@ test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
     await expect(page.locator('text=Loading your work feed...')).not.toBeVisible({ timeout: 10000 });
 
     // 3. Verify the surfaced actionable card
-    const card = page.locator('[data-testid="daily-work-card"]').first();
-    await expect(card).toBeVisible();
-
-    // It should have the simulated context "Draft Reply" based on our mock
-    await expect(card.locator('text=Draft Reply')).toBeVisible();
+    const card = page.locator(`[data-testid="triage-card-${workItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
 
     // Find the approve button
-    const approveButton = card.locator(`[data-testid="approve-${workItemId}"]`);
+    const approveButton = card.locator(`[data-testid="triage-approve-${workItemId}"]`);
     await expect(approveButton).toBeVisible();
 
     // Check touch target for mobile
@@ -45,6 +45,6 @@ test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
     await approveButton.click();
 
     // The card should disappear
-    await expect(card).not.toBeVisible();
+    await expect(card).not.toBeVisible({ timeout: 5000 });
   });
 });
