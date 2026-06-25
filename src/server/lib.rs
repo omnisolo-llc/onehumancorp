@@ -3539,7 +3539,7 @@ pub async fn simulate_agent_feed_item_handler(
     match &db.store {
         crate::db::DbStore::Postgres => {
             if let Err(e) = sqlx::query(
-                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
             .bind(item_id.clone())
             .bind(&tenant_id)
@@ -3555,7 +3555,7 @@ pub async fn simulate_agent_feed_item_handler(
         },
         crate::db::DbStore::Sqlite(_) => {
             if let Err(e) = sqlx::query(
-                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
             .bind(item_id.clone())
             .bind(&tenant_id)
