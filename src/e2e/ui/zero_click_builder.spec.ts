@@ -50,37 +50,67 @@ test.describe('Zero-Click Business Generator CUJ', () => {
         });
     });
 
+
     // Navigate to the real setup page
     await page.goto('http://mock/setup.html');
 
-    // Verify Initial Screen
-    await expect(page.locator("h1").filter({ hasText: "10-Minute Setup Wizard" })).toBeAttached();
-
-    // 1. Click "Instant Build"
-    await page.locator('button').filter({ hasText: 'Instant Build' }).evaluate((el: HTMLButtonElement) => el.click());
-
     // Wait and check if there's any visibility issues.
     await page.waitForTimeout(500);
-    const content = await page.content();
-    if (!content.includes('Tell us about your business')) {
-        throw new Error(`PAGE CONTENT DOES NOT HAVE HEADING: ${content}`);
-    }
 
-    // 2. Verify we are in the instant step
-    await expect(page.locator("h1").filter({ hasText: "Tell us about your business" })).toBeAttached();
+    // 1. Verify we are in the chat step
+    await expect(page.locator("h1").filter({ hasText: "Setup Assistant" })).toBeAttached();
 
-    // 3. Fill in the description
-    const instantInput = page.locator('#instant-bio');
-    await expect(instantInput).toBeAttached();
-    await instantInput.evaluate((el: HTMLTextAreaElement) => { el.value = 'I am a home baker in Austin selling custom vegan cakes and cupcakes.'; el.dispatchEvent(new Event('input')); });
+    // 2. Fill in the description in chat input
+    const chatInput = page.getByTestId('chat-input');
+    await expect(chatInput).toBeAttached();
+    await chatInput.fill('I am a home baker in Austin selling custom vegan cakes and cupcakes.');
 
-    const generateBtn = page.getByTestId('generate-storefront-btn');
-    await expect(generateBtn).toBeEnabled();
+    // 3. Mock the chat API response
+    await page.route('**/api/onboarding/chat*', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                is_complete: true,
+                reply: "Give me a minute... I'm building your business.",
+                intake_data: {
+                    business_name: "Mock Bakery",
+                    business_type: "Bakery",
+                    categories: ["food"],
+                    initial_products: [{ name: "Vegan Cake", price: "25.00" }]
+                }
+            })
+        });
+    });
 
-    // 4. Click generate
-    await generateBtn.click();
+    // Mock the start API response
+    await page.route('**/api/onboarding/start*', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                organization_id: "test-org",
+                user_id: "test-user",
+                status: "success"
+            })
+        });
+    });
 
-    // 5. Wait for generation to complete and the success message to appear
+    const sendBtn = page.getByTestId('chat-send-btn');
+    await expect(sendBtn).toBeEnabled();
+
+    // 4. Click send
+    await sendBtn.click();
+
+    // 5. Wait for generation to complete and the approve button to appear
+    const approveBtn = page.getByTestId('approve-publish-btn');
+    await expect(approveBtn).toBeAttached({ timeout: 5000 });
+
+    // Click approve
+    await approveBtn.click();
+
+    // 6. Wait for success page
     await expect(page).toHaveURL(/.*success.html/, { timeout: 15000 });
   });
+
 });
