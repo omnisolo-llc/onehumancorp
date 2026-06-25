@@ -138,7 +138,7 @@ export class SyncManager {
              mutation_type: 'agent_intent',
              payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
           };
-        } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status') {
+        } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'daily_work_action') {
             return m; // keep them for specific APIs
         }
         return m;
@@ -231,7 +231,7 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'daily_work_action');
       if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',
@@ -322,6 +322,25 @@ export class SyncManager {
           }
         } catch (err) {
           console.error("Field Ops Status Sync error:", err);
+          allOk = false;
+        }
+      }
+
+      // Sync daily work actions
+      const dailyWorkActions = generalMutations.filter(m => m.type === 'daily_work_action');
+      for (const action of dailyWorkActions) {
+        try {
+          const res = await fetch(`/api/ui/dashboard/daily-work/action?id=${action.payload.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action_status: action.payload.action_status })
+          });
+          if (!res.ok) {
+            console.error(`Daily Work Action Sync failed with status ${res.status}`);
+            if (res.status >= 500) allOk = false;
+          }
+        } catch (err) {
+          console.error("Daily Work Action Sync error:", err);
           allOk = false;
         }
       }

@@ -4,10 +4,7 @@ import { usePathname } from "next/navigation";
 import { AppShell } from "./AppShell";
 
 const shellRoutes: Record<string, { title: string; subtitle?: string }> = {
-  "/onboarding": {
-    title: "Setup",
-    subtitle: "Launch or update the business setup from the dashboard workspace.",
-  },
+
   "/agents": {
     title: "Agents",
     subtitle: "Manage expert teams, workflows, and assistant capabilities.",
@@ -80,6 +77,7 @@ const standaloneRoutes = new Set([
   "/unlock",
   "/waitlist",
   "/work-intake-widget",
+  "/onboarding",
 ]);
 
 const titleOverrides: Record<string, string> = {

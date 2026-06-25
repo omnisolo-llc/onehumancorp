@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { DailyWorkCard, DailyWorkItem } from "./DailyWorkCard";
+import { SyncManager } from "../../../lib/sync/SyncManager";
 
 export default function DailyWorkFeed() {
   const [items, setItems] = useState<DailyWorkItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
 
   const fetchFeed = async () => {
     try {
@@ -23,12 +25,35 @@ export default function DailyWorkFeed() {
 
   useEffect(() => {
     fetchFeed();
+
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    if (typeof window !== "undefined") {
+      setIsOffline(!navigator.onLine);
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+      return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+      };
+    }
   }, []);
 
   const handleAction = async (id: string, actionStatus: string) => {
     try {
       // Optimistic UI update
       setItems((prev) => prev.filter((item) => item.id !== id));
+
+      if (isOffline) {
+        await SyncManager.getInstance().enqueue({
+          id: crypto.randomUUID(),
+          type: "daily_work_action",
+          payload: { id, action_status: actionStatus },
+          timestamp: Date.now(),
+        });
+        return;
+      }
 
       await fetch(`/api/ui/dashboard/daily-work/action?id=${id}`, {
         method: "POST",
