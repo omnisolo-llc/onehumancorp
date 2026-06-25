@@ -1,5 +1,10 @@
 #[cfg(test)]
+use std::sync::Mutex;
+use std::sync::LazyLock;
+pub static ENV_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
 mod tests {
+
     use super::super::daemon::HybridSyncDaemon;
     use serde_json::json;
     use sqlx::postgres::PgPoolOptions;
@@ -263,42 +268,29 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         .await
         .unwrap();
 
-    // The async env issue... temp_env is synchronous
-    let _old_telemetry = std::env::var("OHC_TELEMETRY_ENABLED");
-    let _old_standalone = std::env::var("OHC_STANDALONE_MODE");
+    let _lock = ENV_MUTEX.lock().unwrap();
+    temp_env::with_vars(
+        [
+            ("OHC_TELEMETRY_ENABLED", Some("false")),
+            ("OHC_STANDALONE_MODE", Some("true")),
+        ],
+        || {
+            // We must block on the async task since temp_env runs synchronously
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+                daemon.sync_telemetry_step().await.unwrap();
 
-    unsafe {
-        std::env::set_var("OHC_TELEMETRY_ENABLED", "false");
-        std::env::set_var("OHC_STANDALONE_MODE", "true");
-    }
-
-    // We also need to reload config somehow... or actually our change reads ::server_config::get().
-    // We can't really reload standard OnceLock easily so we'll just check if it blocks.
-    let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
-    daemon.sync_telemetry_step().await.unwrap();
-
-    // Check that it's still pending
-    let row = sqlx::query("SELECT sync_status FROM telemetry_buffer")
-        .fetch_one(&sqlite_pool)
-        .await
-        .unwrap();
-    use sqlx::Row;
-    let status: String = row.get("sync_status");
-    assert_eq!(status, "pending");
-
-    unsafe {
-        if let Ok(val) = _old_telemetry {
-            std::env::set_var("OHC_TELEMETRY_ENABLED", val);
-        } else {
-            std::env::remove_var("OHC_TELEMETRY_ENABLED");
+                // Check that it's still pending
+                let row = sqlx::query("SELECT sync_status FROM telemetry_buffer")
+                    .fetch_one(&sqlite_pool)
+                    .await
+                    .unwrap();
+                use sqlx::Row;
+                let status: String = row.get("sync_status");
+                assert_eq!(status, "pending");
+            });
         }
-
-        if let Ok(val) = _old_standalone {
-            std::env::set_var("OHC_STANDALONE_MODE", val);
-        } else {
-            std::env::remove_var("OHC_STANDALONE_MODE");
-        }
-    }
+    );
 }
 
 #[tokio::test]
