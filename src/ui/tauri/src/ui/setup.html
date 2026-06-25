@@ -2475,6 +2475,8 @@
         firstOffer: document.getElementById("first-offer"),
         templateSelection: document.getElementById("template-selection"),
         domainName: document.getElementById("domain-name"),
+        instantBio: document.getElementById("instant-bio"),
+        instantImageUrl: document.getElementById("instant-image-url"),
       };
 
       const errors = {
@@ -2713,6 +2715,30 @@
         if (state.templateSelection)
           inputs.templateSelection.value = state.templateSelection;
         if (state.domain) inputs.domainName.value = state.domain;
+        if (state.instantBio && inputs.instantBio) inputs.instantBio.value = state.instantBio;
+        if (state.instantImageUrl && inputs.instantImageUrl) inputs.instantImageUrl.value = state.instantImageUrl;
+        if (state.chatHistory) {
+          chatHistory = state.chatHistory;
+          const chatMessagesEl = document.getElementById("chat-messages");
+          if (chatMessagesEl && chatHistory.length > 0) {
+            chatMessagesEl.innerHTML = "";
+            chatHistory.forEach((msg) => {
+              const msgDiv = document.createElement("div");
+              msgDiv.className = "chat-message " + (msg.role === "user" ? "user" : "assistant");
+              const senderDiv = document.createElement("div");
+              senderDiv.className = "chat-sender";
+              senderDiv.textContent = msg.role === "user" ? "You" : "OHC Assistant";
+              const bubbleDiv = document.createElement("div");
+              bubbleDiv.className = "chat-bubble";
+              bubbleDiv.textContent = msg.content;
+              msgDiv.appendChild(senderDiv);
+              msgDiv.appendChild(bubbleDiv);
+              chatMessagesEl.appendChild(msgDiv);
+            });
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+          }
+        }
+
         if (state.capabilities && document.getElementById("cap-draft")) {
           document.getElementById("cap-draft").checked =
             state.capabilities.draft !== false;
@@ -2765,6 +2791,10 @@
         state.first_offer = inputs.firstOffer.value;
         state.templateSelection = inputs.templateSelection.value;
         if (inputs.domainName) state.domain = inputs.domainName.value;
+        if (inputs.instantBio) state.instantBio = inputs.instantBio.value;
+        if (inputs.instantImageUrl) state.instantImageUrl = inputs.instantImageUrl.value;
+        state.chatHistory = chatHistory;
+
         state.capabilities = {
           draft: document.getElementById("cap-draft")
             ? document.getElementById("cap-draft").checked
