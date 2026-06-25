@@ -49,13 +49,28 @@ test.describe('Triage Action Feed UI', () => {
 
       const approveBtn = listItems.nth(0).getByTestId('approve-btn');
       const dismissBtn = listItems.nth(0).getByTestId('dismiss-btn');
+      const feedApproveBtn = listItems.nth(0).getByTestId('feed-approve-btn');
+      const approveInstagramBtn = listItems.nth(0).getByTestId('approve-instagram-dm');
+      const modalApproveBtn = listItems.nth(0).getByTestId('modal-approve-btn');
 
       if (await approveBtn.isVisible()) {
         await approveBtn.click();
       } else if (await dismissBtn.isVisible()) {
         await dismissBtn.click();
+      } else if (await feedApproveBtn.isVisible()) {
+        await feedApproveBtn.click();
+      } else if (await approveInstagramBtn.isVisible()) {
+        await approveInstagramBtn.click();
+      } else if (await modalApproveBtn.isVisible()) {
+        await modalApproveBtn.click();
       } else {
-        break;
+        // Fallback for unified agent feed Instagram DM
+        const genericApprove = listItems.nth(0).locator('button', { hasText: /Approve & Send|Approve|Send Draft|Send Deposit Link/i });
+        if (await genericApprove.first().isVisible()) {
+          await genericApprove.first().click();
+        } else {
+          break;
+        }
       }
 
       await page.waitForTimeout(1000);
@@ -76,7 +91,7 @@ test.describe('Triage Action Feed UI', () => {
 
     const proposalsTab = page.locator('button', { hasText: /Proposals/ });
     if (await proposalsTab.isVisible()) {
-       await proposalsTab.click();
+       await proposalsTab.click({ force: true });
     }
 
     const triageFeedEmpty = page.getByTestId('triage-feed-empty');

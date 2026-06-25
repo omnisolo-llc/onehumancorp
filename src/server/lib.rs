@@ -3467,6 +3467,22 @@ pub async fn simulate_ui_triage_item_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
 
+            let af_item_id = format!("af-{}", uuid::Uuid::new_v4());
+            if let Err(e) = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
+            )
+            .bind(&af_item_id)
+            .bind(&tenant_id)
+            .bind("instagram_dm")
+            .bind(sqlx::types::Json(serde_json::json!({"description": "Do you have vegan chocolate cake available this weekend?", "feature_type": "instagram_dm", "customer_message": "Do you have vegan chocolate cake available this weekend?", "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"})))
+            .bind(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"})))
+            .bind("PENDING_APPROVAL")
+            .execute(&mut *tx)
+            .await {
+                 tracing::error!("Failed to insert agent_feed_items: {:?}", e);
+                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
             if let Err(e) = tx.commit().await {
                  tracing::error!("Failed to commit transaction: {:?}", e);
                  return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
@@ -3510,6 +3526,22 @@ pub async fn simulate_ui_triage_item_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
 
+            let af_item_id = format!("af-{}", uuid::Uuid::new_v4());
+            if let Err(e) = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+            )
+            .bind(&af_item_id)
+            .bind(&tenant_id)
+            .bind("instagram_dm")
+            .bind(serde_json::to_string(&serde_json::json!({"description": "Do you have vegan chocolate cake available this weekend?", "feature_type": "instagram_dm", "customer_message": "Do you have vegan chocolate cake available this weekend?", "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"})).unwrap())
+            .bind(serde_json::to_string(&serde_json::json!({"action_type": "Draft Reply", "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"})).unwrap())
+            .bind("PENDING_APPROVAL")
+            .execute(&mut *tx)
+            .await {
+                 tracing::error!("Failed to insert agent_feed_items (sqlite): {:?}", e);
+                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+            }
+
             if let Err(e) = tx.commit().await {
                  tracing::error!("Failed to commit transaction: {:?}", e);
                  return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
@@ -3524,6 +3556,10 @@ pub async fn simulate_ui_triage_item_handler(
 
     let cache_key_mobile = format!("ui_triage:{}:mobile:true", tenant_id);
     let _ = cache.invalidate(&cache_key_mobile).await;
+
+    let cache_af = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let _ = cache_af.invalidate(&format!("ui_unified_agent_feed:{}:mobile:false", tenant_id)).await;
+    let _ = cache_af.invalidate(&format!("ui_unified_agent_feed:{}:mobile:true", tenant_id)).await;
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true, "id": item_id}))).into_response()
 }
