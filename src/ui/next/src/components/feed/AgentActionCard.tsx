@@ -155,7 +155,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "instagram_dm" && (
-              <InstagramDMCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} />
+              <InstagramDMCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} onDismiss={() => handleDecision(approval.id, false, undefined, approval.event_source)} />
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "ambassador_reply" && (
@@ -850,40 +850,6 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss Plan"
               data-testid="dismiss-incident-resolution"
-            >
-              Dismiss
-            </button>
-          </div>
-        ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "instagram_dm" ? (
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            <button
-              onClick={() =>
-                handleDecision(
-                  approval.id,
-                  true,
-                  undefined,
-                  approval.event_source,
-                )
-              }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-pink-600 text-white font-medium hover:bg-pink-700 transition-all duration-200 shadow-md flex items-center justify-center"
-              aria-label="Approve & Send"
-              data-testid="approve-instagram-dm"
-            >
-              Approve & Send
-            </button>
-            <button
-              onClick={() =>
-                handleDecision(
-                  approval.id,
-                  false,
-                  undefined,
-                  approval.event_source,
-                )
-              }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-              aria-label="Dismiss"
-              data-testid="dismiss-instagram-dm"
             >
               Dismiss
             </button>
