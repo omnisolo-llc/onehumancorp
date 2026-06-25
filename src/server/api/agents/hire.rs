@@ -8,8 +8,6 @@ use axum::{
 use std::sync::Arc;
 use crate::hub::Hub;
 use serde::{Deserialize, Serialize};
-use ohc_builtin_agent::marketplace::Marketplace;
-
 #[derive(Deserialize, Debug)]
 pub struct HireAgentRequest {
     pub name: String,
@@ -131,18 +129,18 @@ pub struct MarketplaceQuery {
 }
 
 pub async fn list_marketplace_agents(Query(query): Query<MarketplaceQuery>) -> impl IntoResponse {
-    let marketplace = Marketplace::new();
-    let mut agents = marketplace.list_agents();
+    let provider = Box::new(ohc_builtin_agent::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string())));
+    let marketplace = ohc_builtin_agent::tools::marketplace::MarketplaceClient::new(provider);
 
-    if let Some(q) = query.q {
-        if !q.is_empty() {
-            let lower_q = q.to_lowercase();
-            agents.retain(|a| a.name.to_lowercase().contains(&lower_q));
+    let q = query.q.unwrap_or_default();
+
+    match marketplace.search(&q).await {
+        Ok(agents) => {
+            let json_agents = serde_json::to_value(agents).unwrap_or_else(|_| serde_json::json!([]));
+            (StatusCode::OK, Json(json_agents)).into_response()
+        },
+        Err(_) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!([]))).into_response()
         }
     }
-
-
-    // Transform into a JSON format expected by the frontend
-    let json_agents = serde_json::to_value(agents).unwrap_or_else(|_| serde_json::json!([]));
-    (StatusCode::OK, Json(json_agents)).into_response()
 }
