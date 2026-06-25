@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::common::auth::{ui_tenant_id, UiTenantQuery};
+use crate::common::auth_utils::{UiTenantQuery, ui_tenant_id};
 use crate::db::DB;
 
 #[derive(Serialize, Deserialize, Debug)]
