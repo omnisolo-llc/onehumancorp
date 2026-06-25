@@ -1998,7 +1998,40 @@
             `;
           }
 
+
+          if (item.event_source === 'Simulated Webhook' || item.context_payload?.description === 'A new simulated event needs your attention.') {
+            return `
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(item.event_source || 'Simulated Webhook').replace('_', ' ')}</div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
+                </div>
+                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${item.context_payload?.description || 'A new simulated event needs your attention.'}</div>
+
+                <div id="triage-view-${item.id}">
+                  <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #0044BB;">
+                    ${item.proposed_action?.message || ''}
+                  </div>
+                  <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Approve</button>
+                    <button class="triage-btn-dismiss" onclick="document.getElementById('triage-view-${item.id}').style.display='none'; document.getElementById('triage-edit-${item.id}').style.display='block';" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Edit</button>
+                    <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Deny</button>
+                  </div>
+                </div>
+
+                <div id="triage-edit-${item.id}" style="display: none;">
+                  <textarea id="triage-textarea-${item.id}" style="width: 100%; height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 16px; font-family: inherit; font-size: 14px; box-sizing: border-box;" onchange="window.updateTriagePayload('${item.id}', this.value)">${item.proposed_action?.message || ''}</textarea>
+                  <div class="triage-controls" style="display: flex; gap: 8px;">
+                    <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Save & Approve</button>
+                    <button class="triage-btn-dismiss" onclick="document.getElementById('triage-edit-${item.id}').style.display='none'; document.getElementById('triage-view-${item.id}').style.display='block';" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+
           if (actionType === 'Draft Reply') {
+
             const draftMessage = item.action_payload || item.proposed_action?.message || 'Draft reply ready.';
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
@@ -2146,7 +2179,17 @@
       };
 
 
+
+      window.updateTriagePayload = function(id, val) {
+        let item = agentFeedItems.find(i => i.id === id);
+        if (item) {
+          if (!item.proposed_action) item.proposed_action = {};
+          item.proposed_action.message = val;
+        }
+      };
+
       window.handleTriageAction = async function(id, state) {
+
         const itemEl = document.getElementById(`triage-${id}`);
         if (itemEl) itemEl.style.opacity = '0.5';
 
