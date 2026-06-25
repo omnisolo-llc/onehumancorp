@@ -34,6 +34,7 @@ export default function HelpCenterPage() {
   }, []);
 
   const filteredArticles = articles.filter(a => a.category !== "Advanced");
+  const advancedArticles = articles.filter(a => a.category === "Advanced");
 
   const filteredVideos = videos.filter(video =>
     video.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
@@ -110,6 +111,29 @@ export default function HelpCenterPage() {
             {filteredVideos.length > 0 && (
               <div className="pt-4">
                  <VideoTutorialList videos={filteredVideos} loading={false} />
+              </div>
+            )}
+
+            {advancedArticles.length > 0 && (
+              <div className="space-y-10 sm:space-y-12 flex flex-col pt-8">
+                {Array.from(new Set(advancedArticles.map(a => a.category || "General"))).map((category) => (
+                  <section key={category} className="flex flex-col">
+                    <div className="flex items-center mb-4 sm:mb-6">
+                      <h2 className="text-xl sm:text-2xl font-bold font-outfit text-gray-900">{category}</h2>
+                      <div className="ml-4 flex-grow border-t border-gray-200/50"></div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 flex-col">
+                      {advancedArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
+                        <Link key={idx} href={article.link} className="block group">
+                          <div className="backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-white/10 border border-white/40 p-5 sm:p-6 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[120px] sm:min-h-[140px]">
+                            <h3 className="text-lg sm:text-xl font-bold font-outfit text-blue-600 mb-2 sm:mb-3 group-hover:text-blue-700">{article.title}</h3>
+                            <p className="text-sm sm:text-base text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                ))}
               </div>
             )}
           </div>
