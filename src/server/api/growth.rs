@@ -1304,13 +1304,15 @@ async fn handle_customer_referral_embed(
     let mut has_pro = false;
     if query.hide_branding.as_deref() == Some("true") {
         // Validate pro status in DB
-        let is_pro_res = sqlx::query_scalar::<_, bool>("SELECT has_pro FROM tenants WHERE tenant_id = $1")
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
             .bind(&tenant)
             .fetch_optional(&state.pool)
             .await;
 
-        if let Ok(Some(true)) = is_pro_res {
-            has_pro = true;
+        if let Ok(Some(plan)) = is_pro_res {
+            if plan.to_lowercase() == "pro" {
+                has_pro = true;
+            }
         }
     }
 
@@ -1426,13 +1428,15 @@ async fn handle_viral_goal_tracker(
 
     let mut has_pro = false;
     if query.hide_branding.as_deref() == Some("true") {
-        let is_pro_res = sqlx::query_scalar::<_, bool>("SELECT has_pro FROM tenants WHERE tenant_id = $1")
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
             .bind(&tenant)
             .fetch_optional(&state.pool)
             .await;
 
-        if let Ok(Some(true)) = is_pro_res {
-            has_pro = true;
+        if let Ok(Some(plan)) = is_pro_res {
+            if plan.to_lowercase() == "pro" {
+                has_pro = true;
+            }
         }
     }
 
