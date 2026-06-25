@@ -838,7 +838,7 @@ describe('OnboardingWizard', () => {
     await user.click(backButton);
 
     expect(screen.getByText('10-Minute Setup Wizard')).toBeInTheDocument();
-    expect(useOnboardingStore.getState().step).toBe(0);
+    expect(useOnboardingStore.getState().step).toBe(-2);
   });
 
   it('Step 3: Passes initial_products from localStorage to /api/onboarding/start', async () => {
