@@ -21,6 +21,7 @@
     .container {
       max-width: 450px;
       width: 100%;
+      box-sizing: border-box;
       background: rgba(255, 255, 255, 0.65);
       backdrop-filter: blur(30px) saturate(210%);
       -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -126,6 +127,11 @@
       color: white;
     }
 
+    .loyalty-share-link:focus {
+      outline: 2px solid #0066FF;
+      outline-offset: 2px;
+    }
+
     @media (max-width: 375px) {
       .stamp {
         width: 40px;
@@ -221,14 +227,17 @@
       }
     });
 
-    document.getElementById('copy-btn').addEventListener('click', () => {
+    document.getElementById('copy-btn').addEventListener('click', async () => {
         const urlInput = document.getElementById('share-link');
         urlInput.select();
-        document.execCommand('copy');
-
-        const btn = document.getElementById('copy-btn');
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        try {
+            await navigator.clipboard.writeText(urlInput.value);
+            const btn = document.getElementById('copy-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
     });
   </script>
 </body>
