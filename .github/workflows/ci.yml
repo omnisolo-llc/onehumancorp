@@ -313,10 +313,13 @@ jobs:
         include:
           - name: spec coverage
             target: //src/e2e:playwright_spec_coverage
+            artifact: playwright-ui-e2e-spec-coverage
           - name: shard 1/1
             target: //src/e2e:playwright_shard_1_of_1
+            artifact: playwright-ui-e2e-shard-1-of-1
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      PLAYWRIGHT_REPORT_RETENTION_DAYS: 30
     steps:
       - uses: actions/checkout@v6
 
@@ -377,7 +380,44 @@ jobs:
             --test_env=SOURCE_REPO_ROOT="$GITHUB_WORKSPACE" \
             --local_test_jobs="$(nproc)" \
             --jobs="$(nproc)" \
+            --test_output=all \
             --nocache_test_results
+
+      - name: Collect Playwright UI E2E report
+        if: always()
+        env:
+          BAZEL_TARGET: ${{ matrix.target }}
+          ARTIFACT_NAME: ${{ matrix.artifact }}
+          MATRIX_NAME: ${{ matrix.name }}
+        run: |
+          bash .github/scripts/collect_playwright_report.sh
+
+      - name: Upload Playwright UI E2E report
+        id: upload-playwright-report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ runner.temp }}/playwright-ci-artifacts/${{ matrix.artifact }}
+          if-no-files-found: warn
+          retention-days: ${{ env.PLAYWRIGHT_REPORT_RETENTION_DAYS }}
+
+      - name: Publish Playwright UI E2E report link
+        if: always()
+        env:
+          ARTIFACT_NAME: ${{ matrix.artifact }}
+          ARTIFACT_URL: ${{ steps.upload-playwright-report.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          fallback_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}#artifacts"
+          artifact_url="${ARTIFACT_URL:-$fallback_url}"
+          {
+            echo "### Uploaded Playwright UI E2E report: ${{ matrix.name }}"
+            echo
+            echo "- Artifact: \`${ARTIFACT_NAME}\`"
+            echo "- Link: ${artifact_url}"
+            echo "- Retention: ${PLAYWRIGHT_REPORT_RETENTION_DAYS} days"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   kind-e2e:
     name: Kind E2E
