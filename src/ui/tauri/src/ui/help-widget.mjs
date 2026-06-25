@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border: 1px solid rgba(255, 255, 255, 0.5);
             color: #0f172a;
             padding: 8px 12px;
-            border-radius: 6px;
+            border-radius: 16px;
             font-size: 13px;
             font-family: Outfit, sans-serif;
             z-index: 100000;
@@ -226,10 +226,13 @@ document.addEventListener('DOMContentLoaded', () => {
         /* Tooltip Styles */
         .ohc-tooltip {
             position: fixed;
-            background: #333;
-            color: white;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #1d1d1f;
             padding: 8px 12px;
-            border-radius: 6px;
+            border-radius: 16px;
             font-size: 13px;
             font-family: Outfit, sans-serif;
             z-index: 100000;
@@ -506,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
 
             function renderStep() {
