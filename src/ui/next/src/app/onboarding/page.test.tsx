@@ -603,7 +603,7 @@ describe('OnboardingWizard', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
-    render(<OnboardingWizard />);
+    render(<TooltipProvider><OnboardingWizard /></TooltipProvider>);
 
     // Wait for the mock fetch to resolve and state to update
     await waitFor(() => {
