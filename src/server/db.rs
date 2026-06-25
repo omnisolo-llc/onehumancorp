@@ -334,14 +334,18 @@ impl DB {
                     if secret_path.exists() {
                         #[cfg(unix)]
                         {
+                            if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
+                                if sym_meta.file_type().is_symlink() {
+                                    tracing::error!("CRITICAL SECURITY ERROR: .ohc_sqlite_key is a symlink. Aborting to prevent TOCTOU vulnerability.");
+                                    std::process::exit(1);
+                                }
+                            }
+
                             use std::os::unix::fs::PermissionsExt;
-                            if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
+                            if let Ok(mut perms) = std::fs::symlink_metadata(&secret_path).map(|m| m.permissions()) {
                                 if perms.mode() & 0o777 != 0o600 {
-                                    perms.set_mode(0o600);
-                                    let _ = std::fs::set_permissions(&secret_path, perms.clone());
-                                    if perms.mode() & 0o777 != 0o600 {
-                                        panic!("CRITICAL SECURITY ERROR: .ohc_sqlite_key has insecure permissions. Must be exactly 0600.");
-                                    }
+                                    tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
+                                    std::process::exit(1);
                                 }
                             }
                         }
@@ -368,15 +372,6 @@ impl DB {
                             .open(&secret_path)
                         {
                             let _ = file.write_all(new_key.as_bytes());
-                        }
-
-                        // Ensure permissions are strictly 0o600
-                        use std::os::unix::fs::PermissionsExt;
-                        if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
-                            if (perms.mode() & 0o777) != 0o600 {
-                                perms.set_mode(0o600);
-                                let _ = std::fs::set_permissions(&secret_path, perms);
-                            }
                         }
                     }
                     #[cfg(not(unix))]
