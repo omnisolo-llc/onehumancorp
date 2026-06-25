@@ -5,13 +5,13 @@ import React from "react";
 
 type AgentFeedItem = {
   id: string;
-  tenant_id: string;
+  tenant_id?: string;
   event_source: string;
   context_payload: any;
   proposed_action: any;
   lifecycle_state: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 };
 
 interface AgentActionCardProps {
@@ -1526,7 +1526,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve proposal"
-              data-testid="approve-proposal"
+              data-testid={`triage-approve-${approval.id}`}
             >
               Approve
             </button>

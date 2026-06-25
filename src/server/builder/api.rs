@@ -233,7 +233,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
     let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
 
     Router::new()
-        .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request))
+        .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)))
         .route("/sites", get(list_sites).post(create_site))
         .route("/sites/{site_id}", get(get_site))
 
