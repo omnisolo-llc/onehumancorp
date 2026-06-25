@@ -59,6 +59,43 @@ async fn handle_rpc(
         });
     }
 
+
+    if payload.method == "goose_mcp_list" {
+        let mut registry = crate::goose::GooseMcpRegistry::new();
+        registry.register(std::sync::Arc::new(crate::goose::SampleExtension));
+        let specs = registry.get_specs();
+        return Json(JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: Some(serde_json::to_value(specs).unwrap()),
+            error: None,
+            id: payload.id.clone(),
+        });
+    }
+
+    if payload.method == "goose_mcp_execute" {
+        let mut registry = crate::goose::GooseMcpRegistry::new();
+        registry.register(std::sync::Arc::new(crate::goose::SampleExtension));
+        // payload.params is Option<serde_json::Value>
+        let ext_id = payload.params.as_ref().and_then(|p| p.get("id")).and_then(|v| v.as_str()).unwrap_or("");
+        let ext_args = payload.params.as_ref().and_then(|p| p.get("args")).cloned().unwrap_or(serde_json::json!({}));
+        let result = registry.execute_extension(ext_id, ext_args).await;
+        let resp = match result {
+            Ok(val) => JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: payload.id.clone(),
+                result: Some(val),
+                error: None,
+            },
+            Err(e) => JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: payload.id.clone(),
+                result: None,
+                error: Some(JsonRpcError { code: -32603, message: e, data: None }),
+            },
+        };
+        return Json(resp);
+    }
+
     let params: RunParams = match payload.params {
         Some(ref p) => match serde_json::from_value(p.clone()) {
             Ok(params) => params,

@@ -689,6 +689,42 @@ impl AppServer {
                     serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
                 }
             }
+
+        } else if req.method == "goose_mcp_list" {
+            let mut registry = crate::goose::GooseMcpRegistry::new();
+            registry.register(std::sync::Arc::new(crate::goose::SampleExtension));
+            let specs = registry.get_specs();
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id.clone(),
+                result: Some(serde_json::to_value(specs).unwrap()),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap();
+        } else if req.method == "goose_mcp_execute" {
+            let mut registry = crate::goose::GooseMcpRegistry::new();
+            registry.register(std::sync::Arc::new(crate::goose::SampleExtension));
+            let ext_id = req.params.get("id").and_then(|v| v.as_str()).unwrap_or("");
+            let ext_args = req.params.get("args").cloned().unwrap_or(serde_json::json!({}));
+            let result = registry.execute_extension(ext_id, ext_args).await;
+            let resp = match result {
+                Ok(val) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id.clone(),
+                    result: Some(val),
+                    error: None,
+                    meta: None,
+                },
+                Err(e) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id.clone(),
+                    result: None,
+                    error: Some(JsonRpcError { code: -32603, message: e }),
+                    meta: None,
+                },
+            };
+            return serde_json::to_string(&resp).unwrap();
         } else if req.method == "get_sona_patterns" {
             // SOTA Harness Pattern: Ruflo SONA neural patterns
             // Retrieve all learned trajectory patterns
@@ -1375,5 +1411,46 @@ mod tests {
                 .to_string()
                 .contains("Codex Runner Input Guardrail tripped: Rejected by test guardrail")
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_goose {
+    use super::*;
+    use crate::llm::LlmClient;
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, Message};
+    use std::sync::Arc;
+
+    struct DummyLlm;
+    #[async_trait::async_trait]
+    impl LlmClient for DummyLlm {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(ChatResponse {
+                response_id: Some("res_1".to_string()),
+                stop_reason: "end".to_string(),
+                message: Message::assistant("hi"),
+                usage: Usage {
+                    input_tokens: 0,
+                    output_tokens: 0,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_goose_mcp_endpoints() {
+        let agent = Arc::new(Agent::new(Arc::new(DummyLlm), vec![]));
+        let runner = Runner::new(agent);
+        let server = AppServer::new(Arc::new(runner));
+
+        let list_req = r#"{"jsonrpc": "2.0", "id": "1", "method": "goose_mcp_list", "params": {}}"#;
+        let list_res_str = server.handle_request(list_req).await;
+        assert!(list_res_str.contains("sample_mcp"), "Response was: {}", list_res_str);
+
+        let exec_req = r#"{"jsonrpc": "2.0", "id": "2", "method": "goose_mcp_execute", "params": {"id": "sample_mcp", "args": {"echo": "hello test"}}}"#;
+        let exec_res_str = server.handle_request(exec_req).await;
+        assert!(exec_res_str.contains("hello test"), "Response was: {}", exec_res_str);
     }
 }
