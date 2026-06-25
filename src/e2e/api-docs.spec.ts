@@ -4,7 +4,7 @@ test.describe('API Documentation', () => {
   test('should display interactive Swagger UI layout', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     // Navigate to API Docs page
-    await page.goto('/api/ui/api-docs.html');
+    await page.goto('/api-docs');
 
     // Ensure the advanced warning is visible
     await expect(page.locator('text=Advanced:')).toBeVisible();
@@ -24,7 +24,7 @@ test.describe('API Documentation', () => {
     await loginAs(page, unlimitedAdminUser);
     // Set viewport to mobile (375px)
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/api/ui/api-docs.html');
+    await page.goto('/api-docs');
 
     // Wait for the swagger UI to load
     await expect(page.locator('#swagger-ui')).toBeVisible({ timeout: 15000 });
