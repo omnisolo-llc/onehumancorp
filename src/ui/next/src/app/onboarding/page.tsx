@@ -112,8 +112,8 @@ export default function OnboardingWizard() {
     updateState({ error: '' });
     setValidationError('');
     setValidationErrors({});
-    updateState({ step: 0 });
-    syncStateToBackend({ step: 0 });
+    updateState({ step: -2 });
+    syncStateToBackend({ step: -2 });
   };
 
   const handleSaveDraft = async () => {
@@ -603,7 +603,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
-      <div id="setup-screen" className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border border-white/40 dark:border-white/10 shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] sm:rounded-[16px]">
+      <div id="setup-screen" className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border border-white/40 dark:border-white/10 shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism">
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
@@ -637,7 +637,7 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === 0 && (
+          {step === -2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -674,9 +674,9 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === -2 && (
+          {step === 0 && (
             <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full">
-              <button onClick={() => { updateState({ step: 0 }); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
+              <button onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 text-center">Setup Assistant</h2>
@@ -712,8 +712,8 @@ export default function OnboardingWizard() {
                   <input
                     type="url"
                     id="chat-image-url"
-                    value={instantImageUrl}
-                    onChange={(e) => updateState({ instantImageUrl: e.target.value })}
+                    value={chatImageUrl}
+                    onChange={(e) => setChatImageUrl(e.target.value)}
                     className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] min-h-[44px]"
                     placeholder="Image URL (Optional)"
                     inputMode="url"
@@ -721,11 +721,27 @@ export default function OnboardingWizard() {
                     enterKeyHint="next"
                   />
                   <div className="flex gap-2 w-full">
+                    <button
+                      id="chat-upload-btn"
+                      className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[8px] min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
+                      onClick={() => {
+                        const url = prompt("Enter image URL");
+                        if (url) setChatImageUrl(url);
+                      }}
+                      title="Upload Image"
+                      aria-label="Upload Image"
+                    >
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                      </svg>
+                    </button>
                     <input
                       type="text"
                       id="chat-input"
-                      value={bio}
-                      onChange={(e) => updateState({ bio: e.target.value })}
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => {
                          if (e.key === 'Enter') handleSendChatMessage();
                       }}
@@ -749,7 +765,7 @@ export default function OnboardingWizard() {
 
           {step === -1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { updateState({ step: 0 }); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
+              <button onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
@@ -807,7 +823,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { updateState({ step: 0 }); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
@@ -1414,7 +1430,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-2xl p-8">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-2xl p-4 sm:p-8">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
