@@ -1,5 +1,8 @@
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex;
+    use std::sync::LazyLock;
+    pub static ENV_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
     use serde_json;
     use temp_env;
     use tokio;
@@ -251,6 +254,7 @@ mod tests {
 
     #[test]
     fn test_buffer_metric_respects_standalone() {
+        let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
         temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
@@ -286,6 +290,7 @@ mod tests {
 
     #[test]
     fn test_init_telemetry_standalone_opt_out() {
+        let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
         temp_env::with_vars(
             [
                 ("OHC_STANDALONE_MODE", Some("true")),
@@ -307,6 +312,7 @@ mod tests {
 
     #[test]
     fn test_init_telemetry_standalone_opt_in() {
+        let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
         temp_env::with_vars(
             [
                 ("OHC_STANDALONE_MODE", Some("true")),
@@ -660,6 +666,7 @@ fn test_record_error_signal() {
         // Enforce Local Sovereignty
         // Ensures that OHC_STANDALONE_MODE properly overrides any implicit telemetry activation.
         // It must default to false unless OHC_TELEMETRY_ENABLED is explicitly "true".
+        let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
         temp_env::with_vars(
             [
                 ("OHC_STANDALONE_MODE", Some("true")),
