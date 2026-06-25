@@ -5,13 +5,13 @@ import React from "react";
 
 type AgentFeedItem = {
   id: string;
-  tenant_id: string;
+  tenant_id?: string;
   event_source: string;
   context_payload: any;
   proposed_action: any;
   lifecycle_state: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 };
 
 interface AgentActionCardProps {
