@@ -28,6 +28,15 @@ export default function ApiDocsPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[30px] saturate-[210%] font-inter flex flex-col items-center">
       <style dangerouslySetInnerHTML={{__html: `
+<<<<<<< HEAD
+        .swagger-ui { background: white; border-radius: 12px; padding: 24px; width: 100%; box-sizing: border-box; }
+        .swagger-ui .wrapper { width: 100%; max-width: 100vw; overflow-x: hidden; padding: 0 10px; box-sizing: border-box; }
+        .swagger-ui .opblock-body pre { white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; max-width: 100%; box-sizing: border-box; }
+        .swagger-ui table { display: block; overflow-x: auto; max-width: 100%; box-sizing: border-box; }
+        .swagger-ui .markdown p { word-break: break-word; box-sizing: border-box; }
+        .swagger-ui .info { margin: 20px 0; box-sizing: border-box; }
+        .swagger-ui .scheme-container { background: transparent; padding: 10px 0; margin-bottom: 20px; border-radius: 12px; box-shadow: none; border: 1px solid rgba(0,0,0,0.1); box-sizing: border-box; width: 100%; }
+=======
         .swagger-ui { background: white; border-radius: 12px; padding: 24px; }
         .swagger-ui .wrapper { max-width: 100%; overflow-x: hidden; padding: 0 10px; }
         .swagger-ui .opblock-body pre { white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; max-width: 100%; }
@@ -35,6 +44,7 @@ export default function ApiDocsPage() {
         .swagger-ui .markdown p { word-break: break-word; }
         .swagger-ui .info { margin: 20px 0; }
         .swagger-ui .scheme-container { background: transparent; padding: 10px 0; margin-bottom: 20px; border-radius: 12px; box-shadow: none; border: 1px solid rgba(0,0,0,0.1); }
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
       `}} />
       <div data-testid="api-docs-title" className="w-full max-w-6xl bg-yellow-50/80 backdrop-blur-[30px] saturate-[210%] border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter">
         <div className="text-yellow-700 text-sm">

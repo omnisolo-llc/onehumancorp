@@ -496,12 +496,21 @@
 
           const data = await response.json();
           if (data.success) {
+<<<<<<< HEAD
+            resultEl.innerHTML = `<h4>${workflowName}</h4><p>Result: ${data.result}</p>`;
+          } else {
+            resultEl.innerHTML = `<h4>${workflowName}</h4><p>Error: ${data.error}</p>`;
+          }
+        } catch (e) {
+          resultEl.innerHTML = `<h4>${workflowName}</h4><p>Failed: ${e.toString()}</p>`;
+=======
             resultEl.innerHTML = `<h4>${workflowName}</h4><pre>${JSON.stringify(payload)}</pre><p>Result: ${data.result}</p>`;
           } else {
             resultEl.innerHTML = `<h4>${workflowName}</h4><pre>${JSON.stringify(payload)}</pre><p>Error: ${data.error}</p>`;
           }
         } catch (e) {
           resultEl.innerHTML = `<h4>${workflowName}</h4><pre>${JSON.stringify(payload)}</pre><p>Failed: ${e.toString()}</p>`;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         }
       });
     </script>
@@ -515,10 +524,20 @@
 <style>
 .ohc-tooltip {
     position: fixed;
+<<<<<<< HEAD
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #1d1d1f;
+    padding: 8px 12px;
+    border-radius: 16px;
+=======
     background: #333;
     color: white;
     padding: 8px 12px;
     border-radius: 6px;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     font-size: 13px;
     font-family: Outfit, sans-serif;
     z-index: 100000;
@@ -640,7 +659,11 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
+<<<<<<< HEAD
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+=======
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         document.body.appendChild(bubble);
 
         function renderStep() {

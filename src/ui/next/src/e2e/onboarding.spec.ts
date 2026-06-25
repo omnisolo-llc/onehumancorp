@@ -2,11 +2,14 @@ import { test, expect } from '@playwright/test';
 
 test.describe('OnboardingWizard CUJ', () => {
   test.beforeEach(async ({ page, context }) => {
+<<<<<<< HEAD
+=======
     await page.route("**/api/onboarding/intake", async route => route.fulfill({ status: 200, json: { business_name: "Mocked Business", business_type: "Mocked Type", initial_products: [{name: "Mocked Product", price: "10.00"}], categories: ["mocked"] } }));
     await context.route("**/api/onboarding/start", async route => route.fulfill({ status: 200, json: { success: true, organization_id: "test-tenant-123" } }));
     await context.route("**/api/onboarding/state", async route => route.fulfill({ status: 200, json: {} }));
     await context.route("**/api/onboarding/draft", async route => route.fulfill({ status: 200, json: {} }));
 
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
       window.localStorage.clear();
@@ -296,10 +299,22 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Next' }).click();
 
+<<<<<<< HEAD
+    await expect(page.getByText("Style & Team")).toBeVisible({ timeout: 15000 });
+    await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
+    await page.getByPlaceholder(/you@example.com/i).fill('admin@test.com');
+    await page.getByPlaceholder(/••••••••/i).fill('password123');
+
+    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+
+=======
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     // Expect it to eventually reach "You're Live!" screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
   });
 });
+<<<<<<< HEAD
+=======
 
   test('Instant Build handles network failures gracefully without mock data', async ({ page, context }) => {
     await context.unroute('**/api/onboarding/intake');
@@ -383,3 +398,4 @@ test.describe('OnboardingWizard CUJ', () => {
     await context.unroute('**/api/onboarding/launch');
     await context.unroute('/api/onboarding/intake');
   });
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)

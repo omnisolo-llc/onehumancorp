@@ -1,9 +1,20 @@
+<<<<<<< HEAD
+import { test, expect } from '../fixtures';
+=======
 import { test, expect } from '@playwright/test';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
 test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
+<<<<<<< HEAD
+  test('injects a raw signal, surfaces in the UI, and owner approves it', async ({ page, request, loginAs, adminUser }) => {
+    // 1. Log in to the application
+    await loginAs(page, adminUser);
+
+=======
   test('injects a raw signal, surfaces in the UI, and owner approves it', async ({ page, request }) => {
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     // 1. Inject raw signal to simulate Triage Engine processing
     const tenantId = 'default'; // In a real E2E, this aligns with the configured test tenant
     const payload = {
@@ -26,6 +37,13 @@ test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
     await expect(page.locator('text=Loading your work feed...')).not.toBeVisible({ timeout: 10000 });
 
     // 3. Verify the surfaced actionable card
+<<<<<<< HEAD
+    const card = page.locator(`[data-testid="triage-card-${workItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Find the approve button
+    const approveButton = card.locator(`[data-testid="triage-approve-${workItemId}"]`);
+=======
     const card = page.locator('[data-testid="daily-work-card"]').first();
     await expect(card).toBeVisible();
 
@@ -34,6 +52,7 @@ test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
 
     // Find the approve button
     const approveButton = card.locator(`[data-testid="approve-${workItemId}"]`);
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     await expect(approveButton).toBeVisible();
 
     // Check touch target for mobile
@@ -45,6 +64,10 @@ test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
     await approveButton.click();
 
     // The card should disappear
+<<<<<<< HEAD
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+=======
     await expect(card).not.toBeVisible();
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
   });
 });

@@ -10,7 +10,11 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await page.getByRole('button', { name: 'Log In' }).click();
 
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+<<<<<<< HEAD
+    await expect(page.locator('h2', { hasText: 'Welcome back' }).first()).toBeVisible({ timeout: 5000 });
+=======
     await expect(page.getByText('Welcome back.')).toBeVisible({ timeout: 5000 });
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
     // Verify glassmorphism style drift on dashboard panels
     const panel = page.locator('.app-panel').first();
@@ -19,7 +23,11 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(panel).toHaveCSS('border-radius', '16px');
 
     // Verify glassmorphism style drift on dashboard cards
+<<<<<<< HEAD
+    const card = page.locator('.app-card').last();
+=======
     const card = page.locator('.app-card').first();
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     await expect(card).toBeVisible();
     await expect(card).toHaveCSS('backdrop-filter', /blur\(30px\)|none/);
     await expect(card).toHaveCSS('border-radius', '16px');
@@ -79,8 +87,13 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
 
 
     // Verify Milestones Page and Embed code generation
+<<<<<<< HEAD
+    await page.goto('/milestone-alerts');
+
+=======
     await page.goto('/milestones');
     await expect(page.locator('h1', { hasText: 'Success Milestones 🏆' }).first()).toBeVisible({ timeout: 15000 });
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
     // Wait for data to load
     await page.waitForTimeout(2000);
@@ -98,8 +111,13 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     }
 
     // Verify Referral Leaderboard Generator
+<<<<<<< HEAD
+    await page.goto('/api/ui/referral-leaderboard-generator.html');
+
+=======
     await page.goto('/referral-leaderboard-generator.html');
     await expect(page.locator('h1', { hasText: 'Referral Leaderboard' }).first()).toBeVisible({ timeout: 15000 });
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
     // Check that there is either a leaderboard or an empty state loaded
     await page.waitForTimeout(2000); // Allow fetch to settle
@@ -107,7 +125,11 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     const hasCodeBlock = await page.locator('#embed-code').isVisible();
     const hasEmptyState = await page.locator('.empty-state').isVisible();
 
+<<<<<<< HEAD
+
+=======
     expect(hasCodeBlock || hasEmptyState).toBeTruthy();
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
     if (hasCodeBlock) {
         const codeText = await page.locator('#embed-code').innerText();

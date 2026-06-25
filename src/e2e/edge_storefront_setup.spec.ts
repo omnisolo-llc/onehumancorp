@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+import { test, expect } from './fixtures';
+=======
 import { test, expect } from './test_utils/authenticated_test';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
 test.describe('Edge Storefront UI Setup Journey', () => {
 

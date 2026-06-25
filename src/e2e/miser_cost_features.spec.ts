@@ -1,7 +1,11 @@
 import { test, expect } from './fixtures';
 
 test.describe('Miser Cost Features E2E', () => {
+<<<<<<< HEAD
+  test('Cost Dashboard displays Cost Transparency Dashboard and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
+=======
   test.skip('Cost Dashboard displays Cost Transparency Dashboard and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     // Log in as an admin user
     await loginAs(page, adminUser);
 
@@ -27,7 +31,11 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('text=AI actions used this month')).toBeVisible({ timeout: 15000 });
   });
 
+<<<<<<< HEAD
+  test('Pricing Page displays Free Tier details and "Current Plan" disabled button', async ({ page, adminUser, loginAs }) => {
+=======
   test.skip('Pricing Page displays Free Tier details and "Current Plan" disabled button', async ({ page, adminUser, loginAs }) => {
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     await loginAs(page, adminUser);
     await page.goto('/pricing');
 
@@ -39,7 +47,11 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(freeCard.locator('text=500MB Storage Quota').first()).toBeVisible();
     await expect(freeCard.locator('text=10 Products Limit').first()).toBeVisible();
 
+<<<<<<< HEAD
+    const currentPlanButton = freeCard.locator('button', { hasText: 'Current Plan' });
+=======
     const currentPlanButton = freeCard.locator('button', { hasText: 'Current Plan' }).first();
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     await expect(currentPlanButton).toBeVisible();
     await expect(currentPlanButton).toBeDisabled();
   });
@@ -51,7 +63,11 @@ test.describe('Miser Cost Features E2E', () => {
 
     const starterCard = page.locator('.ohc-growth-card').filter({ hasText: 'Starter' });
     await expect(starterCard).toBeVisible({ timeout: 15000 });
+<<<<<<< HEAD
+    await expect(starterCard.locator('text=$29').first()).toBeVisible();
+=======
     await expect(starterCard.locator('text=$9').first()).toBeVisible();
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     await expect(starterCard.locator('text=3 Agents Limit').first()).toBeVisible();
     await expect(starterCard.locator('text=1,000 AI actions / month').first()).toBeVisible();
     await expect(starterCard.locator('text=5GB Storage Quota').first()).toBeVisible();
@@ -76,14 +92,24 @@ test.describe('Miser Cost Features E2E', () => {
     }
   });
 
+<<<<<<< HEAD
+  test('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, loginAs }) => {
+=======
   test.skip('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, loginAs }) => {
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     const proUser = { email: "pro@example.com", password: "password123", role: "ADMIN" };
     await loginAs(page, proUser as any);
     await page.goto('/pricing');
 
+<<<<<<< HEAD
+    const proCard = page.locator('.ohc-growth-card').filter({ hasText: 'Pro' });
+    await expect(proCard).toBeVisible({ timeout: 15000 });
+    await expect(proCard.locator('text=$79').first()).toBeVisible();
+=======
     const proCard = page.locator('.ohc-growth-card').filter({ hasText: 'Pro' }).first();
     await expect(proCard).toBeVisible({ timeout: 15000 });
     await expect(proCard.locator('text=$29').first()).toBeVisible();
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     await expect(proCard.locator('text=10 Agents Limit').first()).toBeVisible();
     await expect(proCard.locator('text=Unlimited AI actions').first()).toBeVisible();
     await expect(proCard.locator('text=50GB Storage Quota').first()).toBeVisible();
@@ -115,7 +141,11 @@ test.describe('Miser Cost Features E2E', () => {
 
     const businessCard = page.locator('.ohc-growth-card').filter({ hasText: 'Business' });
     await expect(businessCard).toBeVisible({ timeout: 15000 });
+<<<<<<< HEAD
+    await expect(businessCard.locator('text=$299').first()).toBeVisible();
+=======
     await expect(businessCard.locator('text=$79').first()).toBeVisible();
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     await expect(businessCard.locator('text=Unlimited Agents').first()).toBeVisible();
     await expect(businessCard.locator('text=Unlimited AI actions').first()).toBeVisible();
     await expect(businessCard.locator('text=500GB Storage Quota').first()).toBeVisible();
@@ -139,7 +169,11 @@ test.describe('Miser Cost Features E2E', () => {
     }
   });
 
+<<<<<<< HEAD
+  test('Pricing Page displays Manage Plan for active paid tier', async ({ page, loginAs }) => {
+=======
   test.skip('Pricing Page displays Manage Plan for active paid tier', async ({ page, loginAs }) => {
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     const starterUser = { email: "starter@example.com", password: "password123", role: "ADMIN" };
     await loginAs(page, starterUser as any);
 
@@ -147,7 +181,11 @@ test.describe('Miser Cost Features E2E', () => {
 
     // Using a more resilient text check for Starter plan text on button
     const starterCard = page.locator('.ohc-growth-card').filter({ hasText: 'Starter' });
+<<<<<<< HEAD
+    const managePlanButton = starterCard.locator('button', { hasText: 'Manage Plan' });
+=======
     const managePlanButton = starterCard.locator('button', { hasText: 'Manage Plan' }).first();
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     await expect(managePlanButton).toBeVisible({ timeout: 15000 });
   });
 
@@ -168,6 +206,10 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/cost-dashboard');
 
     // The threshold should trigger given a $2,000 spend on the Starter plan.
+<<<<<<< HEAD
+    await expect(page.locator('text=Soft Limit Approaching')).toBeVisible({ timeout: 15000 });
+=======
     await expect(page.locator('text=Soft Limit Approaching').first()).toBeVisible({ timeout: 15000 });
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
   });
 });

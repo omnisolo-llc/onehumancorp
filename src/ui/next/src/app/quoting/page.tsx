@@ -23,9 +23,16 @@ function QuotingContent() {
 
     const fetchQuote = async () => {
       try {
+<<<<<<< HEAD
+        const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
+        const res = await fetch(`/api/quotes?id=${quoteId}`, {
+          headers: {
+            'x-tenant-id': tenantId
+=======
         const res = await fetch(`/api/quotes?id=${quoteId}`, {
           headers: {
             'x-tenant-id': 'tenant-1' // hardcoded for test
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
           }
         });
         if (res.ok) {
@@ -78,16 +85,27 @@ function QuotingContent() {
 
     try {
       if (navigator.onLine) {
+<<<<<<< HEAD
+        const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
+        const updateRes = await fetch(`/api/quotes?id=${quoteId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
+=======
         const updateRes = await fetch(`/api/quotes?id=${quoteId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-tenant-id': 'tenant-1' },
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
           body: JSON.stringify(updatePayload)
         });
         if (!updateRes.ok) throw new Error('Update failed');
 
         const approveRes = await fetch(`/api/quotes/${quoteId}/approve`, {
           method: 'PATCH',
+<<<<<<< HEAD
+          headers: { 'x-tenant-id': tenantId }
+=======
           headers: { 'x-tenant-id': 'tenant-1' }
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         });
         if (!approveRes.ok) throw new Error('Approve failed');
       } else {

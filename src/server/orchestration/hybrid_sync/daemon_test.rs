@@ -1,5 +1,14 @@
 #[cfg(test)]
+<<<<<<< HEAD
+use std::sync::Mutex;
+use std::sync::LazyLock;
+pub static ENV_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
 mod tests {
+
+=======
+mod tests {
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     use super::super::daemon::HybridSyncDaemon;
     use serde_json::json;
     use sqlx::postgres::PgPoolOptions;
@@ -263,6 +272,31 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         .await
         .unwrap();
 
+<<<<<<< HEAD
+    let _lock = ENV_MUTEX.lock().unwrap();
+    temp_env::with_vars(
+        [
+            ("OHC_TELEMETRY_ENABLED", Some("false")),
+            ("OHC_STANDALONE_MODE", Some("true")),
+        ],
+        || {
+            // We must block on the async task since temp_env runs synchronously
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+                daemon.sync_telemetry_step().await.unwrap();
+
+                // Check that it's still pending
+                let row = sqlx::query("SELECT sync_status FROM telemetry_buffer")
+                    .fetch_one(&sqlite_pool)
+                    .await
+                    .unwrap();
+                use sqlx::Row;
+                let status: String = row.get("sync_status");
+                assert_eq!(status, "pending");
+            });
+        }
+    );
+=======
     // The async env issue... temp_env is synchronous
     let _old_telemetry = std::env::var("OHC_TELEMETRY_ENABLED");
     let _old_standalone = std::env::var("OHC_STANDALONE_MODE");
@@ -299,6 +333,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
             std::env::remove_var("OHC_STANDALONE_MODE");
         }
     }
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 }
 
 #[tokio::test]
@@ -541,6 +576,17 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         daemon.prune_stuck_agent_missions().await.unwrap();
         daemon.prune_stuck_sub_agent_queue().await.unwrap();
 
+<<<<<<< HEAD
+        // Verify SQLite mission is failed (now deleted)
+        let row_sqlite = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_sqlite'")
+            .fetch_optional(&sqlite_pool).await.unwrap();
+        assert!(row_sqlite.is_none());
+
+        // Verify PG mission is failed (now deleted)
+        let row_pg = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_pg'")
+            .fetch_optional(&pg_pool).await.unwrap();
+        assert!(row_pg.is_none());
+=======
         // Verify SQLite mission is failed
         let row_sqlite = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_sqlite'")
             .fetch_one(&sqlite_pool).await.unwrap();
@@ -551,10 +597,15 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let row_pg = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_pg'")
             .fetch_one(&pg_pool).await.unwrap();
         assert_eq!(row_pg.get::<String, _>("status"), "FAILED");
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
         // Verify SQLite queue is failed
         let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queue_sqlite'")
             .fetch_one(&sqlite_pool).await.unwrap();
+<<<<<<< HEAD
+        use sqlx::Row;
+=======
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         assert_eq!(row_queue_sqlite.get::<String, _>("status"), "FAILED");
 
         // Verify PG queue is failed
@@ -689,6 +740,16 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         daemon.prune_stuck_agent_missions().await.unwrap();
 
         // Verify SQLite mission failure category
+<<<<<<< HEAD
+        let dl_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_sqlite_cat'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(dl_sqlite.0, 1);
+
+        // Verify PG mission failure category
+        let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_pg_cat'")
+            .fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(dl_pg.0, 1);
+=======
         let row_sqlite = sqlx::query("SELECT sync_error FROM agent_missions WHERE id = 'stuck_mission_sqlite_cat'")
             .fetch_one(&sqlite_pool).await.unwrap();
         use sqlx::Row;
@@ -698,4 +759,5 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let row_pg = sqlx::query("SELECT sync_error FROM agent_missions WHERE id = 'stuck_mission_pg_cat'")
             .fetch_one(&pg_pool).await.unwrap();
         assert!(row_pg.get::<String, _>("sync_error").contains("bug:"));
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     }

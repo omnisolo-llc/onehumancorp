@@ -5,13 +5,21 @@ import React from "react";
 
 type AgentFeedItem = {
   id: string;
+<<<<<<< HEAD
+  tenant_id?: string;
+=======
   tenant_id: string;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
   event_source: string;
   context_payload: any;
   proposed_action: any;
   lifecycle_state: string;
   created_at: string;
+<<<<<<< HEAD
+  updated_at?: string;
+=======
   updated_at: string;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 };
 
 interface AgentActionCardProps {

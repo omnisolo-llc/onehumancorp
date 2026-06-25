@@ -83,6 +83,37 @@ impl Department for CustomerSuccessAgent {
             let tenant_id_for_meta = event.tenant_id.clone();
 
             tokio::spawn(async move {
+<<<<<<< HEAD
+                if source == "whatsapp" && !sender_id.is_empty() {
+                    let pool = crate::db::get_pool();
+                    let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id = 'twilio' AND tenant_id = $1 LIMIT 1")
+                        .bind(&tenant_id_for_meta)
+                        .fetch_one(&pool)
+                        .await;
+
+                    if let Ok((account_sid, auth_token, from_phone)) = twilio_row {
+                        if !account_sid.is_empty() && !auth_token.is_empty() {
+                            use crate::integrations::twilio::provider::TwilioProvider;
+                            let provider = TwilioProvider::new(account_sid, auth_token);
+
+                            if from_phone.is_empty() {
+                                tracing::error!("Failed to send whatsapp message via Twilio integration: from_phone is empty in credentials");
+                                return;
+                            }
+                            let twilio_from = from_phone;
+                            let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
+                            if let Err(e) = provider.send_whatsapp(&twilio_to, &twilio_from, &text).await {
+                                tracing::error!("Failed to send whatsapp message via Twilio integration: {}", e);
+                            } else {
+                                tracing::info!("Successfully sent whatsapp message via Twilio integration");
+                            }
+                            return;
+                        }
+                    }
+                }
+
+=======
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                 if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
                     let pool = crate::db::get_pool();
                     let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")

@@ -3,6 +3,10 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
 _NEXT_UI_E2E_SPECS = [
+<<<<<<< HEAD
+
+=======
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     "//src/ui/next:src/e2e/test_glassmorphism.spec.ts",
     "//src/ui/next:src/e2e/langgraph.spec.ts",
     "//src/ui/next:src/e2e/client-side-image-optimization.spec.ts",
@@ -18,7 +22,10 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/business-analytics.spec.ts",
     "//src/ui/next:src/e2e/changelog.spec.ts",
     "//src/ui/next:src/e2e/cost-dashboard.spec.ts",
+<<<<<<< HEAD
+=======
     "//src/ui/next:src/e2e/plan.spec.ts",
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     "//src/ui/next:src/e2e/field-ops.spec.ts",
     "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
     "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
@@ -56,7 +63,11 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/help_components.spec.ts",
     "//src/ui/next:e2e/localization_offline.spec.ts",
     "//src/ui/next:e2e/referrals.spec.ts",
+<<<<<<< HEAD
+
+=======
     "//src/ui/next:src/e2e/post-purchase-share.spec.ts",
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
 
     "//src/ui/next:src/e2e/viral_share_to_unlock.spec.ts",

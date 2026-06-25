@@ -13,3 +13,8 @@ pub mod cache;
 pub mod sip_protocol;
 
 pub mod payload_validator;
+<<<<<<< HEAD
+
+pub mod edge_caching_middleware;
+=======
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)

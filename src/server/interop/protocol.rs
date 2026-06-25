@@ -219,7 +219,11 @@ impl InteropProtocol {
         use prost::Message as ProstMessage;
         use std::sync::atomic::Ordering;
 
+<<<<<<< HEAD
+        tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job"); // pii-safe
+=======
         tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job");
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();

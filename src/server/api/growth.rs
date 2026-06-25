@@ -1304,13 +1304,24 @@ async fn handle_customer_referral_embed(
     let mut has_pro = false;
     if query.hide_branding.as_deref() == Some("true") {
         // Validate pro status in DB
+<<<<<<< HEAD
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
+=======
         let is_pro_res = sqlx::query_scalar::<_, bool>("SELECT has_pro FROM tenants WHERE tenant_id = $1")
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
             .bind(&tenant)
             .fetch_optional(&state.pool)
             .await;
 
+<<<<<<< HEAD
+        if let Ok(Some(plan)) = is_pro_res {
+            if plan.to_lowercase() == "pro" {
+                has_pro = true;
+            }
+=======
         if let Ok(Some(true)) = is_pro_res {
             has_pro = true;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         }
     }
 
@@ -1426,13 +1437,24 @@ async fn handle_viral_goal_tracker(
 
     let mut has_pro = false;
     if query.hide_branding.as_deref() == Some("true") {
+<<<<<<< HEAD
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
+=======
         let is_pro_res = sqlx::query_scalar::<_, bool>("SELECT has_pro FROM tenants WHERE tenant_id = $1")
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
             .bind(&tenant)
             .fetch_optional(&state.pool)
             .await;
 
+<<<<<<< HEAD
+        if let Ok(Some(plan)) = is_pro_res {
+            if plan.to_lowercase() == "pro" {
+                has_pro = true;
+            }
+=======
         if let Ok(Some(true)) = is_pro_res {
             has_pro = true;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         }
     }
 

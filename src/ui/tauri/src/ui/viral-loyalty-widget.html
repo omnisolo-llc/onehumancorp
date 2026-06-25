@@ -21,6 +21,10 @@
     .container {
       max-width: 450px;
       width: 100%;
+<<<<<<< HEAD
+      box-sizing: border-box;
+=======
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
       background: rgba(255, 255, 255, 0.65);
       backdrop-filter: blur(30px) saturate(210%);
       -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -126,6 +130,14 @@
       color: white;
     }
 
+<<<<<<< HEAD
+    .loyalty-share-link:focus {
+      outline: 2px solid #0066FF;
+      outline-offset: 2px;
+    }
+
+=======
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     @media (max-width: 375px) {
       .stamp {
         width: 40px;
@@ -221,6 +233,19 @@
       }
     });
 
+<<<<<<< HEAD
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+        const urlInput = document.getElementById('share-link');
+        urlInput.select();
+        try {
+            await navigator.clipboard.writeText(urlInput.value);
+            const btn = document.getElementById('copy-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+=======
     document.getElementById('copy-btn').addEventListener('click', () => {
         const urlInput = document.getElementById('share-link');
         urlInput.select();
@@ -229,6 +254,7 @@
         const btn = document.getElementById('copy-btn');
         btn.textContent = 'Copied!';
         setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     });
   </script>
 </body>

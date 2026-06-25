@@ -35,7 +35,12 @@ impl SyncDeltas for CloudSyncService {
         let telemetry_enabled = env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
 
         if is_standalone && !telemetry_enabled {
+<<<<<<< HEAD
+            tracing::debug!("Standalone mode, telemetry disabled, skipping cloud delta sync entirely to enforce local sovereignty.");
+            return Ok(());
+=======
             tracing::debug!("Standalone mode, telemetry disabled, syncing anyway but without telemetry tracking.");
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         }
 
         let mut futures = Vec::new();

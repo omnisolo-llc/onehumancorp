@@ -12,7 +12,10 @@ exports_files(
         "translation.rs",
         "webhook.rs",
         "client_intake.rs",
+<<<<<<< HEAD
+=======
         "jobs.rs",
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
 
     ],
@@ -33,7 +36,10 @@ rust_library(
         "translation.rs",
         "webhook.rs",
         "client_intake.rs",
+<<<<<<< HEAD
+=======
         "jobs.rs",
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
 
 
     ],

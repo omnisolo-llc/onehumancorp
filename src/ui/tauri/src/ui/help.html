@@ -344,7 +344,11 @@
             border: 1px solid rgba(255, 255, 255, 0.4);
             color: #1d1d1f;
             padding: 8px 12px;
+<<<<<<< HEAD
+            border-radius: 16px;
+=======
             border-radius: 6px;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
             font-size: 13px;
             z-index: 100000;
             pointer-events: none;
@@ -646,7 +650,11 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="empty-state">
                  <p style="margin:0; font-size: 16px;">No results found matching <strong>"${query}"</strong></p>
                  <p style="margin-top:10px; font-size: 14px; opacity: 0.7;">Try adjusting your search terms or ask our AI assistant for help.</p>
+<<<<<<< HEAD
+                 <button id="ask-ai-tooltip" style="margin-top: 15px; padding: 10px 20px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="openAISupport()">Ask AI Support Agent</button>
+=======
                  <button id="ask-ai-tooltip" style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="openAISupport()">Ask AI Support Agent</button>
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
               </div>
             `;
             return;
@@ -697,7 +705,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         html += `
           <section style="margin-top: 48px; padding-top: 32px; border-top: 1px solid rgba(0,0,0,0.1);">
+<<<<<<< HEAD
+            <div style="margin-bottom: 20px;">
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #1d1d1f; font-weight: 500;">
+                <input type="checkbox" onchange="document.getElementById('advanced-help-content').style.display = this.checked ? 'flex' : 'none';" />
+                Advanced Settings
+              </label>
+            </div>
+            <div id="advanced-help-content" style="display: none; background: rgba(254, 243, 199, 0.5); border-radius: 16px; padding: 24px; border: 1px solid rgba(253, 230, 138, 0.5); flex-direction: column; gap: 16px; align-items: flex-start;">
+=======
             <div style="background: rgba(254, 243, 199, 0.5); border-radius: 16px; padding: 24px; border: 1px solid rgba(253, 230, 138, 0.5); display: flex; flex-direction: column; gap: 16px; align-items: flex-start;">
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 <h3 style="font-size: 18px; font-weight: bold; color: #78350f; margin: 0;">Advanced Users</h3>
                 <p style="font-size: 14px; color: rgba(146, 64, 14, 0.8); margin: 0;">For users who want to use OHC's APIs directly (e.g., connect a custom checkout).</p>
@@ -848,7 +866,11 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
+<<<<<<< HEAD
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+=======
         bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.4); padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -869,12 +891,21 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+<<<<<<< HEAD
+                    <button id="wt-close" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+=======
                     <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                     ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
                     <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                 </div>
             `;
 
@@ -1104,7 +1135,11 @@ document.addEventListener('DOMContentLoaded', () => {
             color: white;
             border: none;
             border-radius: 20px;
+<<<<<<< HEAD
+            padding: 0 16px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+=======
             padding: 0 16px;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
             font-weight: 500;
             cursor: pointer;
         }
@@ -1150,7 +1185,11 @@ document.addEventListener('DOMContentLoaded', () => {
     widget.innerHTML = `
         <div id="ohc-floating-help-header">
             <h3>In-App Help Center</h3>
+<<<<<<< HEAD
+            <button id="ohc-floating-help-close" aria-label="Close" data-tooltip="Close this widget" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
+=======
             <button id="ohc-floating-help-close" aria-label="Close" data-tooltip="Close this widget">
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
@@ -1172,7 +1211,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
+<<<<<<< HEAD
+                <div style="margin-bottom: 8px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500;">
+                    <input type="checkbox" onchange="document.getElementById('help-html-advanced-links').style.display = this.checked ? 'block' : 'none';" />
+                    Advanced Settings
+                  </label>
+                </div>
+                <div id="help-html-advanced-links" style="display: none;">
+                    <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none;">API Reference for advanced users</a>
+                </div>
+=======
                 <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none;">API Reference for advanced users</a>
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
             </div>
         </div>
 
@@ -1396,7 +1447,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
+<<<<<<< HEAD
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+=======
             bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.4); padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
             document.body.appendChild(bubble);
 
             function renderStep() {
@@ -1415,12 +1470,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+<<<<<<< HEAD
+                        <button id="wt-close" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    </div>
+                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                        ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+=======
                         <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                         ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
                         <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                     </div>
                 `;
 

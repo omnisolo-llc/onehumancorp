@@ -28,7 +28,11 @@ export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
         <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-inner flex-shrink-0 ${
           disabled ? 'bg-gray-100 border border-gray-200 text-gray-400' : 'bg-gradient-to-tr from-blue-100 to-blue-50 border border-blue-200/50'
         }`}>
+<<<<<<< HEAD
+           <span className={`text-xl font-bold font-outfit ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>{name.replace(/^The\s+/i, '').charAt(0).toUpperCase()}</span>
+=======
            <span className={`text-xl font-bold font-outfit ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>{name.charAt(4)}</span>
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         </div>
 
         <div>

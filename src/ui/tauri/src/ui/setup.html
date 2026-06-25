@@ -139,6 +139,14 @@
         text-align: left;
       }
 
+<<<<<<< HEAD
+      .invalid-input {
+        border-color: #FF3B30 !important;
+        background-color: rgba(255, 59, 48, 0.05) !important;
+      }
+
+=======
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
       .text-\[\#FF3B30\] { color: #FF3B30 !important; }
       .border-\[\#FF3B30\] { border-color: #FF3B30 !important; }
       .border-\[\#FF3B30\]\/30 { border-color: rgba(255, 59, 48, 0.3) !important; border-width: 1px !important; border-style: solid !important; border-radius: 16px; padding: 10px !important; }
@@ -315,7 +323,11 @@
       }
       .step-indicator {
         width: 12px;
+<<<<<<< HEAD
+        height: 12px;
+=======
         height: 8px;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.65);
         border: 2px solid rgba(255, 255, 255, 0.65);
@@ -867,8 +879,13 @@
           padding: 0 10px;
         }
         .step-indicator {
+<<<<<<< HEAD
+          width: 10px;
+          height: 10px;
+=======
           width: 8px;
           height: 8px;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         }
         .step-indicator.active {
           transform: scale(1.2);
@@ -1186,7 +1203,11 @@
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
+<<<<<<< HEAD
+        <div class="step-indicator" data-step="step-domain"></div>
+=======
 
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         <div class="step-indicator" data-step="step-template"></div>
       </div>
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
@@ -1654,7 +1675,11 @@
       inputs.name.addEventListener('input', () => {
           if (inputs.name.value.trim().length >= 3) {
               errors.name.style.display = 'none';
+<<<<<<< HEAD
+              inputs.name.classList.remove('invalid-input');
+=======
               inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
           }
           if (inputs.domainName) {
               const suggested = generateSubdomain(inputs.name.value);
@@ -1669,28 +1694,44 @@
       inputs.adminEmail.addEventListener('input', () => {
           if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.adminEmail.value.trim())) {
               errors.adminEmail.style.display = 'none';
+<<<<<<< HEAD
+              inputs.adminEmail.classList.remove('invalid-input');
+=======
               inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
           }
       });
 
       inputs.adminPassword.addEventListener('input', () => {
           if (inputs.adminPassword.value.trim().length >= 8 && /\d/.test(inputs.adminPassword.value)) {
               errors.adminPassword.style.display = 'none';
+<<<<<<< HEAD
+              inputs.adminPassword.classList.remove('invalid-input');
+=======
               inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
           }
       });
 
       inputs.assistantName.addEventListener('input', () => {
           if (inputs.assistantName.value.trim().length > 0) {
               errors.assistantName.style.display = 'none';
+<<<<<<< HEAD
+              inputs.assistantName.classList.remove('invalid-input');
+=======
               inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
           }
       });
 
       inputs.firstOffer.addEventListener('input', () => {
           if (inputs.firstOffer.value.trim().length > 0) {
               errors.firstOffer.style.display = 'none';
+<<<<<<< HEAD
+              inputs.firstOffer.classList.remove('invalid-input');
+=======
               inputs.firstOffer.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
           }
       });
 
@@ -1808,22 +1849,38 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-categories') {
               if (inputs.categories.value.trim() === '') {
                   errors.categories.style.display = 'block';
+<<<<<<< HEAD
+                  inputs.categories.classList.add('invalid-input');
+                  isValid = false;
+              } else {
+                  errors.categories.style.display = 'none';
+                  inputs.categories.classList.remove('invalid-input');
+=======
                   inputs.categories.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.categories.style.display = 'none';
                   inputs.categories.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   state.categories = inputs.categories.value.trim();
               }
           }
           else if (stepId === 'step-name') {
               if (inputs.name.value.trim().length < 3) {
                   errors.name.style.display = 'block';
+<<<<<<< HEAD
+                  inputs.name.classList.add('invalid-input');
+                  isValid = false;
+              } else {
+                  errors.name.style.display = 'none';
+                  inputs.name.classList.remove('invalid-input');
+=======
                   inputs.name.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.name.style.display = 'none';
                   inputs.name.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   state.businessName = inputs.name.value.trim();
                   state.tagline = inputs.tagline.value.trim();
               }
@@ -1831,21 +1888,37 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-assistant') {
               if (inputs.assistantName.value.trim() === '') {
                   errors.assistantName.style.display = 'block';
+<<<<<<< HEAD
+                  inputs.assistantName.classList.add('invalid-input');
+                  isValid = false;
+              } else {
+                  errors.assistantName.style.display = 'none';
+                  inputs.assistantName.classList.remove('invalid-input');
+=======
                   inputs.assistantName.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.assistantName.style.display = 'none';
                   inputs.assistantName.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   state.assistantName = inputs.assistantName.value.trim();
               }
 
               if (!inputs.assistantTone.value) {
                   errors.assistantTone.style.display = 'block';
+<<<<<<< HEAD
+                  inputs.assistantTone.classList.add('invalid-input');
+                  isValid = false;
+              } else {
+                  errors.assistantTone.style.display = 'none';
+                  inputs.assistantTone.classList.remove('invalid-input');
+=======
                   inputs.assistantTone.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.assistantTone.style.display = 'none';
                   inputs.assistantTone.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   state.assistantTone = inputs.assistantTone.value;
               }
           }
@@ -1857,21 +1930,37 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
                   errors.adminEmail.style.display = 'block';
                   errors.adminEmail.innerText = emailVal === '' ? 'Admin Email is required.' : 'Please enter a valid email address.';
+<<<<<<< HEAD
+                  inputs.adminEmail.classList.add('invalid-input');
+                  stepValid = false;
+              } else {
+                  errors.adminEmail.style.display = 'none';
+                  inputs.adminEmail.classList.remove('invalid-input');
+=======
                   inputs.adminEmail.style.borderColor = '#FF3B30';
                   stepValid = false;
               } else {
                   errors.adminEmail.style.display = 'none';
                   inputs.adminEmail.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
               }
 
               if (passVal === '' || passVal.length < 8 || !/\d/.test(passVal)) {
                   errors.adminPassword.style.display = 'block';
                   errors.adminPassword.innerText = passVal === '' ? 'Password is required.' : 'Password must be at least 8 characters and contain a number.';
+<<<<<<< HEAD
+                  inputs.adminPassword.classList.add('invalid-input');
+                  stepValid = false;
+              } else {
+                  errors.adminPassword.style.display = 'none';
+                  inputs.adminPassword.classList.remove('invalid-input');
+=======
                   inputs.adminPassword.style.borderColor = '#FF3B30';
                   stepValid = false;
               } else {
                   errors.adminPassword.style.display = 'none';
                   inputs.adminPassword.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
               }
 
               if (stepValid) {
@@ -1884,11 +1973,19 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-offer') {
               if (inputs.firstOffer.value.trim() === '') {
                   errors.firstOffer.style.display = 'block';
+<<<<<<< HEAD
+                  inputs.firstOffer.classList.add('invalid-input');
+                  isValid = false;
+              } else {
+                  errors.firstOffer.style.display = 'none';
+                  inputs.firstOffer.classList.remove('invalid-input');
+=======
                   inputs.firstOffer.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.firstOffer.style.display = 'none';
                   inputs.firstOffer.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   state.first_offer = inputs.firstOffer.value.trim();
               }
           }
@@ -1896,11 +1993,19 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-domain') {
               if (inputs.domainName.value.trim().length < 3) {
                   errors.domainName.style.display = 'block';
+<<<<<<< HEAD
+                  inputs.domainName.classList.add('invalid-input');
+                  isValid = false;
+              } else {
+                  errors.domainName.style.display = 'none';
+                  inputs.domainName.classList.remove('invalid-input');
+=======
                   inputs.domainName.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.domainName.style.display = 'none';
                   inputs.domainName.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   state.domain = inputs.domainName.value.trim();
               }
           }
@@ -1908,11 +2013,19 @@ if (state.capabilities && document.getElementById('cap-draft')) {
           else if (stepId === 'step-template') {
               if (inputs.templateSelection.value === '') {
                   errors.templateSelection.style.display = 'block';
+<<<<<<< HEAD
+                  inputs.templateSelection.classList.add('invalid-input');
+                  isValid = false;
+              } else {
+                  errors.templateSelection.style.display = 'none';
+                  inputs.templateSelection.classList.remove('invalid-input');
+=======
                   inputs.templateSelection.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.templateSelection.style.display = 'none';
                   inputs.templateSelection.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   state.templateSelection = inputs.templateSelection.value;
               }
           }
@@ -2083,7 +2196,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               generateStorefrontBtn.disabled = true;
           }
           instantBioInputEl.addEventListener('input', () => {
+<<<<<<< HEAD
+              instantBioInputEl.classList.remove('invalid-input');
+=======
               instantBioInputEl.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
               if (instantErrorEl) {
                   instantErrorEl.style.display = 'none';
                   instantErrorEl.classList.remove('animate-shake');
@@ -2365,7 +2482,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   instantErrorEl.classList.add('animate-shake');
                   instantErrorEl.style.color = '#FF3B30';
                   instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+<<<<<<< HEAD
+                  instantBioInputEl.classList.add('invalid-input');
+=======
                   instantBioInputEl.style.borderColor = '#FF3B30';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   return;
               }
 
@@ -2373,7 +2494,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
               instantErrorEl.classList.remove('animate-shake');
                   instantErrorEl.style.color = '';
                   instantErrorEl.style.borderColor = '';
+<<<<<<< HEAD
+              instantBioInputEl.classList.remove('invalid-input');
+=======
               instantBioInputEl.style.borderColor = '';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
               generateStorefrontBtn.disabled = true;
               generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>Building Your Business...';
               goToStep('step-loading');
@@ -2420,7 +2545,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   instantErrorEl.style.display = 'block';
                   instantErrorEl.style.color = '#FF3B30';
                   instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+<<<<<<< HEAD
+                  instantBioInputEl.classList.add('invalid-input');
+=======
                   instantBioInputEl.style.borderColor = '#FF3B30';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   generateStorefrontBtn.disabled = false;
                   delete generateStorefrontBtn.dataset.submitting;
                   generateStorefrontBtn.innerHTML = "Next";
@@ -2536,7 +2665,11 @@ if (state.capabilities && document.getElementById('cap-draft')) {
                   instantErrorEl.style.display = 'block';
                   instantErrorEl.style.color = '#FF3B30';
                   instantErrorEl.style.borderColor = 'rgba(255, 59, 48, 0.3)';
+<<<<<<< HEAD
+                  instantBioInputEl.classList.add('invalid-input');
+=======
                   instantBioInputEl.style.borderColor = '#FF3B30';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
                   generateStorefrontBtn.disabled = false;
                   delete generateStorefrontBtn.dataset.submitting;
                   generateStorefrontBtn.innerHTML = "Next";
@@ -3012,10 +3145,20 @@ document.addEventListener('DOMContentLoaded', () => {
 <style>
 .ohc-tooltip {
     position: fixed;
+<<<<<<< HEAD
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #1d1d1f;
+    padding: 8px 12px;
+    border-radius: 16px;
+=======
     background: #333;
     color: white;
     padding: 8px 12px;
     border-radius: 6px;
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
     font-size: 13px;
     font-family: Outfit, sans-serif;
     z-index: 100000;
@@ -3136,7 +3279,11 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
+<<<<<<< HEAD
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+=======
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+>>>>>>> 5aad3344 (Update prices to /9/9 per requirements)
         document.body.appendChild(bubble);
 
         function renderStep() {
