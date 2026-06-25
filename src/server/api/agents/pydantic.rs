@@ -17,7 +17,7 @@ pub struct PydanticValidateResponse {
     pub is_recoverable: bool,
 }
 
-pub fn router() -> Router {
+pub fn router<S>() -> Router<S> where S: Clone + Send + Sync + 'static, {
     Router::new().route("/", post(validate_pydantic))
 }
 
@@ -72,7 +72,7 @@ async fn validate_pydantic(
                     is_recoverable: false,
                 }),
             )
-                .into();
+                .into_response();
         }
     }
 
@@ -85,7 +85,7 @@ async fn validate_pydantic(
                 is_recoverable,
             }),
         )
-            .into()
+            .into_response()
     } else {
         (
             axum::http::StatusCode::OK,
@@ -95,6 +95,6 @@ async fn validate_pydantic(
                 is_recoverable: false,
             }),
         )
-            .into()
+            .into_response()
     }
 }
