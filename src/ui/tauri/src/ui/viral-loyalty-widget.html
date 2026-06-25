@@ -209,15 +209,11 @@
             if (!stamp.hasAttribute('data-original-text')) {
                 stamp.setAttribute('data-original-text', stamp.textContent);
             }
-            setTimeout(() => {
-                stamp.classList.add('filled');
+            stamp.classList.add('filled');
                 stamp.textContent = '☕';
-            }, i * 200);
         });
 
-        setTimeout(() => {
-           document.getElementById('result-area').style.display = 'block';
-        }, stamps.length * 200);
+        document.getElementById('result-area').style.display = 'block';
 
       } catch (err) {
         console.error("Error generating loyalty program:", err);
