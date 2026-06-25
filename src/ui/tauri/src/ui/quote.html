@@ -478,14 +478,14 @@
                 html = '<div class="line-item"><span class="line-item-desc">No items</span></div>';
             }
 
-            if (data.quote && data.quote.total_amount) {
-               quoteData.totalCents = data.quote.total_amount;
+            if (data.quote && data.quote.total_amount_cents) {
+               quoteData.totalCents = data.quote.total_amount_cents;
             } else {
                quoteData.totalCents = total;
             }
 
-            if (data.quote && data.quote.required_deposit) {
-               quoteData.requiredDepositCents = data.quote.required_deposit;
+            if (data.quote && data.quote.required_deposit_cents) {
+               quoteData.requiredDepositCents = data.quote.required_deposit_cents;
                if (quoteData.totalCents > 0) {
                  quoteData.depositPercent = Math.round((quoteData.requiredDepositCents / quoteData.totalCents) * 100);
                }
