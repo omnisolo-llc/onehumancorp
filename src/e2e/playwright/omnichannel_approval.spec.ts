@@ -46,9 +46,9 @@ test.describe('Omnichannel Inbox Approval Flow', () => {
         await page.evaluate((t) => localStorage.setItem('tenant', t), tenantId);
         await page.goto('/dashboard');
 
-        // Wait for Action Required section to be visible
-        const actionPanel = page.locator('.glassmorphism', { hasText: 'Approval' }).first();
-        await expect(actionPanel).toBeVisible({ timeout: 15000 });
+        // Verify feed
+        const feedSection = page.locator('section', { hasText: 'Proposals' }).first();
+        await expect(feedSection).toBeVisible({ timeout: 15000 });
 
         // Verify mobile constraints
         const bodyBox = await page.locator('body').boundingBox();

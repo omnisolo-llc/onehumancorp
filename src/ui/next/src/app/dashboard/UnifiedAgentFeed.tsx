@@ -205,10 +205,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   id: pt.id,
                   tenant_id: pt.tenant_id || "default",
                   event_source: "task",
-                  context_payload: { description: pt.description || pt.title },
+                  context_payload: {
+                    description: pt.description || pt.title,
+                    feature_type: "task"
+                  },
                   proposed_action: {
                     message: "Task Pending",
                     action_type: "complete_task",
+                    feature_type: "task"
                   },
                   lifecycle_state:
                     pt.status === "PENDING" ? "PENDING_APPROVAL" : "DISMISSED",
@@ -228,10 +232,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   event_source: "triage",
                   context_payload: {
                     description: ti.context || "Message requires attention",
+                    feature_type: "triage"
                   },
                   proposed_action: {
                     message: ti.action_payload || "Triage item",
                     action_type: ti.action_type || "resolve",
+                    feature_type: "triage"
                   },
                   lifecycle_state:
                     ti.status === "RESOLVED" ? "DISMISSED" : "PENDING_APPROVAL",
@@ -251,10 +257,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   event_source: "order",
                   context_payload: {
                     description: `Order ${or.id} needs fulfillment`,
+                    feature_type: "order",
+                    order: or
                   },
                   proposed_action: {
                     message: "Fulfill Order",
                     action_type: "fulfill_order",
+                    feature_type: "order"
                   },
                   lifecycle_state:
                     or.status === "pending" || or.status === "unfulfilled"
@@ -262,6 +271,36 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       : "DISMISSED",
                   created_at: or.created_at || new Date().toISOString(),
                   updated_at: or.created_at || new Date().toISOString(),
+                })),
+              ];
+            }
+
+            // Integrate Pending Reviews
+            if (unifiedData.pendingReviews && Array.isArray(unifiedData.pendingReviews)) {
+              combinedItems = [
+                ...combinedItems,
+                ...unifiedData.pendingReviews.map((pr: any) => ({
+                  id: pr.response?.id || crypto.randomUUID(),
+                  tenant_id: tenant,
+                  event_source: "review",
+                  context_payload: {
+                    description: pr.review?.content || "Pending Review",
+                    source: pr.review?.source,
+                    rating: pr.review?.rating,
+                    original_message: pr.review?.content,
+                    feature_type: "review",
+                    review: pr.review
+                  },
+                  proposed_action: {
+                    message: pr.response?.draftedContent || "",
+                    action_type: "review_reply",
+                    generated_response: pr.response?.draftedContent,
+                    feature_type: "review",
+                    response: pr.response
+                  },
+                  lifecycle_state: pr.response?.status === "draft" ? "PENDING_APPROVAL" : "DISMISSED",
+                  created_at: new Date((pr.review?.createdAtUnix || Date.now() / 1000) * 1000).toISOString(),
+                  updated_at: new Date((pr.review?.createdAtUnix || Date.now() / 1000) * 1000).toISOString(),
                 })),
               ];
             }
@@ -523,6 +562,18 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     modified_content?: string,
     event_source?: string,
   ) => {
+    if (event_source === "review") {
+        const res = await fetch('/api/reviews/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: approved ? 'approve' : 'dismiss', responseId: id, content: modified_content })
+        });
+        if (!res.ok) {
+            throw new Error("Failed to submit review decision");
+        }
+        return;
+    }
+
     if (
       event_source === "triage" ||
       event_source === "task" ||
