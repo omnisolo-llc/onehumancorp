@@ -387,10 +387,12 @@ async fn approve_quote(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
     let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
 
+    let currency = "EUR"; // Defaulting to EUR to fix the gap identified in the research report for European customers
     match stripe_client.create_checkout_session(
         &format!("Quote #{}", quote.id),
         &quote.customer_id.to_string(),
         amount_usd,
+        currency,
         None
     ).await {
         Ok(url) => {

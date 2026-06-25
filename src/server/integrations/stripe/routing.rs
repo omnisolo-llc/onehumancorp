@@ -1,3 +1,4 @@
+use redis::AsyncCommands;
 #[derive(Debug, Clone, PartialEq)]
 pub enum PaymentMethod {
     CreditCard,
@@ -5,6 +6,9 @@ pub enum PaymentMethod {
     Razorpay,
     MercadoPago,
     Alipay,
+    Sepa,
+    Bacs,
+    Ideal,
 }
 
 pub struct PaymentRouter;
@@ -40,12 +44,18 @@ impl PaymentRouter {
         if currency.eq_ignore_ascii_case("CNY") {
             return PaymentMethod::Alipay;
         }
-        let amount_usd = amount;
+        if currency.eq_ignore_ascii_case("EUR") {
+            return PaymentMethod::Sepa;
+        }
+        if currency.eq_ignore_ascii_case("GBP") {
+            return PaymentMethod::Bacs;
+        }
 
+        let amount_usd = amount;
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
-
-        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
+        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT);
+        if ach_fee < card_fee && amount_usd >= ach_min {
             PaymentMethod::Ach
         } else {
             PaymentMethod::CreditCard
@@ -55,10 +65,36 @@ impl PaymentRouter {
     /// Calculates the potential savings in USD if the optimal payment method is used
     /// instead of defaulting to Credit Card.
     pub fn calculate_fee_savings(amount_usd: f64) -> f64 {
+        Self::calculate_fee_savings_with_currency(amount_usd, "USD")
+    }
+
+    pub fn calculate_fee_savings_with_currency(amount: f64, currency: &str) -> f64 {
+        if currency.eq_ignore_ascii_case("EUR") {
+            // EU cards typically charge 1.5% + €0.25 vs SEPA at 0.8% + €0.20 (capped at €5.00)
+            let card_fee = (amount * 0.015) + 0.25;
+            let sepa_fee = (amount * 0.008 + 0.20).min(5.0);
+            if sepa_fee < card_fee {
+                let savings = card_fee - sepa_fee;
+                return (savings * 100.0).round() / 100.0;
+            }
+            return 0.0;
+        } else if currency.eq_ignore_ascii_case("GBP") {
+            // UK cards typically charge 1.5% + £0.20 vs Bacs at 1% + £0.20 (capped at £2.00)
+            let card_fee = (amount * 0.015) + 0.20;
+            let bacs_fee = (amount * 0.010 + 0.20).min(2.0);
+            if bacs_fee < card_fee {
+                let savings = card_fee - bacs_fee;
+                return (savings * 100.0).round() / 100.0;
+            }
+            return 0.0;
+        }
+
+        let amount_usd = amount;
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
+        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT);
+        if ach_fee < card_fee && amount_usd >= ach_min {
             let savings = card_fee - ach_fee;
             (savings * 100.0).round() / 100.0
         } else {
@@ -188,5 +224,82 @@ mod mercadopago_tests {
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "MXN"), PaymentMethod::MercadoPago);
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "brl"), PaymentMethod::MercadoPago);
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "mxn"), PaymentMethod::MercadoPago);
+    }
+}
+
+pub struct ExchangeRateCache;
+
+impl ExchangeRateCache {
+    /// Gets the exchange rate from a base currency to a target currency.
+    /// If not cached, it mocks an API call and stores it in Redis with a 1-hour TTL.
+    pub async fn get_exchange_rate(
+        redis_client: &redis::Client,
+        base_currency: &str,
+        target_currency: &str,
+    ) -> Result<f64, String> {
+        let mut conn = redis_client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| format!("Redis connection error: {}", e))?;
+
+        let cache_key = format!("ohc:exchange_rate:{}:{}", base_currency.to_uppercase(), target_currency.to_uppercase());
+
+        // 1. Try to get from cache
+        let cached_rate: Option<String> = conn.get(&cache_key).await.ok();
+        if let Some(rate_str) = cached_rate {
+            if let Ok(rate) = rate_str.parse::<f64>() {
+                return Ok(rate);
+            }
+        }
+
+        // 2. Mock external exchange rate API
+        let rate = match (base_currency.to_uppercase().as_str(), target_currency.to_uppercase().as_str()) {
+            ("EUR", "USD") => 1.08,
+            ("USD", "EUR") => 0.93,
+            ("GBP", "USD") => 1.25,
+            ("USD", "GBP") => 0.80,
+            _ => 1.0,
+        };
+
+        // 3. Cache it with 1-hour TTL (3600 seconds)
+        let _: () = conn
+            .set_ex(&cache_key, rate.to_string(), 3600)
+            .await
+            .map_err(|e| format!("Redis set error: {}", e))?;
+
+        Ok(rate)
+    }
+}
+
+#[cfg(test)]
+mod sepa_bacs_tests {
+    use super::*;
+
+    #[test]
+    fn test_optimize_payment_method_eur() {
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "EUR"), PaymentMethod::Sepa);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "eur"), PaymentMethod::Sepa);
+    }
+
+    #[test]
+    fn test_optimize_payment_method_gbp() {
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "GBP"), PaymentMethod::Bacs);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "gbp"), PaymentMethod::Bacs);
+    }
+
+    #[test]
+    fn test_calculate_fee_savings_eur() {
+        // EU Card: 100 * 0.015 + 0.25 = 1.75
+        // SEPA: 100 * 0.008 + 0.20 = 1.00
+        // Savings = 0.75
+        assert_eq!(PaymentRouter::calculate_fee_savings_with_currency(100.0, "EUR"), 0.75);
+    }
+
+    #[test]
+    fn test_calculate_fee_savings_gbp() {
+        // UK Card: 100 * 0.015 + 0.20 = 1.70
+        // Bacs: 100 * 0.010 + 0.20 = 1.20
+        // Savings = 0.50
+        assert_eq!(PaymentRouter::calculate_fee_savings_with_currency(100.0, "GBP"), 0.50);
     }
 }

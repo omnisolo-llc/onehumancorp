@@ -53,9 +53,9 @@ impl StripeClient {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 
-    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>) -> Result<String, String> {
-        let pm = PaymentRouter::optimize_payment_method(amount_usd);
-        let savings = PaymentRouter::calculate_fee_savings(amount_usd);
+    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount: f64, currency: &str, subscription_interval: Option<String>) -> Result<String, String> {
+        let pm = PaymentRouter::optimize_payment_method_with_currency(amount, currency);
+        let savings = PaymentRouter::calculate_fee_savings_with_currency(amount, currency);
         tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${} in fees", savings);
 
         // For MercadoPago and others not routed to Stripe Checkout
@@ -94,7 +94,7 @@ impl StripeClient {
         }
 
         let api_key = api_key_res.unwrap();
-        let amount_cents = (amount_usd * 100.0).round() as i64;
+        let amount_cents = (amount * 100.0).round() as i64;
 
         let mut form = std::collections::HashMap::new();
         form.insert("success_url".to_string(), "https://example.com/success".to_string());
@@ -105,7 +105,7 @@ impl StripeClient {
         } else {
             form.insert("mode".to_string(), "payment".to_string());
         }
-        form.insert("line_items[0][price_data][currency]".to_string(), "usd".to_string());
+        form.insert("line_items[0][price_data][currency]".to_string(), currency.to_lowercase());
         let display_name = if price_id_or_name.trim().is_empty() { "Checkout".to_string() } else { price_id_or_name.to_string() };
         form.insert("line_items[0][price_data][product_data][name]".to_string(), display_name);
         form.insert("line_items[0][price_data][unit_amount]".to_string(), amount_cents.to_string());
@@ -115,6 +115,12 @@ impl StripeClient {
         match pm {
             PaymentMethod::Ach => {
                 form.insert("payment_method_types[0]".to_string(), "us_bank_account".to_string());
+            },
+            PaymentMethod::Sepa => {
+                form.insert("payment_method_types[0]".to_string(), "sepa_debit".to_string());
+            },
+            PaymentMethod::Bacs => {
+                form.insert("payment_method_types[0]".to_string(), "bacs_debit".to_string());
             },
             _ => {
                 form.insert("payment_method_types[0]".to_string(), "card".to_string());

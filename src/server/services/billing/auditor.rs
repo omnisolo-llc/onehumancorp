@@ -428,7 +428,7 @@ impl CostAuditor {
             let mut tenant_payment_fees = self.tenant_payment_fees.lock().unwrap();
             let current_tenant_fee = tenant_payment_fees.entry(tenant_id.to_string()).or_insert(0.0);
 
-            use crate::integrations::stripe::routing::{PaymentRouter, PaymentMethod};
+            use crate::integrations::stripe::routing::{PaymentRouter};
             let method = PaymentRouter::optimize_payment_method(amount);
 
             let savings = PaymentRouter::calculate_fee_savings(amount);
@@ -436,8 +436,11 @@ impl CostAuditor {
                 tracing::info!("💰 Miser telemetry: Payment method optimized for revenue recording. Saved ${:.2} in fees", savings);
             }
             let fee = match method {
-                PaymentMethod::Ach => (amount * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP),
-                PaymentMethod::CreditCard | PaymentMethod::Razorpay | PaymentMethod::MercadoPago | PaymentMethod::Alipay => {
+                crate::integrations::stripe::routing::PaymentMethod::Ach => (amount * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP),
+                crate::integrations::stripe::routing::PaymentMethod::Sepa => (amount * 0.008 + 0.20).min(5.0),
+                crate::integrations::stripe::routing::PaymentMethod::Bacs => (amount * 0.010 + 0.20).min(2.0),
+                crate::integrations::stripe::routing::PaymentMethod::Ideal => (amount * 0.015) + 0.25, // Mock value
+                crate::integrations::stripe::routing::PaymentMethod::CreditCard | crate::integrations::stripe::routing::PaymentMethod::Razorpay | crate::integrations::stripe::routing::PaymentMethod::MercadoPago | crate::integrations::stripe::routing::PaymentMethod::Alipay => {
                     (amount * PaymentRouter::CARD_FEE_PERCENTAGE) + PaymentRouter::CARD_FEE_FIXED
                 }
             };

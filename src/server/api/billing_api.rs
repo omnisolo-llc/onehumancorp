@@ -131,6 +131,7 @@ pub struct CreateCheckoutSessionRequest {
     pub product_id: Option<String>,
     pub quantity: Option<i32>,
     pub ttl_seconds: Option<i32>,
+    pub currency: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -254,7 +255,8 @@ pub async fn create_checkout_session_handler(
 
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval).await {
+        let currency = req.currency.clone().unwrap_or_else(|| "USD".to_string());
+        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, &currency, actual_interval).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
@@ -774,6 +776,7 @@ mod department_tier_usage_tests {
             product_id: Some("prod_123".to_string()),
             quantity: Some(1),
             ttl_seconds: Some(300),
+            currency: Some("USD".to_string()),
         };
         assert_eq!(req.tier.unwrap(), "starter");
         assert_eq!(req.product_id.unwrap(), "prod_123");
