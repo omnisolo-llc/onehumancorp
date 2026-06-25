@@ -701,7 +701,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            return serde_json::to_string(&resp).unwrap();
+            serde_json::to_string(&resp).unwrap()
         } else if req.method == "goose_mcp_execute" {
             let mut registry = crate::goose::GooseMcpRegistry::new();
             registry.register(std::sync::Arc::new(crate::goose::SampleExtension));
@@ -724,7 +724,7 @@ impl AppServer {
                     meta: None,
                 },
             };
-            return serde_json::to_string(&resp).unwrap();
+            serde_json::to_string(&resp).unwrap()
         } else if req.method == "get_sona_patterns" {
             // SOTA Harness Pattern: Ruflo SONA neural patterns
             // Retrieve all learned trajectory patterns
