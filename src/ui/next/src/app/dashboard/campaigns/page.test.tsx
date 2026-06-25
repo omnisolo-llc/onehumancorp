@@ -61,7 +61,7 @@ describe("CampaignOrchestrationPage", () => {
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes("/api/v1/growth/campaign/generate-review")) {
-        return jsonResponse({ message: "Hi Alice, please review order-1001." });
+        return jsonResponse({ message: "Hi Alice, please review order-1001" });
       }
 
       const match = Object.keys(responses).find((path) => url.startsWith(`${path}?tenant_id=tenant-123`));
@@ -89,7 +89,7 @@ describe("CampaignOrchestrationPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Generate review draft/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Hi Alice, please review order-1001./)).toBeInTheDocument();
+      expect(screen.getByText(/Hi Alice, please review order-1001/)).toBeInTheDocument();
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/growth/campaign/generate-review",

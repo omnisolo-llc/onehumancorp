@@ -646,7 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="empty-state">
                  <p style="margin:0; font-size: 16px;">No results found matching <strong>"${query}"</strong></p>
                  <p style="margin-top:10px; font-size: 14px; opacity: 0.7;">Try adjusting your search terms or ask our AI assistant for help.</p>
-                 <button id="ask-ai-tooltip" style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="openAISupport()">Ask AI Support Agent</button>
+                 <button id="ask-ai-tooltip" style="margin-top: 15px; padding: 10px 20px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="openAISupport()">Ask AI Support Agent</button>
               </div>
             `;
             return;
@@ -875,12 +875,12 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                 </div>
             `;
 
@@ -1110,7 +1110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             color: white;
             border: none;
             border-radius: 20px;
-            padding: 0 16px;
+            padding: 0 16px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
             font-weight: 500;
             cursor: pointer;
         }
@@ -1156,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     widget.innerHTML = `
         <div id="ohc-floating-help-header">
             <h3>In-App Help Center</h3>
-            <button id="ohc-floating-help-close" aria-label="Close" data-tooltip="Close this widget">
+            <button id="ohc-floating-help-close" aria-label="Close" data-tooltip="Close this widget" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
@@ -1429,12 +1429,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                        <button id="wt-close" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                        ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                     </div>
                 `;
 
