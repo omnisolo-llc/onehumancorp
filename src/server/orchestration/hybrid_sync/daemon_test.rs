@@ -541,20 +541,20 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         daemon.prune_stuck_agent_missions().await.unwrap();
         daemon.prune_stuck_sub_agent_queue().await.unwrap();
 
-        // Verify SQLite mission is failed
+        // Verify SQLite mission is failed (now deleted)
         let row_sqlite = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_sqlite'")
-            .fetch_one(&sqlite_pool).await.unwrap();
-        use sqlx::Row;
-        assert_eq!(row_sqlite.get::<String, _>("status"), "FAILED");
+            .fetch_optional(&sqlite_pool).await.unwrap();
+        assert!(row_sqlite.is_none());
 
-        // Verify PG mission is failed
+        // Verify PG mission is failed (now deleted)
         let row_pg = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_pg'")
-            .fetch_one(&pg_pool).await.unwrap();
-        assert_eq!(row_pg.get::<String, _>("status"), "FAILED");
+            .fetch_optional(&pg_pool).await.unwrap();
+        assert!(row_pg.is_none());
 
         // Verify SQLite queue is failed
         let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = 'stuck_queue_sqlite'")
             .fetch_one(&sqlite_pool).await.unwrap();
+        use sqlx::Row;
         assert_eq!(row_queue_sqlite.get::<String, _>("status"), "FAILED");
 
         // Verify PG queue is failed
@@ -689,13 +689,12 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         daemon.prune_stuck_agent_missions().await.unwrap();
 
         // Verify SQLite mission failure category
-        let row_sqlite = sqlx::query("SELECT sync_error FROM agent_missions WHERE id = 'stuck_mission_sqlite_cat'")
+        let dl_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_sqlite_cat'")
             .fetch_one(&sqlite_pool).await.unwrap();
-        use sqlx::Row;
-        assert!(row_sqlite.get::<String, _>("sync_error").contains("bug:"));
+        assert_eq!(dl_sqlite.0, 1);
 
         // Verify PG mission failure category
-        let row_pg = sqlx::query("SELECT sync_error FROM agent_missions WHERE id = 'stuck_mission_pg_cat'")
+        let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_pg_cat'")
             .fetch_one(&pg_pool).await.unwrap();
-        assert!(row_pg.get::<String, _>("sync_error").contains("bug:"));
+        assert_eq!(dl_pg.0, 1);
     }
