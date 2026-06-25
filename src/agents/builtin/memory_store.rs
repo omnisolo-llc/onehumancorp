@@ -205,37 +205,10 @@ impl VectorRepository {
                 let mut ids_to_update = Vec::new();
 
                 for row in rows {
-                    let id: String = row.get("id");
-                    ids_to_update.push(id.clone());
-                    let tenant_id: String = row.get("tenant_id");
-                    let agent_id: String = row.get("agent_id");
-                    let content: String = row.get("content");
-                    let emb_str_res: String = row.get("embedding");
-                    let source_type: String = row.get("source_type");
-                    let created_at: DateTime<Utc> = row.get("created_at");
-                    let last_referenced_at: DateTime<Utc> = row.get("last_referenced_at");
-                    let reference_count: i32 = row.get("reference_count");
-                    let reliability_score: i32 = row.get("reliability_score");
-                    let owner_override: bool = row.get("owner_override");
-                    let metadata: Option<String> = row.get("metadata");
-
-                    let embedding: Vec<f32> =
-                        serde_json::from_str(&emb_str_res).unwrap_or_default();
-
-                    results.push(EmbeddingRecord {
-                        id,
-                        tenant_id,
-                        agent_id,
-                        content,
-                        embedding,
-                        source_type,
-                        created_at,
-                        last_referenced_at,
-                        reference_count,
-                        reliability_score,
-                        owner_override,
-                        metadata,
-                    });
+                    if let Ok(record) = Self::parse_record_row(&row) {
+                        ids_to_update.push(record.id.clone());
+                        results.push(record);
+                    }
                 }
 
                 if !ids_to_update.is_empty() {
@@ -268,41 +241,10 @@ impl VectorRepository {
                     let mut ids_to_update = Vec::new();
 
                     for row in rows {
-                        let id: String = row.get("id");
-                        ids_to_update.push(id.clone());
-                        let tenant_id: String = row.get("tenant_id");
-                        let agent_id: String = row.get("agent_id");
-                        let content: String = row.get("content");
-                        let emb_str_res: String = row.get("embedding");
-                        let source_type: String = row.get("source_type");
-                        let created_at: DateTime<Utc> = row
-                            .try_get::<DateTime<Utc>, _>("created_at")
-                            .map_err(|e| e.to_string())?;
-                        let last_referenced_at: DateTime<Utc> = row
-                            .try_get::<DateTime<Utc>, _>("last_referenced_at")
-                            .map_err(|e| e.to_string())?;
-                        let reference_count: i32 = row.get("reference_count");
-                        let reliability_score: i32 = row.get("reliability_score");
-                        let owner_override: bool = row.get("owner_override");
-                        let metadata: Option<String> = row.get("metadata");
-
-                        let embedding: Vec<f32> =
-                            serde_json::from_str(&emb_str_res).unwrap_or_default();
-
-                        results.push(EmbeddingRecord {
-                            id,
-                            tenant_id,
-                            agent_id,
-                            content,
-                            embedding,
-                            source_type,
-                            created_at,
-                            last_referenced_at,
-                            reference_count,
-                            reliability_score,
-                            owner_override,
-                            metadata,
-                        });
+                        if let Ok(record) = Self::parse_record_row(&row) {
+                            ids_to_update.push(record.id.clone());
+                            results.push(record);
+                        }
                     }
 
                     if !ids_to_update.is_empty() {
@@ -336,32 +278,9 @@ impl VectorRepository {
 
                     let mut all_records = Vec::new();
                     for row in rows {
-                        let emb_str_res: String = row.try_get("embedding").unwrap_or_else(|_| {
-                            String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
-                                .unwrap_or_default()
-                        });
-                        let embedding: Vec<f32> =
-                            serde_json::from_str(&emb_str_res).unwrap_or_default();
-
-                        let record = EmbeddingRecord {
-                            id: row.get("id"),
-                            tenant_id: row.get("tenant_id"),
-                            agent_id: row.get("agent_id"),
-                            content: row.get("content"),
-                            embedding,
-                            source_type: row.get("source_type"),
-                            created_at: row
-                                .try_get::<DateTime<Utc>, _>("created_at")
-                                .map_err(|e| e.to_string())?,
-                            last_referenced_at: row
-                                .try_get::<DateTime<Utc>, _>("last_referenced_at")
-                                .map_err(|e| e.to_string())?,
-                            reference_count: row.get("reference_count"),
-                            reliability_score: row.get("reliability_score"),
-                            owner_override: row.get("owner_override"),
-                            metadata: row.get("metadata"),
-                        };
-                        all_records.push(record);
+                        if let Ok(record) = Self::parse_record_row(&row) {
+                            all_records.push(record);
+                        }
                     }
 
                     let query_emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
@@ -906,11 +825,34 @@ impl VectorRepository {
                     }
 
                     // Fetch full records only for the matched IDs
-                    for (id_a, id_b) in conflicting_pairs_ids {
-                        let record_a = self.get_by_id(&id_a).await?;
-                        let record_b = self.get_by_id(&id_b).await?;
-                        if let (Some(a), Some(b)) = (record_a, record_b) {
-                            conflicts.push((a, b));
+                    if !conflicting_pairs_ids.is_empty() {
+                        let mut distinct_ids = std::collections::HashSet::new();
+                        for (id_a, id_b) in &conflicting_pairs_ids {
+                            distinct_ids.insert(id_a.clone());
+                            distinct_ids.insert(id_b.clone());
+                        }
+
+                        let ids_vec: Vec<String> = distinct_ids.into_iter().collect();
+                        let placeholders = ids_vec.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+                        let query_str = format!("SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata FROM consolidated_memory WHERE id IN ({})", placeholders);
+
+                        let mut q = sqlx::query(&query_str);
+                        for id in &ids_vec {
+                            q = q.bind(id);
+                        }
+
+                        let rows = q.fetch_all(pool).await.map_err(|e| e.to_string())?;
+                        let mut record_map = std::collections::HashMap::new();
+                        for row in rows {
+                            if let Ok(record) = Self::parse_record_row(&row) {
+                                record_map.insert(record.id.clone(), record);
+                            }
+                        }
+
+                        for (id_a, id_b) in conflicting_pairs_ids {
+                            if let (Some(a), Some(b)) = (record_map.get(&id_a), record_map.get(&id_b)) {
+                                conflicts.push((a.clone(), b.clone()));
+                            }
                         }
                     }
                 }
