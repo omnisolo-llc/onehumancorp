@@ -59,6 +59,12 @@
         align-items: stretch;
       }
 
+      @media (max-width: 375px) {
+        .pricing-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
       .ohc-growth-card {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
@@ -291,9 +297,13 @@
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
         const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const token = localStorage.getItem('token');
         const headers = {};
         if (tenant) {
             headers['x-ohc-tenant-id'] = tenant;
+        }
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
 
         try {
@@ -324,8 +334,10 @@
         errorMsg.innerText = '';
         try {
           const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+          const token = localStorage.getItem('token');
           const headers = { 'Content-Type': 'application/json' };
           if (tenant) { headers['x-ohc-tenant-id'] = tenant; }
+          if (token) { headers['Authorization'] = `Bearer ${token}`; }
           const response = await fetch('/api/billing/create-billing-portal-session', {
             method: 'POST',
             headers: headers
@@ -353,11 +365,15 @@
 
         try {
           const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+          const token = localStorage.getItem('token');
           const headers = {
             'Content-Type': 'application/json'
           };
           if (tenant) {
               headers['x-ohc-tenant-id'] = tenant;
+          }
+          if (token) {
+              headers['Authorization'] = `Bearer ${token}`;
           }
 
           const response = await fetch('/api/billing/create-checkout-session', {
