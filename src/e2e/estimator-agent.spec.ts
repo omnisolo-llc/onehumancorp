@@ -65,7 +65,7 @@ test.describe('The Estimator Agent - Mobile Feed to Customer Deposit', () => {
         // --- 2. Quote Review Flow ---
         await expect(page.locator('text=Review Estimate')).toBeVisible({ timeout: 15000 });
 
-        const approveQuoteBtn = page.locator('button', { hasText: 'Approve & Send Quote' });
+        const approveQuoteBtn = page.locator('button', { hasText: 'Approve & Send to Customer' });
         await expect(approveQuoteBtn).toBeVisible();
         await approveQuoteBtn.click();
 
@@ -73,14 +73,14 @@ test.describe('The Estimator Agent - Mobile Feed to Customer Deposit', () => {
 
         // --- 3. Customer Web View Flow ---
         // Go to the customer view
-        await page.goto(`/proposals/customer-view?id=${quoteId}`);
+        await page.goto(`/ui/quote.html?id=${quoteId}`);
 
         // Verify responsive layout
-        await expect(page.locator('h1', { hasText: 'Your Quote' })).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('h1', { hasText: 'Quote Details' })).toBeVisible({ timeout: 15000 });
         await expect(page.locator('text=Deposit')).toBeVisible();
 
         // Customer clicks "Pay Deposit"
-        const payBtn = page.locator('button', { hasText: 'Pay $50 Deposit' });
+        const payBtn = page.locator('button', { hasText: 'Pay Deposit with Pay' });
         await expect(payBtn).toBeVisible();
 
         page.on('dialog', async dialog => {
