@@ -24,6 +24,7 @@ impl AgentFeedService {
             "Analyze the following event and provide a concise JSON object with a 'draft_action' containing a suggested response or action, and 'intent' summarizing the reason. Tenant: {}. Source: {}. Payload: {}",
             tenant_id, event_source, payload
         );
+        let prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
         let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
             Ok("gemini") => {

@@ -5134,7 +5134,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5145,8 +5145,6 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
-                        "context_payload": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("context_payload"),
-                        "proposed_action": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("proposed_action"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })
                 }).collect::<Vec<_>>())
@@ -5175,7 +5173,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5186,8 +5184,6 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
-                        "context_payload": row.try_get::<String, _>("context_payload").map(|s| serde_json::from_str::<serde_json::Value>(&s).unwrap_or(serde_json::json!({}))).ok(),
-                        "proposed_action": row.try_get::<String, _>("proposed_action").map(|s| serde_json::from_str::<serde_json::Value>(&s).unwrap_or(serde_json::json!({}))).ok(),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })
                 }).collect::<Vec<_>>())
@@ -5247,57 +5243,46 @@ async fn ui_dashboard_unified_feed_handler(
         let t_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let metrics_cache = UI_DASHBOARD_METRICS_CACHE.get();
-            let orders_cache = UI_ORDERS_CACHE.get();
-            let inbox_cache = UI_INBOX_CACHE.get();
-            let triage_cache = UI_TRIAGE_CACHE.get();
-            let priority_tasks_cache = UI_PRIORITY_TASKS_CACHE.get();
-
             let m_key = format!("ui_dashboard_metrics:{}:mobile:{}", t_bg, mobile_optimized);
             let o_key = format!("ui_orders:{}:mobile:{}", t_bg, mobile_optimized);
             let i_key = format!("ui_inbox:{}:mobile:{}", t_bg, mobile_optimized);
             let t_key = format!("ui_triage:{}:mobile:{}", t_bg, mobile_optimized);
             let p_key = format!("ui_priority_tasks:{}:mobile:{}", t_bg, mobile_optimized);
 
-            let (m_res, o_res, i_res, tr_res, p_res) = tokio::join!(
-                async { if let Some(c) = metrics_cache { c.get_with_swr(&m_key).await.map(|(v, _)| v) } else { None } },
-                async { if let Some(c) = orders_cache { c.get_with_swr(&o_key).await.map(|(v, _)| v) } else { None } },
-                async { if let Some(c) = inbox_cache { c.get_with_swr(&i_key).await.map(|(v, _)| v) } else { None } },
-                async { if let Some(c) = triage_cache { c.get_with_swr(&t_key).await.map(|(v, _)| v) } else { None } },
-                async { if let Some(c) = priority_tasks_cache { c.get_with_swr(&p_key).await.map(|(v, _)| v) } else { None } }
+            let (metrics_val, orders, inbox, triage, priority_tasks, approvals, agent_feed) = tokio::join!(
+                async {
+                    if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
+                        if let Some((v, _)) = c.get_with_swr(&m_key).await { return v; }
+                    }
+                    load_ui_dashboard_metrics(&db_bg, &t_bg, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
+                },
+                async {
+                    if let Some(c) = UI_ORDERS_CACHE.get() {
+                        if let Some((v, _)) = c.get_with_swr(&o_key).await { return v; }
+                    }
+                    load_ui_orders_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
+                },
+                async {
+                    if let Some(c) = UI_INBOX_CACHE.get() {
+                        if let Some((v, _)) = c.get_with_swr(&i_key).await { return v; }
+                    }
+                    load_ui_inbox_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
+                },
+                async {
+                    if let Some(c) = UI_TRIAGE_CACHE.get() {
+                        if let Some((v, _)) = c.get_with_swr(&t_key).await { return v; }
+                    }
+                    load_ui_triage_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
+                },
+                async {
+                    if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
+                        if let Some((v, _)) = c.get_with_swr(&p_key).await { return v; }
+                    }
+                    load_ui_priority_tasks_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
+                },
+                async { load_ui_agent_approvals_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default() },
+                async { load_ui_agent_feed_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default() }
             );
-
-            let db1 = db_bg.clone(); let t1 = t_bg.clone();
-            let db2 = db_bg.clone(); let t2 = t_bg.clone();
-            let db3 = db_bg.clone(); let t3 = t_bg.clone();
-            let db4 = db_bg.clone(); let t4 = t_bg.clone();
-            let db5 = db_bg.clone(); let t5 = t_bg.clone();
-            let db6 = db_bg.clone(); let t6 = t_bg.clone();
-            let db7 = db_bg.clone(); let t7 = t_bg.clone();
-
-            let m_res_clone = m_res.clone();
-            let o_res_clone = o_res.clone();
-            let i_res_clone = i_res.clone();
-            let tr_res_clone = tr_res.clone();
-            let p_res_clone = p_res.clone();
-
-            let (metrics_db, orders_db, messages_db, triage_db, approvals_res, agent_feed_res, priority_tasks_db) = tokio::join!(
-                tokio::spawn(async move { if m_res_clone.is_none() { load_ui_dashboard_metrics(&db1, &t1, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).ok() } else { None } }),
-                tokio::spawn(async move { if o_res_clone.is_none() { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await.ok() } else { None } }),
-                tokio::spawn(async move { if i_res_clone.is_none() { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await.ok() } else { None } }),
-                tokio::spawn(async move { if tr_res_clone.is_none() { load_ui_triage_from_db(&db4, &t4, mobile_optimized).await.ok() } else { None } }),
-                tokio::spawn(async move { load_ui_agent_approvals_from_db(&db5, &t5, mobile_optimized).await }),
-                tokio::spawn(async move { load_ui_agent_feed_from_db(&db6, &t6, mobile_optimized).await }),
-                tokio::spawn(async move { if p_res_clone.is_none() { load_ui_priority_tasks_from_db(&db7, &t7, mobile_optimized).await.ok() } else { None } })
-            );
-
-            let metrics_val = m_res.or_else(|| metrics_db.unwrap_or_default()).unwrap_or_default();
-            let orders = o_res.or_else(|| orders_db.unwrap_or_default()).unwrap_or_default();
-            let inbox = i_res.or_else(|| messages_db.unwrap_or_default()).unwrap_or_default();
-            let triage = tr_res.or_else(|| triage_db.unwrap_or_default()).unwrap_or_default();
-            let priority_tasks = p_res.or_else(|| priority_tasks_db.unwrap_or_default()).unwrap_or_default();
-            let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
             let result = serde_json::json!({
                 "metrics": metrics_val,
@@ -5323,58 +5308,66 @@ async fn ui_dashboard_unified_feed_handler(
         return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
     }
 
-    let metrics_cache = UI_DASHBOARD_METRICS_CACHE.get();
-    let orders_cache = UI_ORDERS_CACHE.get();
-    let inbox_cache = UI_INBOX_CACHE.get();
-    let triage_cache = UI_TRIAGE_CACHE.get();
-    let priority_tasks_cache = UI_PRIORITY_TASKS_CACHE.get();
-
     let m_key = format!("ui_dashboard_metrics:{}:mobile:{}", tenant_id, mobile_optimized);
     let o_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
     let i_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
     let t_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
     let p_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
 
-    let (m_res, o_res, i_res, tr_res, p_res) = tokio::join!(
-        async { if let Some(c) = metrics_cache { c.get_with_swr(&m_key).await.map(|(v, _)| v) } else { None } },
-        async { if let Some(c) = orders_cache { c.get_with_swr(&o_key).await.map(|(v, _)| v) } else { None } },
-        async { if let Some(c) = inbox_cache { c.get_with_swr(&i_key).await.map(|(v, _)| v) } else { None } },
-        async { if let Some(c) = triage_cache { c.get_with_swr(&t_key).await.map(|(v, _)| v) } else { None } },
-        async { if let Some(c) = priority_tasks_cache { c.get_with_swr(&p_key).await.map(|(v, _)| v) } else { None } }
-    );
-
-    let db1 = db.clone(); let t1 = tenant_id.clone();
-    let db2 = db.clone(); let t2 = tenant_id.clone();
-    let db3 = db.clone(); let t3 = tenant_id.clone();
-    let db5 = db.clone(); let t5 = tenant_id.clone();
-    let db6 = db.clone(); let t6 = tenant_id.clone();
-    let db7 = db.clone(); let t7 = tenant_id.clone();
-    let db8 = db.clone(); let t8 = tenant_id.clone();
-
-    let m_res_clone = m_res.clone();
-    let o_res_clone = o_res.clone();
-    let i_res_clone = i_res.clone();
-    let tr_res_clone = tr_res.clone();
-    let p_res_clone = p_res.clone();
-
-    let (metrics_db, orders_db, messages_db, triage_db, approvals_res, agent_feed_res, priority_tasks_db, supply_res) = tokio::join!(
-        tokio::spawn(async move { if m_res_clone.is_none() { load_ui_dashboard_metrics(&db1, &t1, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).ok() } else { None } }),
-        tokio::spawn(async move { if o_res_clone.is_none() { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await.ok() } else { None } }),
-        tokio::spawn(async move { if i_res_clone.is_none() { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await.ok() } else { None } }),
-        tokio::spawn(async move { if tr_res_clone.is_none() { load_ui_triage_from_db(&db5, &t5, mobile_optimized).await.ok() } else { None } }),
-        tokio::spawn(async move { load_ui_agent_approvals_from_db(&db6, &t6, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_agent_feed_from_db(&db7, &t7, mobile_optimized).await }),
-        tokio::spawn(async move { if p_res_clone.is_none() { load_ui_priority_tasks_from_db(&db8, &t8, mobile_optimized).await.ok() } else { None } }),
+    let (metrics_val, orders, inbox, triage, priority_tasks, approvals, agent_feed, supply_res) = tokio::join!(
+        async {
+            let db_clone = db.clone();
+            let t_clone = tenant_id.clone();
+            if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&m_key).await { return v; }
+            }
+            load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
+        },
+        async {
+            let db_clone = db.clone();
+            let t_clone = tenant_id.clone();
+            if let Some(c) = UI_ORDERS_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&o_key).await { return v; }
+            }
+            load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
+            let db_clone = db.clone();
+            let t_clone = tenant_id.clone();
+            if let Some(c) = UI_INBOX_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&i_key).await { return v; }
+            }
+            load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
+            let db_clone = db.clone();
+            let t_clone = tenant_id.clone();
+            if let Some(c) = UI_TRIAGE_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&t_key).await { return v; }
+            }
+            load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
+            let db_clone = db.clone();
+            let t_clone = tenant_id.clone();
+            if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&p_key).await { return v; }
+            }
+            load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
+            let db_clone = db.clone();
+            let t_clone = tenant_id.clone();
+            load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
+            let db_clone = db.clone();
+            let t_clone = tenant_id.clone();
+            load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
         supply_future
     );
 
-    let metrics_val = m_res.or_else(|| metrics_db.unwrap_or_default()).unwrap_or_default();
-    let orders = o_res.or_else(|| orders_db.unwrap_or_default()).unwrap_or_default();
-    let inbox = i_res.or_else(|| messages_db.unwrap_or_default()).unwrap_or_default();
-    let triage = tr_res.or_else(|| triage_db.unwrap_or_default()).unwrap_or_default();
-    let priority_tasks = p_res.or_else(|| priority_tasks_db.unwrap_or_default()).unwrap_or_default();
-    let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let supply_val = supply_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
 
 
