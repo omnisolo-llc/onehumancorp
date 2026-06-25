@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         #ohc-help-chat-input {
             flex: 1;
-            padding: 10px 14px;
+            padding: 10px 14px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-start;
             border: 1px solid #cbd5e1;
             border-radius: 20px;
             font-size: 14px;
@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
             color: white;
             border: none;
             border-radius: 20px;
-            padding: 0 16px;
+            padding: 0 16px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
             font-weight: 500;
             cursor: pointer;
         }
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
     widget.innerHTML = `
         <div id="ohc-floating-help-header">
             <h3>In-App Help Center</h3>
-            <button id="ohc-floating-help-close" aria-label="Close">
+            <button id="ohc-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>

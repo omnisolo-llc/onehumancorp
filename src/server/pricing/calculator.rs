@@ -194,7 +194,11 @@ pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
     if cost <= 0.0 {
         return 0.0;
     }
-    (output_tokens as f64) / cost
+    let eff = (output_tokens as f64) / cost;
+    if eff.is_nan() || eff.is_infinite() {
+        return 0.0;
+    }
+    eff
 }
 
 // Advanced heuristic: estimate savings when fallback logic kicks in or tokens are dynamically truncated
@@ -282,6 +286,11 @@ mod tests {
 
         let efficiency_neg = calculate_efficiency(-10.0, 1000);
         assert_eq!(efficiency_neg, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_efficiency_nan_inf() {
+        assert_eq!(calculate_efficiency(0.0000000000000000000000000000000000000000001, std::i64::MAX), 0.0);
     }
 
     #[test]

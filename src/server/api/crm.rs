@@ -29,6 +29,7 @@ pub struct UpdateOpportunityStageRequest {
     pub stage: String,
 }
 
+
 pub async fn list_opportunities_handler(
     State(db): State<Arc<crate::db::DB>>,
     Query(query): Query<OpportunitiesQuery>,
