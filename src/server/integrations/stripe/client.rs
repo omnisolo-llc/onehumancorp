@@ -44,7 +44,7 @@ impl StripeClient {
     pub fn require_api_key(&self) -> Result<&str, String> {
         let key = self.api_key.trim();
         if key.is_empty() || key == "sk_test_123" || key == "sk_test" {
-            return Err("Stripe API key is required for Terminal API calls".to_string());
+            return Err("Stripe API key is required".to_string());
         }
         Ok(key)
     }
