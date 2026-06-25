@@ -496,12 +496,12 @@
 
           const data = await response.json();
           if (data.success) {
-            resultEl.innerHTML = `<h4>${workflowName}</h4><pre>${JSON.stringify(payload)}</pre><p>Result: ${data.result}</p>`;
+            resultEl.innerHTML = `<h4>${workflowName}</h4><p>Result: ${data.result}</p>`;
           } else {
-            resultEl.innerHTML = `<h4>${workflowName}</h4><pre>${JSON.stringify(payload)}</pre><p>Error: ${data.error}</p>`;
+            resultEl.innerHTML = `<h4>${workflowName}</h4><p>Error: ${data.error}</p>`;
           }
         } catch (e) {
-          resultEl.innerHTML = `<h4>${workflowName}</h4><pre>${JSON.stringify(payload)}</pre><p>Failed: ${e.toString()}</p>`;
+          resultEl.innerHTML = `<h4>${workflowName}</h4><p>Failed: ${e.toString()}</p>`;
         }
       });
     </script>
