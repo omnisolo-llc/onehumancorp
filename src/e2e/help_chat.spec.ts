@@ -25,7 +25,7 @@ test.describe('HelpChat Widget E2E', () => {
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await chatButton.click({ force: true });
 
-    const inputField = page.locator('input[placeholder="Ask me anything..."]');
+    const inputField = page.locator('input[placeholder="Ask anything..."]');
     const sendButton = page.locator('button[aria-label="Send message"]');
 
     await expect(sendButton).toBeDisabled();
@@ -37,7 +37,7 @@ test.describe('HelpChat Widget E2E', () => {
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await chatButton.click({ force: true });
 
-    const inputField = page.locator('input[placeholder="Ask me anything..."]');
+    const inputField = page.locator('input[placeholder="Ask anything..."]');
     const sendButton = page.locator('button[aria-label="Send message"]');
 
     await inputField.fill('How do I add a new product?');
@@ -51,7 +51,7 @@ test.describe('HelpChat Widget E2E', () => {
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await chatButton.click({ force: true });
 
-    const inputField = page.locator('input[placeholder="Ask me anything..."]');
+    const inputField = page.locator('input[placeholder="Ask anything..."]');
     const sendButton = page.locator('button[aria-label="Send message"]');
 
     await inputField.fill('Tell me about the dashboard features');

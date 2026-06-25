@@ -89,7 +89,7 @@ export default function MyPlanPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden max-w-[100vw]">
-      <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 app-panel-header shadow-sm w-full glass-panel">
+      <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 app-panel-header backdrop-blur-md bg-white/70 shadow-sm w-full glass-panel">
         <div className="flex items-center gap-3">
           <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-3 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-800 hover:bg-gray-200 transition-colors flex items-center justify-center">
             Back
@@ -138,7 +138,7 @@ export default function MyPlanPage() {
 
         {/* Current Usage Section */}
         <section className="app-card ohc-growth-card glass-panel shadow-lg hover:shadow-2xl transition-all duration-300 mt-4">
-          <div className="app-panel-header px-6 py-4 border-b border-white/40 bg-transparent">
+          <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4 border-b border-white/40 bg-transparent">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
           </div>
           <div className="app-panel-body p-6">
