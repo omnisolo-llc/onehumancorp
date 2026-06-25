@@ -112,6 +112,14 @@ export default function HelpCenterPage() {
                  <VideoTutorialList videos={filteredVideos} loading={false} />
               </div>
             )}
+
+            <div className="pt-8 text-center">
+              <WithTooltip id="api-docs-link-tooltip" defaultText="Access the developer API documentation.">
+                <Link href="/api-docs" className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                  Advanced: API Documentation &rarr;
+                </Link>
+              </WithTooltip>
+            </div>
           </div>
         )}
       </div>

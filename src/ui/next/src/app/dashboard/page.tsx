@@ -596,17 +596,23 @@ export default function Dashboard() {
                 <div className="app-metric-note">{loading ? "Loading your data..." : "All recorded orders"}</div>
               </WalkthroughTarget>
               <div className="app-card">
-                <div className="app-metric-label">Customers</div>
+                <WithTooltip id="customers-metric-tooltip" defaultText="Total number of active customer records in your system.">
+                  <div className="app-metric-label">Customers</div>
+                </WithTooltip>
                 <div className="app-metric-value">{metrics.active_customers}</div>
                 <div className="app-metric-note">Customer records</div>
               </div>
               <div className="app-card">
-                <div className="app-metric-label">Pending Orders</div>
+                <WithTooltip id="pending-orders-metric-tooltip" defaultText="Number of orders that have not yet been fulfilled.">
+                  <div className="app-metric-label">Pending Orders</div>
+                </WithTooltip>
                 <div className="app-metric-value">{metrics.pending_orders}</div>
                 <div className="app-metric-note">Open fulfillment workload</div>
               </div>
               <div className="app-card">
-                <div className="app-metric-label">Low Stock</div>
+                <WithTooltip id="low-stock-metric-tooltip" defaultText="Number of inventory items running below the safe threshold.">
+                  <div className="app-metric-label">Low Stock</div>
+                </WithTooltip>
                 <div className="app-metric-value">{lowStockCount}</div>
                 <div className="app-metric-note">Materials below threshold</div>
               </div>

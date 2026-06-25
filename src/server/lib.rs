@@ -190,7 +190,11 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("settings-verify-tooltip".to_string(), "Verify your number to receive critical notifications.".to_string());
     m.insert("settings-otp-tooltip".to_string(), "Click to confirm the code sent to your phone.".to_string());
     m.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
+    m.insert("api-docs-link-tooltip".to_string(), "Access the developer API documentation.".to_string());
     m.insert("total-sales-tooltip".to_string(), "Total revenue generated from database orders.".to_string());
+    m.insert("customers-metric-tooltip".to_string(), "Total number of active customer records in your system.".to_string());
+    m.insert("pending-orders-metric-tooltip".to_string(), "Number of orders that have not yet been fulfilled.".to_string());
+    m.insert("low-stock-metric-tooltip".to_string(), "Number of inventory items running below the safe threshold.".to_string());
     m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
     m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
     m.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
