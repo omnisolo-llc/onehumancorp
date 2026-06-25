@@ -4322,8 +4322,9 @@ async fn ui_dashboard_analytics_briefing_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_analytics_briefing:{}", tenant_id);
+    let cache_key = format!("ui_analytics_briefing:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_ANALYTICS_BRIEFING_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -4339,8 +4340,8 @@ async fn ui_dashboard_analytics_briefing_handler(
             let tenant_id1 = t_bg.clone(); let tenant_id2 = t_bg.clone();
 
             let (metrics_res, inbox_res) = tokio::join!(
-                tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, false).await }),
-                tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, false).await })
+                tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, mobile_optimized).await }),
+                tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, mobile_optimized).await })
             );
 
             let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -4373,8 +4374,8 @@ async fn ui_dashboard_analytics_briefing_handler(
     let tenant_id2 = tenant_id.clone();
 
     let (metrics_res, inbox_res) = tokio::join!(
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, false).await }),
-        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, false).await })
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, mobile_optimized).await }),
+        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, mobile_optimized).await })
     );
 
     let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -4415,13 +4416,14 @@ async fn ui_dashboard_analytics_chat_handler(
     use std::hash::{Hash, Hasher};
 
     let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let text = payload.message.to_lowercase();
 
     let mut hasher = DefaultHasher::new();
     text.hash(&mut hasher);
     let text_hash = hasher.finish();
 
-    let cache_key = format!("ui_analytics_chat:{}:{}", tenant_id, text_hash);
+    let cache_key = format!("ui_analytics_chat:{}:mobile:{}:{}", tenant_id, mobile_optimized, text_hash);
     let cache = UI_ANALYTICS_CHAT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -4438,8 +4440,8 @@ async fn ui_dashboard_analytics_chat_handler(
             let tenant_id1 = t_bg.clone(); let tenant_id2 = t_bg.clone();
 
             let (inbox_res_handle, metrics_res_handle) = tokio::join!(
-                tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, false).await }),
-                tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, false).await })
+                tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, mobile_optimized).await }),
+                tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, mobile_optimized).await })
             );
 
             let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -4474,8 +4476,8 @@ async fn ui_dashboard_analytics_chat_handler(
     let tenant_id2 = tenant_id.clone();
 
     let (inbox_res_handle, metrics_res_handle) = tokio::join!(
-        tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, false).await }),
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, false).await })
+        tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, mobile_optimized).await }),
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, mobile_optimized).await })
     );
 
     let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
