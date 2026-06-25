@@ -12,7 +12,7 @@ export default function KnowledgePage() {
 
   const fetchDocuments = async () => {
     try {
-      const token = localStorage.getItem("auth_token") || "test_token"; // ensure a token is sent in local dev
+      const token = localStorage.getItem("auth_token"); // ensure a token is sent in local dev
       const res = await fetch("/api/memory", {
         headers: {
             "Authorization": token ? `Bearer ${token}` : ""
@@ -38,7 +38,7 @@ export default function KnowledgePage() {
 
   const handleDelete = async (id: string) => {
     try {
-      const token = localStorage.getItem("auth_token") || "test_token";
+      const token = localStorage.getItem("auth_token");
       await fetch(`/api/memory/${id}`, {
           method: "DELETE",
           headers: {
@@ -71,7 +71,7 @@ export default function KnowledgePage() {
           content = await file.text();
       }
 
-      const token = localStorage.getItem("auth_token") || "test_token";
+      const token = localStorage.getItem("auth_token");
       await fetch("/api/memory/upload", {
         method: "POST",
         headers: {
