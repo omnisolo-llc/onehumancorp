@@ -426,6 +426,12 @@ pub async fn stripe_webhook_handler(
                     }
                 };
 
+                let loyalty_service = crate::services::loyalty_service::LoyaltyService::new(crate::domain::repository::loyalty_repo::LoyaltyRepo::new(webhook_state.db.pool.clone()));
+                if let Some(tenant_id) = tenant_id_opt {
+                    let customer_id = obj.get("metadata").and_then(|m| m.get("customer_id")).and_then(|id| id.as_str()).unwrap_or("anonymous");
+                    let amount_cents = obj.get("amount_received").and_then(|a| a.as_i64()).unwrap_or(0) as i32;
+                    let _ = loyalty_service.handle_payment_event(tenant_id, customer_id, amount_cents).await;
+                }
                 if let Err(e) = res {
                     ::server_telemetry::record_error_signal("[bug] Failed to update order status for order : {:?}");
                     tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
@@ -496,6 +502,10 @@ pub async fn stripe_webhook_handler(
                             event_type: "payment.captured".to_string(),
                             payload: payload_val,
                         };
+                    let loyalty_service = crate::services::loyalty_service::LoyaltyService::new(crate::domain::repository::loyalty_repo::LoyaltyRepo::new(webhook_state.db.pool.clone()));
+                    let customer_id = obj.get("metadata").and_then(|m| m.get("customer_id")).and_then(|id| id.as_str()).unwrap_or("anonymous");
+                    let amount_cents = obj.get("amount_total").and_then(|a| a.as_i64()).unwrap_or(0) as i32;
+                    let _ = loyalty_service.handle_payment_event(tenant_id, customer_id, amount_cents).await;
                         let _ = orch.dispatch_event(evt).await;
                     });
                 }

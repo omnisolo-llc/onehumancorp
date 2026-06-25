@@ -52,3 +52,4 @@ pub mod proposals;
 pub mod storefront_delivery;
 pub mod unified_inbox_webhook;
 pub mod work_triage;
+pub mod loyalty;

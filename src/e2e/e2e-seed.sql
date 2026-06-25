@@ -624,3 +624,7 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('e2e-tenant', 'ohc_llm_cost_total_cents', 'gauge', 200000, '{"agent_id": "agent_test_high_usage"}', CURRENT_TIMESTAMP, 'PENDING');
+
+INSERT INTO loyalty_programs (id, tenant_id, name, program_type, config, is_active)
+VALUES ('e2e-loyalty-program', 'e2e-tenant', 'E2E Loyalty Program', 'points', '{"points_per_dollar": 1}', true)
+ON CONFLICT DO NOTHING;
