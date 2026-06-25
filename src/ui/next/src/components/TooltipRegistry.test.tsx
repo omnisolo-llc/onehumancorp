@@ -99,16 +99,18 @@ describe('TooltipRegistry', () => {
 describe('useTooltip Hook sync', () => {
   it('throws an error if used outside TooltipProvider', () => {
     const originalError = console.error;
-    console.error = vi.fn();
+    console.error = () => {};
 
     const TestComponent = () => {
       useTooltip();
       return <div />;
     };
 
-    expect(() => render(<TestComponent />)).toThrow('useTooltip must be used within a TooltipProvider');
-
-    console.error = originalError;
+    try {
+      expect(() => render(<TestComponent />)).toThrow('useTooltip must be used within a TooltipProvider');
+    } finally {
+      console.error = originalError;
+    }
   });
 });
 
