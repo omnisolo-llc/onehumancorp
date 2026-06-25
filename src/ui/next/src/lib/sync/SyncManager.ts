@@ -38,6 +38,7 @@ export class SyncManager {
   public static getInstance(): SyncManager {
     if (!SyncManager.instance) {
       SyncManager.instance = new SyncManager();
+
     }
     return SyncManager.instance;
   }
