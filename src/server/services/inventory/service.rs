@@ -64,40 +64,6 @@ impl InventoryService {
                 }).unwrap_or(false);
 
             if !acquired {
-                let pool = crate::db::get_pool();
-                let action_request_id = Uuid::new_v4().to_string();
-                let payload = serde_json::json!({
-                    "product_id": product_id,
-                    "suggested_action": "Restock Item",
-                    "reason": "Lock contention on limited item"
-                }).to_string();
-
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                    .bind(&action_request_id)
-                    .bind(tenant_id)
-                    .bind(product_id)
-                    .bind(&payload)
-                    .execute(&pool)
-                    .await;
-
-                // Operations Agent: trigger push notification for out-of-stock/lock failure
-                let job_id = Uuid::new_v4().to_string();
-                let message = format!("{} sold out. Would you like to draft a restock order?", product_id);
-                let job_payload = serde_json::json!({
-                    "product_id": product_id,
-                    "product_title": product_id,
-                    "remaining_stock": 0,
-                    "threshold": 5,
-                    "message": message
-                }).to_string();
-
-                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
-                    .bind(job_id)
-                    .bind(tenant_id)
-                    .bind(&job_payload)
-                    .execute(&pool)
-                    .await;
-
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
@@ -396,37 +362,13 @@ impl InventoryService {
                 .await;
 
             if new_stock <= 5 {
-                let product_title: String = sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
-                    .bind(product_id)
-                    .bind(tenant_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .unwrap_or(Some(product_id.to_string()))
-                    .unwrap_or_else(|| product_id.to_string());
 
-
-                let job_id = Uuid::new_v4().to_string();
 
                 let message = if new_stock == 0 {
                     format!("{} sold out. Would you like to draft a restock order?", product_id)
                 } else {
                     format!("Stock for product {} has dropped to {}.", product_id, new_stock)
                 };
-
-                let job_payload = serde_json::json!({
-                    "product_id": product_id,
-                    "product_title": product_title,
-                    "remaining_stock": new_stock,
-                    "threshold": 5,
-                    "message": message
-                }).to_string();
-
-                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
-                    .bind(job_id)
-                    .bind(tenant_id)
-                    .bind(&job_payload)
-                    .execute(&mut *tx)
-                    .await;
 
                 // Directly notify Operations Agent for real-time monitoring as per Step 3
                 tracing::info!("Real-time stock level monitored: {} drops below threshold. Triggered LowStockAlert for Operations Agent.", product_id);
@@ -435,13 +377,14 @@ impl InventoryService {
                 let action_payload = serde_json::json!({
                     "product_id": product_id,
                     "remaining_stock": new_stock,
-                    "suggested_action": "Restock Item"
+                    "suggested_action": "Restock Item",
+                    "description": message
                 }).to_string();
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                let _ = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'operations', $3::jsonb, $4, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
-                    .bind(product_id)
                     .bind(&action_payload)
+                    .bind("Restock Item")
                     .execute(&mut *tx)
                     .await;
             }
@@ -567,4 +510,42 @@ mod tests {
             assert_eq!(failed_res.error_message, "Item is currently being checked out");
         }
     }
+#[tokio::test]
+async fn test_commit_inventory() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let pool = crate::db::get_pool();
+    let _db = Arc::new(crate::db::DB {
+        pool: pool.clone(),
+        store: DbStore::Postgres,
+    });
+
+    let tenant_id = "test_inventory_tenant_commit";
+    let product_id = "test_product_commit";
+
+    let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product Commit', 10, 10) ON CONFLICT DO NOTHING")
+        .bind(product_id)
+        .bind(tenant_id)
+        .execute(&pool)
+        .await;
+
+    let _ = sqlx::query("UPDATE products SET inventory_count = 10, available_quantity = 10, locked_quantity = 0 WHERE id = $1 AND tenant_id = $2")
+        .bind(product_id)
+        .bind(tenant_id)
+        .execute(&pool)
+        .await;
+
+    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+    let redis_client_opt = redis::Client::open(redis_url).ok();
+
+    let service = Arc::new(InventoryService::new(redis_client_opt));
+
+    let reserve_res = service.reserve_inventory(tenant_id, product_id, 1, 5).await.unwrap();
+    assert!(reserve_res.success);
+
+    let commit_res = service.commit_inventory(tenant_id, product_id, 1, &reserve_res.lock_id).await.unwrap();
+    assert!(commit_res.success);
+}
 }
