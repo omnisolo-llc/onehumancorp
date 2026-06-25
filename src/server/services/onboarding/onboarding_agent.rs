@@ -592,7 +592,7 @@ Your response:",
 
         sqlx::query(
             r#"
-            INSERT INTO tenants (id, name, plan_tier, subdomain)
+            INSERT INTO tenants (id, name, tier, subdomain)
             VALUES ($1, $2, 'free', $3)
             ON CONFLICT (id) DO UPDATE SET subdomain = EXCLUDED.subdomain
             "#
