@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TestimonialWidgetGenerator from './page';
 
+vi.mock('../components/PoweredByOHC', () => ({
+  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+}));
+
 describe('Testimonial Widget Generator', () => {
     beforeEach(() => {
         Object.assign(navigator, {
@@ -23,6 +27,7 @@ describe('Testimonial Widget Generator', () => {
 
         const authorInput = screen.getByDisplayValue('Jane Doe');
         expect(authorInput).toBeDefined();
+        expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
     });
 
     it('updates live preview URL when settings change', () => {

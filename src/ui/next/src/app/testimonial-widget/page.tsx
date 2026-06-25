@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function TestimonialWidgetGenerator() {
   const [tenant, setTenant] = useState('my-business');
@@ -164,10 +165,8 @@ export default function TestimonialWidgetGenerator() {
                             {authorName}
                         </div>
 
-                        <div className={`mt-5 pt-3 border-t text-center text-xs ${theme === 'dark' ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-500'}`}>
-                            <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="font-bold hover:underline" style={{ color: '#6b7280' }}>
-                                ⚡ Powered by OHC
-                            </a>
+                        <div className={`mt-5 pt-4 border-t flex justify-center ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
+                            <PoweredByOHC tenantId={tenant} />
                         </div>
                     </div>
                 </div>
