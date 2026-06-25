@@ -1,10 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const tenant = searchParams.get('tenant') || 'unknown';
-  const give = searchParams.get('give') || '10';
-  const get = searchParams.get('get') || '10';
+  const tenant = searchParams.get("tenant") || "unknown";
+  const give = searchParams.get("give") || "10";
+  const get = searchParams.get("get") || "10";
+
+  const hideBranding =
+    searchParams.get("hide_branding") === "true" ||
+    searchParams.get("hideBranding") === "true";
+
+  const brandingHtml = hideBranding
+    ? ""
+    : `
+<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;">
+  <a href="${request.nextUrl.origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+</div>`;
 
   const html = `
 <!DOCTYPE html>
@@ -94,14 +105,15 @@ export async function GET(request: NextRequest) {
       </div>
     </form>
   </div>
+  ${brandingHtml}
 </body>
 </html>
 `;
 
   return new NextResponse(html, {
     headers: {
-      'Content-Type': 'text/html',
-      'Cache-Control': 'public, max-age=3600',
+      "Content-Type": "text/html",
+      "Cache-Control": "public, max-age=3600",
     },
   });
 }
