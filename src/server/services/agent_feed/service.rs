@@ -65,9 +65,8 @@ mod tests {
     use std::env;
 
     #[tokio::test]
-    #[ignore]
     async fn test_process_event() {
-        let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = PgPool::connect(&database_url).await.unwrap();
         let service = AgentFeedService::new(pool);
 

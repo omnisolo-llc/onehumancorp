@@ -74,7 +74,6 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore]
     async fn test_identity_resolution() {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = PgPool::connect(&database_url).await.unwrap();
