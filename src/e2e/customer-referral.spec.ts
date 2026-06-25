@@ -45,6 +45,15 @@ test.describe('Customer Referral Program Growth Loop', () => {
 
         const html = await response.text();
         expect(html).toContain('Give $20, Get $25');
+        expect(html).toContain('⚡ Powered by OHC');
+
+        // Check the backend embed API endpoint directly when branding is hidden
+        const responseNoBranding = await request.get('/api/v1/growth/customer-referral/embed?tenant=maya-cakes&give=20&get=25&hideBranding=true');
+        expect(responseNoBranding.status()).toBe(200);
+
+        const htmlNoBranding = await responseNoBranding.text();
+        expect(htmlNoBranding).toContain('Give $20, Get $25');
+        expect(htmlNoBranding).not.toContain('⚡ Powered by OHC');
     });
 
     test('should show soft paywall when attempting to remove branding without pro', async ({ page }) => {
