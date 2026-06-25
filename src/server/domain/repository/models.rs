@@ -288,6 +288,8 @@ pub struct Service {
     pub title: String,
     pub description: Option<String>,
     pub price_cents: i64,
+    pub requires_deposit: bool,
+    pub deposit_amount_cents: i64,
     pub seo_title: Option<String>,
     pub seo_description: Option<String>,
     pub seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,

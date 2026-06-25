@@ -28,18 +28,13 @@ function BookingForm() {
     async function fetchSlots() {
       setIsLoadingSlots(true);
       try {
-        const res = await fetch("/api/v1/booking/engine/availability", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            tenant_id: tenant,
-            product_id: serviceId,
-            date: selectedDate
-          })
+        const res = await fetch(`/api/v1/booking/available_slots/${serviceId}`, {
+          method: "GET",
+          headers: { "x-tenant-id": tenant },
         });
         const data = await res.json();
-        if (data.available_slots) {
-          setAvailableSlots(data.available_slots);
+        if (data.slots) {
+          setAvailableSlots(data.slots);
         } else {
           setAvailableSlots([]);
         }
@@ -65,23 +60,22 @@ function BookingForm() {
     if (!slot) return;
 
     try {
-      const res = await fetch("/api/v1/booking/engine/reserve", {
+      const res = await fetch("/api/v1/booking/reserve", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": tenant
+        },
         body: JSON.stringify({
-          tenant_id: tenant,
-          customer_id: customerEmail || "anon-customer", // Mock ID mapping
-          product_id: serviceId,
+          service_id: serviceId,
           start_time: slot.start_time,
-          end_time: slot.end_time,
-          requires_deposit: true, // Demo always requires deposit
-          timezone: "UTC"
+          end_time: slot.end_time
         })
       });
 
       const data = await res.json();
-      if (data.deposit_stripe_link) {
-        setCheckoutUrl(data.deposit_stripe_link);
+      if (data.checkout_url) {
+        setCheckoutUrl(data.checkout_url);
       }
       setSubmitted(true);
     } catch (err) {
@@ -93,16 +87,16 @@ function BookingForm() {
   if (submitted) {
     if (checkoutUrl) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center" data-testid="booking-checkout-container">
-            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter" style={{ backgroundImage: "url('/img/bg_mesh.webp')", backgroundSize: 'cover' }}>
+          <div className="glassmorphism max-w-md w-full p-8 text-center" style={{ borderRadius: '16px' }} data-testid="booking-checkout-container">
+            <div className="w-16 h-16 bg-blue-100/50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Almost there!</h2>
-            <p className="text-gray-600 mb-8">Please complete your deposit to secure your time slot.</p>
-            <a href={checkoutUrl} className="w-full inline-block bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors" data-testid="pay-deposit-btn">
+            <p className="text-gray-800 mb-8">Please complete your deposit to secure your time slot.</p>
+            <a href={checkoutUrl} className="w-full inline-block bg-blue-600/90 text-white font-semibold py-3 px-6 hover:bg-blue-700 transition-colors rounded-[16px]" style={{ minHeight: '44px', minWidth: '44px' }} data-testid="pay-deposit-btn">
               Pay Deposit
             </a>
           </div>
@@ -111,24 +105,24 @@ function BookingForm() {
     }
 
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
-        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center" data-testid="booking-success-container">
-          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter" style={{ backgroundImage: "url('/img/bg_mesh.webp')", backgroundSize: 'cover' }}>
+        <div className="glassmorphism max-w-md w-full p-8 text-center" style={{ borderRadius: '16px' }} data-testid="booking-success-container">
+          <div className="w-16 h-16 bg-green-100/50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Request Sent!</h2>
-          <p className="text-gray-600 mb-8">We've received your request and will get back to you shortly to confirm the appointment.</p>
+          <p className="text-gray-800 mb-8">We've received your request and will get back to you shortly to confirm the appointment.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
-      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden">
-        <div className="bg-blue-600 px-8 py-10 text-white text-center">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter" style={{ backgroundImage: "url('/img/bg_mesh.webp')", backgroundSize: 'cover' }}>
+      <div className="glassmorphism max-w-lg w-full overflow-hidden" style={{ borderRadius: '16px' }}>
+        <div className="bg-blue-600/90 px-8 py-10 text-white text-center">
           <h1 className="text-3xl font-bold font-outfit tracking-tight mb-2">Book an Appointment</h1>
           <p className="text-blue-100 font-medium">Select a time that works for you.</p>
         </div>

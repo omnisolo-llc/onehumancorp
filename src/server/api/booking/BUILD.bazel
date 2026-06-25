@@ -6,6 +6,33 @@ exports_files(
         "request.rs",
         "reserve.rs",
         "available_slots.rs",
+        "deposit.rs",
     ],
     visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "reserve_test",
+    srcs = ["reserve_test.rs"],
+    deps = [
+        "//src/server:server_lib",
+        "@crates//:axum",
+        "@crates//:tower",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:sqlx",
+    ],
+)
+
+rust_test(
+    name = "deposit_test",
+    srcs = ["deposit_test.rs"],
+    deps = [
+        "//src/server:server_lib",
+        "@crates//:axum",
+        "@crates//:tower",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:sqlx",
+    ],
 )
