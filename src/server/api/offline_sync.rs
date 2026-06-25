@@ -205,14 +205,14 @@ pub async fn offline_sync_handler(
                         is_conflict = true;
                     }
 
-                    let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
                     let mutation_ts = mutation.timestamp.clone().unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
 
-                    let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $4, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $4)), available_quantity = GREATEST(0, available_quantity - $4) WHERE id = $2 AND tenant_id = $3")
-                        .bind(new_stock)
+                    // Use CRDT principles (PN-Counter) to eventually reconcile offline deductions
+                    // We add the deducted quantity to the negative counter (pn_counter_n)
+                    let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                        .bind(mutation.quantity_deducted)
                         .bind(&mutation.product_id)
                         .bind(&tenant_id_clone)
-                        .bind(mutation.quantity_deducted)
                         .execute(&mut *db_tx)
                         .await;
 
