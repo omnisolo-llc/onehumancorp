@@ -22,7 +22,7 @@ impl JitContextRetriever {
     }
 
     /// Analyzes the recent conversation history to extract keywords and pulls relevant
-    /// JIT context from the FTS5-backed LongTermMemory.
+    /// JIT context from the FTS5-backed LongTermMemory, tool docs, or code snippets.
     pub async fn retrieve_context(&self, messages: &[Message]) -> Option<String> {
         // Simple keyword extraction heuristic: take the last user message
         let last_user_msg = messages
@@ -52,7 +52,7 @@ impl JitContextRetriever {
             let cleaned: String = s
                 .to_lowercase()
                 .chars()
-                .filter(|c| c.is_alphanumeric())
+                .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
                 .collect();
 
             if !cleaned.is_empty() && cleaned.len() > 3 && !stop_words.contains(&cleaned.as_str()) {
@@ -85,6 +85,14 @@ impl JitContextRetriever {
             .collect::<Vec<_>>()
             .join(" OR ");
 
+        // Extract potential filenames or function names for JIT snippet retrieval
+        let mut potential_files = Vec::new();
+        for s in content.split_whitespace() {
+            if s.contains('.') && s.len() > 4 { // likely a file like main.rs, util.ts
+                potential_files.push(s.to_string());
+            }
+        }
+
         // 1. Try to search general memory
         let mut combined_context = String::new();
 
@@ -115,7 +123,29 @@ impl JitContextRetriever {
             }
         }
 
-        if combined_context.is_empty() {
+        // 3. Try to dynamically pull code snippets before LLM calls
+        if !potential_files.is_empty() {
+            let mut snippet_context = String::new();
+            for file_hint in potential_files {
+                let cleaned_file_hint: String = file_hint.chars().filter(|c| c.is_alphanumeric() || *c == '.' || *c == '_' || *c == '-').collect();
+                if let Ok(results) = self.memory_store.retrieve(&format!("file:{}", cleaned_file_hint), 1).await {
+                    for res in results {
+                         snippet_context.push_str(&res);
+                         snippet_context.push_str("\n---\n");
+                    }
+                }
+            }
+
+            if !snippet_context.is_empty() {
+                if !combined_context.is_empty() {
+                    combined_context.push('\n');
+                }
+                combined_context.push_str("Relevant Code Snippets (JIT Retrieval):\n");
+                combined_context.push_str(&snippet_context);
+            }
+        }
+
+        if combined_context.trim().is_empty() {
             None
         } else {
             Some(format!(
@@ -143,6 +173,8 @@ mod tests {
                 || query.contains("programming")
             {
                 Ok(vec!["Rust is a systems programming language.".to_string()])
+            } else if query.contains("file:main.rs") {
+                Ok(vec!["fn main() { println!(\"Hello World\"); }".to_string()])
             } else {
                 Ok(vec![])
             }
@@ -164,6 +196,8 @@ mod tests {
                 Ok(vec![
                     "User previously encountered a compiler error in main.rs".to_string(),
                 ])
+            } else if query.contains("unrelated") {
+                Ok(vec![])
             } else {
                 Ok(vec![])
             }
@@ -219,5 +253,90 @@ mod tests {
         let _ = retriever.retrieve_context(&messages).await;
         // In this mock test, it may not match anything, but we can verify it doesn't crash
         // and if we had a spy, we could verify the query. Let's just ensure it runs cleanly.
+    }
+
+    #[tokio::test]
+    async fn test_jit_retrieval_code_snippets() {
+        let store = Arc::new(MockMemoryStore);
+        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+
+        let messages = vec![Message::user(
+            "Can you explain what the function in main.rs does?",
+        )];
+
+        let context = retriever.retrieve_context(&messages).await.unwrap();
+        assert!(context.contains("Relevant Code Snippets (JIT Retrieval)"));
+        assert!(context.contains("fn main() { println!(\"Hello World\"); }"));
+    }
+
+    #[tokio::test]
+    async fn test_jit_retrieval_term_sorting_and_empty() {
+        let store = Arc::new(MockMemoryStore);
+        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+
+        // This prompt contains short words that should be filtered out
+        let messages = vec![Message::user(
+            "It is an error the to of in on as at by be",
+        )];
+
+        let context = retriever.retrieve_context(&messages).await.unwrap();
+        assert!(context.contains("Relevant Past Session Context (JIT Retrieval)"));
+        assert!(context.contains("User previously encountered a compiler error in main.rs"));
+    }
+
+    #[tokio::test]
+    async fn test_jit_retrieval_all_empty() {
+        let store = Arc::new(MockMemoryStore);
+        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+
+        // A prompt with words that have no matches in the mock store
+        let messages = vec![Message::user(
+            "Unrelated longword entirely foreign database",
+        )];
+
+        let context = retriever.retrieve_context(&messages).await;
+        assert!(context.is_none());
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use async_trait::async_trait;
+
+    #[derive(Debug)]
+    struct FailingMemoryStore;
+
+    #[async_trait]
+    impl LongTermMemory for FailingMemoryStore {
+        async fn retrieve(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
+            Err("Failed to retrieve general knowledge".to_string())
+        }
+
+        async fn store(&self, _content: &str, _tags: Vec<String>) -> Result<(), String> {
+            Ok(())
+        }
+
+        async fn search_session_messages(
+            &self,
+            _session_id: &str,
+            _query: &str,
+            _limit: usize,
+            _summarize: bool,
+        ) -> Result<Vec<String>, String> {
+            Err("Failed to search session".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_jit_retrieval_failing_store() {
+        let store = Arc::new(FailingMemoryStore);
+        let retriever = JitContextRetriever::new(store, "test_session".to_string());
+
+        let messages = vec![Message::user("Please review the code in main.rs")];
+
+        // Should return None when all stores fail
+        let context = retriever.retrieve_context(&messages).await;
+        assert!(context.is_none());
     }
 }
