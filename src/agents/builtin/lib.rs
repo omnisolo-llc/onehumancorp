@@ -71,7 +71,6 @@ pub mod actor_model;
 pub mod agent_protocol;
 pub mod gpt_researcher;
 pub mod llm_condensation;
-pub mod marketplace;
 pub mod plan_and_execute;
 pub mod sona_patterns;
 pub mod swarm_topology;
