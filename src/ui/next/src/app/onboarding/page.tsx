@@ -603,7 +603,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
-      <div id="setup-screen" className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border border-white/40 dark:border-white/10 shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] sm:rounded-[16px]">
+      <div id="setup-screen" className={`w-full ${step === 5 ? "max-w-[375px] sm:max-w-4xl" : "max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl"} mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border border-white/40 dark:border-white/10 shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] sm:rounded-[16px] transition-all duration-[400ms] ease-out`}>
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
@@ -748,7 +748,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === -1 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] p-8 shadow-xl">
               <button onClick={() => { updateState({ step: 0 }); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -1430,37 +1430,93 @@ export default function OnboardingWizard() {
           )}
 
           {step === 5 && startResult && (
-            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
-              <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
+            <div className="flex flex-col flex-1 animate-fade-in gap-6 w-full max-w-4xl mx-auto p-4 md:p-8">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Dashboard</h2>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">Welcome to your new business command center.</p>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#34C759] bg-[#34C759]/10 text-[#34C759] text-sm font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-[#34C759] animate-pulse"></span>
+                  Live
+                </div>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
-                {startResult.message || "Your business has been successfully launched."}
-              </p>
 
-              <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] flex flex-col items-center mb-6">
-                   <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
-                   <div className="flex items-center gap-2">
-                      <span className="text-[#0066FF] font-semibold">{generateSubdomain(businessName)}</span>
-                   </div>
+              {/* Quick Actions / Share */}
+              <div className="p-5 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-1">Your Storefront Link</p>
+                  <a href={`https://${generateSubdomain(businessName)}`} target="_blank" rel="noreferrer" className="text-[#0066FF] font-semibold flex items-center gap-2 hover:underline">
+                    {generateSubdomain(businessName)}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  </a>
+                </div>
+                <div className="flex gap-3">
+                  <a href="/assistant" className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    Ask Assistant
+                  </a>
+                  <a href="/builder" className="px-4 py-2 bg-[#0066FF] text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-[#0052cc] transition-colors">
+                    Edit Store
+                  </a>
+                </div>
+              </div>
+
+              {/* Modular Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Products Widget */}
+                <div className="md:col-span-2 p-6 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-sm flex flex-col">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Products & Services</h3>
+                    <button className="text-[#0066FF] text-sm font-semibold">View All</button>
+                  </div>
+                  <div className="space-y-3 flex-1">
+                    {[
+                      { name: firstProductName || 'Signature Offering', price: firstProductPrice || '$45.00', status: 'Active', sales: 0 },
+                      { name: 'Premium Package', price: '$120.00', status: 'Active', sales: 0 },
+                      { name: 'Consultation Booking', price: '$0.00', status: 'Active', sales: 0 }
+                    ].map((prod, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 border border-gray-100 dark:border-white/5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xl">
+                            {i === 0 ? '✨' : i === 1 ? '🌟' : '📅'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{prod.name}</p>
+                            <p className="text-xs text-gray-500">{prod.sales} sales</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{prod.price}</p>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#34C759]">{prod.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="w-full mt-4 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                    + Add New Product
+                  </button>
                 </div>
 
-                <a
-                  href="/assistant"
-                  className="flex w-full items-center justify-center bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-                >
-                  <IconLabel icon="sparkles">Open Assistant</IconLabel>
-                </a>
-                <a
-                  href="/builder"
-                  className="flex w-full items-center justify-center bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-                >
-                  <IconLabel icon="eye">Preview Storefront</IconLabel>
-                </a>
+                {/* AI Agents Widget */}
+                <div className="p-6 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-sm flex flex-col">
+                  <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Active Agents</h3>
+                  <div className="space-y-4 flex-1">
+                    {(aiAgents && aiAgents.length > 0 ? aiAgents : ['Sales & Leads', 'Customer Support', 'Operations']).map((agent, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                         <div className="relative">
+                           <div className="w-8 h-8 rounded-full bg-[#0066FF]/10 text-[#0066FF] flex items-center justify-center">
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                           </div>
+                           <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#34C759] border-2 border-white dark:border-[#16161a] rounded-full"></div>
+                         </div>
+                         <div>
+                           <p className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{agent}</p>
+                           <p className="text-xs text-gray-500">Monitoring</p>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}
