@@ -331,10 +331,17 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         });
                     } else {
                         current_req.messages.push(msg.clone());
-                        let error_context = format!(
-                            "Validation Error (Pydantic-first tool schema): Your previous completion failed to parse.\nFailed completion: {}\nReason: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
-                            msg.content, parse_error_msg
-                        );
+                        let error_context = if parse_error_msg.contains("Validation Error") {
+                            format!(
+                                "{}\nFailed completion: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
+                                parse_error_msg, msg.content
+                            )
+                        } else {
+                            format!(
+                                "Validation Error (Pydantic-first tool schema): Your previous completion failed to parse.\nFailed completion: {}\nReason: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
+                                msg.content, parse_error_msg
+                            )
+                        };
                         let mut error_msg = Message::user(error_context);
                         error_msg.previous_response_id = msg.response_id.clone();
                         current_req.messages.push(error_msg);
@@ -404,7 +411,7 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.expect("Expected TestOutput in test").result, "recovered");
 
-        // Need to check the requests to ensure the prompt contained the "Semantic validation failed"
+        // Need to check the requests to ensure the prompt contained the "Validation Error (Pydantic-first tool schema)"
         // Let's modify the test to just check if it fails with the right message when max_retries = 0
         let client_fail = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![create_tool_call_resp(
@@ -420,7 +427,7 @@ mod tests {
         assert!(result_fail.is_err());
         match result_fail {
             Err(ToolError::LlmRecoverable(msg)) => {
-                assert!(msg.contains("Semantic validation failed"));
+                assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
             }
             _ => panic!("Expected LlmRecoverable error for schema mismatch"),
         }
