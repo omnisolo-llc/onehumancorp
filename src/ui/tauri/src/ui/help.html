@@ -697,7 +697,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         html += `
           <section style="margin-top: 48px; padding-top: 32px; border-top: 1px solid rgba(0,0,0,0.1);">
-            <div style="background: rgba(254, 243, 199, 0.5); border-radius: 16px; padding: 24px; border: 1px solid rgba(253, 230, 138, 0.5); display: flex; flex-direction: column; gap: 16px; align-items: flex-start;">
+            <div style="margin-bottom: 20px;">
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #1d1d1f; font-weight: 500;">
+                <input type="checkbox" onchange="document.getElementById('advanced-help-content').style.display = this.checked ? 'flex' : 'none';" />
+                Advanced Settings
+              </label>
+            </div>
+            <div id="advanced-help-content" style="display: none; background: rgba(254, 243, 199, 0.5); border-radius: 16px; padding: 24px; border: 1px solid rgba(253, 230, 138, 0.5); flex-direction: column; gap: 16px; align-items: flex-start;">
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 <h3 style="font-size: 18px; font-weight: bold; color: #78350f; margin: 0;">Advanced Users</h3>
                 <p style="font-size: 14px; color: rgba(146, 64, 14, 0.8); margin: 0;">For users who want to use OHC's APIs directly (e.g., connect a custom checkout).</p>
@@ -1172,7 +1178,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
-                <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none;">API Reference for advanced users</a>
+                <div style="margin-bottom: 8px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500;">
+                    <input type="checkbox" onchange="document.getElementById('help-html-advanced-links').style.display = this.checked ? 'block' : 'none';" />
+                    Advanced Settings
+                  </label>
+                </div>
+                <div id="help-html-advanced-links" style="display: none;">
+                    <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none;">API Reference for advanced users</a>
+                </div>
             </div>
         </div>
 
