@@ -20,11 +20,11 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         expect(response.ok()).toBeTruthy();
 
         // Step 3: Navigate to Work Triage UI
-        await page.goto('/triage');
+        await page.goto('/dashboard');
 
         // Wait for feed to load
         await page.waitForSelector('.app-list-item');
-        await expect(page.getByTestId(/triage-card-/).first()).toBeVisible();
+        await expect(page.getByTestId(/dashboard-card-/).first()).toBeVisible();
 
         // Step 4: Verify the message appears in the feed
         const sourceText = await page.locator('.app-list-item .app-list-title').first().textContent();
@@ -66,7 +66,7 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         });
         expect(response.ok()).toBeTruthy();
 
-        await page.goto('/triage');
+        await page.goto('/dashboard');
         await page.waitForSelector('.app-list-item');
 
         const sourceText = await page.locator('.app-list-item .app-list-title').first().textContent();
@@ -87,7 +87,7 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         // Wait for it to disappear and the empty state to show up (if it was the last item)
         // Note: other items might exist from previous tests, but if it is empty we should see the empty state.
         // For this test, we can just ensure that the card is removed.
-        const card = page.getByTestId(/triage-card-/);
+        const card = page.getByTestId(/dashboard-card-/);
         // It might be empty, check for empty state just in case
         if (await page.getByTestId('triage-feed-empty').isVisible()) {
              await expect(page.getByTestId('triage-feed-empty')).toBeVisible();
