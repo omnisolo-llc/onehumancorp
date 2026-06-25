@@ -9,6 +9,7 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
+        .route("/generate", post(handle_zero_click_generate))
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
         .route("/chat", post(process_chat_handler))
@@ -193,5 +194,146 @@ async fn save_state(
             tracing::error!("Failed to save onboarding state: {}", e);
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         },
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+}
+#[derive(Debug, serde::Serialize)]
+pub struct ZeroClickGenerateResponse {
+    pub organization_id: String,
+    pub user_id: String,
+    pub message: String,
+}
+
+pub async fn handle_zero_click_generate(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ZeroClickGenerateRequest>,
+) -> Result<Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
+    let intake_data = agent.process_intake(&req.prompt).await.map_err(|e| {
+        tracing::error!("Intake error: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let first_product = intake_data.initial_products.first();
+    let first_product_name = first_product.map(|p| p.name.clone()).unwrap_or_else(|| "Standard Product".to_string());
+    let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
+
+    let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
+        business_type: intake_data.business_type,
+        company_name: intake_data.business_name.clone(),
+        company_description: req.prompt.clone(),
+        selling_categories: intake_data.categories,
+        payment_pref: "online".to_string(),
+        admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
+        admin_name: "Owner".to_string(),
+        admin_password: uuid::Uuid::new_v4().to_string(),
+        website_template: "Modern".to_string(),
+        first_product_name,
+        first_product_price,
+        domain_choice: "subdomain".to_string(),
+        price_type: "fixed".to_string(),
+        location: intake_data.location.unwrap_or_else(|| "Global".to_string()),
+        target_audience: intake_data.target_audience.unwrap_or_else(|| "Everyone".to_string()),
+        ai_agents: vec![],
+        ai_auto_respond: true,
+        initial_products: intake_data.initial_products.into_iter().map(|p| {
+            ::server_ohc::orchestration::IntakeProductProto {
+                name: p.name,
+                price: p.price,
+                description: p.description.unwrap_or_default(),
+                variants: p.variants.unwrap_or_default().into_iter().map(|v| {
+                    ::server_ohc::orchestration::IntakeProductVariantProto {
+                        name: v.name,
+                        price_modifier: v.price_modifier,
+                    }
+                }).collect(),
+            }
+        }).collect(),
+    };
+
+    let _start_res = agent.start_onboarding(start_req).await.map_err(|e| {
+        tracing::error!("Start onboarding error: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(ZeroClickGenerateResponse {
+        organization_id: _start_res.organization_id,
+        user_id: _start_res.user_id,
+        message: "Storefront generated successfully".to_string()
+    }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::DbStore;
+
+    async fn setup_db() -> sqlx::PgPool {
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        crate::db::secure_pg_pool_options()
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .max_connections(1)
+            .connect_lazy(&database_url)
+            .expect("Failed to connect to DB")
+    }
+
+    #[tokio::test]
+    async fn test_handle_zero_click_generate() {
+        let pool = setup_db().await;
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
+        let db = Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        });
+        let agent = Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, hub));
+
+        let req = ZeroClickGenerateRequest {
+            prompt: "I sell coffee".to_string(),
+        };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
+            org_id: "test-tenant-zero".to_string(),
+            agent_id: "owner@test.com".to_string(),
+        };
+        let _ = handle_zero_click_generate(State(agent), axum::extract::Extension(auth_info.clone()), Json(req)).await;
+    }
+
+    #[tokio::test]
+    async fn test_zero_click_generate() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let db = Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        });
+        let agent = Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db, hub));
+
+        let req = ZeroClickGenerateRequest {
+            prompt: "I am a home baker selling cakes.".to_string(),
+        };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: format!("spiffe://ohc.app/{}/agent1", "test-tenant-zero"),
+            org_id: "test-tenant-zero".to_string(),
+            agent_id: "owner@test.com".to_string(),
+        };
+
+        let res = handle_zero_click_generate(State(agent), axum::extract::Extension(auth_info.clone()), Json(req)).await;
+
+        assert!(res.is_ok());
+        let response = res.unwrap().0;
+        assert!(!response.organization_id.is_empty());
+        assert!(!response.user_id.is_empty());
     }
 }

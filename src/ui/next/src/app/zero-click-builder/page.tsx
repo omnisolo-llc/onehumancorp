@@ -43,7 +43,7 @@ export default function ZeroClickBuilderPage() {
     }, 1500);
 
     try {
-      const response = await fetch('/api/v1/growth/zero-click-builder/generate', {
+      const response = await fetch('/api/v1/onboarding/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })
