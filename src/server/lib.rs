@@ -3770,8 +3770,55 @@ pub async fn update_ui_triage_action_handler(
                 }
 
                 if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
-                    if action_type == "Draft Reply" {
+                    if action_type == "Draft Reply" || action_type == "DRAFT_REPLY" {
+                        let mut channel_opt = None;
+                        let mut thread_customer_id = None;
+                        if let Ok(Some(row)) = sqlx::query("SELECT channel, customer_id FROM unified_threads WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            channel_opt = Some(row.try_get::<String, _>("channel").unwrap_or_default());
+                            thread_customer_id = row.try_get::<String, _>("customer_id").ok();
+                        }
+
+                        if let Some(channel) = channel_opt {
+                            if channel == "whatsapp" {
+                                if let Some(ref cid) = thread_customer_id {
+                                    // Send via Meta Provider
+                                    let meta_token_opt: Option<String> = sqlx::query_scalar("SELECT meta_access_token FROM integrations WHERE tenant_id = $1")
+                                        .bind(&tenant_id)
+                                        .fetch_optional(&mut *tx)
+                                        .await
+                                        .unwrap_or(None);
+                                    let meta_token = meta_token_opt.unwrap_or_default();
+
+                                    if !meta_token.is_empty() {
+                                        let meta_provider = crate::integrations::meta::provider::MetaProvider::new(meta_token);
+                                        let res = meta_provider.send_message("whatsapp", cid, &action_payload).await;
+                                        if let Err(e) = res {
+                                            tracing::error!("Failed to send WhatsApp message via Meta API: {}", e);
+                                        } else {
+                                            tracing::info!("Successfully sent WhatsApp message to {}", cid);
+                                        }
+                                    } else {
+                                        tracing::warn!("meta_access_token not configured for tenant {}, skipping actual send.", tenant_id);
+                                    }
+                                }
+                            }
+                        }
+
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                        // Insert into unified_messages for the actual conversation history
+                        let _ = sqlx::query("INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES ($1, $2, $3, 'agent', $4)")
+                            .bind(&new_msg_id)
+                            .bind(&tenant_id)
+                            .bind(&payload.triage_item_id)
+                            .bind(&action_payload)
+                            .execute(&mut *tx)
+                            .await;
+
                         let _ = sqlx::query(
                             "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
                         )
@@ -3994,8 +4041,55 @@ pub async fn update_ui_triage_action_handler(
                 }
 
                 if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
-                    if action_type == "Draft Reply" {
+                    if action_type == "Draft Reply" || action_type == "DRAFT_REPLY" {
+                        let mut channel_opt = None;
+                        let mut thread_customer_id = None;
+                        if let Ok(Some(row)) = sqlx::query("SELECT channel, customer_id FROM unified_threads WHERE id = ? AND tenant_id = ?")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                        {
+                            channel_opt = Some(row.try_get::<String, _>("channel").unwrap_or_default());
+                            thread_customer_id = row.try_get::<String, _>("customer_id").ok();
+                        }
+
+                        if let Some(channel) = channel_opt {
+                            if channel == "whatsapp" {
+                                if let Some(ref cid) = thread_customer_id {
+                                    // Send via Meta Provider
+                                    let meta_token_opt: Option<String> = sqlx::query_scalar("SELECT meta_access_token FROM integrations WHERE tenant_id = ?")
+                                        .bind(&tenant_id)
+                                        .fetch_optional(&mut *tx)
+                                        .await
+                                        .unwrap_or(None);
+                                    let meta_token = meta_token_opt.unwrap_or_default();
+
+                                    if !meta_token.is_empty() {
+                                        let meta_provider = crate::integrations::meta::provider::MetaProvider::new(meta_token);
+                                        let res = meta_provider.send_message("whatsapp", cid, &action_payload).await;
+                                        if let Err(e) = res {
+                                            tracing::error!("Failed to send WhatsApp message via Meta API: {}", e);
+                                        } else {
+                                            tracing::info!("Successfully sent WhatsApp message to {}", cid);
+                                        }
+                                    } else {
+                                        tracing::warn!("meta_access_token not configured for tenant {}, skipping actual send.", tenant_id);
+                                    }
+                                }
+                            }
+                        }
+
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                        // Insert into unified_messages for the actual conversation history
+                        let _ = sqlx::query("INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES (?, ?, ?, 'agent', ?)")
+                            .bind(&new_msg_id)
+                            .bind(&tenant_id)
+                            .bind(&payload.triage_item_id)
+                            .bind(&action_payload)
+                            .execute(&mut *tx)
+                            .await;
+
                         let _ = sqlx::query(
                             "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, ?, ?)"
                         )
