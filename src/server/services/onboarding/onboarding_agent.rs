@@ -72,7 +72,7 @@ impl OnboardingAgent {
             Some(m) => m,
             None => {
                 // E2E Test / Local adapter mock fallback when no LLM is configured
-                if user_messages.len() <= 1 {
+                if user_messages.len() <= 0 {
                     return Ok(ChatResponse {
                         is_complete: false,
                         reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),

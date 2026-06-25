@@ -369,9 +369,8 @@ export default function OnboardingWizard() {
         updateState({ firstProductName: intakeData.initial_products?.[0]?.name || "First Product" });
         updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00" });
         updateState({ location: intakeData.location || "" });
-        updateState({ targetAudience: intakeData.target_audience || "" });
-
-        // Let the normal handleStartOnboarding function take over if admin details are missing
+        updateState({ targetAudience: intakeData.target_audience || "" });        // Zero-click onboarding: jump to step 3 so the user can enter their admin credentials properly,
+        // or let the normal handleStartOnboarding function take over if admin details are missing
         if (!adminEmail.trim() || !adminPassword.trim()) {
           updateState({ step: 3 }); syncStateToBackend({
             step: 3,
