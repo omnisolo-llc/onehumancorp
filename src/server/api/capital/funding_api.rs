@@ -41,7 +41,7 @@ impl FundingService for FundingApi {
             amount: o.amount,
             draft_proposal_text: o.draft_proposal_text.unwrap_or_default(),
             status: o.status,
-            deadline: o.deadline.map(|d| d.to_rfc3339()).unwrap_or_default(),
+            deadline: o.deadline.unwrap_or_default(),
         }).collect();
 
         Ok(Response::new(ListFundingOpportunitiesResponse {
