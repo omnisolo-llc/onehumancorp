@@ -16,11 +16,23 @@ test.describe('Visual Workflow Builder', () => {
     await page.getByRole('button', { name: '+ Add LLM Node' }).click();
     await expect(page.locator('text=node-2')).toBeVisible();
 
-    // 3. Connect the nodes
-    await page.getByRole('button', { name: 'Connect from previous' }).click();
-    await expect(page.locator('text=node-1 → node-2')).toBeVisible();
+    // 3. Add Parallel Fork Node
+    await page.getByRole('button', { name: '+ Add Parallel Fork Node' }).click();
+    await expect(page.locator('text=node-3')).toBeVisible();
 
-    // 4. Run the workflow (Since it calls fetch, it should show Waiting or an Error/Result)
+    // 4. Add Parallel Join Node
+    await page.getByRole('button', { name: '+ Add Parallel Join Node' }).click();
+    await expect(page.locator('text=node-4')).toBeVisible();
+
+    // 5. Connect the nodes
+    await page.locator('div').filter({ hasText: /^node-2LlmConnect from previous$/ }).getByRole('button').click();
+    await expect(page.locator('text=node-1 → node-2')).toBeVisible();
+    await page.locator('div').filter({ hasText: /^node-3ParallelForkConnect from previous$/ }).getByRole('button').click();
+    await expect(page.locator('text=node-2 → node-3')).toBeVisible();
+    await page.locator('div').filter({ hasText: /^node-4ParallelJoinConnect from previous$/ }).getByRole('button').click();
+    await expect(page.locator('text=node-3 → node-4')).toBeVisible();
+
+    // 6. Run the workflow (Since it calls fetch, it should show Waiting or an Error/Result)
     await page.getByRole('button', { name: '▶ Run Workflow' }).click();
 
     // We either expect a result or an error since the backend may or may not be mocked

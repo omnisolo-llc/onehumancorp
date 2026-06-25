@@ -16,6 +16,8 @@ export default function VisualWorkflowPage() {
     if (type === "Llm") data = { prompt_template: "Translate to French: {input}" };
     if (type === "Input") data = { name: "input" };
     if (type === "Output") data = {};
+    if (type === "ParallelFork") data = { targets: [] };
+    if (type === "ParallelJoin") data = { state_keys: [], output_key: "joined_output" };
 
     setNodes([...nodes, { id, type, data }]);
   };
@@ -78,6 +80,18 @@ export default function VisualWorkflowPage() {
           onClick={() => addNode("Output")}
         >
           + Add Output Node
+        </button>
+        <button
+          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded shadow transition"
+          onClick={() => addNode("ParallelFork")}
+        >
+          + Add Parallel Fork Node
+        </button>
+        <button
+          className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded shadow transition"
+          onClick={() => addNode("ParallelJoin")}
+        >
+          + Add Parallel Join Node
         </button>
 
         <button

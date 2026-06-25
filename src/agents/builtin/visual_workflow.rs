@@ -459,6 +459,9 @@ impl WorkflowExecutor {
                                     merged_data.push(val.clone());
                                 }
                             }
+                            if merged_data.is_empty() {
+                                return Err(format!("ParallelJoin failed: missing expected state keys {:?}", state_keys));
+                            }
                             merged_data.sort();
                             let merged_string = serde_json::to_string(&merged_data)
                                 .unwrap_or_else(|_| "[]".to_string());
