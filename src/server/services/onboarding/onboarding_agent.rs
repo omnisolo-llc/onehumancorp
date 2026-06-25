@@ -117,8 +117,8 @@ Review the following conversation history:
 {}
 
 If you DO NOT have enough information to confidently create a business profile (including name, type, categories, and initial products), reply with a natural, conversational question asking for the missing information.
-If you DO have enough information, first PROPOSE the setup plan to the user. For example: "I'll create a Cake Catalog, set up a custom deposit workflow, and generate a booking link. Sound good?"
-Once the user approves the plan (e.g., "Yes", "Sounds good", "Do it"), reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have their approval.
+If you DO have enough information, first PROPOSE the setup plan to the user. For example: "I will create a Cake Catalog, set up a custom deposit workflow, and generate a booking link. Sound good?"
+Once the user approves the plan (e.g., "Yes", "Sounds good", "Do it"), reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message. Do not output anything else if you have their approval.
 
 Your response:",
             conversation_history

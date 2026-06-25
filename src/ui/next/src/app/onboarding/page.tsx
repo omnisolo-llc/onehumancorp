@@ -586,18 +586,10 @@ export default function OnboardingWizard() {
   const showIntroBack = step === 1 && chatStep === 1;
 
   // Progress percentage calculation
+    // Progress percentage calculation
   const getProgress = () => {
-    // There are 5 steps, let's make it a more gradual fill
-    if (step === 1) {
-      if (chatStep === 1) return 25;
-      if (chatStep === 2) return 35;
-      if (chatStep === 3) return 40;
-      if (chatStep === 4) return 45;
-      if (chatStep === 5) return 50;
-    }
-    if (step === 2) return 60;
-    if (step === 3) return 80;
-    if (step === 4) return 95;
+    if (step === 0) return 20;
+    if (step === 4) return 80;
     if (step === 5) return 100;
     return 0;
   };
@@ -638,7 +630,7 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-                    {step === 0 && (
+                                        {step === 0 && (
             <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full">
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 text-center">Setup Assistant</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-4 leading-relaxed max-w-sm mx-auto">

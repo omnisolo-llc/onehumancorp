@@ -21,7 +21,7 @@ describe('OnboardingWizard Chat Interface', () => {
         isLoading: false,
         error: '',
         businessName: '',
-        chatMessages: [], // if it was persisted
+        chatMessages: [],
       });
     });
     localStorage.clear();

@@ -26,12 +26,21 @@ test.describe('OnboardingWizard CUJ', () => {
       });
     });
 
+    await page.route('**/*api/onboarding/start*', async route => {
+      await route.fulfill({ status: 200, json: { organization_id: 'test-org-123' } });
+    });
+
+    await page.route('**/*api/onboarding/launch*', async route => {
+      await route.fulfill({ status: 200, json: {} });
+    });
+
     await page.goto('/onboarding');
     await expect(page.getByText("What do you want to build or manage today?")).toBeVisible();
 
     // Click the predefined chip
     await page.getByText('Cake Shop', { exact: true }).click();
 
-    // Wait for the UI to be in loading state after the chip click (which triggers send)
+    // The send triggers step 4 then step 5
+    await expect(page.getByText('Building Your Business', { exact: false })).toBeVisible({ timeout: 5000 });
   });
 });
