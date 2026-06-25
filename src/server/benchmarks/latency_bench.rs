@@ -903,6 +903,7 @@ pub async fn bench_ai_token_efficiency() {
     let mut event = crate::services::billing::auditor::AuditEvent {
         agent_id: "agent1".to_string(),
         tenant_id: "test_tenant".to_string(),
+        mission_id: None,
         input_tokens: 10,
         output_tokens: 5,
         cached_input_tokens: 0,

@@ -163,6 +163,51 @@
           }
         }
       }
+    },
+    {
+      "type": "timeseries",
+      "title": "Per-Mission Cost (Cents/sec) - ROA",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_mission_cost_cents[5m])) by (mission_id)",
+          "legendFormat": "{{mission_id}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      }
     }
   ]
 }

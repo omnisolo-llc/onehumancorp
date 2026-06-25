@@ -5,10 +5,11 @@ use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 use opentelemetry::KeyValue;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AuditEvent {
     pub agent_id: String,
     pub tenant_id: String,
+    pub mission_id: Option<String>,
     pub input_tokens: i64,
     pub output_tokens: i64,
     pub cached_input_tokens: i64,
@@ -173,6 +174,13 @@ impl CostAuditor {
 
         let cost_cents = (cost * 100.0).round() as u64;
         self.llm_cost_counter.add(cost_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
+
+        // Let's emit the metric from the global meter here if a mission ID is present.
+        // It's also cleaner to let ViolationStore handle it if it was integrated deeply,
+        // but CostAuditor doesn't hold ViolationStore.
+        // Since the cost-blueprint wants `ohc_mission_cost_cents`, we will add it directly here
+        // using opentelemetry, and later in hub.rs buffer it to db.
+        // Actually, hub.rs will receive the event through `telemetry_tx` and can persist it.
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
@@ -569,6 +577,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            mission_id: None,
             input_tokens: 1000,
             output_tokens: 500,
             cached_input_tokens: 0,
@@ -629,6 +638,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            mission_id: None,
             input_tokens: 0,
             output_tokens: 0,
             cached_input_tokens: 100,
@@ -672,6 +682,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            mission_id: None,
             input_tokens: 0,
             output_tokens: 0,
             cached_input_tokens: 0,
@@ -694,6 +705,7 @@ mod tests {
         let event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant1".to_string(),
+            mission_id: None,
             input_tokens: 100,
             output_tokens: 50,
             cached_input_tokens: 100,
@@ -764,6 +776,7 @@ mod additional_tests {
         let mut event = AuditEvent {
             agent_id: "agent1".to_string(),
             tenant_id: "tenant_anomaly".to_string(),
+            mission_id: None,
             input_tokens: 10,
             output_tokens: 5,
             cached_input_tokens: 0,
