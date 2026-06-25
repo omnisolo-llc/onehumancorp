@@ -40,7 +40,7 @@ impl FundingService for FundingApi {
             grant_name: o.grant_name,
             amount: o.amount,
             draft_proposal_text: o.draft_proposal_text.unwrap_or_default(),
-            status: o.status,
+            status: o.status.to_string(),
             deadline: o.deadline.map(|d| d.to_rfc3339()).unwrap_or_default(),
         }).collect();
 
