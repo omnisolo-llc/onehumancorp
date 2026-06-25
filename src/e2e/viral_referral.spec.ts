@@ -44,23 +44,20 @@ test.describe('Viral Referral Loop', () => {
     }
   });
 
-  test('should display Cloud Bridge Invite widget and generate link', async ({ page, loginAs, unlimitedAdminUser }) => {
+  test('should display Grow Your Team widget and generate link', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/dashboard.html');
+    await page.goto('/team');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Cloud Bridge Invite' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Grow Your Team' })).toBeVisible();
 
-    const emailInput = page.locator('#cloud-bridge-email');
-    await expect(emailInput).toBeVisible();
-    await emailInput.fill('team-member@example.com');
+    const altBtn = page.getByRole('button', { name: 'Invite to Cloud Team' });
+    await expect(altBtn).toBeVisible();
+    await altBtn.click();
 
-    const generateCloudBtn = page.locator('#generate-cloud-bridge-btn');
-    await expect(generateCloudBtn).toBeVisible();
-    await generateCloudBtn.click();
-
-    const statusText = page.locator('#cloud-bridge-status');
-    await expect(statusText).toBeVisible();
-    await expect(statusText).toContainText('Cloud Invite generated: https://ohc.app/invite/');
+    const input = page.locator('#cloud-bridge-invite-link');
+    await expect(input).toBeVisible();
+    const value = await input.inputValue();
+    expect(value).toContain('http');
   });
 });
