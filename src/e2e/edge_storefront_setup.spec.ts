@@ -1,4 +1,4 @@
-import { test, expect } from './test_utils/authenticated_test';
+import { test, expect } from './fixtures';
 
 test.describe('Edge Storefront UI Setup Journey', () => {
 
