@@ -368,9 +368,13 @@
 
       document.addEventListener('DOMContentLoaded', async () => {
         const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const token = localStorage.getItem('token');
         const headers = {};
         if (tenant) {
             headers['x-ohc-tenant-id'] = tenant;
+        }
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
 
         try {
