@@ -18,6 +18,7 @@ pub enum ClaudeSubagentMode {
     Teammate {
         mailbox_dir: PathBuf,
     },
+    // Subagent Orchestration: Worktree branch
     Worktree {
         base_repo_path: PathBuf,
         branch_name: String,
