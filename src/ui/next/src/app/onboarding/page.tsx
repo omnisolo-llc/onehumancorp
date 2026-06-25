@@ -712,8 +712,8 @@ export default function OnboardingWizard() {
                   <input
                     type="url"
                     id="chat-image-url"
-                    value={instantImageUrl}
-                    onChange={(e) => updateState({ instantImageUrl: e.target.value })}
+                    value={chatImageUrl}
+                    onChange={(e) => setChatImageUrl(e.target.value)}
                     className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] min-h-[44px]"
                     placeholder="Image URL (Optional)"
                     inputMode="url"
@@ -721,11 +721,27 @@ export default function OnboardingWizard() {
                     enterKeyHint="next"
                   />
                   <div className="flex gap-2 w-full">
+                    <button
+                      id="chat-upload-btn"
+                      className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[8px] min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
+                      onClick={() => {
+                        const url = prompt("Enter image URL");
+                        if (url) setChatImageUrl(url);
+                      }}
+                      title="Upload Image"
+                      aria-label="Upload Image"
+                    >
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                      </svg>
+                    </button>
                     <input
                       type="text"
                       id="chat-input"
-                      value={bio}
-                      onChange={(e) => updateState({ bio: e.target.value })}
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => {
                          if (e.key === 'Enter') handleSendChatMessage();
                       }}
