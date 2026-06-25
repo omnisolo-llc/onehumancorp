@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
 import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
@@ -44,6 +45,7 @@ function InboxWorkspace({
   messages: Message[];
   sourceLabel: string;
 }) {
+  const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
@@ -87,6 +89,31 @@ function InboxWorkspace({
 
 
   const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
+
+  async function handleDraftQuoteWithAI(message: Message) {
+    try {
+      setActionStatus("Drafting quote with AI...");
+      const res = await fetch("/api/quotes/draft_agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inquiry: message.content || "",
+          customer_id: message.customer_id || message.sender_id || "unknown",
+          tenant_id: "t1" // Hardcoded fallback for now, normally from context
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to draft quote");
+      const data = await res.json();
+      if (data.id) {
+        setActionStatus("Quote drafted successfully!");
+        router.push(`/quotes/${data.id}`);
+      }
+    } catch (err: any) {
+      setActionStatus(`Error drafting quote: ${err.message}`);
+    } finally {
+      setTimeout(() => setActionStatus(""), 3000);
+    }
+  }
 
   async function handleApproveAndSend(inboxMessageId: string) {
     try {
@@ -257,6 +284,22 @@ function InboxWorkspace({
                         </button>
                       );
                     })()}
+                  </div>
+                )}
+                {!activeApproval && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => handleDraftQuoteWithAI(selected)}
+                      className="app-button w-full min-h-[44px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-[16px] shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                    >✨ Draft Quote with AI</button>
+                  </div>
+                )}
+                {!activeApproval && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => handleDraftQuoteWithAI(selected)}
+                      className="w-full min-h-[44px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-[16px] shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                    >✨ Draft Quote with AI</button>
                   </div>
                 )}
               </div>
