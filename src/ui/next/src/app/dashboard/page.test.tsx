@@ -18,10 +18,31 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock fetch to prevent valid Undici errors regarding absolute URLs or missing globals
-global.fetch = vi.fn(() => Promise.resolve({
-  ok: true,
-  json: () => Promise.resolve({})
-})) as any;
+global.fetch = vi.fn((url: string) => {
+  if (url === '/api/walkthrough/dashboard') {
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve([
+        {
+          targetId: "sales-card-target",
+          title: "Business Analytics",
+          content: "This panel shows your current sales and customer counts.",
+          position: "bottom"
+        },
+        {
+          targetId: "operations-map-target",
+          title: "Operations Map",
+          content: "Use this area to see the live state of your orders, messages, and inventory.",
+          position: "bottom"
+        }
+      ])
+    });
+  }
+  return Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({})
+  });
+}) as any;
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -39,14 +60,31 @@ vi.mock('next/navigation', () => ({
 }));
 
 test('renders dashboard with actionable feed', async () => {
-  global.fetch = vi.fn(() => Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({})
-  })) as any;
-  global.fetch = vi.fn(() => Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({})
-  })) as any;
+  global.fetch = vi.fn((url: string) => {
+    if (url === '/api/walkthrough/dashboard') {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([
+          {
+            targetId: "sales-card-target",
+            title: "Business Analytics",
+            content: "This panel shows your current sales and customer counts.",
+            position: "bottom"
+          },
+          {
+            targetId: "operations-map-target",
+            title: "Operations Map",
+            content: "Use this area to see the live state of your orders, messages, and inventory.",
+            position: "bottom"
+          }
+        ])
+      });
+    }
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({})
+    });
+  }) as any;
   const { act } = await import('@testing-library/react');
   await act(async () => {
     render(<TooltipProvider><Dashboard /></TooltipProvider>);
@@ -57,7 +95,7 @@ test('renders dashboard with actionable feed', async () => {
   });
 
   expect(screen.getByText("Operations Map")).toBeDefined();
-  expect(screen.getByText(/Action Required/)).toBeDefined();
+  expect(screen.getByText("Unified Agent Feed")).toBeDefined();
   expect(screen.getByText("Recent Orders")).toBeDefined();
   expect(screen.queryByText(/\/api\/ui\/dashboard\/unified-feed/)).toBeNull();
   expect(screen.getByText("Inbox Activity")).toBeDefined();

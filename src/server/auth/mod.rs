@@ -6,6 +6,7 @@ pub use ::server_oidc as oidc;
 pub mod orchestration;
 pub mod postgres_store;
 pub mod sqlite_store;
+pub mod user_repository;
 pub mod grpc;
 
 use std::collections::HashMap;
@@ -157,6 +158,7 @@ pub struct Store {
     redis_client: Option<redis::Client>,
     secret: Vec<u8>,
     oidc_cfg: RwLock<OIDCConfig>,
+    repo: Option<std::sync::Arc<dyn crate::user_repository::UserRepository>>,
 }
 
 impl Store {
@@ -170,6 +172,19 @@ impl Store {
 
                 let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
                 if secret_path.exists() {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
+                            if perms.mode() & 0o777 != 0o600 {
+                                perms.set_mode(0o600);
+                                let _ = std::fs::set_permissions(&secret_path, perms.clone());
+                                if perms.mode() & 0o777 != 0o600 {
+                                    panic!("CRITICAL SECURITY ERROR: .ohc_jwt_secret has insecure permissions. Must be exactly 0600.");
+                                }
+                            }
+                        }
+                    }
                     if let Ok(bytes) = std::fs::read(&secret_path) {
                         if bytes.len() >= 32 {
                             return bytes;
@@ -184,9 +199,12 @@ impl Store {
                         {
                             use std::os::unix::fs::PermissionsExt;
                             if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
-                                if (perms.mode() & 0o777) != 0o600 {
+                                if perms.mode() & 0o777 != 0o600 {
                                     perms.set_mode(0o600);
-                                    let _ = std::fs::set_permissions(&secret_path, perms);
+                                    let _ = std::fs::set_permissions(&secret_path, perms.clone());
+                                    if perms.mode() & 0o777 != 0o600 {
+                                        panic!("CRITICAL SECURITY ERROR: .ohc_sqlite_key has insecure permissions. Must be exactly 0600.");
+                                    }
                                 }
                             }
                         }
@@ -228,9 +246,12 @@ impl Store {
                     // Ensure permissions are strictly 0o600
                     use std::os::unix::fs::PermissionsExt;
                     if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
-                        if (perms.mode() & 0o777) != 0o600 {
+                        if perms.mode() & 0o777 != 0o600 {
                             perms.set_mode(0o600);
-                            let _ = std::fs::set_permissions(&secret_path, perms);
+                            let _ = std::fs::set_permissions(&secret_path, perms.clone());
+                            if perms.mode() & 0o777 != 0o600 {
+                                panic!("CRITICAL SECURITY ERROR: .ohc_jwt_secret has insecure permissions. Must be exactly 0600.");
+                            }
                         }
                     }
                 }
@@ -290,6 +311,7 @@ impl Store {
                 client_id,
                 enabled,
             }),
+            repo: None,
         };
 
         store.seed_default_admin(now);
@@ -322,6 +344,13 @@ impl Store {
         self.users.write().unwrap().insert(id.clone(), admin);
         self.by_name.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_user }, id.clone());
         self.by_email.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_email }, id);
+    }
+
+
+    pub fn with_repo(repo: std::sync::Arc<dyn crate::user_repository::UserRepository>) -> Self {
+        let mut store = Store::new();
+        store.repo = Some(repo);
+        store
     }
 
     pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
@@ -525,9 +554,13 @@ impl Store {
         Ok(())
     }
 
-    pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
+        pub async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) {
         if self.validate_org_id(org_id).is_err() {
             return;
+        }
+
+        if let Some(repo) = &self.repo {
+            let _ = repo.revoke_token(jti.clone(), exp, org_id).await;
         }
 
         {
@@ -546,9 +579,15 @@ impl Store {
         }
     }
 
-    pub async fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
+        pub async fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
         if self.validate_org_id(org_id).is_err() {
             return false;
+        }
+
+        if let Some(repo) = &self.repo {
+            if let Ok(true) = repo.is_revoked(jti, org_id).await {
+                return true;
+            }
         }
 
         {

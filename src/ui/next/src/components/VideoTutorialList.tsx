@@ -19,6 +19,7 @@ export function VideoTutorialList({
   const [fetchedVideos, setFetchedVideos] = useState<VideoTutorial[]>([]);
   const [fetchedLoading, setFetchedLoading] = useState(true);
   const [activeVideo, setActiveVideo] = useState<VideoTutorial | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (initialVideos !== undefined) return;
@@ -37,6 +38,10 @@ export function VideoTutorialList({
   const loading = externalLoading !== undefined ? externalLoading : fetchedLoading;
   const videos = initialVideos !== undefined ? initialVideos : fetchedVideos;
 
+  const filteredVideos = videos.filter(video =>
+    video.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12 backdrop-filter backdrop-blur-[30px] saturate-[210%] bg-white/30">
@@ -45,20 +50,36 @@ export function VideoTutorialList({
     );
   }
 
-  if (videos.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <p>No video tutorials available right now.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full max-w-4xl mx-auto py-8 px-4 font-inter">
-      <h2 className="text-2xl font-extrabold font-outfit text-gray-900 mb-6 text-center sm:text-left">Video Tutorials</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {videos.map(video => (
-          <div key={video.id} onClick={() => setActiveVideo(video)} className="backdrop-blur-[30px] bg-white/80 dark:bg-black/40 saturate-[250%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/80 dark:border-white/20 overflow-hidden group hover:shadow-lg transition-all cursor-pointer flex flex-col hover:-translate-y-1">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <h2 className="text-2xl font-extrabold font-outfit text-gray-900 text-center sm:text-left">Video Tutorials</h2>
+        <div className="w-full sm:w-64 relative">
+          <input
+            type="text"
+            placeholder="Search videos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+          />
+          <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+
+      {videos.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <p>No video tutorials available right now.</p>
+        </div>
+      ) : filteredVideos.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <p>No video tutorials match your search.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredVideos.map(video => (
+            <div key={video.id} onClick={() => setActiveVideo(video)} className="backdrop-blur-[30px] bg-white/80 dark:bg-black/40 saturate-[250%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/80 dark:border-white/20 overflow-hidden group hover:shadow-lg transition-all cursor-pointer flex flex-col hover:-translate-y-1">
             {/* Mock video player area (portrait optimized 9:16 approx for mobile shorts feel, or standard 16:9) */}
             <div className="w-full aspect-[9/16] sm:aspect-video bg-gray-900 relative flex items-center justify-center">
               {/* Play button overlay */}
@@ -81,8 +102,9 @@ export function VideoTutorialList({
               </h3>
             </div>
           </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
       {/* Video Player Modal */}
       {activeVideo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-[20px] saturate-200 p-4 animate-fade-in">

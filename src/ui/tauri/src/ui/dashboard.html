@@ -889,11 +889,14 @@
 
         <a href="reputation-engine.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
 <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
+        <a href="viral-waitlist-generator.html" id="viral-waitlist-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Waitlist Generator ⏳</a>
+        <a href="viral-goal-tracker.html" id="viral-goal-tracker-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Goal Tracker Builder 🎯</a>
         <a href="viral-loyalty-widget.html" id="loyalty-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Loyalty Engine 💳</a>
 <a href="exit-intent-builder.html" id="exit-intent-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Exit-Intent Pop-up 🛑</a>
         <a href="spin-to-win-generator.html" id="spin-to-win-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Spin To Win Generator</a>
         <a href="share-to-unlock-generator.html" id="share-to-unlock-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share-to-Unlock Generator 🔓</a>
         <a href="footer-branding-loop.html" id="footer-branding-loop-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Footer Branding Loop ✨</a>
+        <a href="nps-feedback-generator.html" id="nps-feedback-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">NPS Feedback Generator 📊</a>
         <a href="review-reward-generator.html" id="review-reward-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Review Reward Generator ⭐️</a>
         <a href="link-in-bio-generator.html" id="link-in-bio-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Link-in-Bio Generator 🔗</a>
         <a href="social-proof-nudge.html" id="social-proof-nudge-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Proof Nudge 🔔</a>
@@ -1706,14 +1709,15 @@
         }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/unified_inbox_feed?tenant_id=${encodeURIComponent(tenantId)}`, {
+          const res = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
 
           const data = await res.json();
           // Adjust logic to match new ui triage shape if necessary
-          agentFeedItems = data.triage || data.agent_feed || (Array.isArray(data) ? data : (data.items || []));
+          agentFeedItems = [...(data.triage || []), ...(data.pending_approvals || []), ...(data.agent_feed || []), ...(data.approvals || []), ...(data.items || [])];
+          if (agentFeedItems.length === 0) { agentFeedItems = (Array.isArray(data) ? data : (data.items || [])); }
           if (agentFeedItems.length === 0) {
             triageQueue.innerHTML = `
               <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
@@ -1840,7 +1844,7 @@
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
                   <button class="triage-btn-approve" data-testid="triage-approve-${action.id}" onclick="handleTriageAction('${action.id}', true)" style="flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Send Draft</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${action.id}', false)" style="flex: 1; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${action.id}', false)" style="flex: 1; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Review Estimate</button>
                 </div>
               </div>
               `;
@@ -1862,8 +1866,11 @@
               `;
             }
 
-            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft') {
-              let payload = item.proposed_action || item.context_payload || {};
+            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft' || item.payload?.feature_type === 'quote_draft' || (item.payload && typeof item.payload === 'string' && item.payload.includes('quote_draft'))) {
+              let payload = item.proposed_action || item.context_payload || item.payload || {};
+              if (typeof payload === 'string') {
+                  try { payload = JSON.parse(payload); } catch(e){}
+              }
               if (typeof item.action_payload === 'string') {
                   try { payload = JSON.parse(item.action_payload); } catch(e){}
               } else if (item.action_payload) {
@@ -1883,7 +1890,7 @@
                   <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
                     <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Approve & Send</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/ui/quote.html?id=${payload.quote_id || item.id}&mode=owner'" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;">Review Estimate</button>
                     <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none; min-height: 44px; min-width: 44px;">Dismiss</button>
                   </div>
                 </div>
@@ -2055,7 +2062,7 @@
                 <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
                 <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
                   <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Approve</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Edit</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Review Estimate</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Deny</button>
                 </div>
               </div>

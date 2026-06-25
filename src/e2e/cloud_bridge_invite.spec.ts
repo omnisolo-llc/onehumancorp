@@ -1,8 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Sovereign-to-Cloud Bridge Invite', () => {
-  test('generates cloud bridge invite link from team page', async ({ page }) => {
+  test('generates cloud bridge invite link from team page', async ({ page, loginAs, unlimitedAdminUser }) => {
     // Navigate to Team page
+    await loginAs(page, unlimitedAdminUser);
     await page.goto('/team');
 
     // Check Growth Referral Widget is visible

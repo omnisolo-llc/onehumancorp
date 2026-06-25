@@ -1,3 +1,4 @@
+#![allow(clippy::empty_line_after_doc_comments)]
 use std::fs;
 use std::path::PathBuf;
 
@@ -20,15 +21,17 @@ impl OmniContextRouter {
     pub fn get_system_grounding(&self) -> Option<String> {
         let agents_path = self.context_root.join("AGENTS.md");
         if agents_path.exists()
-            && let Ok(content) = fs::read_to_string(&agents_path) {
-                return Some(format!("[SYSTEM GROUNDING]\n{}", content));
-            }
+            && let Ok(content) = fs::read_to_string(&agents_path)
+        {
+            return Some(format!("[SYSTEM GROUNDING]\n{}", content));
+        }
 
         let claude_path = self.context_root.join("CLAUDE.md");
         if claude_path.exists()
-            && let Ok(content) = fs::read_to_string(&claude_path) {
-                return Some(format!("[SYSTEM GROUNDING]\n{}", content));
-            }
+            && let Ok(content) = fs::read_to_string(&claude_path)
+        {
+            return Some(format!("[SYSTEM GROUNDING]\n{}", content));
+        }
 
         None
     }

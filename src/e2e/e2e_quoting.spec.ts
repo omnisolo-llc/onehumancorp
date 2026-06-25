@@ -5,11 +5,11 @@ test.describe('Quoting UI e2e', () => {
 
   test('owner can navigate to quoting page, view a real quote from the backend, and approve it', async ({ page }) => {
     // Navigate to the quoting page
-    await page.goto('/quoting?id=e2e-approval-quote-draft');
+    await page.goto('/ui/quote.html?id=823e4567-e89b-12d3-a456-426614174000');
 
-    await expect(page.locator('text=Quote Summary')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Quote Details')).toBeVisible({ timeout: 15000 });
 
-    const approveBtn = page.getByRole('button', { name: 'Approve & Send' });
+    const approveBtn = page.getByRole('button', { name: 'Pay Deposit with Pay' });
     await expect(approveBtn).toBeVisible();
 
     await approveBtn.click();

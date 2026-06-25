@@ -17,6 +17,7 @@ pub struct GatherActVerifyHarness {
     pub gather_tools: Vec<Tool>,
     pub act_tools: Vec<Tool>,
     pub verify_tools: Vec<Tool>,
+    pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
 }
 
 impl GatherActVerifyHarness {
@@ -31,7 +32,13 @@ impl GatherActVerifyHarness {
             gather_tools,
             act_tools,
             verify_tools,
+            checkpointer: None,
         }
+    }
+
+    pub fn with_checkpointer(mut self, checkpointer: Arc<dyn crate::checkpointer::CheckpointSaver>) -> Self {
+        self.checkpointer = Some(checkpointer);
+        self
     }
 
     /// The single query function returning an async channel of AgentEvents.
@@ -47,9 +54,15 @@ impl GatherActVerifyHarness {
         let gather_tools = self.gather_tools.clone();
         let act_tools = self.act_tools.clone();
         let verify_tools = self.verify_tools.clone();
-
+        let checkpointer = self.checkpointer.clone();
 
         tokio::spawn(async move {
+            let mut last_checkpoint_id: Option<String> = None;
+            let scratchpad_path = config
+                .state_scratchpad_path
+                .clone()
+                .unwrap_or_else(|| format!(".agent_progress_{}.json", config.thread_id.clone().unwrap_or_else(|| "default".to_string())));
+
             let mut error_counts: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
 
             if let Some(guardrails) = &config.guardrails {
@@ -331,6 +344,46 @@ impl GatherActVerifyHarness {
                         return;
                     }
                 }
+
+                // Master Catalog B.7. State Management Checkpointing Mechanic
+                // 1. Configured Checkpointer (Database or Git)
+                if config.enable_state_checkpointing {
+                    if let (Some(cp_saver), Some(thread_id)) = (&checkpointer, &config.thread_id) {
+                        let checkpoint_id = uuid::Uuid::new_v4().to_string();
+                        let cp = crate::checkpointer::Checkpoint {
+                            thread_id: thread_id.clone(),
+                            checkpoint_id: checkpoint_id.clone(),
+                            parent_id: last_checkpoint_id.clone(),
+                            data: serde_json::to_value(&messages).unwrap_or(serde_json::Value::Null),
+                            metadata: serde_json::json!({
+                                "iteration": iteration,
+                            }),
+                            created_at: chrono::Utc::now(),
+                        };
+                        if let Err(e) = cp_saver.put_checkpoint(cp).await {
+                            tracing::warn!("Failed to save checkpoint: {}", e);
+                        } else {
+                            last_checkpoint_id = Some(checkpoint_id.clone());
+                            let _ = tx.send(AgentEvent::CheckpointSaved {
+                                iteration: iteration as i32,
+                                path: format!("{}:{}", cp_saver.storage_prefix(), checkpoint_id),
+                            });
+                        }
+                    }
+
+                    // 2. Local File Scratchpad (Claude Code Mechanic)
+                    let mut pf = crate::checkpointer::ProgressFile::default();
+                    pf.status = format!("GatherActVerify Iteration {}", iteration);
+                    pf.notes.push(format!("Completed Iteration {}", iteration));
+                    if let Ok(json_state) = serde_json::to_string_pretty(&pf) {
+                        if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
+                            let _ = tx.send(AgentEvent::CheckpointSaved {
+                                iteration: iteration as i32,
+                                path: scratchpad_path.clone(),
+                            });
+                        }
+                    }
+                }
             }
 
             let _ = tx.send(AgentEvent::TaskError {
@@ -341,6 +394,11 @@ impl GatherActVerifyHarness {
         rx
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
 
     #[tokio::test]
     async fn test_gather_act_verify_compounding_error_prevention() {
@@ -419,13 +477,6 @@ impl GatherActVerifyHarness {
 
         assert!(error_msg.contains("Fatal tool error: Tool 'fail_tool' failed consecutively beyond max_retries limit"));
     }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
 
     struct MockLlm {
         responses: tokio::sync::Mutex<Vec<ChatResponse>>,

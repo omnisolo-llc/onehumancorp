@@ -32,7 +32,7 @@ export default function RootLayout({
           <TooltipProvider>
                     <WalkthroughProvider>
               <ProductShellGuard>{children}</ProductShellGuard>
-              <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
+              <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
               <HelpChat />
               <VoiceAssistant />
               <NetworkStatusIndicator />

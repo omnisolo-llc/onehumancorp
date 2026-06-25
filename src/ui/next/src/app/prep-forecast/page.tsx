@@ -100,7 +100,7 @@ export default function PrepForecast() {
           </div>
 
           <div className="p-6">
-            {error && <div className="text-red-500 py-4">{error}</div>}
+            {error && <div className="text-[#FF3B30] py-4">{error}</div>}
 
             {!error && predictions.length === 0 ? (
               <div className="text-center py-12 opacity-50">

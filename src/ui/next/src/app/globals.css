@@ -28,14 +28,23 @@ body {
   position: sticky;
   top: 0;
   align-self: flex-start;
-  background: rgba(22, 22, 26, 0.7);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
+  background: rgba(255, 255, 255, 0.65);
+
   backdrop-filter: blur(30px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   color: #d8dee8;
   padding: 16px 12px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+@media (prefers-color-scheme: dark) {
+  .app-sidebar {
+    background: rgba(22, 22, 26, 0.7);
+
+    backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
 
 .app-brand {
   height: 52px;
@@ -138,14 +147,14 @@ body {
 }
 
 .app-topbar {
-  min-height: 72px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   padding: 14px 24px;
   background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
+
   backdrop-filter: blur(30px) saturate(210%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.4);
   position: sticky;
@@ -156,7 +165,7 @@ body {
 @media (prefers-color-scheme: dark) {
   .app-topbar {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
+
     backdrop-filter: blur(30px) saturate(210%);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
@@ -209,7 +218,7 @@ body {
 
 .app-card {
   background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
+
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
@@ -219,7 +228,7 @@ body {
 @media (prefers-color-scheme: dark) {
   .app-card {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
+
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
@@ -228,7 +237,7 @@ body {
 
 .app-panel {
   background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
+
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
@@ -239,7 +248,7 @@ body {
 @media (prefers-color-scheme: dark) {
   .app-panel {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
+
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
@@ -544,8 +553,9 @@ body {
 }
 
 .ohc-hybrid-panel {
-    backdrop-filter: blur(30px) saturate(210%);
     background: rgba(255, 255, 255, 0.65);
+
+    backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.4);
     font-family: 'Outfit', 'Inter', sans-serif;
     color: #1D1D1F;
@@ -553,6 +563,16 @@ body {
     border-radius: 12px;
     padding: 24px;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+    .ohc-hybrid-panel {
+        background: rgba(22, 22, 26, 0.7);
+
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #F5F5F7;
+    }
 }
 
 @keyframes fade-in {
@@ -594,26 +614,30 @@ body {
 }
 
 .glassmorphism {
-  border-radius: 16px;
   background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
 }
 
 @media (prefers-color-scheme: dark) {
   .glassmorphism {
-    border-radius: 16px;
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
   }
+}
+
+html.dark .glassmorphism {
+  background: rgba(22, 22, 26, 0.7);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
 }
 
 .glass-card {
   background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
@@ -622,11 +646,17 @@ body {
 @media (prefers-color-scheme: dark) {
   .glass-card {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
   }
+}
+
+html.dark .glass-card {
+  background: rgba(22, 22, 26, 0.7);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
 }
 
 .app-shell .app-card,
@@ -678,7 +708,7 @@ button, .app-button, .charge-btn {
 
 .glass-panel {
   background: rgba(255, 255, 255, 0.65);
-  -webkit-backdrop-filter: blur(30px) saturate(210%);
+
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
@@ -687,9 +717,10 @@ button, .app-button, .charge-btn {
 @media (prefers-color-scheme: dark) {
   .glass-panel {
     background: rgba(22, 22, 26, 0.7);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
+
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
   }
 }
 
@@ -743,7 +774,8 @@ button, .app-button, .charge-btn {
 
 .setup-page #setup-screen .setup-nav-button {
   width: fit-content;
-  min-height: 32px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 6px 10px;
   border: 1px solid #d8e0ea;
   border-radius: 999px;
@@ -765,7 +797,7 @@ button, .app-button, .charge-btn {
 
 .setup-page #setup-screen .setup-nav-spacer {
   width: 92px;
-  height: 32px;
+  height: 44px;
 }
 
 .setup-page #setup-screen > div:first-child h1 {
@@ -900,7 +932,8 @@ button, .app-button, .charge-btn {
 .setup-page #setup-screen button[class*="text-[#0066FF]"],
 .setup-page #setup-screen button.self-start {
   width: auto;
-  min-height: 32px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0;
   border: 0;
   background: transparent !important;
@@ -1038,6 +1071,7 @@ select {
 
 .ohc-growth-card {
     background: rgba(255, 255, 255, 0.65);
+
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 16px;
@@ -1048,12 +1082,16 @@ select {
 @media (prefers-color-scheme: dark) {
     .ohc-growth-card {
         background: rgba(22, 22, 26, 0.7);
+
+        backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 }
 
 html.dark .ohc-growth-card {
     background: rgba(22, 22, 26, 0.7);
+
+    backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -1062,5 +1100,12 @@ html.dark .ohc-growth-card {
 }
 
 .app-panel {
+  border-radius: 16px;
+}
+
+html.dark .glass-panel {
+  background: rgba(22, 22, 26, 0.7);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
 }

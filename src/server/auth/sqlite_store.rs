@@ -14,7 +14,7 @@ fn is_multitenant_mode() -> bool {
 }
 
 use sqlx::Row;
-use super::postgres_store::UserRepository;
+use super::user_repository::UserRepository;
 
 
 macro_rules! validate_org_id {
@@ -42,17 +42,18 @@ impl SqliteUserRepository {
 
 #[async_trait]
 impl UserRepository for SqliteUserRepository {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+            async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        // For SQLite in Standalone mode, there's no multi-tenant isolation via connection parameters.
-        // We still store the org_id to conform to the interface.
-        sqlx::query(
-            r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, json($5), $6, $7, $8, $9, $10)
-            "#
-        )
+        let is_multitenant = is_multitenant_mode();
+        let _should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
+        let query = r#"
+        INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, json($5), $6, $7, $8, $9, $10)
+        "#;
+
+        sqlx::query(query)
         .bind(&user.id)
         .bind(&user.username)
         .bind(&user.email)
@@ -284,6 +285,7 @@ impl UserRepository for SqliteUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
+                .bind(org_id)
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?

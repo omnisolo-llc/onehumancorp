@@ -3,25 +3,25 @@ import { test, expect } from '@playwright/test';
 test.describe('Documentation Features CUJ', () => {
   test('User can access help center, use chat, run walkthroughs, view changelog, and API docs', async ({ page }) => {
     // 1. Visit Help Center
-    await page.goto('/help');
+    await page.goto('/api/ui/help.html');
     await expect(page.locator('h1')).toContainText('In-App Help Center');
 
     // 2. Open AI Help Chat
     const helpChatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(helpChatButton).toBeVisible();
     await helpChatButton.click();
-    await expect(page.locator('text="Ask AI Help"').first()).toBeVisible();
+    await expect(page.locator('text="Ask AI"').first()).toBeVisible();
 
     // 3. View Changelog from Dashboard
-    await page.goto('/dashboard');
+    await page.goto('/api/ui/dashboard.html');
     const changelogLink = page.locator('a', { hasText: 'Changelog' }).first();
     await expect(changelogLink).toBeVisible();
     await changelogLink.click();
-    await expect(page).toHaveURL(/.*\/changelog/);
+    await expect(page).toHaveURL(/.*\/api\/ui\/changelog\.html/);
     await expect(page.locator('h1')).toHaveText('Release Notes & Changelog');
 
     // 4. Trigger Walkthrough (Dashboard has a walkthrough button)
-    await page.goto('/dashboard');
+    await page.goto('/api/ui/dashboard.html');
     const walkthroughBtn = page.locator('#dashboard-walkthrough-btn');
     await expect(walkthroughBtn).toBeVisible();
     await walkthroughBtn.click();
@@ -30,7 +30,7 @@ test.describe('Documentation Features CUJ', () => {
     await expect(page.locator('.ohc-walkthrough-bubble')).not.toBeVisible();
 
     // 5. View API Docs
-    await page.goto('/api-docs');
+    await page.goto('/api/ui/api-docs.html');
     await expect(page.locator('text="Advanced:"').first()).toBeVisible();
     // Wait for swagger to load
     await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 10000 });

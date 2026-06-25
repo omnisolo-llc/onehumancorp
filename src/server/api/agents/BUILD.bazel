@@ -12,7 +12,6 @@ exports_files(
         "translation.rs",
         "webhook.rs",
         "client_intake.rs",
-        "jobs.rs",
 
 
     ],
@@ -33,7 +32,6 @@ rust_library(
         "translation.rs",
         "webhook.rs",
         "client_intake.rs",
-        "jobs.rs",
 
 
     ],

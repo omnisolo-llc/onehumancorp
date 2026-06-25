@@ -148,7 +148,7 @@ export default function LinkInBioGeneratorPage() {
                     <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Link {index + 1}</span>
                         {links.length > 1 && (
-                            <button onClick={() => handleRemoveLink(index)} className="text-red-500 hover:text-red-700 text-sm">Remove</button>
+                            <button onClick={() => handleRemoveLink(index)} className="text-[#FF3B30] hover:text-red-700 text-sm">Remove</button>
                         )}
                     </div>
                     <input

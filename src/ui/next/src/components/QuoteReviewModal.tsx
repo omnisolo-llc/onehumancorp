@@ -18,6 +18,8 @@ interface QuoteReviewModalProps {
 export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }: QuoteReviewModalProps) {
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [requireDeposit, setRequireDeposit] = useState(true);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [proposedSlots, setProposedSlots] = useState<any[]>([]);
 
   useEffect(() => {
     if (initialPayload) {
@@ -29,6 +31,10 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
         }
       ];
       setLineItems(items);
+      if (initialPayload.proposed_slots && initialPayload.proposed_slots.length > 0) {
+        setProposedSlots(initialPayload.proposed_slots);
+        setSelectedSlot(initialPayload.proposed_slots[0].start_time);
+      }
     }
   }, [initialPayload]);
 
@@ -51,6 +57,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
       price: totalCents / 100,
       require_deposit: requireDeposit,
       deposit_amount_cents: requireDeposit ? Math.round(totalCents * 0.5) : 0,
+      selected_slot: selectedSlot,
     };
     onApprove(updatedPayload);
   };
@@ -128,6 +135,38 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${requireDeposit ? 'left-7' : 'left-1'}`} />
             </button>
           </div>
+
+          {proposedSlots.length > 0 && (
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Proposed Schedule</label>
+              <div className="space-y-3">
+                {proposedSlots.map((slot, idx) => {
+                  const startTime = new Date(slot.start_time);
+                  const endTime = new Date(slot.end_time);
+                  const isSelected = selectedSlot === slot.start_time;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedSlot(slot.start_time)}
+                      className={`w-full p-4 rounded-[16px] border text-left transition-colors flex items-center gap-3 ${isSelected ? 'bg-[#0066FF]/10 border-[#0066FF]' : 'bg-white/50 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-[#0066FF]/50'}`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-[#0066FF]' : 'border-gray-300 dark:border-gray-600'}`}>
+                        {isSelected && <div className="w-2.5 h-2.5 bg-[#0066FF] rounded-full" />}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                          {startTime.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {startTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} - {endTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
             <div className="flex justify-between items-center">

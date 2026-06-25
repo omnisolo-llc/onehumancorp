@@ -1,5 +1,5 @@
 use tonic::{Request, Response, Status};
-use funding_proto::{
+use funding_proto::ohc::funding::{
     funding_service_server::FundingService,
     ListFundingOpportunitiesRequest, ListFundingOpportunitiesResponse,
     ApproveFundingOpportunityRequest, ApproveFundingOpportunityResponse,
@@ -38,10 +38,10 @@ impl FundingService for FundingApi {
             id: o.id,
             tenant_id: o.tenant_id,
             grant_name: o.grant_name,
-            amount: o.amount,
+            amount: o.amount as f64,
             draft_proposal_text: o.draft_proposal_text.unwrap_or_default(),
             status: o.status,
-            deadline: o.deadline.map(|d| d.to_rfc3339()).unwrap_or_default(),
+            deadline: o.deadline.unwrap_or_default(),
         }).collect();
 
         Ok(Response::new(ListFundingOpportunitiesResponse {
