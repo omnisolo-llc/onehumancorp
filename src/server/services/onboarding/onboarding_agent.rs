@@ -75,7 +75,7 @@ impl OnboardingAgent {
                 if user_messages.len() <= 1 {
                     return Ok(ChatResponse {
                         is_complete: false,
-                        reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
+                        reply: "I'll create a Cake Catalog, set up a custom deposit workflow, and generate a booking link. Sound good?".to_string(),
                         intake_data: None,
                     });
                 }
