@@ -15,6 +15,8 @@ pub fn router(pool: PgPool) -> Router {
         .route("/quotes/{id}/approve", patch(approve_quote))
         .route("/pricing-rules", get(get_pricing_rules))
         .route("/pricing-rules", post(create_pricing_rule))
+        .route("/quote-requests", post(create_quote_request))
+        .route("/quote-requests/{id}/generate-proposal", post(generate_proposal))
         .with_state(pool)
 }
 
@@ -28,6 +30,28 @@ pub struct Quote {
     pub total_amount_cents: i64,
     pub required_deposit_cents: i64,
     pub stripe_payment_link: Option<String>,
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QuoteRequest {
+    pub id: Uuid,
+    pub tenant_id: String,
+    pub customer_id: Option<Uuid>,
+    pub status: String,
+    pub source: String,
+    pub message: String,
+    pub images: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateQuoteRequestReq {
+    pub customer_id: Option<Uuid>,
+    pub source: String,
+    pub message: String,
+    pub images: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -107,6 +131,84 @@ async fn create_pricing_rule(
     })?;
 
     Ok(Json(rule))
+}
+
+
+async fn create_quote_request(
+    State(pool): State<PgPool>,
+    axum::extract::Extension(claims): axum::extract::Extension<crate::common::Claims>,
+    Json(payload): Json<CreateQuoteRequestReq>,
+) -> Result<Json<QuoteRequest>, axum::http::StatusCode> {
+    let request_id = Uuid::new_v4();
+    let tenant_id = claims.organization_id;
+
+    let request = sqlx::query_as!(
+        QuoteRequest,
+        r#"INSERT INTO quote_requests (id, tenant_id, customer_id, status, source, message, images)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           RETURNING id, tenant_id, customer_id, status, source, message, images, created_at, updated_at"#,
+        request_id,
+        tenant_id,
+        payload.customer_id,
+        "NEW",
+        payload.source,
+        payload.message,
+        payload.images
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create quote request: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(request))
+}
+
+async fn generate_proposal(
+    State(pool): State<PgPool>,
+    axum::extract::Extension(claims): axum::extract::Extension<crate::common::Claims>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Quote>, axum::http::StatusCode> {
+    // 1. Fetch the QuoteRequest
+    let request = sqlx::query_as!(
+        QuoteRequest,
+        r#"SELECT id, tenant_id, customer_id, status, source, message, images, created_at, updated_at
+           FROM quote_requests WHERE id = $1 AND tenant_id = $2"#,
+        id,
+        claims.organization_id
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch quote request: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?
+    .ok_or(axum::http::StatusCode::NOT_FOUND)?;
+
+    // 2. Here would be the AI integration logic.
+    // For now, we mock the generated quote based on the request message.
+    let mock_price = if request.message.to_lowercase().contains("door") {
+        15000 // $150
+    } else {
+        25000 // $250
+    };
+
+    let create_req = CreateQuoteReq {
+        customer_id: request.customer_id.unwrap_or_else(Uuid::new_v4),
+        status: "DRAFT".to_string(),
+        line_items: vec![
+            QuoteLineItemReq {
+                description: format!("AI Generated Proposal for: {}", request.message),
+                unit_price_cents: mock_price,
+                quantity: 1,
+                is_optional: false,
+            }
+        ]
+    };
+
+    // 3. Create the quote
+    create_quote(State(pool), axum::extract::Extension(claims.clone()), Json(create_req)).await
 }
 
 async fn create_quote(
