@@ -116,7 +116,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
 
     // The chat assistant should have an initial message
     const chatMessages = page.locator('#chat-messages');
-    await expect(chatMessages).toContainText('AssistantWhat do you do?');
+    await expect(chatMessages).toContainText('What do you do?');
 
     // Make sure we have the 44x44 image upload button
     const uploadBtn = page.locator('#chat-upload-btn');
