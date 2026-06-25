@@ -4981,7 +4981,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             let customer_info: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("customer_info").ok().map(|j| j.0);
                             let suggested_actions: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("suggested_actions").ok().map(|j| j.0);
                             daily_work_rows_json.push(serde_json::json!({
-                                "id": row.get::<String, _>("id"),
+                                "id": format!("daily-work-{}", row.get::<String, _>("id")),
                                 "tenant_id": t_id4,
                                 "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
                                 "intent": row.get::<String, _>("intent"),
@@ -5001,7 +5001,7 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             let customer_info: Option<serde_json::Value> = row.try_get::<String, _>("customer_info").ok().and_then(|s| serde_json::from_str(&s).ok());
                             let suggested_actions: Option<serde_json::Value> = row.try_get::<String, _>("suggested_actions").ok().and_then(|s| serde_json::from_str(&s).ok());
                             daily_work_rows_json.push(serde_json::json!({
-                                "id": row.get::<String, _>("id"),
+                                "id": format!("daily-work-{}", row.get::<String, _>("id")),
                                 "tenant_id": t_id4,
                                 "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
                                 "intent": row.get::<String, _>("intent"),
@@ -6191,7 +6191,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
-        .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/daily-work/action/:id", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
