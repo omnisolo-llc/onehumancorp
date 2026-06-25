@@ -3921,3 +3921,177 @@ pub async fn handle_footer_branding_embed(
 
     ([(axum::http::header::CONTENT_TYPE, "application/javascript")], js)
 }
+#[derive(Debug, Deserialize)]
+pub struct WaitlistEmbedQuery {
+    pub tenant: Option<String>,
+    pub product: Option<String>,
+    pub goal: Option<String>,
+    pub theme: Option<String>,
+    #[serde(rename = "hideBranding")]
+    pub hide_branding: Option<String>,
+}
+
+pub async fn handle_waitlist_embed(
+    axum::extract::Query(query): axum::extract::Query<WaitlistEmbedQuery>,
+) -> impl axum::response::IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let product_name = query.product.as_deref().unwrap_or("New Feature Launch");
+    let goal = query.goal.as_deref().unwrap_or("3");
+    let theme = query.theme.as_deref().unwrap_or("light");
+    let hide_branding = query.hide_branding.as_deref().unwrap_or("false") == "true";
+
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
+    let muted_color = if theme == "dark" { "#a1a1aa" } else { "#6b7280" };
+    let input_bg = if theme == "dark" { "#2d2d30" } else { "#f9fafb" };
+    let border_color = if theme == "dark" { "#3f3f46" } else { "#e5e7eb" };
+
+    let safe_tenant = escape_html(tenant);
+    let safe_product = escape_html(product_name);
+    let safe_goal = escape_html(goal);
+
+    let branding_html = if hide_branding {
+        "".to_string()
+    } else {
+        format!(
+            r#"<div style="margin-top: 16px; font-size: 12px; text-align: center;">
+                <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=waitlist_embed" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+            </div>"#,
+            safe_tenant, muted_color
+        )
+    };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: {bg_color};
+      color: {text_color};
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      height: 100%;
+    }}
+    .widget-container {{
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }}
+    .icon {{
+      font-size: 32px;
+      margin-bottom: 12px;
+    }}
+    h2 {{
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      font-weight: 700;
+    }}
+    p {{
+      margin: 0 0 20px 0;
+      font-size: 14px;
+      color: {muted_color};
+      line-height: 1.5;
+    }}
+    .input-group {{
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }}
+    input {{
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid {border_color};
+      border-radius: 8px;
+      font-size: 14px;
+      background: {input_bg};
+      color: {text_color};
+      outline: none;
+    }}
+    input:focus {{
+      border-color: #0066FF;
+    }}
+    button {{
+      background: #0066FF;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }}
+    button:hover {{
+      background: #0052cc;
+    }}
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <div class="icon">✨</div>
+    <h2>Join the {safe_product} Waitlist</h2>
+    <p>Be the first to access our new launch. Refer {safe_goal} friends to jump to the front of the line!</p>
+
+    <div class="input-group">
+      <input type="email" placeholder="Your email address" id="email-input" />
+      <button id="join-btn">Join</button>
+    </div>
+
+    <div id="success-message" style="display: none; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 500;">
+      Thanks for joining! We'll be in touch.
+    </div>
+
+    {branding_html}
+  </div>
+
+  <script>
+    document.getElementById('join-btn').addEventListener('click', function() {{
+      const email = document.getElementById('email-input').value;
+      if (!email) return;
+
+      const btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Joining...';
+
+      fetch('/api/v1/growth/lead-magnet/capture', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          tenant_id: '{safe_tenant}',
+          email: email,
+          source: 'waitlist_embed',
+          campaign: '{safe_product}'
+        }})
+      }}).then(() => {{
+        document.querySelector('.input-group').style.display = 'none';
+        document.getElementById('success-message').style.display = 'block';
+      }}).catch(err => {{
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = 'Join';
+      }});
+    }});
+  </script>
+</body>
+</html>"#,
+        bg_color = bg_color,
+        text_color = text_color,
+        muted_color = muted_color,
+        input_bg = input_bg,
+        border_color = border_color,
+        safe_product = safe_product,
+        safe_goal = safe_goal,
+        branding_html = branding_html,
+        safe_tenant = safe_tenant
+    );
+
+    axum::response::Html(html)
+}

@@ -1,7 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { E2E_ADMIN_USER, loginAs } from './fixtures';
 
 test.describe('Viral Waitlist Generator', () => {
-    test('navigates to dashboard, opens widget, configures and checks paywall', async ({ page }) => {
+    test('navigates to dashboard, opens widget, configures and checks paywall', async ({ page, adminUser, loginAs }) => {
+        await loginAs(page, adminUser);
         // Go to dashboard
         await page.goto('/dashboard.html');
 
@@ -53,7 +55,7 @@ test.describe('Viral Waitlist Generator', () => {
 
         // Check the code
         const embedCode = await page.locator('#embed-code').inputValue();
-        expect(embedCode).toContain('embed/waitlist');
+        expect(embedCode).toContain('api/v1/growth/waitlist/embed');
         expect(embedCode).toContain('product=Awesome%20New%20Gadget');
         expect(embedCode).toContain('goal=5');
         expect(embedCode).toContain('theme=dark');
