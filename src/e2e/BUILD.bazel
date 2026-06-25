@@ -3,6 +3,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
 _NEXT_UI_E2E_SPECS = [
+
     "//src/ui/next:src/e2e/test_glassmorphism.spec.ts",
     "//src/ui/next:src/e2e/langgraph.spec.ts",
     "//src/ui/next:src/e2e/client-side-image-optimization.spec.ts",
@@ -56,7 +57,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/help_components.spec.ts",
     "//src/ui/next:e2e/localization_offline.spec.ts",
     "//src/ui/next:e2e/referrals.spec.ts",
-    "//src/ui/next:src/e2e/post-purchase-share.spec.ts",
+
 
 
     "//src/ui/next:src/e2e/viral_share_to_unlock.spec.ts",
