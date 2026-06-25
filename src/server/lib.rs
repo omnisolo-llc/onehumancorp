@@ -6683,6 +6683,9 @@ async fn create_ui_bom_item_handler(
         .route("/cost-dashboard", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/cost-dashboard.html"))
         }))
+        .route("/gift-cards", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/gift-cards.html"))
+        }))
         .route("/pricing", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/pricing.html"))
         }))
