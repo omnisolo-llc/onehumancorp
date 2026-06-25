@@ -1,18 +1,17 @@
-import { test, expect, request as apiRequest } from '@playwright/test';
-import { db } from '../db_utils';
+import { test, expect } from '@playwright/test';
+import { e2eDbQuery } from '../db_utils';
 
 test.describe('Agentic Booking System', () => {
   test('Customer booking flow with real database assertions', async ({ page }) => {
     // 1. Setup: Seed the database directly to ensure we have a valid environment
     const tenantId = 'test-booking-tenant';
     const serviceId = 'test-booking-service';
-    const customerId = '00000000-0000-0000-0000-000000000001';
 
-    await db.query(`
+    await e2eDbQuery(`
       INSERT INTO tenants (id, name) VALUES ($1, 'Test Booking Tenant') ON CONFLICT (id) DO NOTHING;
     `, [tenantId]);
 
-    await db.query(`
+    await e2eDbQuery(`
       INSERT INTO services (id, tenant_id, title, price_cents, requires_deposit, deposit_amount_cents)
       VALUES ($1, $2, 'Test Service', 10000, true, 5000)
       ON CONFLICT (id) DO NOTHING;
@@ -25,7 +24,7 @@ test.describe('Agentic Booking System', () => {
     const startStr = new Date(tomorrow.setHours(10, 0, 0, 0)).toISOString();
     const endStr = new Date(tomorrow.setHours(11, 0, 0, 0)).toISOString();
 
-    await db.query(`
+    await e2eDbQuery(`
       INSERT INTO availability_blocks (id, tenant_id, service_id, start_time, end_time, is_available)
       VALUES ('test-block-1', $1, $2, $3, $4, true)
       ON CONFLICT (id) DO NOTHING;
@@ -64,12 +63,12 @@ test.describe('Agentic Booking System', () => {
     await expect(payButton).toBeVisible();
 
     // 5. Verify the backend state was actually updated without mocks
-    const result = await db.query(`
+    const result = await e2eDbQuery(`
         SELECT status, payment_intent_id FROM bookings WHERE tenant_id = $1 AND service_id = $2
     `, [tenantId, serviceId]);
 
-    expect(result.rows.length).toBeGreaterThan(0);
-    expect(result.rows[0].status).toBe('pending_payment');
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].status).toBe('pending_payment');
 
     // 6. Click checkout to test the redirect
     await payButton.click();

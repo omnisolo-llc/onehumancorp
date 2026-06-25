@@ -26,3 +26,23 @@ async fn test_deposit_booking_missing_tenant() {
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }
+
+#[tokio::test]
+async fn test_deposit_booking_missing_booking_id() {
+    let pool = sqlx::PgPool::connect_lazy("postgres://dummy").unwrap();
+    let db = Arc::new(DB { pool, store: DbStore::Postgres });
+    let app = deposit::router(db);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/?tenant_id=tenant1")
+                .method("GET")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
