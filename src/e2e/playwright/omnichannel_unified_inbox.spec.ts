@@ -31,13 +31,10 @@ test.describe('Unified Inbox & Agentic Triage', () => {
     await page.waitForURL('**/dashboard**');
 
     // 4. Verify feed item exists
-    const actionRequiredCard = page.locator('text="Action Required"').first();
-    await expect(actionRequiredCard).toBeVisible({ timeout: 10000 });
-
     const messageContext = page.locator(`text="${messageContent}"`).first();
-    await expect(messageContext).toBeVisible();
+    await expect(messageContext).toBeVisible({ timeout: 10000 });
 
-    const approveButton = page.locator('button:has-text("Send Draft"), button:has-text("Approve")').first();
+    const approveButton = page.locator('button:has-text("Resolve Message"), button:has-text("Approve")').first();
     await expect(approveButton).toBeVisible();
 
     // 5. Approve the action

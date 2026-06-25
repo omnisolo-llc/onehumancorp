@@ -1,5 +1,6 @@
 import { InstagramDMCard } from "../../app/dashboard/InstagramDMCard";
 import { AmbassadorReplyCard } from "../../app/dashboard/AmbassadorReplyCard";
+import { ReviewFeedCard } from "../../app/dashboard/ReviewFeedCard";
 import React from "react";
 
 type AgentFeedItem = {
@@ -160,6 +161,67 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "ambassador_reply" && (
               <AmbassadorReplyCard approval={approval} />
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "review" && (
+              <ReviewFeedCard
+                 review={approval.context_payload?.review}
+                 response={approval.proposed_action?.response}
+                 onApprove={async (id, content) => {
+                     await handleDecision(approval.id, true, content, 'review');
+                 }}
+                 onDismiss={async (id) => {
+                     await handleDecision(approval.id, false, undefined, 'review');
+                 }}
+               />
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "order" && (
+              <div className="mb-4 p-4 rounded-[16px] bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-yellow-600 font-semibold text-sm">
+                  <span className="w-5 h-5 flex items-center justify-center">📦</span>
+                  Order Needs Fulfillment
+                </div>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  {approval.context_payload?.description || "An order is waiting to be fulfilled."}
+                </p>
+                <div className="flex gap-2 w-full mt-1">
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'order')}>Fulfill Order</button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'order')}>Dismiss</button>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "triage" && (
+              <div className="mb-4 p-4 rounded-[16px] bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm">
+                  <span className="w-5 h-5 flex items-center justify-center">✉️</span>
+                  Message Requires Attention
+                </div>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  {approval.context_payload?.description || "You have an open customer conversation waiting for your reply."}
+                </p>
+                <div className="flex gap-2 w-full mt-1">
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'triage')}>Resolve Message</button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'triage')}>Dismiss</button>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "task" && (
+              <div className="mb-4 p-4 rounded-[16px] bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-purple-600 font-semibold text-sm">
+                  <span className="w-5 h-5 flex items-center justify-center">✅</span>
+                  Pending Task
+                </div>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  {approval.context_payload?.description || "You have a pending task."}
+                </p>
+                <div className="flex gap-2 w-full mt-1">
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'task')}>Complete Task</button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'task')}>Dismiss</button>
+                </div>
+              </div>
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "quote_draft" && (
@@ -1112,6 +1174,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
+        ) : ((approval.proposed_action || approval.context_payload)
+            ?.feature_type === "review" ||
+            (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "order" ||
+            (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "triage" ||
+            (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "task") ? (
+           null
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ? (
           editingId === approval.id ? (
