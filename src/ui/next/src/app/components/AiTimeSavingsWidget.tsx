@@ -34,10 +34,6 @@ export default function AiTimeSavingsWidget() {
       .catch(err => console.error("Error fetching time savings:", err));
   }, []);
 
-  if (savingsData.hours_saved === 0) {
-    return null;
-  }
-
   const handleShareAndClaim = async () => {
     setIsClaiming(true);
 
