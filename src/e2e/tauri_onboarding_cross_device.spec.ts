@@ -122,6 +122,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     await page.fill('#admin-password', 'password123');
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.locator('#email-error')).toBeVisible();
+    await expect(page.locator('#admin-email')).toHaveClass(/invalid-input/);
   });
 
   test('Setup UI requires at least 8 chars password', async ({ page }) => {
@@ -153,6 +154,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     await page.fill('#admin-password', 'pass');
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.locator('#password-error')).toBeVisible();
+    await expect(page.locator('#admin-password')).toHaveClass(/invalid-input/);
   });
 
   test('Setup UI allows finishing setup', async ({ page }) => {
