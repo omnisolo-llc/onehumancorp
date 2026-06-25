@@ -79,8 +79,8 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
   };
 
   return (
-    <div className="rounded-[16px] border border-white/20 bg-white/60 backdrop-blur-3xl saturate-200 shadow-glass p-4 shadow-sm" data-testid="visual-workflow-builder">
-      <h3 className="mb-4 text-lg font-bold text-zinc-900">Visual Workflow Builder (Visual/low-code orchestration --&gt; democratizing agent construction)</h3>
+    <div className="rounded-[16px] border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4 shadow-sm dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)]" data-testid="visual-workflow-builder">
+      <h3 className="mb-4 text-lg font-bold text-zinc-900 dark:text-zinc-100">Visual Workflow Builder (Visual/low-code orchestration --&gt; democratizing agent construction)</h3>
 
       {error && (
         <div className="mb-4 rounded border border-red-200 bg-red-50 p-2 text-sm text-red-600" data-testid="builder-error">
@@ -89,13 +89,13 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
       )}
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-zinc-700 mb-1">Workflow Name</label>
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Workflow Name</label>
         <input
           type="text"
           value={workflowName}
           onChange={(e) => setWorkflowName(e.target.value)}
           placeholder="e.g., Auto-reply to VIPs"
-          className="w-full rounded-[8px] border border-zinc-300 p-2 text-sm text-black focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          className="w-full rounded-[8px] border border-zinc-300 p-2 text-sm text-black dark:text-white dark:bg-zinc-800 dark:border-zinc-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
           id="visual-workflow-name"
         />
       </div>
@@ -103,21 +103,21 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
       <div className="flex gap-6">
         {/* Palette */}
         <div className="w-1/3">
-          <h4 className="mb-2 text-sm font-bold text-zinc-800">Block Palette</h4>
+          <h4 className="mb-2 text-sm font-bold text-zinc-800 dark:text-zinc-200">Block Palette</h4>
           <div className="flex flex-col gap-2">
             {AVAILABLE_BLOCKS.map(block => (
               <button
                 key={block.id}
                 onClick={() => addBlock(block)}
-                className="flex items-center justify-between rounded-[8px] border border-zinc-200 bg-zinc-50 p-2 text-left hover:bg-zinc-100 transition-colors"
+                className="flex items-center justify-between rounded-[8px] border border-zinc-200 bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 p-2 text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                 data-testid={`palette-block-${block.id}`}
               >
-                <span className="text-sm font-medium text-zinc-800">{block.label}</span>
+                <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{block.label}</span>
                 <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full
-                  ${block.type === 'Trigger' ? 'bg-blue-100 text-blue-700' :
-                    block.type === 'Action' ? 'bg-amber-100 text-amber-700' :
-                    block.type === 'Condition' ? 'bg-purple-100 text-purple-700' :
-                    'bg-green-100 text-green-700'}`}
+                  ${block.type === 'Trigger' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                    block.type === 'Action' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                    block.type === 'Condition' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
                 >
                   {block.type}
                 </span>
@@ -127,8 +127,8 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 rounded-[16px] border-2 border-dashed border-zinc-300 bg-zinc-50/50 p-4 min-h-[300px]">
-          <h4 className="mb-4 text-sm font-bold text-zinc-800">Workflow Canvas</h4>
+        <div className="flex-1 rounded-[16px] border-2 border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 p-4 min-h-[300px]">
+          <h4 className="mb-4 text-sm font-bold text-zinc-800 dark:text-zinc-200">Workflow Canvas</h4>
 
           {workflowBlocks.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-zinc-400">
@@ -138,10 +138,10 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
             <div className="flex flex-col items-center gap-2 relative">
               {workflowBlocks.map((block, index) => (
                 <React.Fragment key={block.id}>
-                  <div className="w-full max-w-sm flex items-center justify-between rounded-[16px] border-2 border-teal-500 bg-white/60 backdrop-blur-3xl saturate-200 shadow-glass p-3 shadow-sm" data-testid={`canvas-block-${index}`}>
+                  <div className="w-full max-w-sm flex items-center justify-between rounded-[16px] border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] p-3 shadow-sm" data-testid={`canvas-block-${index}`}>
                     <div>
-                      <span className="text-xs font-bold text-teal-600 uppercase tracking-wider">{block.type}</span>
-                      <p className="font-semibold text-zinc-900">{block.label}</p>
+                      <span className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">{block.type}</span>
+                      <p className="font-semibold text-zinc-900 dark:text-zinc-100">{block.label}</p>
                     </div>
                     <button
                       onClick={() => removeBlock(index)}
@@ -152,8 +152,8 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
                     </button>
                   </div>
                   {index < workflowBlocks.length - 1 && (
-                    <div className="h-6 w-0.5 bg-teal-300 relative">
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 border-r-2 border-b-2 border-teal-500 rotate-45"></div>
+                    <div className="h-6 w-0.5 bg-teal-300 dark:bg-teal-700 relative">
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 border-r-2 border-b-2 border-teal-500 dark:border-teal-400 rotate-45"></div>
                     </div>
                   )}
                 </React.Fragment>
@@ -167,7 +167,7 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
         <button
           onClick={handleSave}
           disabled={workflowBlocks.length === 0 || !workflowName || isSubmitting}
-          className="rounded-[8px] bg-teal-700 px-6 py-2 text-sm font-bold text-white shadow-sm hover:bg-teal-800 disabled:opacity-50 transition-colors"
+          className="rounded-[8px] bg-teal-600 hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-600 px-6 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-50 transition-colors"
           id="btn-create-run-workflow"
         >
           {isSubmitting ? 'Compiling & Running...' : 'Create & Run Workflow'}
