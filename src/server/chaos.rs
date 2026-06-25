@@ -150,7 +150,7 @@ mod tests {
             let p95 = latencies[latencies.len() * 95 / 100];
             let p99 = latencies[latencies.len() * 99 / 100];
 
-            println!("Cloud Mode Stress - p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
+            tracing::info!("Cloud Mode Stress - p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
             assert!(p50 < 5000, "p50 latency should be reasonable");
 
             let _ = sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name)).execute(&*pool_arc).await;
@@ -205,7 +205,7 @@ mod tests {
         let p95 = latencies[latencies.len() * 95 / 100];
         let p99 = latencies[latencies.len() * 99 / 100];
 
-        println!("Standalone Mode Stress - p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
+        tracing::info!("Standalone Mode Stress - p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
         assert!(p50 < 5000, "p50 latency should be reasonable");
     }
 

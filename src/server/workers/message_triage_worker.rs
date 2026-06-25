@@ -207,6 +207,35 @@ Output JSON format:
                         }
                     }
                 }
+
+                if retry_count == max_retries {
+                    match &self.db.store {
+                        crate::db::DbStore::Postgres => {
+                            let _ = sqlx::query(
+                                r#"
+                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                VALUES ($1, $2, 'AI Agent Paused: Message Triage', 'The AI agent responsible for message triage is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually review incoming messages.')
+                                "#
+                            )
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .execute(&self.db.pool)
+                            .await;
+                        },
+                        crate::db::DbStore::Sqlite(pool) => {
+                            let _ = sqlx::query(
+                                r#"
+                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                VALUES (?, ?, 'AI Agent Paused: Message Triage', 'The AI agent responsible for message triage is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually review incoming messages.')
+                                "#
+                            )
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .execute(pool)
+                            .await;
+                        }
+                    }
+                }
             }
 
             let priority = extracted.get("priority").and_then(|v| v.as_str()).unwrap_or("Medium");
@@ -293,7 +322,7 @@ Output JSON format:
                             .bind(service_id)
                             .bind(st)
                             .bind(et)
-                            .execute(sqlite_pool).await;
+                            .execute(&*sqlite_pool).await;
 
                             let _ = sqlx::query(
                                 "UPDATE availability_blocks SET is_available = false WHERE tenant_id = ? AND service_id = ? AND start_time = ? AND end_time = ?"
@@ -302,7 +331,7 @@ Output JSON format:
                             .bind(service_id)
                             .bind(st)
                             .bind(et)
-                            .execute(sqlite_pool).await;
+                            .execute(&*sqlite_pool).await;
                         }
                     }
                 }
@@ -358,7 +387,7 @@ Output JSON format:
                             .bind(customer_id_uuid.to_string())
                             .bind(total_amount_cents)
                             .bind(required_deposit_cents)
-                            .execute(sqlite_pool).await;
+                            .execute(&*sqlite_pool).await;
 
                             if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
                                 for item in items {
@@ -376,7 +405,7 @@ Output JSON format:
                                     .bind(price)
                                     .bind(qty)
                                     .bind(is_opt)
-                                    .execute(sqlite_pool).await;
+                                    .execute(&*sqlite_pool).await;
                                 }
                             }
                         }
@@ -518,7 +547,7 @@ Output JSON format:
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)
-                        .execute(sqlite_pool).await {
+                        .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to update omni_inbox_messages: {}", e);
                     }
 
@@ -526,7 +555,7 @@ Output JSON format:
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)
-                        .execute(sqlite_pool).await {
+                        .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
 
@@ -562,7 +591,7 @@ Output JSON format:
                     .bind(&event_source)
                     .bind(&priority)
                     .bind(&context_summary)
-                    .execute(sqlite_pool).await {
+                    .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert triage_items (Sqlite): {}", e);
                     }
 
@@ -574,7 +603,7 @@ Output JSON format:
                     .bind(&tenant_id)
                     .bind(&action_type)
                     .bind(&action_payload)
-                    .execute(sqlite_pool).await {
+                    .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert triage_proposed_actions (Sqlite): {}", e);
                     }
 
@@ -605,11 +634,11 @@ Output JSON format:
                         "booking_id": booking_id_opt,
                         "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
                     }).to_string())
-                    .execute(sqlite_pool).await {
+                    .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                             .bind(&job_id)
-                            .execute(sqlite_pool).await;
+                            .execute(&*sqlite_pool).await;
                         return Ok(false);
                     }
 
@@ -629,17 +658,17 @@ Output JSON format:
                         "sender_id": sender_id,
                         "customer_id": customer_id_val,
                     }).to_string())
-                    .execute(sqlite_pool).await {
+                    .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert agent approvals item (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                             .bind(&job_id)
-                            .execute(sqlite_pool).await;
+                            .execute(&*sqlite_pool).await;
                         return Ok(false);
                     }
 
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)
-                        .execute(sqlite_pool).await;
+                        .execute(&*sqlite_pool).await;
                 }
             }
 
