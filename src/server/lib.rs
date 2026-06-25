@@ -5148,7 +5148,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5159,6 +5159,8 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
+                        "context_payload": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("context_payload"),
+                        "proposed_action": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("proposed_action"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })
                 }).collect::<Vec<_>>())
@@ -5187,7 +5189,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5198,6 +5200,8 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
+                        "context_payload": row.try_get::<String, _>("context_payload").map(|s| serde_json::from_str::<serde_json::Value>(&s).unwrap_or(serde_json::json!({}))).ok(),
+                        "proposed_action": row.try_get::<String, _>("proposed_action").map(|s| serde_json::from_str::<serde_json::Value>(&s).unwrap_or(serde_json::json!({}))).ok(),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })
                 }).collect::<Vec<_>>())
