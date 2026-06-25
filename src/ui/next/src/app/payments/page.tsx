@@ -74,41 +74,48 @@ export default function PaymentLedger() {
   };
 
   return (
-    <div style={{ maxWidth: "375px", margin: "0 auto", padding: "20px", fontFamily: "sans-serif" }}>
-      <h2>Dashboard</h2>
-      <div style={{ background: "#f0f0f0", padding: "20px", borderRadius: "10px", marginBottom: "20px" }}>
-        <p style={{ margin: 0, color: "#666" }}>Today's Revenue</p>
-        <h1 style={{ margin: "10px 0" }} data-testid="total-revenue">${revenue.toFixed(2)}</h1>
+    <div className="max-w-[375px] mx-auto p-4 md:p-6 space-y-6">
+      <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">Dashboard</h2>
+
+      <div className="glassmorphism p-6 flex flex-col space-y-2">
+        <p className="m-0 text-gray-500 dark:text-gray-400 font-inter text-sm uppercase tracking-wide">Today's Revenue</p>
+        <h1 className="m-0 text-4xl font-outfit font-bold text-gray-900 dark:text-white tracking-tight" data-testid="total-revenue">
+          ${revenue.toFixed(2)}
+        </h1>
       </div>
 
-      <div style={{ background: "#fafafa", padding: "20px", borderRadius: "10px" }}>
-        <h3>Request Payment</h3>
+      <div className="glassmorphism p-6 space-y-4">
+        <h3 className="text-lg font-semibold font-outfit text-gray-900 dark:text-gray-100 mb-2">Request Payment</h3>
+
         <input
           type="number"
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value))}
-          style={{ width: "100%", padding: "10px", marginBottom: "10px", boxSizing: "border-box" }}
+          className="w-full px-4 py-3 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-black/50 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF] font-inter"
           data-testid="payment-amount-input"
+          aria-label="Payment Amount"
         />
+
         <button
           onClick={handleRequestPayment}
           disabled={status === "Processing..."}
           data-testid="request-payment-button"
-          style={{
-            width: "100%",
-            padding: "15px",
-            background: status === "Processing..." ? "#ccc" : "#0070f3",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            fontWeight: "bold",
-            cursor: "pointer"
-          }}
+          className={`w-full min-h-[44px] py-3 rounded-xl font-bold font-inter transition-all shadow-md active:scale-[0.98] ${
+            status === "Processing..."
+              ? "bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed"
+              : "bg-[#0066FF] text-white hover:bg-[#0052cc]"
+          }`}
         >
           {status === "Processing..." ? "Waiting for card..." : "Tap to Pay"}
         </button>
+
         {status !== "idle" && status !== "Processing..." && (
-          <p data-testid="payment-status" style={{ textAlign: "center", marginTop: "10px", color: status === "Approved" ? "green" : "red" }}>
+          <p
+            data-testid="payment-status"
+            className={`text-center mt-4 font-inter text-sm font-medium ${
+              status === "Approved" ? "text-[#34C759] dark:text-[#00C24B]" : "text-[#FF3B30] dark:text-[#DE1B1B]"
+            }`}
+          >
             {status}
           </p>
         )}

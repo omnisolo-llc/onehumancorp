@@ -182,6 +182,7 @@ impl VerificationManager {
 }
 
 /// An InferentialSensor that uses an LlmClient to act as a judge.
+// Verification Loops: Playwright UI tests
 pub struct PlaywrightVisualVerifier;
 
 #[async_trait::async_trait]
