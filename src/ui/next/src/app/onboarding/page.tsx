@@ -687,7 +687,13 @@ export default function OnboardingWizard() {
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
                 <div id="chat-messages" className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4">
                   {chatMessages.length === 0 && (
-                    <div className="mb-2"><strong>Assistant:</strong> What do you do? (e.g. I bake custom vegan cakes in Austin)</div>
+                    <div className="mb-2">
+                      <strong>Assistant:</strong> What do you want to build or manage today?
+                      <div className="flex gap-2 mt-2 flex-wrap" id="chat-chips">
+                        <button className="px-3 py-1 bg-[#0066FF]/10 text-[#0066FF] border border-transparent rounded-full text-sm font-semibold hover:bg-[#0066FF]/20 transition-all dark:bg-[#0066FF]/20 dark:text-[#4da6ff] dark:hover:bg-[#0066FF]/30 min-h-[32px]" onClick={() => { setChatInput('Cake Shop'); setTimeout(() => document.getElementById('chat-send-btn')?.click(), 0); }} data-testid="chat-chip-cake">Cake Shop</button>
+                        <button className="px-3 py-1 bg-[#0066FF]/10 text-[#0066FF] border border-transparent rounded-full text-sm font-semibold hover:bg-[#0066FF]/20 transition-all dark:bg-[#0066FF]/20 dark:text-[#4da6ff] dark:hover:bg-[#0066FF]/30 min-h-[32px]" onClick={() => { setChatInput('Handyman'); setTimeout(() => document.getElementById('chat-send-btn')?.click(), 0); }} data-testid="chat-chip-handyman">Handyman</button>
+                      </div>
+                    </div>
                   )}
                   {chatMessages.map((msg, index) => (
                     <div key={index} className={`mb-2 ${msg.role === 'user' ? 'text-[#0066FF]' : 'text-[#333] dark:text-[#A1A1A6]'}`}>

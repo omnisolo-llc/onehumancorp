@@ -6,7 +6,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await page.goto('/onboarding');
 
     // 2. Wait for Setup Assistant's first message to appear
-    await expect(page.locator('#chat-messages')).toContainText('What do you do?');
+    await expect(page.locator('#chat-messages')).toContainText('What do you want to build or manage today?');
 
     // 3. Input simple sentence and submit
     await page.fill('#chat-input', 'I run a mobile dog grooming service in Austin');
