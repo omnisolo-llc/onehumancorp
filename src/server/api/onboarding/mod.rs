@@ -80,14 +80,33 @@ async fn process_chat_handler(
 }
 
 async fn get_draft(
+    headers: axum::http::HeaderMap,
     State(agent): State<Arc<OnboardingAgent>>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
     let tenant_id = auth_info.org_id.clone();
     let user_id = auth_info.agent_id.clone(); // In this context agent_id refers to the user
 
-    let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
-    let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
+    let mut tid = tenant_id;
+    let mut uid = user_id;
+
+    if tid.is_empty() {
+        if let Some(val) = headers.get("X-Tenant-ID") {
+            if let Ok(val_str) = val.to_str() {
+                tid = val_str.to_string();
+            }
+        }
+    }
+    if uid.is_empty() {
+        if let Some(val) = headers.get("X-User-ID") {
+            if let Ok(val_str) = val.to_str() {
+                uid = val_str.to_string();
+            }
+        }
+    }
+
+    let tid = if tid.is_empty() { "default".to_string() } else { tid };
+    let uid = if uid.is_empty() { "default".to_string() } else { uid };
 
     match agent.get_onboarding_state(&tid, &uid).await {
         Ok(state) => Ok(Json(state)),
@@ -96,6 +115,7 @@ async fn get_draft(
 }
 
 async fn save_draft(
+    headers: axum::http::HeaderMap,
     State(agent): State<Arc<OnboardingAgent>>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
     Json(payload): Json<serde_json::Value>,
@@ -103,8 +123,26 @@ async fn save_draft(
     let tenant_id = auth_info.org_id.clone();
     let user_id = auth_info.agent_id.clone();
 
-    let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
-    let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
+    let mut tid = tenant_id;
+    let mut uid = user_id;
+
+    if tid.is_empty() {
+        if let Some(val) = headers.get("X-Tenant-ID") {
+            if let Ok(val_str) = val.to_str() {
+                tid = val_str.to_string();
+            }
+        }
+    }
+    if uid.is_empty() {
+        if let Some(val) = headers.get("X-User-ID") {
+            if let Ok(val_str) = val.to_str() {
+                uid = val_str.to_string();
+            }
+        }
+    }
+
+    let tid = if tid.is_empty() { "default".to_string() } else { tid };
+    let uid = if uid.is_empty() { "default".to_string() } else { uid };
 
     let step = payload.get("step")
         .and_then(|s| s.as_i64())
@@ -153,6 +191,7 @@ async fn launch_onboarding(
 }
 
 async fn get_state(
+    headers: axum::http::HeaderMap,
     State(agent): State<Arc<OnboardingAgent>>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
@@ -160,8 +199,26 @@ async fn get_state(
     let user_id = auth_info.agent_id.clone();
 
     // Support X- headers if auth_info is empty (for setup phase)
-    let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
-    let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
+    let mut tid = tenant_id;
+    let mut uid = user_id;
+
+    if tid.is_empty() {
+        if let Some(val) = headers.get("X-Tenant-ID") {
+            if let Ok(val_str) = val.to_str() {
+                tid = val_str.to_string();
+            }
+        }
+    }
+    if uid.is_empty() {
+        if let Some(val) = headers.get("X-User-ID") {
+            if let Ok(val_str) = val.to_str() {
+                uid = val_str.to_string();
+            }
+        }
+    }
+
+    let tid = if tid.is_empty() { "default".to_string() } else { tid };
+    let uid = if uid.is_empty() { "default".to_string() } else { uid };
 
     match agent.get_onboarding_state(&tid, &uid).await {
         Ok(state) => Ok(Json(state)),
@@ -173,6 +230,7 @@ async fn get_state(
 }
 
 async fn save_state(
+    headers: axum::http::HeaderMap,
     State(agent): State<Arc<OnboardingAgent>>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
     Json(payload): Json<serde_json::Value>,
@@ -180,8 +238,26 @@ async fn save_state(
     let tenant_id = auth_info.org_id.clone();
     let user_id = auth_info.agent_id.clone();
 
-    let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
-    let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
+    let mut tid = tenant_id;
+    let mut uid = user_id;
+
+    if tid.is_empty() {
+        if let Some(val) = headers.get("X-Tenant-ID") {
+            if let Ok(val_str) = val.to_str() {
+                tid = val_str.to_string();
+            }
+        }
+    }
+    if uid.is_empty() {
+        if let Some(val) = headers.get("X-User-ID") {
+            if let Ok(val_str) = val.to_str() {
+                uid = val_str.to_string();
+            }
+        }
+    }
+
+    let tid = if tid.is_empty() { "default".to_string() } else { tid };
+    let uid = if uid.is_empty() { "default".to_string() } else { uid };
 
     let step = payload.get("step")
         .and_then(|s| s.as_i64())
