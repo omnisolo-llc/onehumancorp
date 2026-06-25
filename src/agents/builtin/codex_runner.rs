@@ -671,7 +671,6 @@ impl AppServer {
                     serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
                 }
             }
-
         } else if req.method == "goose_mcp_list" {
             let mut registry = crate::goose::GooseMcpRegistry::new();
             registry.register(std::sync::Arc::new(crate::goose::SampleExtension));
@@ -688,7 +687,11 @@ impl AppServer {
             let mut registry = crate::goose::GooseMcpRegistry::new();
             registry.register(std::sync::Arc::new(crate::goose::SampleExtension));
             let ext_id = req.params.get("id").and_then(|v| v.as_str()).unwrap_or("");
-            let ext_args = req.params.get("args").cloned().unwrap_or(serde_json::json!({}));
+            let ext_args = req
+                .params
+                .get("args")
+                .cloned()
+                .unwrap_or(serde_json::json!({}));
             let result = registry.execute_extension(ext_id, ext_args).await;
             let resp = match result {
                 Ok(val) => JsonRpcResponse {
@@ -702,7 +705,10 @@ impl AppServer {
                     jsonrpc: "2.0".to_string(),
                     id: req.id.clone(),
                     result: None,
-                    error: Some(JsonRpcError { code: -32603, message: e }),
+                    error: Some(JsonRpcError {
+                        code: -32603,
+                        message: e,
+                    }),
                     meta: None,
                 },
             };
@@ -1393,13 +1399,16 @@ mod tests {
 mod tests_goose {
     use super::*;
     use crate::llm::LlmClient;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, Message};
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
     use std::sync::Arc;
 
     struct DummyLlm;
     #[async_trait::async_trait]
     impl LlmClient for DummyLlm {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             Ok(ChatResponse {
                 response_id: Some("res_1".to_string()),
                 stop_reason: "end".to_string(),
@@ -1422,10 +1431,18 @@ mod tests_goose {
 
         let list_req = r#"{"jsonrpc": "2.0", "id": "1", "method": "goose_mcp_list", "params": {}}"#;
         let list_res_str = server.handle_request(list_req).await;
-        assert!(list_res_str.contains("sample_mcp"), "Response was: {}", list_res_str);
+        assert!(
+            list_res_str.contains("sample_mcp"),
+            "Response was: {}",
+            list_res_str
+        );
 
         let exec_req = r#"{"jsonrpc": "2.0", "id": "2", "method": "goose_mcp_execute", "params": {"id": "sample_mcp", "args": {"echo": "hello test"}}}"#;
         let exec_res_str = server.handle_request(exec_req).await;
-        assert!(exec_res_str.contains("hello test"), "Response was: {}", exec_res_str);
+        assert!(
+            exec_res_str.contains("hello test"),
+            "Response was: {}",
+            exec_res_str
+        );
     }
 }

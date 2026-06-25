@@ -88,7 +88,8 @@ impl JitContextRetriever {
         // Extract potential filenames or function names for JIT snippet retrieval
         let mut potential_files = Vec::new();
         for s in content.split_whitespace() {
-            if s.contains('.') && s.len() > 4 { // likely a file like main.rs, util.ts
+            if s.contains('.') && s.len() > 4 {
+                // likely a file like main.rs, util.ts
                 potential_files.push(s.to_string());
             }
         }
@@ -127,11 +128,18 @@ impl JitContextRetriever {
         if !potential_files.is_empty() {
             let mut snippet_context = String::new();
             for file_hint in potential_files {
-                let cleaned_file_hint: String = file_hint.chars().filter(|c| c.is_alphanumeric() || *c == '.' || *c == '_' || *c == '-').collect();
-                if let Ok(results) = self.memory_store.retrieve(&format!("file:{}", cleaned_file_hint), 1).await {
+                let cleaned_file_hint: String = file_hint
+                    .chars()
+                    .filter(|c| c.is_alphanumeric() || *c == '.' || *c == '_' || *c == '-')
+                    .collect();
+                if let Ok(results) = self
+                    .memory_store
+                    .retrieve(&format!("file:{}", cleaned_file_hint), 1)
+                    .await
+                {
                     for res in results {
-                         snippet_context.push_str(&res);
-                         snippet_context.push_str("\n---\n");
+                        snippet_context.push_str(&res);
+                        snippet_context.push_str("\n---\n");
                     }
                 }
             }
@@ -275,9 +283,7 @@ mod tests {
         let retriever = JitContextRetriever::new(store, "test_session".to_string());
 
         // This prompt contains short words that should be filtered out
-        let messages = vec![Message::user(
-            "It is an error the to of in on as at by be",
-        )];
+        let messages = vec![Message::user("It is an error the to of in on as at by be")];
 
         let context = retriever.retrieve_context(&messages).await.unwrap();
         assert!(context.contains("Relevant Past Session Context (JIT Retrieval)"));

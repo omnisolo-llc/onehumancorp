@@ -848,7 +848,8 @@ impl VectorRepository {
                             .await
                             .map_err(|e| e.to_string())?;
 
-                        let mut records_in_tenant: Vec<MinimalRecord> = Vec::with_capacity(rows.len());
+                        let mut records_in_tenant: Vec<MinimalRecord> =
+                            Vec::with_capacity(rows.len());
                         for row in rows {
                             let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
                                 String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
