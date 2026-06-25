@@ -2556,7 +2556,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let replenishment_job = crate::workers::subscription_replenishment_job::SubscriptionReplenishmentJob::new(db.clone());
     replenishment_job.start();
     // Start Subscription Replenishment Worker
-    let replenishment_worker = crate::workers::subscription_replenishment_worker::SubscriptionReplenishmentWorker::new(db.clone());
+    let replenishment_worker = std::sync::Arc::new(crate::workers::subscription_replenishment_worker::SubscriptionReplenishmentWorker::new(db.clone()));
     replenishment_worker.start();
 
     // Start Competitor Audit Worker
