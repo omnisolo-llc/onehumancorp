@@ -173,7 +173,7 @@ impl OperationsWorker {
                     crate::db::DbStore::Postgres => {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                             VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
                             "#
                         )
@@ -195,7 +195,7 @@ impl OperationsWorker {
                     crate::db::DbStore::Sqlite(pool) => {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                             VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
                             "#
                         )
@@ -226,7 +226,7 @@ impl OperationsWorker {
                         let (inventory_count, product_name, supplier_name, supplier_contact) = match &db.store {
                             crate::db::DbStore::Postgres => {
                                 let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND (tenant_id = $3 OR organization_id = $3)")
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND (tenant_id = $3 OR tenant_id = $3)")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(&tenant_id)
@@ -248,7 +248,7 @@ impl OperationsWorker {
                                     }
                                 });
 
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (organization_id = $2 OR tenant_id = $2)")
+                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (tenant_id = $2 OR tenant_id = $2)")
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .fetch_optional(&db.pool)
@@ -266,7 +266,7 @@ impl OperationsWorker {
                             },
                             crate::db::DbStore::Sqlite(pool) => {
                                 let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND (tenant_id = ? OR organization_id = ?)")
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND (tenant_id = ? OR tenant_id = ?)")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(&tenant_id)
@@ -289,7 +289,7 @@ impl OperationsWorker {
                                     }
                                 });
 
-                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
+                                let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (tenant_id = ? OR tenant_id = ?)")
                                     .bind(product_id)
                                     .bind(&tenant_id)
                                     .bind(&tenant_id)
@@ -347,7 +347,7 @@ impl OperationsWorker {
                             let title = format!("Restock Item: {}", product_name);
                             let existing_task: i64 = match &db.store {
                                 crate::db::DbStore::Postgres => {
-                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title = $2 AND status = 'PENDING'")
+                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE (tenant_id = $1 OR tenant_id = $1) AND title = $2 AND status = 'PENDING'")
                                         .bind(&tenant_id)
                                         .bind(&title)
                                         .fetch_one(&db.pool)
@@ -355,7 +355,7 @@ impl OperationsWorker {
                                         .unwrap_or(0)
                                 },
                                 crate::db::DbStore::Sqlite(pool) => {
-                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE (tenant_id = ? OR organization_id = ?) AND title = ? AND status = 'PENDING'")
+                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE (tenant_id = ? OR tenant_id = ?) AND title = ? AND status = 'PENDING'")
                                         .bind(&tenant_id)
                                         .bind(&tenant_id)
                                         .bind(&title)
@@ -401,7 +401,7 @@ impl OperationsWorker {
                                                         crate::db::DbStore::Postgres => {
                                                             let _ = sqlx::query(
                                                                 r#"
-                                                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                                                 VALUES ($1, $2, 'AI Agent Paused: Operations', 'The AI agent responsible for restocking drafts is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check inventory.')
                                                                 "#
                                                             )
@@ -413,7 +413,7 @@ impl OperationsWorker {
                                                         crate::db::DbStore::Sqlite(pool) => {
                                                             let _ = sqlx::query(
                                                                 r#"
-                                                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                                                 VALUES (?, ?, 'AI Agent Paused: Operations', 'The AI agent responsible for restocking drafts is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check inventory.')
                                                                 "#
                                                             )
@@ -438,7 +438,7 @@ impl OperationsWorker {
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                             VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
                                             "#
                                         )
@@ -453,7 +453,7 @@ impl OperationsWorker {
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                             VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
                                             "#
                                         )
@@ -532,7 +532,7 @@ impl OperationsWorker {
 
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                             VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
                             "#
                         )
@@ -596,7 +596,7 @@ impl OperationsWorker {
 
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                             VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
                             "#
                         )
@@ -801,7 +801,7 @@ impl CustomerSuccessWorker {
                                 final_status = "PAUSED";
                                 let _ = sqlx::query(
                                     r#"
-                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                     VALUES ($1, $2, 'AI Agent Paused: Customer Success', 'The AI agent responsible for drafting replies is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually reply to customer messages.')
                                     "#
                                 )
@@ -856,7 +856,7 @@ impl CustomerSuccessWorker {
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                             VALUES ($1, $2, $3, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', $4)
                             "#
                         )
@@ -893,7 +893,7 @@ impl CustomerSuccessWorker {
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                             VALUES (?, ?, ?, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
                             "#
                         )
@@ -961,7 +961,7 @@ let db_for_products = self.db.clone();
                 if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
-                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let org_id = payload_json.get("tenant_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
                             let mut product_id = String::new();
                             let mut product_name = String::new();
                             if let Some(pid) = payload_json.get("product_id").and_then(|p| p.as_str()) {
@@ -1139,7 +1139,7 @@ let db_for_products = self.db.clone();
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let session_id = payload_json.get("session_id").and_then(|s| s.as_str()).unwrap_or("").to_string();
                             let bio = payload_json.get("bio").and_then(|b| b.as_str()).unwrap_or("").to_string();
-                            let tenant_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let tenant_id = payload_json.get("tenant_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
 
                             if !session_id.is_empty() {
                                 let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
@@ -1175,7 +1175,7 @@ let db_for_products = self.db.clone();
                                                     crate::db::DbStore::Postgres => {
                                                         let _ = sqlx::query(
                                                             r#"
-                                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                                             VALUES ($1, $2, 'AI Agent Paused: Onboarding', 'The AI agent responsible for storefront generation is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please generate your storefront later.')
                                                             "#
                                                         )
@@ -1187,7 +1187,7 @@ let db_for_products = self.db.clone();
                                                     crate::db::DbStore::Sqlite(pool) => {
                                                         let _ = sqlx::query(
                                                             r#"
-                                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                                             VALUES (?, ?, 'AI Agent Paused: Onboarding', 'The AI agent responsible for storefront generation is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please generate your storefront later.')
                                                             "#
                                                         )
@@ -1322,7 +1322,7 @@ impl AdvisorWorker {
 
                                 let _ = sqlx::query(
                                     r#"
-                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                     VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
                                     "#
                                 )
@@ -1345,7 +1345,7 @@ impl AdvisorWorker {
 
                                 let _ = sqlx::query(
                                     r#"
-                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                     VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
                                     "#
                                 )
@@ -1397,7 +1397,7 @@ impl AdvisorWorker {
                                         crate::db::DbStore::Postgres => {
                                             let _ = sqlx::query(
                                                 r#"
-                                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                                 VALUES ($1, $2, 'AI Agent Paused: Advisory', 'The AI agent responsible for answering questions is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please ask your question again later.')
                                                 "#
                                             )
@@ -1409,7 +1409,7 @@ impl AdvisorWorker {
                                         crate::db::DbStore::Sqlite(pool) => {
                                             let _ = sqlx::query(
                                                 r#"
-                                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                                 VALUES (?, ?, 'AI Agent Paused: Advisory', 'The AI agent responsible for answering questions is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please ask your question again later.')
                                                 "#
                                             )
@@ -1454,8 +1454,7 @@ mod tests {
             );
             CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
-                organization_id TEXT NOT NULL,
-                tenant_id TEXT,
+                tenant_id TEXT NOT NULL,
                 name TEXT,
                 inventory_count INT,
                 locked_quantity INT DEFAULT 0,
@@ -1465,8 +1464,7 @@ mod tests {
             );
             CREATE TABLE IF NOT EXISTS shared_tasks (
                 id TEXT PRIMARY KEY,
-                organization_id TEXT NOT NULL,
-                tenant_id TEXT,
+                tenant_id TEXT NOT NULL,
                 title TEXT NOT NULL,
                 description TEXT,
                 status TEXT NOT NULL DEFAULT 'PENDING',
@@ -1496,7 +1494,7 @@ mod tests {
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
 
             // Insert a product with low inventory
-            sqlx::query("INSERT INTO products (id, organization_id, tenant_id, name, inventory_count) VALUES ('prod1', 'tenant1', 'tenant1', 'Low Stock Item', 2)")
+            sqlx::query("INSERT INTO products (id, tenant_id, tenant_id, name, inventory_count) VALUES ('prod1', 'tenant1', 'tenant1', 'Low Stock Item', 2)")
                 .execute(pool).await.unwrap();
 
             // Insert a task
@@ -1515,7 +1513,7 @@ mod tests {
             // Due to timing in parallel tests, wait and retry fetching the task
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1'")
                 .fetch_optional(pool).await.unwrap();
 
             // Ignore the test flakiness related to timing if parallel execution skipped the assert
@@ -1542,7 +1540,7 @@ mod tests {
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, tenant_id TEXT, order_id TEXT, product_id TEXT, quantity INTEGER, price REAL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
 
             // High inventory but massive velocity
-            sqlx::query("INSERT INTO products (id, organization_id, tenant_id, name, inventory_count) VALUES ('prod_high_vel', 'tenant1', 'tenant1', 'Fast Selling Item', 50)")
+            sqlx::query("INSERT INTO products (id, tenant_id, tenant_id, name, inventory_count) VALUES ('prod_high_vel', 'tenant1', 'tenant1', 'Fast Selling Item', 50)")
                 .execute(pool).await.unwrap();
 
             let order_id = "order_1";
@@ -1569,7 +1567,7 @@ mod tests {
         if let DbStore::Sqlite(pool) = &db.store {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             // Check if SharedTask was created
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1'")
                 .fetch_optional(pool).await.unwrap();
 
             if let Some(row) = row {
@@ -1608,7 +1606,7 @@ mod tests {
         if let DbStore::Sqlite(pool) = &db.store {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1'")
                 .fetch_optional(pool).await.unwrap();
 
             if let Some(row) = row {
@@ -1651,7 +1649,7 @@ mod tests {
 
         if let DbStore::Sqlite(pool) = &db.store {
             // Check if SharedTask was created
-            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1'")
                 .fetch_one(pool).await.unwrap();
             let title: String = row.get("title");
             let content: String = row.get("proposed_content");
@@ -1735,7 +1733,7 @@ mod tests {
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS department_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, event_type TEXT, payload JSONB, status TEXT DEFAULT 'PENDING', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT);").execute(&pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS business_milestones (id TEXT PRIMARY KEY, tenant_id TEXT, milestone_type TEXT, reached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(tenant_id, milestone_type));").execute(&pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&pool).await;
 
         // Insert 99 orders
         for i in 0..99 {
@@ -1773,7 +1771,7 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count, 1);
 
-        let count_shared_task: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE organization_id = 'tenant-100-orders' AND title = '🎉 Milestone: 100th Order!'")
+        let count_shared_task: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE tenant_id = 'tenant-100-orders' AND title = '🎉 Milestone: 100th Order!'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count_shared_task, 1);
     }
