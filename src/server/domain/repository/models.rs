@@ -424,3 +424,14 @@ pub struct DepositRequirement {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, sqlx::FromRow, serde::Serialize, serde::Deserialize)]
+pub struct QuoteTemplate {
+    pub id: uuid::Uuid,
+    pub tenant_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub base_price_cents: i64,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
