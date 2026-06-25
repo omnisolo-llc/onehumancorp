@@ -4,10 +4,12 @@ import React, { useState, useEffect, useRef } from 'react';
 
 interface PoweredByOHCProps {
   tenantId: string;
+  isOwner?: boolean;
 }
 
-export function PoweredByOHC({ tenantId }: PoweredByOHCProps) {
+export function PoweredByOHC({ tenantId, isOwner = false }: PoweredByOHCProps) {
   const referralUrl = `/onboarding?ref=${tenantId}&source=footer_widget`;
+  const upgradeUrl = `/pricing?source=footer_widget_upgrade`;
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -56,25 +58,45 @@ export function PoweredByOHC({ tenantId }: PoweredByOHCProps) {
               </div>
             </div>
 
-            <h4 className="text-sm font-bold text-gray-900 font-outfit mb-1">
-              Built with OneHumanCorp
-            </h4>
-            <p className="text-xs text-gray-600 mb-3 leading-relaxed">
-              The AI-powered work assistant for modern owners and operators.
-            </p>
+            {isOwner ? (
+              <>
+                <h4 className="text-sm font-bold text-gray-900 font-outfit mb-1">
+                  Remove Branding
+                </h4>
+                <p className="text-xs text-gray-600 mb-3 leading-relaxed">
+                  Upgrade to Pro to remove this watermark and fully white-label your workspace.
+                </p>
 
-            <a
-              href={referralUrl}
-              className="block w-full py-2 px-4 rounded-xl bg-gray-900 text-white text-xs font-semibold tracking-wide hover:bg-gray-800 transition-colors shadow-sm"
-            >
-              Create Your Own
-            </a>
+                <a
+                  href={upgradeUrl}
+                  className="block w-full py-2 px-4 rounded-xl bg-indigo-600 text-white text-xs font-semibold tracking-wide hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  Upgrade to Pro
+                </a>
+              </>
+            ) : (
+              <>
+                <h4 className="text-sm font-bold text-gray-900 font-outfit mb-1">
+                  Built with OneHumanCorp
+                </h4>
+                <p className="text-xs text-gray-600 mb-3 leading-relaxed">
+                  The AI-powered work assistant for modern owners and operators.
+                </p>
+
+                <a
+                  href={referralUrl}
+                  className="block w-full py-2 px-4 rounded-xl bg-gray-900 text-white text-xs font-semibold tracking-wide hover:bg-gray-800 transition-colors shadow-sm"
+                >
+                  Create Your Own
+                </a>
+              </>
+            )}
           </div>
         </div>
       )}
 
       <a
-        href={referralUrl}
+        href={isOwner ? upgradeUrl : referralUrl}
         onClick={handleBaseClick}
         className="group flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white/50 backdrop-blur-[30px] saturate-[210%] hover:bg-white/80 hover:shadow-sm transition-all text-xs font-semibold text-gray-500 hover:text-indigo-600 uppercase tracking-widest font-outfit z-10 relative"
       >
