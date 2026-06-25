@@ -14,6 +14,8 @@ impl PaymentRouter {
     pub const CARD_FEE_FIXED: f64 = 0.30;
     pub const ACH_FEE_PERCENTAGE: f64 = 0.008;
     pub const ACH_FEE_CAP: f64 = 5.0;
+    pub const TERMINAL_FEE_PERCENTAGE: f64 = 0.027; // Custom NFC terminal fee constant optimization
+    pub const TERMINAL_FEE_FIXED: f64 = 0.05;
     pub const ACH_MIN_AMOUNT: f64 = 50.0;
     pub const BATCH_PAYOUT_THRESHOLD_CENTS: i64 = 10000;
 
@@ -60,6 +62,17 @@ impl PaymentRouter {
 
         let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
             let savings = card_fee - ach_fee;
+            (savings * 100.0).round() / 100.0
+        } else {
+            0.0
+        }
+    }
+
+    pub fn calculate_terminal_fee_savings(amount_usd: f64) -> f64 {
+        let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
+        let terminal_fee = (amount_usd * Self::TERMINAL_FEE_PERCENTAGE) + Self::TERMINAL_FEE_FIXED;
+        let savings = card_fee - terminal_fee;
+        if savings > 0.0 {
             (savings * 100.0).round() / 100.0
         } else {
             0.0
@@ -188,5 +201,19 @@ mod mercadopago_tests {
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "MXN"), PaymentMethod::MercadoPago);
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "brl"), PaymentMethod::MercadoPago);
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "mxn"), PaymentMethod::MercadoPago);
+    }
+}
+
+#[cfg(test)]
+mod terminal_tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_terminal_fee_savings() {
+        // Card fee: 100 * 0.029 + 0.30 = 3.20
+        // Terminal fee: 100 * 0.027 + 0.05 = 2.75
+        // Savings: 3.20 - 2.75 = 0.45
+        assert_eq!(PaymentRouter::calculate_terminal_fee_savings(100.0), 0.45);
+        assert_eq!(PaymentRouter::calculate_terminal_fee_savings(0.0), 0.0);
     }
 }

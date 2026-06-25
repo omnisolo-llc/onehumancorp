@@ -673,6 +673,13 @@ pub async fn create_payment_intent_handler(
 
     info!(tenant_id = %tenant_id, amount = req_data.amount_cents, currency = %req_data.currency, "Creating Stripe Terminal Payment Intent");
 
+    // Track payment fee savings automatically
+    let amount_usd = (req_data.amount_cents as f64) / 100.0;
+    let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_terminal_fee_savings(amount_usd);
+    if savings > 0.0 {
+        tracing::info!("💰 Miser telemetry: Payment method optimized for NFC Terminal. Saved ${:.2} in fees", savings);
+    }
+
     if let Err(e) = ::server_telemetry::record_api_call_cost(
         &crate::db::get_pool(),
         &tenant_id,
