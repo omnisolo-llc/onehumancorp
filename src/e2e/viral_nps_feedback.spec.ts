@@ -87,38 +87,38 @@ test.describe('Viral NPS Feedback Generator Loop E2E', () => {
         expect(generatedHtml).not.toContain('⚡ Powered by OHC');
     });
 
-    test('should allow owner to create an embeddable widget', async ({ adminPage }) => {
+    test('should allow owner to create an embeddable widget', async ({ page }) => {
         // Navigate to dashboard
-        await adminPage.goto('/dashboard.html');
-        let content = await adminPage.content();
+        await page.goto('/dashboard.html');
+        let content = await page.content();
         if (!content.includes('OneHumanCorp')) {
-            await adminPage.goto('/tauri_out/dashboard.html');
-            content = await adminPage.content();
+            await page.goto('/tauri_out/dashboard.html');
+            content = await page.content();
         }
         if (!content.includes('OneHumanCorp')) {
-            await adminPage.goto('/ui/dashboard.html');
-            content = await adminPage.content();
+            await page.goto('/ui/dashboard.html');
+            content = await page.content();
         }
         if (!content.includes('OneHumanCorp')) {
-            await adminPage.goto('/dashboard');
+            await page.goto('/dashboard');
         }
 
         // Click the NPS Feedback link
-        await adminPage.click('#nps-feedback-link');
+        await page.click('#nps-feedback-link');
 
         // Wait for page
-        await expect(adminPage.locator('h1', { hasText: 'NPS Feedback Generator' })).toBeVisible();
+        await expect(page.locator('h1', { hasText: 'NPS Feedback Generator' })).toBeVisible();
 
         // Verify preview works
-        const previewProductName = adminPage.locator('#previewProductName');
+        const previewProductName = page.locator('#previewProductName');
         await expect(previewProductName).toBeVisible();
 
         // Set input
-        await adminPage.fill('#productName', 'Test Admin Product');
+        await page.fill('#productName', 'Test Admin Product');
 
         // Check if copy button works
-        await adminPage.click('#copyBtn');
-        await expect(adminPage.locator('#copyBtn')).toHaveText('Copied!');
+        await page.click('#copyBtn');
+        await expect(page.locator('#copyBtn')).toHaveText('Copied!');
     });
 
     test('should show correct default content on load', async ({ memberPage }) => {
