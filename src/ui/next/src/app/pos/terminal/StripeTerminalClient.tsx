@@ -210,7 +210,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           const reserveData = await reserveRes.json();
           if (!reserveData.success) {
             onOptimisticRollback?.();
-            setStatus('Reservation failed: ' + (reserveData.error_message || 'Item just sold out'));
+            setStatus('Reservation failed: ' + (reserveData.error_message || 'Oops! Item just sold out.'));
             setReserving(false);
             return;
           }
@@ -311,7 +311,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         const reserveData = await reserveRes.json();
         if (!reserveData.success) {
           onOptimisticRollback?.();
-          setStatus('Reservation failed: ' + (reserveData.error_message || 'Item just sold out'));
+          setStatus('Reservation failed: ' + (reserveData.error_message || 'Oops! Item just sold out.'));
           setReserving(false);
           return;
         }

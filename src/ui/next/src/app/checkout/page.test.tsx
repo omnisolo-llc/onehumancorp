@@ -191,3 +191,28 @@ beforeEach(() => {
     expect(components.length).toBeGreaterThan(0);
   });
 });
+
+  it('handles item just sold out error', async () => {
+    mockUseSearchParams.mockImplementation(() => new URLSearchParams('?tier=Starter'));
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { assign },
+    });
+    global.fetch = vi.fn().mockResolvedValue({
+      status: 409,
+      ok: false,
+      json: () => Promise.resolve({
+        error: 'Oops! Item just sold out.'
+      }),
+    } as any);
+
+    await act(async () => { render(<CheckoutPage />); });
+
+    const payButton = screen.getByText('Upgrade');
+    fireEvent.click(payButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Oops! Item just sold out.')).toBeDefined();
+    });
+  });
