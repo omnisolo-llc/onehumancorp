@@ -94,7 +94,7 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
   });
 
   test('should push CRDT deltas correctly via mcp-deltas endpoint', async ({ page, context }) => {
-    await page.goto('/');
+    await page.goto('/pos.html');
     await context.setOffline(true);
 
     await page.evaluate(async () => {
