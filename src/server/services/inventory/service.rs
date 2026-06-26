@@ -519,6 +519,25 @@ impl InventoryService {
                     .bind(&action_payload)
                     .execute(&mut *tx)
                     .await;
+
+                let feed_id = Uuid::new_v4().to_string();
+                let feed_payload = serde_json::json!({
+                    "product_id": product_id,
+                    "remaining_stock": new_stock,
+                    "message": message,
+                });
+                let proposed_action = serde_json::json!({
+                    "action": "Review and approve restock order"
+                });
+                let _ = sqlx::query(
+                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, 'operations', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL')"
+                )
+                .bind(&feed_id)
+                .bind(tenant_id)
+                .bind(&feed_payload)
+                .bind(&proposed_action)
+                .execute(&mut *tx)
+                .await;
             }
         } else {
             let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
@@ -587,6 +606,54 @@ mod tests {
     use super::*;
     use crate::db::DbStore;
     use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_commit_inventory_low_stock() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let pool = crate::db::get_pool();
+        let _db = Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        });
+
+        let tenant_id = "test_inventory_tenant";
+        let product_id = "test_product_low_stock";
+
+        let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+
+        let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product', 6, 6) ON CONFLICT DO NOTHING")
+            .bind(product_id)
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+
+        let _ = sqlx::query("UPDATE products SET inventory_count = 6, available_quantity = 6, locked_quantity = 0 WHERE id = $1 AND tenant_id = $2")
+            .bind(product_id)
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+
+        let redis_client_opt = None;
+        let service = Arc::new(InventoryService::new(redis_client_opt));
+
+        let res = service.commit_inventory(tenant_id, product_id, 2, "").await.unwrap();
+        assert!(res.success);
+
+        let feed_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_feed_items WHERE tenant_id = $1 AND context_payload->>'product_id' = $2")
+            .bind(tenant_id)
+            .bind(product_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert!(feed_count.0 > 0);
+    }
 
     #[tokio::test]
     async fn test_reserve_inventory_concurrent_redlock() {
