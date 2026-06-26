@@ -49,7 +49,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   return (
     <div
       key={approval.id}
-      className="glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-300"
+      className="glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-300"
       data-testid={`triage-card-${approval.id}`}
     >
       <div className="flex flex-col gap-1">
@@ -62,7 +62,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           </span>
           {approval.lifecycle_state === "PENDING_APPROVAL" && (
             <span className="text-xs font-bold uppercase tracking-wider text-green-700 bg-green-100 px-2 py-1 rounded-[8px]">
-              Requires Review
+              {approval.event_source === "customer_success_agent" ? "Action Required" : "Action Needed"}
             </span>
           )}
           {queuedActionIds.has(approval.id) && (
@@ -75,10 +75,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           )}
         </div>
         <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1 tracking-wide">
-          {approval.context_payload?.description ||
+          {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" ?
+            "Action Required: Approve Reply"
+            : ((approval as any).description ||
+            approval.context_payload?.description ||
             approval.proposed_action?.message ||
+            approval.proposed_action?.description ||
             approval.proposed_action?.action_type ||
-            approval.event_source}
+            approval.event_source)}
         </h3>
         {((approval.proposed_action || approval.context_payload)?.context ||
           (approval.proposed_action || approval.context_payload)
