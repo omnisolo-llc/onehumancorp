@@ -23,7 +23,7 @@ vi.mock('next/navigation', () => ({
 
 describe('OnboardingWizard', () => {
   const renderOnboardingWizard = async () => {
-    let view: any;
+    let view;
     await act(async () => {
       view = render(
         <TooltipProvider>
@@ -941,7 +941,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 1, chatStep: 3, businessName: 'Bakery', whatYouSell: 'Cakes', location: '' });
     });
 
-    let view: any;
+    let view;
     await act(async () => {
       view = render(
         <TooltipProvider>
@@ -965,7 +965,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 1, chatStep: 4, businessName: 'Bakery', whatYouSell: 'Cakes', location: 'City', targetAudience: '' });
     });
 
-    let view: any;
+    let view;
     await act(async () => {
       view = render(
         <TooltipProvider>
@@ -989,7 +989,7 @@ describe('OnboardingWizard', () => {
       useOnboardingStore.setState({ step: 1, chatStep: 2, businessName: 'Bakery', whatYouSell: '' });
     });
 
-    let view: any;
+    let view;
     await act(async () => {
       view = render(
         <TooltipProvider>
