@@ -10,9 +10,9 @@ mod parity_tests {
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
         let sqlite_pool = SqlitePoolOptions::new()
-            .max_connections(2)
+            .max_connections(5)
             // Fix connection pooling timeout on sqlite
-            .acquire_timeout(std::time::Duration::from_secs(5))
+            .acquire_timeout(std::time::Duration::from_secs(120))
             .connect(&uri)
             .await
             .unwrap();
@@ -20,7 +20,7 @@ mod parity_tests {
         // Run migrations/schema setup for SQLite
         let db = DB {
             // Fix connection pooling timeout on mocked pg pool
-            pool: PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(5)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(120)).connect_lazy("postgres://localhost/dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool),
         };
         db.run_migrations().await.unwrap();
@@ -772,27 +772,28 @@ mod parity_tests {
     async fn test_execute_with_retry_sync_lag() {
         let sqlite_db = setup_sqlite_db().await;
 
-        // Enforce the 60-second ML-Resilience rule for database operations
-        let timeout_duration = std::time::Duration::from_millis(60);
+        // We use tokio::time::pause to fast forward time to test timeouts without actually waiting.
+        tokio::time::pause();
 
         let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
         let attempts_clone = attempts.clone();
 
-        let result = tokio::time::timeout(timeout_duration, sqlite_db.execute_with_retry("test_sync_lag", || {
+        let result: Result<(), String> = sqlite_db.execute_with_retry("test_sync_lag", || {
             let attempts_clone = attempts_clone.clone();
             async move {
                 let mut a = attempts_clone.lock().unwrap();
                 *a += 1;
 
-                // Simulate a lag (e.g. over slow network/disk) that exceeds the 60ms timeout constraint
-                tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+                // Simulate a lag (e.g. over slow network/disk) that exceeds the 60s timeout constraint
+                tokio::time::sleep(std::time::Duration::from_secs(65)).await;
 
                 // We'll return an error so retry logic would theoretically kick in if not timed out
                 Err::<(), String>("database is locked".to_string())
             }
-        })).await;
+        }).await;
 
         assert!(result.is_err(), "Sync operation must time out under lag conditions to prevent cascading failures");
+        assert!(result.unwrap_err().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
     }
 
     #[tokio::test]

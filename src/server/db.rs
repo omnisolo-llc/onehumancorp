@@ -642,15 +642,17 @@ impl DB {
         let timeout_duration = std::time::Duration::from_secs(60);
 
         loop {
-            if start_time.elapsed() > timeout_duration {
-                return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
+            // Note: Since tokio::time::Instant interacts with paused time during tests,
+            // we will evaluate whether the time has eclipsed the timeout here.
+            if start_time.elapsed() >= timeout_duration {
+                return Err(E::from(format!("Database operation '{}' timed out", operation)));
             }
             let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
             match timeout_res {
                 Err(_) => {
-                    return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
+                    return Err(E::from(format!("Database operation '{}' timed out", operation)));
                 }
                 Ok(Ok(val)) => return Ok(val),
                 Ok(Err(err)) => {
