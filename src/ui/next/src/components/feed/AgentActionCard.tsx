@@ -94,7 +94,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ||
           (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "instagram_dm") && (
+            ?.feature_type === "instagram_dm" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "subscription_replenishment") && (
           <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "incident_resolution" && (
@@ -363,6 +365,17 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       "Check out our new product!"}
                     "
                   </div>
+                </div>
+              </div>
+            ) : (approval.proposed_action || approval.context_payload)
+                ?.feature_type === "subscription_replenishment" ? (
+              <div className="flex flex-col gap-2">
+                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  Autopilot Recommendation
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {approval.proposed_action?.context ||
+                    "Based on this customer's order history and the estimated consumption rate, they are due for a replenishment. Would you like me to generate a personalized checkout link and draft an email suggesting they refill?"}
                 </div>
               </div>
             ) : (approval.proposed_action || approval.context_payload)
@@ -915,6 +928,51 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             >
               Dismiss
             </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "subscription_replenishment" ? (
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="w-full sm:flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-blue-600 transition-all duration-200 shadow-sm flex items-center justify-center"
+              aria-label="Generate & Send Email"
+              data-testid="approve-subscription-replenishment"
+            >
+              Generate & Send Email
+            </button>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  false,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-6 rounded-[8px] bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center"
+              aria-label="Dismiss"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "subscription_replenishment" ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 dark:text-gray-400">Action:</span>
+              <span className="font-medium">Send Check-in Email</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 dark:text-gray-400">Offer:</span>
+              <span className="font-medium">1-Click Repurchase Link</span>
+            </div>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "supply_order" ? (
