@@ -35,7 +35,7 @@ test.describe('Documentation full suite', () => {
     // Title should be present
     const title = page.locator('h1');
     await expect(title).toBeVisible();
-    await expect(title).toContainText('Release Notes & Changelog');
+    await expect(title).toContainText("What's New");
   });
 
   test('Walkthrough feature works on Dashboard', async ({ page, loginAs, unlimitedAdminUser }) => {

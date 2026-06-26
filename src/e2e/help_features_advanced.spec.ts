@@ -57,7 +57,7 @@ test.describe('In-App Help & Documentation Features', () => {
 
   test('changelog page', async ({ page }) => {
     await page.goto('/api/ui/changelog.html');
-    await expect(page.getByText('Release Notes & Changelog')).toBeVisible();
-    await expect(page.getByText('New Features')).toBeVisible();
+    await expect(page.getByText("What's New")).toBeVisible();
+    await expect(page.getByText('Help Center & Tooltips')).toBeVisible();
   });
 });

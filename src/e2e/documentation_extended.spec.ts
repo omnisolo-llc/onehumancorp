@@ -42,9 +42,9 @@ test.describe('Extended Documentation & Help Features', () => {
   test('should display external link to full technical changelog in release notes', async ({ page }) => {
     await page.goto('/api/ui/changelog.html');
 
-    await expect(page.getByRole('heading', { name: 'Release Notes & Changelog' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's New" })).toBeVisible();
 
-    const externalLink = page.getByRole('link', { name: 'Read the full technical changelog on our website →' });
+    const externalLink = page.getByRole('link', { name: 'View Full Changelog on our Website' });
     await expect(externalLink).toBeVisible();
     await expect(externalLink).toHaveAttribute('href', 'https://onehumancorp.com/changelog');
   });

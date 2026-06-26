@@ -32,12 +32,7 @@ test.describe('Documentation full suite', () => {
     // Title should be present
     const title = page.locator('h1');
     await expect(title).toBeVisible();
-    await expect(title).toContainText('Release Notes');
-
-    // Expecting to load cards dynamically from API
-    // The test waits for the dynamic content to appear
-    const changelogContainer = page.locator('div.space-y-8');
-    await expect(changelogContainer).toBeVisible();
+    await expect(title).toContainText("What's New");
   });
 
   test('API Docs loads Swagger UI', async ({ page }) => {

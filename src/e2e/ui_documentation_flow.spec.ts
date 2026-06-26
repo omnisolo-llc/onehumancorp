@@ -68,7 +68,7 @@ test.describe('Documentation Features Flow', () => {
 
     // Verify title
     await expect(page.locator('[data-testid="changelog-title"]')).toBeVisible();
-    await expect(page.locator('text=Release Notes & Changelog')).toBeVisible();
+    await expect(page.locator("text=What's New")).toBeVisible();
   });
 
   test('Advanced User can access API Documentation', async ({ page }) => {

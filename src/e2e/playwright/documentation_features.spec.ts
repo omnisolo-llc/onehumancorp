@@ -14,11 +14,11 @@ test.describe('Documentation Features CUJ', () => {
 
     // 3. View Changelog from Dashboard
     await page.goto('/api/ui/dashboard.html');
-    const changelogLink = page.locator('a', { hasText: 'Changelog' }).first();
+    const changelogLink = page.locator('a', { hasText: "What's New" }).first();
     await expect(changelogLink).toBeVisible();
     await changelogLink.click();
     await expect(page).toHaveURL(/.*\/api\/ui\/changelog\.html/);
-    await expect(page.locator('h1')).toHaveText('Release Notes & Changelog');
+    await expect(page.locator('h1')).toHaveText("What's New");
 
     // 4. Trigger Walkthrough (Dashboard has a walkthrough button)
     await page.goto('/api/ui/dashboard.html');

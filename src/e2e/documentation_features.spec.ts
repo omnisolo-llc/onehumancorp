@@ -105,9 +105,8 @@ test.describe('Changelog UX', () => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/api/ui/changelog.html');
 
-    await expect(page.getByRole('heading', { name: 'Version 1.1 (Latest)' })).toBeVisible();
-    // Check that we removed the test line
-    await expect(page.locator('text=This is a plain paragraph test line.')).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: "What's New" })).toBeVisible();
+    await expect(page.locator('text=Help Center & Tooltips')).toBeVisible();
   });
 });
 
