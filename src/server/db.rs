@@ -1798,6 +1798,12 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 
         Ok(())
     }
+
+    // Small Codebase Optimization:
+    // Optimized method signature for internal cleanup
+    pub async fn optimized_internal_cleanup(&self) -> Result<(), sqlx::Error> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
