@@ -1385,7 +1385,7 @@ export default function OnboardingWizard() {
                     {aiAgents.map(agent => (
                       <div
                         key={agent}
-                        className="px-3 py-1.5 rounded-full border border-[#34C759] bg-[#34C759]/10 text-[#34C759] flex items-center gap-1.5 text-sm font-semibold transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                        className="px-3 py-1.5 rounded-[8px] border border-[#34C759] bg-[#34C759]/10 text-[#34C759] flex items-center gap-1.5 text-sm font-semibold transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         {agent}
