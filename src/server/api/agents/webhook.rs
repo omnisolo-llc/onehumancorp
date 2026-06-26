@@ -242,6 +242,8 @@ async fn handle_webhook(
             "original_message": payload.message,
             "target_language": target_language,
             "inbox_message_id": id,
+            "sender_id": payload.customer_name.clone().unwrap_or_else(|| "unknown".to_string()),
+            "customer_id": payload.customer_email.clone().unwrap_or_else(|| "".to_string()),
         }),
     };
 
