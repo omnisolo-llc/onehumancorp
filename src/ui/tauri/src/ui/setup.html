@@ -82,7 +82,7 @@
         min-height: 44px !important;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 8px !important;
+        border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -1258,7 +1258,6 @@
               box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
             "
             onclick="
-              document.getElementById('instant-bio').value = '';
               goToStep('step-instant');
             "
           >
@@ -3205,18 +3204,13 @@
         saveCurrentState();
         localStorage.setItem("onboardingState", JSON.stringify(state));
 
-        if (
-          stepId === "step-instant" &&
-          document.getElementById("instant-bio")
-        ) {
+        if (stepId === "step-instant") {
           // We no longer blindly clear the bio here so users can review what they entered
           // if they come back to this step.
-          const generateStorefrontBtn = document.getElementById(
-            "generate-storefront-btn",
-          );
-          const instantBioEl = document.getElementById("instant-bio");
-          if (generateStorefrontBtn && instantBioEl) {
-            generateStorefrontBtn.disabled = instantBioEl.value.trim().length === 0;
+          const instantBioInputEl = document.getElementById("instant-bio");
+          const generateStorefrontBtn = document.getElementById("generate-storefront-btn");
+          if (instantBioInputEl && generateStorefrontBtn) {
+            generateStorefrontBtn.disabled = instantBioInputEl.value.trim().length === 0;
           }
         }
         if (stepId === "step-categories") {
