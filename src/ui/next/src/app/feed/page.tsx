@@ -212,6 +212,20 @@ export default function FeedPage() {
     }
   };
 
+  const simulateVoiceIntake = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-voice-intake', { method: 'POST' });
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
       <div className="w-full max-w-[375px] mx-auto p-4 space-y-4" data-testid="agent-feed">
@@ -250,6 +264,9 @@ export default function FeedPage() {
             const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
             const isDisputeResolution = item.proposed_action?.feature_type === 'dispute_resolution' || item.context_payload?.feature_type === 'dispute_resolution';
             const disputePayload = isDisputeResolution ? (item.proposed_action || item.context_payload) : null;
+            const isVoiceIntake = item.proposed_action?.feature_type === 'voice_intake' || item.context_payload?.feature_type === 'voice_intake';
+            const isSmsIntake = item.proposed_action?.feature_type === 'sms_intake' || item.context_payload?.feature_type === 'sms_intake';
+            const voiceOrSmsPayload = isVoiceIntake || isSmsIntake ? (item.proposed_action || item.context_payload) : null;
 
             return (
               <div
@@ -258,9 +275,9 @@ export default function FeedPage() {
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
-                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : isVoiceIntake || isSmsIntake ? 'text-[#FF3B30] dark:text-[#FF453A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
+                    <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : isVoiceIntake || isSmsIntake ? 'bg-[#FF3B30] dark:bg-[#FF453A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
+                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isVoiceIntake ? '📞 MISSED CALL: NEW LEAD' : isSmsIntake ? '💬 SMS INQUIRY: NEW LEAD' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -270,6 +287,8 @@ export default function FeedPage() {
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
                   {isDisputeResolution
                     ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
+                    : isVoiceIntake || isSmsIntake
+                    ? `${voiceOrSmsPayload?.sender_id || 'Customer'} Request`
                     : isAmbassador
                     ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Quote'
@@ -280,6 +299,29 @@ export default function FeedPage() {
                     ? `Drafted Booking for ${item.context_payload?.customer_name || 'Customer'}`
                     : (item.proposed_action?.title || 'Review Required')}
                 </h3>
+
+                <p className="text-gray-600 dark:text-gray-300 text-[13px] leading-relaxed mb-4">
+                  {isDisputeResolution
+                    ? disputePayload?.reason || item.ai_summary
+                    : isVoiceIntake || isSmsIntake
+                    ? `"${voiceOrSmsPayload?.message || item.ai_summary}"`
+                    : isAmbassador
+                    ? `"${ambassadorPayload.message || item.ai_summary}"`
+                    : item.ai_summary}
+                </p>
+
+                {isVoiceIntake && voiceOrSmsPayload?.audio_url && (
+                  <div className="mt-3 mb-4 flex items-center gap-2">
+                    <button className="flex items-center justify-center w-11 h-11 bg-[#FF3B30] text-white rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF3B30]" aria-label="Play Voicemail">
+                      <svg className="w-5 h-5 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                      </svg>
+                    </button>
+                    <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#FF3B30] w-1/3"></div>
+                    </div>
+                  </div>
+                )}
 
                 {editingId === item.id ? (
                   <div className="mb-5">
@@ -437,6 +479,27 @@ export default function FeedPage() {
                         Dismiss
                       </button>
                     </div>
+                  ) : isVoiceIntake || isSmsIntake ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Generate Quote"
+                        data-testid="feed-generate-quote-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Generate Quote'}
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
                   ) : (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
@@ -472,7 +535,7 @@ export default function FeedPage() {
         </div>
 
         {/* Hidden test button to trigger simulation easily during development/testing */}
-        <div className="pt-8 opacity-20 hover:opacity-100 transition-opacity flex justify-center gap-2">
+        <div className="pt-8 opacity-20 hover:opacity-100 transition-opacity flex justify-center gap-2 flex-wrap">
           <button
              onClick={simulateAmbassadorDraft}
              data-testid="simulate-ambassador-btn"
@@ -486,6 +549,13 @@ export default function FeedPage() {
              className="text-xs bg-[#FFF5E5] text-[#FF9500] border border-[#FFD699] px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Dispute
+          </button>
+          <button
+             onClick={simulateVoiceIntake}
+             data-testid="simulate-voice-intake-btn"
+             className="text-xs bg-[#FFE5E5] text-[#FF3B30] border border-[#FF9999] px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Voice Intake
           </button>
         </div>
       </div>

@@ -52,6 +52,7 @@ where
         .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
+        .route("/simulate-voice-intake", post(simulate_voice_intake))
         .route("/simulate-dispute-resolution", post(simulate_dispute_resolution))
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/simulate-autonomous-booking-quote", post(simulate_autonomous_booking_quote))
@@ -546,6 +547,41 @@ async fn simulate_autonomous_booking_quote(
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate autonomous booking quote: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
+
+pub async fn simulate_voice_intake(
+    axum::extract::State(orchestrator): axum::extract::State<std::sync::Arc<crate::orchestration::departments::orchestrator::DepartmentOrchestrator>>,
+    axum::extract::Extension(claims): axum::extract::Extension<Claims>,
+) -> impl axum::response::IntoResponse {
+    use axum::{http::StatusCode, response::IntoResponse, Json};
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "voice",
+        "priority": "High",
+        "customer_message": "Audio Recording",
+        "context": "Simulated voice context",
+        "inbox_message_id": "msg_simulated_voice_123",
+        "customer_id": "cust_simulated_voice_123"
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+        "Draft Quote for voice intake".to_string(),
+        tenant_id.clone(),
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate voice intake: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
         }
     }

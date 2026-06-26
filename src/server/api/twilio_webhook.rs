@@ -2,10 +2,14 @@ use axum::{
     extract::State,
     response::IntoResponse,
     http::StatusCode,
+    http::HeaderMap,
 };
 use std::sync::Arc;
 use uuid::Uuid;
 use std::collections::HashMap;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
+use base64::{Engine as _, engine::general_purpose};
 
 use crate::db::DB;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
@@ -22,11 +26,52 @@ pub struct TwilioWebhookState {
     pub voice_sessions: Arc<dashmap::DashMap<String, String>>,
 }
 
+type HmacSha256 = Hmac<Sha256>;
+
+fn validate_twilio_signature(headers: &HeaderMap, body: &str, url: &str, auth_token: &str) -> bool {
+    let signature = match headers.get("X-Twilio-Signature") {
+        Some(sig) => sig.to_str().unwrap_or(""),
+        None => return false,
+    };
+
+    let mut params = std::collections::BTreeMap::new();
+    for pair in body.split('&') {
+        let mut parts = pair.splitn(2, '=');
+        if let (Some(k), Some(v)) = (parts.next(), parts.next()) {
+            params.insert(url_decode(k), url_decode(v));
+        }
+    }
+
+    let mut data = String::from(url);
+    for (k, v) in params {
+        data.push_str(&k);
+        data.push_str(&v);
+    }
+
+    let mut mac = match HmacSha256::new_from_slice(auth_token.as_bytes()) {
+        Ok(m) => m,
+        Err(_) => return false,
+    };
+    mac.update(data.as_bytes());
+    let result = mac.finalize().into_bytes();
+    let encoded = general_purpose::STANDARD.encode(result);
+
+    encoded == signature
+}
+
 pub async fn twilio_webhook_post_handler(
     State(state): State<TwilioWebhookState>,
+    headers: HeaderMap,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
     let body_str = String::from_utf8_lossy(&body_bytes);
+
+    let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default();
+    let url = std::env::var("TWILIO_WEBHOOK_URL").unwrap_or_else(|_| "https://api.onehumancorp.com/api/v1/webhooks/twilio".to_string());
+    if !auth_token.is_empty() && !validate_twilio_signature(&headers, &body_str, &url, &auth_token) {
+        tracing::warn!("Invalid Twilio signature for SMS webhook");
+        return (StatusCode::UNAUTHORIZED, "Invalid signature").into_response();
+    }
 
     // Parse form url-encoded body manually (split by & and =)
     let mut params = HashMap::new();
@@ -189,9 +234,17 @@ pub async fn twilio_webhook_post_handler(
 
 pub async fn twilio_voice_webhook_handler(
     State(state): State<TwilioWebhookState>,
+    headers: HeaderMap,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
     let body_str = String::from_utf8_lossy(&body_bytes);
+
+    let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default();
+    let url = std::env::var("TWILIO_VOICE_WEBHOOK_URL").unwrap_or_else(|_| "https://api.onehumancorp.com/api/v1/webhooks/twilio/voice".to_string());
+    if !auth_token.is_empty() && !validate_twilio_signature(&headers, &body_str, &url, &auth_token) {
+        tracing::warn!("Invalid Twilio signature for Voice webhook");
+        return (StatusCode::UNAUTHORIZED, "Invalid signature").into_response();
+    }
 
     let mut params = HashMap::new();
     for pair in body_str.split('&') {
@@ -347,7 +400,7 @@ pub async fn twilio_voice_webhook_handler(
 }
 
 // Basic URL decode
-fn url_decode(input: &str) -> String {
+pub fn url_decode(input: &str) -> String {
     let mut decoded = String::new();
     let mut chars = input.chars().peekable();
     while let Some(c) = chars.next() {
