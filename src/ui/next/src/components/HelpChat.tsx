@@ -189,7 +189,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/80 dark:bg-black/60 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-full max-w-[350px] pointer-events-auto bg-white/80 dark:bg-black/60 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
