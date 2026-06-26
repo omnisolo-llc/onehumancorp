@@ -1,6 +1,5 @@
 use crate::types::{Message, Role};
 
-/// Master Catalog C.3: Context Window Strategy: ACON Research Metric: Prioritizing reasoning traces over raw tool outputs yields 26-54% token reduction while preserving 95%+ accuracy.
 /// Configuration for the ACON Context Window Strategy.
 #[derive(Debug, Clone)]
 pub struct AconConfig {

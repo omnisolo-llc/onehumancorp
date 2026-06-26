@@ -79,7 +79,6 @@ impl PydanticToolExecutor<BashArgs> for BashExecutor {
     }
 }
 
-// Tools: Sandboxed Execution
 pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
     Tool {
         name: "Bash".to_string(),

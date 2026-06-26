@@ -10,48 +10,6 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::domain::repository::models::{Quote, QuoteLineItem};
-use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
-use std::sync::Arc;
-
-#[derive(Deserialize)]
-pub struct DraftAgentRequest {
-    pub inquiry: String,
-    pub customer_id: String,
-    pub tenant_id: String,
-}
-
-// Production-ready adapter that wraps the real LLM provider logic
-struct AdapterLlm {}
-
-#[async_trait::async_trait]
-impl ResearcherLlmClient for AdapterLlm {
-    async fn chat(
-        &self,
-        req: ChatRequest,
-    ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let mut prompt = req.system.clone();
-        for msg in &req.messages {
-            prompt.push_str("\n\n");
-            prompt.push_str(&msg.content);
-        }
-
-        let is_test_mode = cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
-
-        let response_text = if is_test_mode {
-            r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false}]"#.to_string()
-        } else {
-            crate::minimax::LocalLLMClient::new().reason(&prompt).await?
-        };
-
-        Ok(ChatResponse {
-            message: Message::assistant(response_text),
-            usage: Usage::default(),
-            stop_reason: "stop".to_string(),
-            response_id: None,
-        })
-    }
-}
 
 pub fn router<S>() -> Router<S>
 where
@@ -60,7 +18,6 @@ where
 {
     Router::new()
         .route("/", post(create_quote))
-        .route("/draft_agent", post(draft_quote_agent))
         .route("/{id}", get(get_quote))
         .route("/{id}", put(update_quote))
         .route("/{id}/accept", post(accept_quote))
@@ -197,58 +154,6 @@ async fn create_quote(
     }
 
     (StatusCode::CREATED, Json(serde_json::json!({"id": quote_id.to_string()}))).into_response()
-}
-
-async fn draft_quote_agent(
-    State(pool): State<PgPool>,
-    Json(payload): Json<DraftAgentRequest>,
-) -> impl IntoResponse {
-    let llm = Arc::new(AdapterLlm {});
-
-    let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing an estimate for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
-
-    let req = ChatRequest {
-        model: "default-model".to_string(),
-        system: system_prompt,
-        messages: vec![Message::user(payload.inquiry)],
-        temperature: 0.1,
-        max_tokens: 1024,
-        tools: vec![],
-    };
-
-    let res = match llm.chat(req).await {
-        Ok(r) => r,
-        Err(e) => {
-            tracing::error!("LLM Failed: {}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-
-    let json_str = res.message.content.trim();
-    let json_str = json_str.strip_prefix("```json").unwrap_or(json_str);
-    let json_str = json_str.strip_suffix("```").unwrap_or(json_str).trim();
-
-    let line_items: Vec<QuoteLineItemRequest> = match serde_json::from_str(json_str) {
-        Ok(items) => items,
-        Err(e) => {
-            tracing::error!("Failed to parse LLM JSON output: {}. Output was: {}", e, json_str);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-
-    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
-    let required_deposit_cents = total_amount_cents / 3;
-
-    let create_req = CreateQuoteRequest {
-        tenant_id: payload.tenant_id,
-        customer_id: payload.customer_id,
-        total_amount_cents: Some(total_amount_cents),
-        required_deposit_cents: Some(required_deposit_cents),
-        stripe_payment_link: None,
-        line_items,
-    };
-
-    create_quote(State(pool), Json(create_req)).await.into_response()
 }
 
 async fn update_quote(
@@ -486,7 +391,6 @@ async fn approve_quote(
         &format!("Quote #{}", quote.id),
         &quote.customer_id.to_string(),
         amount_usd,
-        None,
         None
     ).await {
         Ok(url) => {

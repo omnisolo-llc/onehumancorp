@@ -83,72 +83,17 @@ impl Department for CustomerSuccessAgent {
             let tenant_id_for_meta = event.tenant_id.clone();
 
             tokio::spawn(async move {
-                if source == "whatsapp" && !sender_id.is_empty() {
-                    let pool = crate::db::get_pool();
-                    let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id = 'twilio' AND tenant_id = $1 LIMIT 1")
-                        .bind(&tenant_id_for_meta)
-                        .fetch_one(&pool)
-                        .await;
-
-                    if let Ok((account_sid, auth_token, from_phone)) = twilio_row {
-                        if !account_sid.is_empty() && !auth_token.is_empty() {
-                            use crate::integrations::twilio::provider::TwilioProvider;
-                            let provider = TwilioProvider::new(account_sid, auth_token);
-
-                            if from_phone.is_empty() {
-                                tracing::error!("Failed to send whatsapp message via Twilio integration: from_phone is empty in credentials");
-                                return;
-                            }
-                            let twilio_from = from_phone;
-                            let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                            if let Err(e) = provider.send_whatsapp(&twilio_to, &twilio_from, &text).await {
-                                tracing::error!("Failed to send whatsapp message via Twilio integration: {}", e);
-                            } else {
-                                tracing::info!("Successfully sent whatsapp message via Twilio integration");
-                            }
-                            return;
-                        }
-                    }
-                }
-
                 if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
                     let pool = crate::db::get_pool();
-                    let query = if source == "whatsapp" {
-                        "SELECT id, integration_code FROM tool_integrations WHERE id IN ('whatsapp', 'whatsapp_cloud_api', 'twilio', 'meta') AND tenant_id = $1 ORDER BY CASE WHEN id = 'twilio' THEN 1 ELSE 2 END LIMIT 1"
-                    } else {
-                        "SELECT id, integration_code FROM tool_integrations WHERE id = 'meta' AND tenant_id = $1 LIMIT 1"
-                    };
-                    let row: Result<(String, String), sqlx::Error> = sqlx::query_as(query)
+                    let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")
                         .bind(&tenant_id_for_meta)
                         .fetch_one(&pool)
                         .await;
-
                     match row {
-                        Ok((found_id, api_token,)) => {
-                            let registry = crate::integrations::registry::IntegrationsRegistry::new();
-                            let integration_id = if source == "whatsapp" { found_id.as_str() } else { "meta" };
-
-                            let twilio_creds = ::server_ohc::orchestration::ConnectIntegrationRequest { bot_token: api_token.clone(), chat_id: "".to_string(), webhook_url: "".to_string(), api_token: api_token.clone(), from_phone: "".to_string(), ..Default::default() };
-                            if let Err(e) = registry.connect(integration_id, &tenant_id_for_meta, twilio_creds.clone()) {
-                                tracing::warn!("Failed to connect {} integration: {}", integration_id, e);
-                            }
-
-                            let res = registry.send_message(integration_id, &source, &sender_id, &text).await;
-                            if res.is_err() && (integration_id == "whatsapp" || integration_id == "twilio") {
-                                let twilio_creds2 = ::server_ohc::orchestration::ConnectIntegrationRequest { bot_token: api_token.clone(), chat_id: "".to_string(), webhook_url: "".to_string(), api_token: api_token.clone(), from_phone: "".to_string(), ..Default::default() };
-                                if let Err(e) = registry.connect("twilio", &tenant_id_for_meta, twilio_creds2) {
-                                    tracing::warn!("Failed to connect twilio integration fallback: {}", e);
-                                }
-
-                                let from_phone_query = "SELECT sms_critical_phone FROM settings WHERE tenant_id = $1 LIMIT 1";
-                                let from_phone_row: Result<(String,), sqlx::Error> = sqlx::query_as(from_phone_query).bind(&tenant_id_for_meta).fetch_one(&pool).await;
-                                let from_phone = from_phone_row.map(|(p,)| p).unwrap_or_else(|_| "".to_string());
-
-                                match registry.send_sms("twilio", &format!("whatsapp:{}", sender_id.replace("whatsapp:", "")), &format!("whatsapp:{}", from_phone), &text).await {
-                                    Ok(_) => tracing::info!("Successfully sent {} message via Twilio integration fallback", source),
-                                    Err(e) => tracing::error!("Failed to send {} message via Twilio fallback integration: {}", source, e),
-                                }
-                            } else if let Err(e) = res {
+                        Ok((api_token,)) => {
+                            use crate::integrations::meta::client::{MetaClientWrapper, RealMetaClient};
+                            let client = RealMetaClient::new(api_token);
+                            if let Err(e) = client.send_message(&source, &sender_id, &text).await {
                                 tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
                             } else {
                                 tracing::info!("Successfully sent {} message via Meta integration", source);

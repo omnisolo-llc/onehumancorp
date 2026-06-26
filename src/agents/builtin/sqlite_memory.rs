@@ -1,4 +1,4 @@
-/// Master Catalog B.3. Memory: Long-term (OpenAI/LangGraph): Sessions backed by SQLite/Redis, or namespace-organized JSON Stores. Hermes Agent Unique Harness Innovations: FTS5 session search: Cross-session recall with LLM summarization.
+/// Master Catalog B.3. Memory
 use crate::memory_store::LongTermMemory;
 use async_trait::async_trait;
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};

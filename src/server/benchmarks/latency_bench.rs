@@ -629,11 +629,7 @@ mod tests {
     #[tokio::test]
     async fn test_bench_time_savings_latency() {
         bench_time_savings_latency().await;
-    }
-
-    #[tokio::test]
-    async fn test_bench_ui_omni_inbox_latency() {
-        bench_ui_omni_inbox_latency().await;
+    bench_ui_omni_inbox_latency().await;
     }
 
     #[tokio::test]
@@ -660,7 +656,6 @@ mod tests {
     async fn test_bench_dashboard_unified_feed_parallel_latency() {
         bench_dashboard_unified_feed_parallel_latency().await;
     }
-
     #[tokio::test]
     async fn test_run_bench_ui_triage_mobile_payload() {
         bench_ui_triage_mobile_payload().await;
@@ -1082,36 +1077,39 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
-        let db1 = pg_pool.clone();
-        let db2 = pg_pool.clone();
-        let db3 = pg_pool.clone();
-        let db4 = pg_pool.clone();
-        let db5 = pg_pool.clone();
-        let db6 = pg_pool.clone();
-        let db7 = pg_pool.clone();
-        let db8 = pg_pool.clone();
-
+        // Setup some mock data or simply test parallel sleep or actual basic queries
         let start_seq = std::time::Instant::now();
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
         let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
         let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
         let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
         let duration_seq = start_seq.elapsed();
 
         let start_par = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+        let pool2 = pg_pool.clone();
+        let pool3 = pg_pool.clone();
+        let pool4 = pg_pool.clone();
+
+
+
+
+
+
+
+
         let _ = tokio::join!(
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db1).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db2).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db3).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db4).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db5).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db6).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db7).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&db8).await })
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4)
         );
         let duration_par = start_par.elapsed();
 

@@ -8,7 +8,6 @@ use std::collections::HashSet;
 /// 2. Permission check before each tool call
 /// 3. Explicit user confirmation for high-risk operations
 
-// Guardrails & Safety: Anthropic 3-stage tool gating
 pub struct AnthropicToolGater {
     pub project_is_trusted: bool,
     pub safe_tools_for_untrusted: HashSet<String>,

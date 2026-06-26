@@ -127,18 +127,10 @@ pub async fn handle_edge_request_impl(
 
     if let Some((mut cached_html, stale)) = cache.get_with_swr(&cache_key).await {
         cached_html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        std::hash::Hash::hash(&cached_html, &mut hasher);
-        let etag = format!("\"{:x}\"", std::hash::Hasher::finish(&hasher));
-
         let mut response = Html(cached_html).into_response();
         let cache_tag = format!("tenant-id:{}", tenant_id);
-        if let Ok(val) = cache_tag.parse::<axum::http::HeaderValue>() {
-            response.headers_mut().insert("Cache-Tag", val.clone());
-            response.headers_mut().insert("Surrogate-Key", val);
-        }
-        if let Ok(etag_val) = etag.parse::<axum::http::HeaderValue>() {
-            response.headers_mut().insert(axum::http::header::ETAG, etag_val);
+        if let Ok(val) = cache_tag.parse() {
+            response.headers_mut().insert("Cache-Tag", val);
         }
         response.headers_mut().insert(
             CACHE_CONTROL,
@@ -179,19 +171,11 @@ pub async fn handle_edge_request_impl(
         // A real system would use a broadcast channel, but for edge workers returning a slightly delayed or stale is better
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         if let Some((cached_html, _)) = cache.get_with_swr(&cache_key).await {
-            let mut hasher = std::collections::hash_map::DefaultHasher::new();
-            std::hash::Hash::hash(&cached_html, &mut hasher);
-            let etag = format!("\"{:x}\"", std::hash::Hasher::finish(&hasher));
-
             let mut response = Html(cached_html).into_response();
-            let cache_tag = format!("tenant-id:{}", tenant_id);
-            if let Ok(val) = cache_tag.parse::<axum::http::HeaderValue>() {
-                response.headers_mut().insert("Cache-Tag", val.clone());
-                response.headers_mut().insert("Surrogate-Key", val);
-            }
-            if let Ok(etag_val) = etag.parse::<axum::http::HeaderValue>() {
-                response.headers_mut().insert(axum::http::header::ETAG, etag_val);
-            }
+        let cache_tag = format!("tenant-id:{}", tenant_id);
+        if let Ok(val) = cache_tag.parse() {
+            response.headers_mut().insert("Cache-Tag", val);
+        }
             response.headers_mut().insert(
                 CACHE_CONTROL,
                 axum::http::HeaderValue::from_static("public, s-maxage=60, stale-while-revalidate=86400"),
@@ -210,19 +194,11 @@ pub async fn handle_edge_request_impl(
     let (mut html, tags) = result?;
     html = inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
 
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    std::hash::Hash::hash(&html, &mut hasher);
-    let etag = format!("\"{:x}\"", std::hash::Hasher::finish(&hasher));
-
     let mut response = Html(html).into_response();
     if !tags.is_empty() {
-        if let Ok(cache_tag) = tags.join(", ").parse::<axum::http::HeaderValue>() {
-            response.headers_mut().insert("Cache-Tag", cache_tag.clone());
-            response.headers_mut().insert("Surrogate-Key", cache_tag);
+        if let Ok(cache_tag) = tags.join(", ").parse() {
+            response.headers_mut().insert("Cache-Tag", cache_tag);
         }
-    }
-    if let Ok(etag_val) = etag.parse::<axum::http::HeaderValue>() {
-        response.headers_mut().insert(axum::http::header::ETAG, etag_val);
     }
     response.headers_mut().insert(
         CACHE_CONTROL,
@@ -402,18 +378,6 @@ pub async fn regenerate_cache(
             ⚡ Powered by OHC
         </div>
     </div>
-    <script>
-        // Hydrate cart from localStorage to keep edge HTML generic
-        document.addEventListener('DOMContentLoaded', () => {
-            const cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
-            const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-            const cartBadge = document.getElementById('cart-badge');
-            if (cartBadge) {
-                cartBadge.innerText = cartCount;
-                cartBadge.style.display = cartCount > 0 ? 'inline-block' : 'none';
-            }
-        });
-    </script>
     </body>
     </html>
     "#);

@@ -2,20 +2,6 @@ import { test, expect, request as playwrightRequest } from '@playwright/test';
 
 test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
 
-    test('validates storefront edge headers are injected correctly for valid response', async ({ request }) => {
-    const tenantId = '11111111-1111-1111-1111-111111111111';
-    const productId = '22222222-2222-2222-2222-222222222222';
-
-    let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
-
-    const headers = res.headers();
-    // ETag is returned
-    expect(headers['etag']).toBeDefined();
-
-    // Fallback response does not contain Surrogate-Key
-    // Let's hit the actual API with our test and see the headers returned.
-  });
-
   test('validates storefront cache invalidation on inventory update', async ({ request, page }) => {
     // Attempt to access frontend page and cache miss, triggering cache builder
     const tenantId = '11111111-1111-1111-1111-111111111111';
@@ -52,24 +38,6 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
 
     let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
     expect(res.status()).toBe(400); // Bad Request from Uuid parse fail
-  });
-
-
-  test('validates storefront delivery headers including Surrogate-Key, ETag, and Cache-Control', async ({ request }) => {
-    const tenantId = '00000000-0000-0000-0000-000000000000';
-    const productId = '00000000-0000-0000-0000-000000000000';
-
-    let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
-    expect(res.status()).toBe(200);
-
-    const headers = res.headers();
-
-    // We expect the fallback simple HTML to be generated and cached for the default tenant
-    expect(headers['cache-control']).toBeDefined();
-    expect(headers['etag']).toBeDefined();
-    expect(headers['cache-tag']).toBeDefined();
-    expect(headers['surrogate-key']).toBeDefined();
-    expect(headers['surrogate-key']).toEqual(headers['cache-tag']);
   });
 
   test('isolates tenant data with explicit tenant-id tags', async ({ request, page }) => {

@@ -59,6 +59,7 @@ async fn handle_rpc(
         });
     }
 
+
     if payload.method == "goose_mcp_list" {
         let mut registry = crate::goose::GooseMcpRegistry::new();
         registry.register(std::sync::Arc::new(crate::goose::SampleExtension));
@@ -75,18 +76,8 @@ async fn handle_rpc(
         let mut registry = crate::goose::GooseMcpRegistry::new();
         registry.register(std::sync::Arc::new(crate::goose::SampleExtension));
         // payload.params is Option<serde_json::Value>
-        let ext_id = payload
-            .params
-            .as_ref()
-            .and_then(|p| p.get("id"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        let ext_args = payload
-            .params
-            .as_ref()
-            .and_then(|p| p.get("args"))
-            .cloned()
-            .unwrap_or(serde_json::json!({}));
+        let ext_id = payload.params.as_ref().and_then(|p| p.get("id")).and_then(|v| v.as_str()).unwrap_or("");
+        let ext_args = payload.params.as_ref().and_then(|p| p.get("args")).cloned().unwrap_or(serde_json::json!({}));
         let result = registry.execute_extension(ext_id, ext_args).await;
         let resp = match result {
             Ok(val) => JsonRpcResponse {
@@ -99,11 +90,7 @@ async fn handle_rpc(
                 jsonrpc: "2.0".to_string(),
                 id: payload.id.clone(),
                 result: None,
-                error: Some(JsonRpcError {
-                    code: -32603,
-                    message: e,
-                    data: None,
-                }),
+                error: Some(JsonRpcError { code: -32603, message: e, data: None }),
             },
         };
         return Json(resp);

@@ -34,7 +34,7 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
     }, tenantId);
     await page.reload();
 
-    // 3. Navigate to Unified Agent Feed
+    // 3. Navigate to Unified Agent Feed / Action Required
     // Ensure the feed is loaded
     const dmCard = page.locator('[data-testid="instagram-dm-card"]').first();
 
@@ -52,15 +52,9 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
         await expect(dmCard).toContainText(messageText);
 
         // 4. Click "Approve" (using data-testid="approve-proposal" which falls back to the generic approve)
-        const approveBtn1 = dmCard.locator('..').locator('..').locator('[data-testid="approve-proposal"]').first();
-        const approveBtn2 = dmCard.locator('..').locator('[data-testid="approve-proposal"]').first();
-
-        await expect(approveBtn1.or(approveBtn2)).toBeVisible();
-        if (await approveBtn1.isVisible()) {
-            await approveBtn1.click();
-        } else {
-            await approveBtn2.click();
-        }
+        const approveBtn = dmCard.locator('..').locator('[data-testid="approve-proposal"]').first();
+        await expect(approveBtn).toBeVisible();
+        await approveBtn.click();
 
         // The feed item should disappear or move to activity tab
         await expect(dmCard).not.toBeVisible();

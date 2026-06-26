@@ -189,7 +189,6 @@ pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) ->
 }
 
 /// 4. User Instructions (capped at 32 KiB)
-// Prompt Construction: OpenAI Codex Hierarchy
 pub struct HierarchicalPromptBuilder {
     server_system_message: String,
     tool_definitions: String,

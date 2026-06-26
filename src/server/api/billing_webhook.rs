@@ -475,7 +475,7 @@ pub async fn stripe_webhook_handler(
 
             StatusCode::OK.into_response()
         },
-        "checkout.session.completed" | "customer.subscription.updated" | "customer.subscription.created" => {
+        "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
             if payload.r#type == "checkout.session.completed" {
                 release_inventory_locks_for_payment(&webhook_state, obj).await;
@@ -501,74 +501,18 @@ pub async fn stripe_webhook_handler(
                 }
             }
 
+            // Extract tenant ID. Depending on your Stripe setup, this might be in metadata
+            // or client_reference_id. Here we assume it's in metadata.tenant_id.
             let tenant_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("tenant_id"))
                 .and_then(|id| id.as_str())
                 .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
 
-            let customer_id_opt = obj.get("client_reference_id")
-                .and_then(|id| id.as_str())
-                .or_else(|| obj.get("customer").and_then(|id| id.as_str()));
-
-            let product_id_opt = obj.get("metadata")
-                .and_then(|m| m.get("product_id"))
-                .and_then(|id| id.as_str());
-
             if let Some(tenant_id) = tenant_id_opt {
-                // If this is a product subscription
-                if let (Some(product_id), Some(customer_id)) = (product_id_opt, customer_id_opt) {
-                    if payload.r#type == "checkout.session.completed" && obj.get("mode").and_then(|m| m.as_str()) == Some("subscription") {
-                        // Check if a plan exists for this product
-                        let mut plan_id_res = sqlx::query_scalar::<_, String>("SELECT id FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
-                            .bind(product_id)
-                            .bind(tenant_id)
-                            .fetch_optional(&webhook_state.db.pool)
-                            .await
-                            .unwrap_or(None);
-
-                        if plan_id_res.is_none() {
-                            let new_plan_id = uuid::Uuid::new_v4().to_string();
-                            let _ = sqlx::query("INSERT INTO subscription_plans (id, tenant_id, product_id, interval) VALUES ($1, $2, $3, $4)")
-                                .bind(&new_plan_id)
-                                .bind(tenant_id)
-                                .bind(product_id)
-                                .bind("month") // fallback interval
-                                .execute(&webhook_state.db.pool)
-                                .await;
-                            plan_id_res = Some(new_plan_id);
-                        }
-
-                        if let Some(plan_id) = plan_id_res {
-                            let subscription_id = uuid::Uuid::new_v4().to_string();
-                            let stripe_subscription_id = obj.get("subscription").and_then(|s| s.as_str()).unwrap_or("");
-
-                            let _ = sqlx::query(
-                                "INSERT INTO subscriptions (id, tenant_id, customer_id, plan_id, status, current_period_end)
-                                 VALUES ($1, $2, $3, $4, 'active', CURRENT_TIMESTAMP + INTERVAL '1 month')"
-                            )
-                            .bind(&subscription_id)
-                            .bind(tenant_id)
-                            .bind(customer_id)
-                            .bind(&plan_id)
-                            .execute(&webhook_state.db.pool)
-                            .await;
-
-                            let _ = sqlx::query(
-                                "INSERT INTO subscribers (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status)
-                                 VALUES ($1, $2, $3, $4, $5, 'ACTIVE')"
-                            )
-                            .bind(&subscription_id)
-                            .bind(tenant_id)
-                            .bind(&plan_id)
-                            .bind(customer_id)
-                            .bind(stripe_subscription_id)
-                            .execute(&webhook_state.db.pool)
-                            .await;
-                        }
-                    }
-                }
-
-                // Normal tenant tier update logic
+                // Determine new tier based on price ID or plan name or metadata
+                // For this example, let's assume we pass the target tier in metadata.tier
+                // or we deduce it. For simplicity in this demo, let's read metadata.tier
+                // and fallback to "Starter" if a payment succeeded.
                 let tier_str = obj.get("metadata")
                     .and_then(|m| m.get("tier"))
                     .and_then(|t| t.as_str())
@@ -580,6 +524,7 @@ pub async fn stripe_webhook_handler(
                     "Business" => PlanTier::Business,
                     _ => PlanTier::Free,
                 };
+
 
                 // Update Redis Rate Limiter
                 if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {

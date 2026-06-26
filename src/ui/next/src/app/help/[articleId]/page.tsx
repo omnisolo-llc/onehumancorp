@@ -54,10 +54,10 @@ export default function HelpArticlePage() {
             </Link>
         </div>
 
-        <article className="app-card backdrop-blur-xl saturate-[210%] bg-white/80 dark:bg-black/50 shadow-2xl border border-white/50 dark:border-white/20 rounded-[32px] p-8 sm:p-12">
-            <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-gray-900 dark:text-gray-100 mb-8 tracking-tight">{article.title}</h1>
+        <article className="app-card backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-white/10 shadow-xl border border-white/50 rounded-[32px] p-8 sm:p-12">
+            <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 tracking-tight">{article.title}</h1>
             <div
-                className="prose prose-lg prose-blue max-w-none prose-headings:font-outfit prose-headings:font-bold prose-headings:text-gray-800 dark:prose-headings:text-gray-200 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed"
+                className="prose prose-lg prose-blue max-w-none prose-headings:font-outfit prose-headings:font-bold prose-headings:text-gray-800 prose-p:text-gray-700 prose-p:leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: article.contentHtml }}
             />
         </article>

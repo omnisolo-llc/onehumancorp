@@ -7,7 +7,6 @@ use ohc_builtin_agent_core::types::ToolCall;
 /// 2. Output Auditor
 /// 3. Tool Policy Enforcer
 
-// Guardrails & Safety: OpenAI 3 distinct hooks
 pub struct OpenAiInputValidator {
     pub max_length: usize,
     pub require_patterns: Vec<String>,

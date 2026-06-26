@@ -144,7 +144,7 @@ pub struct ToolDefinition {
     pub parameters: serde_json::Value,
 }
 
-/// Master Catalog B.8. Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2. LangGraph Mechanic (4-types): 1) Transient (retry with backoff), 2) LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct), 3) User-fixable (interrupt execution and ask user for input), 4) Unexpected (bubble up to debug).
+/// Master Catalog B.8. Error Handling: LLM-Recoverable ToolMessages (Compounding Error Prevention): LangGraph Mechanic (4-types): 1) Transient, 2) LLM-recoverable, 3) User-fixable, 4) Unexpected
 /// 4-tier Error enum for Tool Execution (LangGraph mechanics).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ToolError {

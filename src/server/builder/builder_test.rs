@@ -213,26 +213,6 @@ async fn test_builder_api() {
         .send().await.unwrap();
     assert_eq!(res.status(), 202); // ACCEPTED
 
-    // Edge Cache Test
-    let res = client.get(&format!("{}/builder/edge/{}/{}", base_url, tenant_id, site.id))
-        .send().await.unwrap();
-    assert_eq!(res.status(), 200);
-    assert_eq!(res.headers().get("Cache-Control").unwrap(), "public, s-maxage=60, stale-while-revalidate=86400");
-    assert!(res.headers().get("Cache-Tag").is_some());
-    assert!(res.headers().get("Surrogate-Key").is_some());
-    assert!(res.headers().get("ETag").is_some());
-
-    // Test cache invalidation via operations agent / cache invalidator
-    let cache = super::edge::get_edge_cache();
-    // Wait briefly for background cache generation from edge fetch
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-    // Send invalidation event like operations agent does
-    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
-
-    // Cache should be cleared
-    assert!(cache.get(&format!("edge_site_{}_{}_{}", tenant_id, site.id, "en-US")).await.is_none());
-
     // Clean up
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }

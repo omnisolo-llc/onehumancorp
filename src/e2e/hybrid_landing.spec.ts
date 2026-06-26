@@ -11,7 +11,7 @@ test.describe("Hybrid Landing Page", () => {
       page.getByRole("heading", { name: "Business Analytics" }),
     ).toBeVisible();
     await expect(page.getByText("Operations Map")).toBeVisible();
-    await expect(page.getByText("Unified Agent Feed")).toBeVisible();
+    await expect(page.getByText("Action Required")).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Integrations" }),
     ).toBeVisible();

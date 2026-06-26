@@ -19,45 +19,57 @@ describe('ZeroClickBuilderPage', () => {
     // Reset fetch mock
     global.fetch = vi.fn() as unknown as typeof fetch;
     localStorage.clear();
-    process.env.NODE_ENV = 'test';
   });
 
   it('renders the initial form', () => {
     render(<ZeroClickBuilderPage />);
     expect(screen.getByText('Zero-Click Business Generator')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Type your message/i)).toBeInTheDocument();
-    const buttons = screen.getAllByRole('button');
-    const submitBtn = buttons[buttons.length - 1];
-    expect(submitBtn).toBeDisabled();
+    expect(screen.getByPlaceholderText(/I am a home baker/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Generate My Business/i })).toBeDisabled();
   });
 
   it('enables the button when prompt is entered', () => {
     render(<ZeroClickBuilderPage />);
-    const input = screen.getByPlaceholderText(/Type your message/i);
-    fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
-
-    const buttons = screen.getAllByRole('button');
-    const submitBtn = buttons[buttons.length - 1];
-    expect(submitBtn).toBeEnabled();
+    const textarea = screen.getByPlaceholderText(/I am a home baker/i);
+    fireEvent.change(textarea, { target: { value: 'I sell custom sneakers' } });
+    expect(screen.getByRole('button', { name: /Generate My Business/i })).toBeEnabled();
   });
 
   it('submits the form and displays the result', async () => {
-    // First fetch for chat
+    // Mock the frontend fetch call
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        reply: 'Got it. I will build a sneakers store.',
-        is_complete: true,
-        intake_data: {
-            business_name: 'Custom Sneakers Store',
-            business_type: 'Retail',
-            categories: ['physical'],
-            initial_products: [{ name: 'Sneakers', price: '100' }]
-        }
+        name: 'Custom Sneakers Store',
+        url: 'https://custom-sneakers-store.ohc.app',
+        products_count: 5,
+        organization_id: 'org_123',
+        user_id: 'user_123'
       }),
     });
 
-    // Second fetch for start
+    render(<ZeroClickBuilderPage />);
+
+    const textarea = screen.getByPlaceholderText(/I am a home baker/i);
+    fireEvent.change(textarea, { target: { value: 'I sell custom sneakers' } });
+
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    fireEvent.click(button);
+
+    // Should show loading state
+    expect(screen.getByText('Analyzing your business...')).toBeInTheDocument();
+
+    // Wait for the result to appear
+    await waitFor(() => {
+      expect(screen.getByText('Your business is live!')).toBeInTheDocument();
+    }, { timeout: 3000 });
+
+    expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Launch My Store/i })).toBeInTheDocument();
+  });
+
+  it('redirects to dashboard when launch button is clicked', async () => {
+    // Mock the frontend fetch call
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -67,21 +79,37 @@ describe('ZeroClickBuilderPage', () => {
     });
 
     render(<ZeroClickBuilderPage />);
+    const textarea = screen.getByPlaceholderText(/I am a home baker/i);
+    fireEvent.change(textarea, { target: { value: 'I sell custom sneakers' } });
+    fireEvent.click(screen.getByRole('button', { name: /Generate My Business/i }));
 
-    const input = screen.getByPlaceholderText(/Type your message/i);
-    fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
-
-    const buttons = screen.getAllByRole('button');
-    const submitBtn = buttons[buttons.length - 1];
-    fireEvent.click(submitBtn);
-
-    // Wait for the result to appear
     await waitFor(() => {
       expect(screen.getByText('Your business is live!')).toBeInTheDocument();
     }, { timeout: 3000 });
 
     expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Launch My Store/i })).toBeInTheDocument();
+    const launchBtn = screen.getByRole('button', { name: /Launch My Store/i });
+    fireEvent.click(launchBtn);
+  });
+
+  it('opens a tweet intent when the share button is clicked', async () => {
+    const mockOpen = vi.fn();
+    window.open = mockOpen;
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        organization_id: 'org_123',
+        user_id: 'user_123'
+      }),
+    });
+
+    render(<ZeroClickBuilderPage />);
+    const textarea = screen.getByPlaceholderText(/I am a home baker/i);
+    fireEvent.change(textarea, { target: { value: 'I sell custom sneakers' } });
+    fireEvent.click(screen.getByRole('button', { name: /Generate My Business/i }));
+    await waitFor(() => expect(screen.getByText('Your business is live!')).toBeInTheDocument(), { timeout: 3000 });
+    fireEvent.click(screen.getByRole('button', { name: /Share on X/i }));
+    expect(mockOpen).toHaveBeenCalled();
   });
 
   it('renders Powered by OHC branding', () => {

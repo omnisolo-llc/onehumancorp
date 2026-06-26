@@ -367,7 +367,7 @@ export default function Dashboard() {
 
       <div className="mb-6 w-full overflow-hidden">
         {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-        <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [], pendingReviews: dashboardData?.pendingReviews || [] }} />
+        <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [] }} />
       </div>
 
       <AIUsageLimitWidget />
@@ -554,6 +554,59 @@ export default function Dashboard() {
         <GrowBusinessCard />
           <PromoterCard />
 
+        {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
+             <ReviewFeedCard
+               key={idx}
+               review={{
+                 id: item.review?.id || "",
+                 rating: item.review?.rating || 5,
+                 content: item.review?.content || '',
+                 source: item.review?.source || 'sms',
+                 createdAtUnix: item.review?.createdAtUnix || Date.now() / 1000
+               }}
+               response={{
+                 id: item.response?.id || "",
+                 draftedContent: item.response?.draftedContent || "",
+                 status: item.response?.status || "draft"
+               }}
+               onApprove={async (id, content) => {
+                 try {
+                     // Optimistic update
+                     setDashboardData((prev: any) => ({
+                         ...prev,
+                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
+                     }));
+                     const res = await fetch('/api/reviews/action', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'approve', responseId: id, content })
+                     });
+                     if (!res.ok) {
+                         // Rollback if needed
+                         console.error("Failed to approve");
+                     }
+                 } catch (e) { console.error(e); }
+               }}
+               onDismiss={async (id) => {
+                 try {
+                     // Optimistic update
+                     setDashboardData((prev: any) => ({
+                         ...prev,
+                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
+                     }));
+                     const res = await fetch('/api/reviews/action', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'dismiss', responseId: id })
+                     });
+                     if (!res.ok) {
+                         console.error("Failed to dismiss");
+                     }
+                 } catch (e) { console.error(e); }
+               }}
+             />
+        ))}
+
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -646,6 +699,61 @@ export default function Dashboard() {
             </div>
           </WalkthroughTarget>
 
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
+            <div className="app-panel-header">
+              <div className="app-panel-title">Action Required</div>
+              <Link href="/inventory" className="app-button min-h-[44px]">Inventory</Link>
+            </div>
+            <div className="app-list">
+                            {(dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map(approval => (
+                <div key={approval.id} data-testid={`${(approval.payload?.source || approval.payload?.original_payload?.source || "instagram").toLowerCase().replace(/[^a-z0-9]/g, "")}-dm-card`} className="app-list-item flex flex-col items-start gap-3">
+                  <div className="w-full">
+                    <div className="app-list-title">Action Required: Approve Reply</div>
+                    <div className="app-list-subtitle font-semibold text-gray-900 mt-1">1 New Message from {approval.payload?.source || approval.payload?.original_payload?.source || "Instagram DM"}</div>
+                    <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">"{approval.payload?.original_message || approval.payload?.message || approval.payload?.original_payload?.original_message || "Customer message"}"</div>
+                    <div className="app-list-subtitle mt-2 p-2 rounded bg-blue-50 border border-blue-100 text-blue-900 text-sm">
+                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">Draft:</span>
+                      {approval.payload?.generated_response || approval.payload?.draft_reply || approval.payload?.original_payload?.generated_response || "Ready to send."}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 w-full mt-1">
+                    <button type="button" data-testid={`approve-${(approval.payload?.source || approval.payload?.original_payload?.source || "instagram").toLowerCase().replace(/[^a-z0-9]/g, "")}-dm`} className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>Send Draft</button>
+                    <Link href="/inbox" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100">Edit</Link>
+                  </div>
+                </div>
+              ))}
+              {metrics.pending_orders > 0 && (
+                <div className="app-list-item">
+                  <div>
+                    <div className="app-list-title">Pending fulfillment</div>
+                    <div className="app-list-subtitle">{metrics.pending_orders} order records need attention.</div>
+                  </div>
+                  <span className="app-badge warn">Orders</span>
+                </div>
+              )}
+              {lowStockCount > 0 && (
+                <div className="app-list-item">
+                  <div>
+                    <div className="app-list-title">Low stock</div>
+                    <div className="app-list-subtitle">{lowStockCount} material records are below reorder threshold.</div>
+                  </div>
+                  <span className="app-badge warn">Supply</span>
+                </div>
+              )}
+              {messages.some((message) => (message.status || "").toLowerCase() !== "closed") && (
+                <div className="app-list-item">
+                  <div>
+                    <div className="app-list-title">Inbox messages</div>
+                    <div className="app-list-subtitle">You have open customer conversations waiting for your reply.</div>
+                  </div>
+                  <span className="app-badge">Inbox</span>
+                </div>
+              )}
+              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === "ambassador_reply").length === 0 && (
+                <div className="app-empty">No actions are currently required.</div>
+              )}
+            </div>
+          </div>
         </section>
 
 
@@ -749,14 +857,6 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
             </Link>
 
-            <Link href="/referrals" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
-                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Referrals</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Referral Program</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Invite your network and earn credits for every business that signs up.</p>
-            </Link>
             <Link href="/affiliate-badge-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
@@ -882,15 +982,6 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Create Link-in-Bio Page</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
-            </Link>
-
-            <Link href="/quiz-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧠</div>
-                <span className="text-xs font-semibold px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full tracking-wider uppercase">Lead Gen</span>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Quiz Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Create viral quizzes that capture leads and spread through social sharing.</p>
             </Link>
 
             <Link href="/whatsapp-link-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
