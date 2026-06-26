@@ -9,7 +9,7 @@ test.describe('Automated Review Campaign Growth Loop', () => {
     await page.goto('/review-campaigns');
 
     // 2. Wait for page load
-    await page.waitForLoadState('networkidle');
+
     await expect(page.getByRole('heading', { name: 'Automated Review Campaigns ⭐️' })).toBeVisible();
 
     // 3. Fill in the "Product to Feature" input
