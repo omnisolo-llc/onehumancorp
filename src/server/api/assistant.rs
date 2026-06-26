@@ -188,12 +188,18 @@ async fn list_workspaces(
 
     let workspaces = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, NULL as default_work_dir, NULL as default_model,
+                        strftime('%s', created_at) as c_unix,
+                        strftime('%s', updated_at) as u_unix
+                 FROM assistant_workspaces WHERE tenant_id = ?"
+            } else {
                 "SELECT id, name, default_work_dir, default_model, 
                         strftime('%s', created_at) as c_unix, 
                         strftime('%s', updated_at) as u_unix 
                  FROM assistant_workspaces WHERE tenant_id = ?"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .fetch_all(pool)
             .await
@@ -213,12 +219,18 @@ async fn list_workspaces(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, NULL::text as default_work_dir, NULL::text as default_model,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix
+                 FROM assistant_workspaces"
+            } else {
                 "SELECT id, name, default_work_dir, default_model, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix, 
                         EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix 
                  FROM assistant_workspaces"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -236,14 +248,7 @@ async fn list_workspaces(
         }
     };
 
-    let mut workspaces = workspaces.map_err(|e: (StatusCode, String)| e)?;
-
-    if mobile_optimized {
-        for w in workspaces.iter_mut() {
-            w.default_work_dir = None;
-            w.default_model = None;
-        }
-    }
+    let workspaces = workspaces.map_err(|e: (StatusCode, String)| e)?;
 
     Ok(Json(workspaces))
 }
@@ -371,12 +376,19 @@ async fn list_tasks(
 
     let tasks = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, workspace_id, title, '' as prompt, status, mode, permission_profile, NULL as model_config, current_step, archived,
+                        strftime('%s', created_at) as c_unix,
+                        strftime('%s', updated_at) as u_unix
+                 FROM assistant_tasks WHERE tenant_id = ?"
+            } else {
                 "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived, 
                         strftime('%s', created_at) as c_unix, 
                         strftime('%s', updated_at) as u_unix 
                  FROM assistant_tasks WHERE tenant_id = ?"
-            )
+            };
+
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .fetch_all(pool)
             .await
@@ -402,12 +414,19 @@ async fn list_tasks(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, workspace_id, title, '' as prompt, status, mode, permission_profile, NULL as model_config, current_step, archived,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix
+                 FROM assistant_tasks"
+            } else {
                 "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix, 
                         EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix 
                  FROM assistant_tasks"
-            )
+            };
+
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -431,14 +450,7 @@ async fn list_tasks(
         }
     };
 
-    let mut tasks = tasks.map_err(|e: (StatusCode, String)| e)?;
-
-    if mobile_optimized {
-        for t in tasks.iter_mut() {
-            t.prompt = String::new();
-            t.model_config_json = None;
-        }
-    }
+    let tasks = tasks.map_err(|e: (StatusCode, String)| e)?;
 
     Ok(Json(tasks))
 }
@@ -623,13 +635,19 @@ async fn list_messages(
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let mut messages = match &db.store {
+    let messages = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, role, content, NULL as tool_metadata,
+                        strftime('%s', created_at) as c_unix
+                 FROM assistant_messages WHERE tenant_id = ? AND task_id = ? ORDER BY created_at ASC"
+            } else {
                 "SELECT id, task_id, role, content, tool_metadata, 
                         strftime('%s', created_at) as c_unix 
                  FROM assistant_messages WHERE tenant_id = ? AND task_id = ? ORDER BY created_at ASC"
-            )
+            };
+
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .bind(&task_id)
             .fetch_all(pool)
@@ -650,11 +668,17 @@ async fn list_messages(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, role, content, NULL::text as tool_metadata,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix
+                 FROM assistant_messages WHERE task_id = $1 ORDER BY created_at ASC"
+            } else {
                 "SELECT id, task_id, role, content, tool_metadata, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix 
                  FROM assistant_messages WHERE task_id = $1 ORDER BY created_at ASC"
-            )
+            };
+
+            let rows = sqlx::query(query_str)
             .bind(&task_id)
             .fetch_all(&mut *tx)
             .await
@@ -672,14 +696,6 @@ async fn list_messages(
             Ok(list)
         }
     }?;
-
-    if mobile_optimized {
-        for m in messages.iter_mut() {
-            // For mobile, maybe we don't need tool_metadata_json or full content if not requested
-            // but let's clear tool_metadata_json
-            m.tool_metadata_json = None;
-        }
-    }
 
     Ok(Json(messages))
 }
@@ -743,13 +759,18 @@ async fn list_artifacts(
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let mut artifacts = match &db.store {
+    let artifacts = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, type, filename, '' as path, mime_type, size, preview_ref,
+                        strftime('%s', created_at) as c_unix
+                 FROM assistant_artifacts WHERE tenant_id = ? AND task_id = ?"
+            } else {
                 "SELECT id, task_id, type, filename, path, mime_type, size, preview_ref, 
                         strftime('%s', created_at) as c_unix 
                  FROM assistant_artifacts WHERE tenant_id = ? AND task_id = ?"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .bind(&task_id)
             .fetch_all(pool)
@@ -773,11 +794,16 @@ async fn list_artifacts(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, type, filename, '' as path, mime_type, size, preview_ref,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix
+                 FROM assistant_artifacts WHERE task_id = $1"
+            } else {
                 "SELECT id, task_id, type, filename, path, mime_type, size, preview_ref, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix 
                  FROM assistant_artifacts WHERE task_id = $1"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&task_id)
             .fetch_all(&mut *tx)
             .await
@@ -798,12 +824,6 @@ async fn list_artifacts(
             Ok(list)
         }
     }?;
-
-    if mobile_optimized {
-        for a in artifacts.iter_mut() {
-            a.path = String::new();
-        }
-    }
 
     Ok(Json(artifacts))
 }
@@ -873,13 +893,18 @@ async fn list_file_changes(
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let mut file_changes = match &db.store {
+    let file_changes = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, path, change_type, NULL as summary, approval_status,
+                        strftime('%s', created_at) as c_unix
+                 FROM assistant_file_changes WHERE tenant_id = ? AND task_id = ?"
+            } else {
                 "SELECT id, task_id, path, change_type, summary, approval_status, 
                         strftime('%s', created_at) as c_unix 
                  FROM assistant_file_changes WHERE tenant_id = ? AND task_id = ?"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .bind(&task_id)
             .fetch_all(pool)
@@ -901,11 +926,16 @@ async fn list_file_changes(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, path, change_type, NULL::text as summary, approval_status,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix
+                 FROM assistant_file_changes WHERE task_id = $1"
+            } else {
                 "SELECT id, task_id, path, change_type, summary, approval_status, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix 
                  FROM assistant_file_changes WHERE task_id = $1"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&task_id)
             .fetch_all(&mut *tx)
             .await
@@ -924,12 +954,6 @@ async fn list_file_changes(
             Ok(list)
         }
     }?;
-
-    if mobile_optimized {
-        for f in file_changes.iter_mut() {
-            f.summary = None;
-        }
-    }
 
     Ok(Json(file_changes))
 }
@@ -993,12 +1017,7 @@ async fn list_memory(
 ) -> Result<Json<AssistantMemoryListResponse>, (StatusCode, String)> {
     let tenant_id = tenant_id_from(&claims);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let mut memories = fetch_memory_records(db.as_ref(), &tenant_id).await?;
-    if mobile_optimized {
-        for m in memories.iter_mut() {
-            m.content = String::new();
-        }
-    }
+    let memories = fetch_memory_records(db.as_ref(), &tenant_id, mobile_optimized).await?;
     Ok(Json(AssistantMemoryListResponse { memories }))
 }
 
@@ -1118,7 +1137,7 @@ async fn mutate_memory(
         _ => return Err((StatusCode::BAD_REQUEST, "unsupported memory action".to_string())),
     }
 
-    let memories = fetch_memory_records(db.as_ref(), &tenant_id).await?;
+    let memories = fetch_memory_records(db.as_ref(), &tenant_id, false).await?;
     Ok(Json(AssistantMemoryListResponse { memories }))
 }
 
@@ -1129,13 +1148,7 @@ async fn list_skills(
 ) -> Result<Json<AssistantSkillListResponse>, (StatusCode, String)> {
     let tenant_id = tenant_id_from(&claims);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let mut skills = fetch_skill_records(db.as_ref(), &tenant_id).await?;
-    if mobile_optimized {
-        for s in skills.iter_mut() {
-            s.description = None;
-            s.config = None;
-        }
-    }
+    let skills = fetch_skill_records(db.as_ref(), &tenant_id, mobile_optimized).await?;
     Ok(Json(AssistantSkillListResponse { skills }))
 }
 
@@ -1281,7 +1294,7 @@ async fn mutate_skill(
         _ => return Err((StatusCode::BAD_REQUEST, "unsupported skill action".to_string())),
     }
 
-    let skills = fetch_skill_records(db.as_ref(), &tenant_id).await?;
+    let skills = fetch_skill_records(db.as_ref(), &tenant_id, false).await?;
     Ok(Json(AssistantSkillListResponse { skills }))
 }
 
@@ -1292,12 +1305,7 @@ async fn list_connectors(
 ) -> Result<Json<AssistantConnectorListResponse>, (StatusCode, String)> {
     let tenant_id = tenant_id_from(&claims);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let mut connectors = fetch_connector_records(db.as_ref(), &tenant_id).await?;
-    if mobile_optimized {
-        for c in connectors.iter_mut() {
-            c.config = None;
-        }
-    }
+    let connectors = fetch_connector_records(db.as_ref(), &tenant_id, mobile_optimized).await?;
     Ok(Json(AssistantConnectorListResponse { connectors }))
 }
 
@@ -1415,24 +1423,33 @@ async fn mutate_connector(
         _ => return Err((StatusCode::BAD_REQUEST, "unsupported connector action".to_string())),
     }
 
-    let connectors = fetch_connector_records(db.as_ref(), &tenant_id).await?;
+    let connectors = fetch_connector_records(db.as_ref(), &tenant_id, false).await?;
     Ok(Json(AssistantConnectorListResponse { connectors }))
 }
 
 async fn fetch_memory_records(
     db: &DB,
     tenant_id: &str,
+    mobile_optimized: bool,
 ) -> Result<Vec<AssistantMemoryRecord>, (StatusCode, String)> {
     match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, '' as content, scope, source, enabled,
+                        strftime('%s', created_at) AS c_unix,
+                        strftime('%s', updated_at) AS u_unix
+                 FROM assistant_memory_records
+                 WHERE tenant_id = ?
+                 ORDER BY updated_at DESC, created_at DESC, id ASC"
+            } else {
                 "SELECT id, content, scope, source, enabled,
                         strftime('%s', created_at) AS c_unix,
                         strftime('%s', updated_at) AS u_unix
                  FROM assistant_memory_records
                  WHERE tenant_id = ?
                  ORDER BY updated_at DESC, created_at DESC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(pool)
             .await
@@ -1463,13 +1480,20 @@ async fn fetch_memory_records(
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, '' as content, scope, source, enabled,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
+                 FROM assistant_memory_records
+                 ORDER BY updated_at DESC, created_at DESC, id ASC"
+            } else {
                 "SELECT id, content, scope, source, enabled,
                         EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
                         EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
                  FROM assistant_memory_records
                  ORDER BY updated_at DESC, created_at DESC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1494,17 +1518,26 @@ async fn fetch_memory_records(
 async fn fetch_skill_records(
     db: &DB,
     tenant_id: &str,
+    mobile_optimized: bool,
 ) -> Result<Vec<AssistantSkillRecord>, (StatusCode, String)> {
     match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, category, source, status, version, NULL as description, NULL as config,
+                        strftime('%s', created_at) AS c_unix,
+                        strftime('%s', updated_at) AS u_unix
+                 FROM assistant_skills
+                 WHERE tenant_id = ?
+                 ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
+            } else {
                 "SELECT id, name, category, source, status, version, description, config,
                         strftime('%s', created_at) AS c_unix,
                         strftime('%s', updated_at) AS u_unix
                  FROM assistant_skills
                  WHERE tenant_id = ?
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(pool)
             .await
@@ -1540,13 +1573,20 @@ async fn fetch_skill_records(
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, category, source, status, version, NULL::text as description, NULL::jsonb as config,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
+                 FROM assistant_skills
+                 ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
+            } else {
                 "SELECT id, name, category, source, status, version, description, config,
                         EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
                         EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
                  FROM assistant_skills
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1574,17 +1614,26 @@ async fn fetch_skill_records(
 async fn fetch_connector_records(
     db: &DB,
     tenant_id: &str,
+    mobile_optimized: bool,
 ) -> Result<Vec<AssistantConnectorRecord>, (StatusCode, String)> {
     match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, kind, status, oauth, NULL as config, last_error,
+                        strftime('%s', created_at) AS c_unix,
+                        strftime('%s', updated_at) AS u_unix
+                 FROM assistant_connectors
+                 WHERE tenant_id = ?
+                 ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
+            } else {
                 "SELECT id, name, kind, status, oauth, config, last_error,
                         strftime('%s', created_at) AS c_unix,
                         strftime('%s', updated_at) AS u_unix
                  FROM assistant_connectors
                  WHERE tenant_id = ?
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(pool)
             .await
@@ -1619,13 +1668,20 @@ async fn fetch_connector_records(
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, kind, status, oauth, NULL::jsonb as config, last_error,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
+                 FROM assistant_connectors
+                 ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
+            } else {
                 "SELECT id, name, kind, status, oauth, config, last_error,
                         EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
                         EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
                  FROM assistant_connectors
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

@@ -118,7 +118,7 @@ pub fn get_safe_user_dir() -> std::path::PathBuf {
         let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(&dir);
 
         if let Ok(metadata) = std::fs::symlink_metadata(&dir) {
-            let mut perms = metadata.permissions();
+            let perms = metadata.permissions();
             if perms.mode() & 0o777 != 0o700 {
                 tracing::warn!("Insecure permissions on OHC user directory. Ignoring it to prevent TOCTOU attacks.");
                 std::process::exit(1);
