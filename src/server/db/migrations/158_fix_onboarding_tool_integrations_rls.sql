@@ -12,7 +12,8 @@ BEGIN
             WHERE tablename = 'onboarding_state' AND policyname = 'tenant_isolation_onboarding_state'
         ) THEN
             CREATE POLICY tenant_isolation_onboarding_state ON onboarding_state
-                USING (tenant_id = current_setting('app.current_tenant', true)::UUID);
+                USING (tenant_id::text = current_setting('app.current_tenant', true))
+                WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
         END IF;
     END IF;
 
@@ -25,7 +26,8 @@ BEGIN
             WHERE tablename = 'tool_integrations' AND policyname = 'tenant_isolation_tool_integrations'
         ) THEN
             CREATE POLICY tenant_isolation_tool_integrations ON tool_integrations
-                USING (tenant_id = current_setting('app.current_tenant', true)::UUID);
+                USING (tenant_id::text = current_setting('app.current_tenant', true))
+                WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
         END IF;
     END IF;
 END $$;
