@@ -33,7 +33,7 @@ pub struct Quote {
 }
 
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct QuoteRequest {
     pub id: Uuid,
     pub tenant_id: String,
@@ -142,19 +142,18 @@ async fn create_quote_request(
     let request_id = Uuid::new_v4();
     let tenant_id = claims.organization_id;
 
-    let request = sqlx::query_as!(
-        QuoteRequest,
+    let request = sqlx::query_as::<_, QuoteRequest>(
         r#"INSERT INTO quote_requests (id, tenant_id, customer_id, status, source, message, images)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
-           RETURNING id, tenant_id, customer_id, status, source, message, images, created_at, updated_at"#,
-        request_id,
-        tenant_id,
-        payload.customer_id,
-        "NEW",
-        payload.source,
-        payload.message,
-        payload.images
+           RETURNING id, tenant_id, customer_id, status, source, message, images, created_at, updated_at"#
     )
+    .bind(request_id)
+    .bind(tenant_id)
+    .bind(payload.customer_id)
+    .bind("NEW")
+    .bind(payload.source)
+    .bind(payload.message)
+    .bind(payload.images)
     .fetch_one(&pool)
     .await
     .map_err(|e| {
@@ -171,13 +170,12 @@ async fn generate_proposal(
     Path(id): Path<Uuid>,
 ) -> Result<Json<Quote>, axum::http::StatusCode> {
     // 1. Fetch the QuoteRequest
-    let request = sqlx::query_as!(
-        QuoteRequest,
+    let request = sqlx::query_as::<_, QuoteRequest>(
         r#"SELECT id, tenant_id, customer_id, status, source, message, images, created_at, updated_at
-           FROM quote_requests WHERE id = $1 AND tenant_id = $2"#,
-        id,
-        claims.organization_id
+           FROM quote_requests WHERE id = $1 AND tenant_id = $2"#
     )
+    .bind(id)
+    .bind(claims.organization_id.clone())
     .fetch_optional(&pool)
     .await
     .map_err(|e| {
