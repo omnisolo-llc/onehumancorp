@@ -64,7 +64,7 @@ describe("CampaignOrchestrationPage", () => {
         return jsonResponse({ message: "Hi Alice, please review order-1001" });
       }
 
-      const match = Object.keys(responses).find((path) => url.startsWith(`${path}?tenant_id=tenant-123`));
+      const match = Object.keys(responses).find((path) => url.includes(path));
       if (match) return jsonResponse(responses[match]);
 
       return jsonResponse({});
