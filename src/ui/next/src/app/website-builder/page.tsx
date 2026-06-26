@@ -768,7 +768,7 @@ export default function WebsiteBuilderPage() {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden justify-center items-center glassmorphism">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0066FF] mb-4"></div>
             <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
         </div>
       </div>
@@ -788,7 +788,7 @@ export default function WebsiteBuilderPage() {
 
           <div className="w-full glassmorphism p-3 rounded-[8px] mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
-            <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
+            <button className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
           <button

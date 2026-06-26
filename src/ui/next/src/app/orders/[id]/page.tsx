@@ -141,7 +141,7 @@ export default function OrderDetailsPage() {
           <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold font-outfit text-gray-900">Fulfillment</h2>
-              <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-blue-100">
+              <div className="bg-blue-50 text-[#0071E3] px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border border-blue-100">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 Powered by Shippo
               </div>
@@ -183,7 +183,7 @@ export default function OrderDetailsPage() {
                       type="number"
                       value={weight}
                       onChange={(e) => setWeight(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                     />
                   </div>
                   <div>
@@ -194,7 +194,7 @@ export default function OrderDetailsPage() {
                       value={dimensions}
                       onChange={(e) => setDimensions(e.target.value)}
                       placeholder="e.g. 10x8x6"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                     />
                   </div>
                 </div>
@@ -221,7 +221,7 @@ export default function OrderDetailsPage() {
                           key={rate.id}
                           className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
                             selectedRate === rate.id
-                              ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                              ? 'border-[#0066FF] bg-blue-50 ring-1 ring-[#0066FF]'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
@@ -232,7 +232,7 @@ export default function OrderDetailsPage() {
                               value={rate.id}
                               checked={selectedRate === rate.id}
                               onChange={() => setSelectedRate(rate.id)}
-                              className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                              className="w-4 h-4 text-[#0071E3] focus:ring-[#0066FF]"
                             />
                             <div>
                               <p className="font-medium text-gray-900">{rate.carrier} {rate.service}</p>
@@ -277,7 +277,7 @@ export default function OrderDetailsPage() {
           <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500 mb-4">Customer</h2>
             <p className="font-medium text-gray-900 mb-1">Alice Johnson</p>
-            <p className="text-sm text-blue-600 hover:underline cursor-pointer mb-4">alice.j@example.com</p>
+            <p className="text-sm text-[#0071E3] hover:underline cursor-pointer mb-4">alice.j@example.com</p>
 
             <h3 className="text-xs font-semibold text-gray-500 uppercase mt-4 mb-2">Shipping Address</h3>
             <p className="text-sm text-gray-700">

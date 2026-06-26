@@ -451,7 +451,7 @@ export default function BuilderPage() {
               <SkeletonBlock />
            </div>
            {/* Abstract pulse overlay */}
-           <div className="absolute inset-0 bg-blue-500/5 animate-pulse pointer-events-none" />
+           <div className="absolute inset-0 bg-[#0066FF]/5 animate-pulse pointer-events-none" />
         </div>
       </div>
     );
@@ -464,7 +464,7 @@ export default function BuilderPage() {
           {/* Success Animation Background */}
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-50 via-white to-blue-50 -z-10 animate-fade-in" />
 
-          <div className="w-20 h-20 bg-green-500 text-white rounded-full flex items-center justify-center mb-6 shadow-lg animate-bounce mt-8">
+          <div className="w-20 h-20 bg-[#34C759] text-white rounded-full flex items-center justify-center mb-6 shadow-lg animate-bounce mt-8">
             <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
           </div>
 
@@ -508,7 +508,7 @@ export default function BuilderPage() {
                 navigator.clipboard.writeText(liveUrl);
                 setSaveMessage("Live URL copied.");
               }}
-              className="text-blue-600 font-semibold text-sm hover:underline shrink-0"
+              className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0"
             >
               Copy
             </button>
@@ -550,7 +550,7 @@ export default function BuilderPage() {
             {geoScore === null ? (
               <button
                 onClick={handleGeoAnalysis}
-                className="w-full bg-blue-600 text-white font-semibold py-2 rounded-[8px] text-sm shadow-sm hover:bg-blue-700 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                className="w-full bg-[#0071E3] text-white font-semibold py-2 rounded-[8px] text-sm shadow-sm hover:bg-blue-700 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
               >
                 Analyze Visibility
               </button>
@@ -558,7 +558,7 @@ export default function BuilderPage() {
               <div className="animate-fade-in">
                 <div className="flex items-end gap-2 mb-3">
                   <span className="text-3xl font-black text-blue-900">{geoScore}</span>
-                  <span className="text-sm font-medium text-blue-600 pb-1">/ 100</span>
+                  <span className="text-sm font-medium text-[#0071E3] pb-1">/ 100</span>
                 </div>
                 {geoRecs.length > 0 && (
                   <ul className="text-xs text-blue-800 space-y-1 mb-4 list-disc pl-4">
@@ -571,7 +571,7 @@ export default function BuilderPage() {
                   className={`w-full font-semibold py-2 rounded-[8px] text-sm shadow-sm transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
                     seoApplied
                     ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-200"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-[#0071E3] text-white hover:bg-blue-700"
                   }`}
                 >
                   {seoApplied ? "Recommendations Applied ✓" : "Auto-Apply SEO Metadata"}

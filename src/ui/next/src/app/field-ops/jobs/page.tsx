@@ -278,7 +278,7 @@ export default function FieldOpsJobsPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setAgentSuggestion(null)}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg"
+                  className="px-3 py-1.5 bg-[#0071E3] text-white text-xs font-semibold rounded-lg"
                 >
                   Yes, text them
                 </button>
@@ -345,7 +345,7 @@ export default function FieldOpsJobsPage() {
                   Service Notes & Potential Follow-ups
                 </label>
                 <textarea
-                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow min-h-[80px]"
+                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#0066FF] focus:border-transparent outline-none transition-shadow min-h-[80px]"
                   placeholder="E.g., Needs a replacement quote."
                   value={job.notes}
                   onChange={(e) => handleNotesChange(job.id, e.target.value)}
@@ -393,7 +393,7 @@ export default function FieldOpsJobsPage() {
                   ) : (
                     <div className="flex w-full gap-2 flex-col sm:flex-row">
                       <button
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-[#0071E3] hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
                         onClick={() => handleComplete(job.id)}
                       >
                         Job Done
@@ -418,7 +418,7 @@ export default function FieldOpsJobsPage() {
                   Saved Notes:
                 </p>
                 <p className="text-sm text-gray-600 italic">"{job.notes}"</p>
-                <p className="text-xs text-blue-600 font-semibold mt-2">
+                <p className="text-xs text-[#0071E3] font-semibold mt-2">
                   ✨ Sales Agent will draft an estimate based on these notes
                   once online.
                 </p>

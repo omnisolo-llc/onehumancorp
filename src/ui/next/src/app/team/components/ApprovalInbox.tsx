@@ -96,7 +96,7 @@ export default function ApprovalInbox({
           </span>
           <button
             onClick={handleToggle}
-            className={`w-12 h-6 rounded-full p-1 transition-colors flex ${reviewAll ? "bg-blue-500 justify-end" : "bg-gray-300 justify-start"}`}
+            className={`w-12 h-6 rounded-full p-1 transition-colors flex ${reviewAll ? "bg-[#0066FF] justify-end" : "bg-gray-300 justify-start"}`}
           >
             <div
               className={`w-4 h-4 bg-white rounded-full transition-transform`}
@@ -108,7 +108,7 @@ export default function ApprovalInbox({
         <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 space-y-4 hide-scrollbar">
           {approvals.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-8">
-              <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-green-50 text-[#34C759] rounded-full flex items-center justify-center mb-4">
                 <svg
                   className="w-8 h-8"
                   fill="none"
@@ -200,7 +200,7 @@ export default function ApprovalInbox({
                         </svg>
                         Draft Reply
                       </div>
-                      <div className="bg-blue-600 p-3 rounded-lg text-xs text-white shadow-inner">
+                      <div className="bg-[#0071E3] p-3 rounded-lg text-xs text-white shadow-inner">
                         {req.payload.generated_response}
                       </div>
                     </div>

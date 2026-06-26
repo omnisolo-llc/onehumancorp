@@ -91,7 +91,7 @@ export default function EmbedBuilderPage() {
                                     type="text"
                                     value={tenantId}
                                     onChange={(e) => setTenantId(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-inner"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all shadow-inner"
                                     placeholder="your-workspace-id"
                                 />
                                 <p className="text-xs text-gray-500 mt-2">Connects widget submissions to your OHC workspace.</p>
@@ -149,7 +149,7 @@ export default function EmbedBuilderPage() {
                                             type="checkbox"
                                             checked={hideBranding}
                                             onChange={handleBrandingToggle}
-                                            className="w-5 h-5 border-2 border-gray-300 rounded text-blue-600 focus:ring-blue-500 transition-colors"
+                                            className="w-5 h-5 border-2 border-gray-300 rounded text-[#0071E3] focus:ring-[#0066FF] transition-colors"
                                         />
                                     </div>
                                     <div className="flex flex-col">
@@ -196,7 +196,7 @@ export default function EmbedBuilderPage() {
                                 <h3 className="text-sm font-bold text-gray-600 uppercase tracking-widest flex items-center gap-2">
                                     <span className="relative flex h-3 w-3">
                                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0066FF]"></span>
                                     </span>
                                     Live Preview
                                 </h3>
@@ -265,7 +265,7 @@ export default function EmbedBuilderPage() {
                                     onClick={() => {
                                         window.location.href = '/pricing';
                                     }}
-                                    className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                    className="w-full py-3.5 bg-[#0071E3] hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                                 >
                                     Upgrade Now
                                 </button>

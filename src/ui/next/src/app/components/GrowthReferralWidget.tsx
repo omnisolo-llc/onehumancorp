@@ -76,7 +76,7 @@ export default function GrowthReferralWidget() {
             Grow Your Team
           </h2>
           <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2">
-            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            <svg className="w-4 h-4 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
             Bridge your local sovereignty with cloud-native collaboration. Invite a member to a shared multi-tenant space while maintaining Zero Data Leakage locally.
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function GrowthReferralWidget() {
               Embed Your Business
             </h2>
             <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2">
-              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              <svg className="w-4 h-4 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
               Put your storefront anywhere. Includes a built-in referral loop to reward you when other owners join through your embed.
             </p>
           </div>
@@ -148,7 +148,7 @@ export default function GrowthReferralWidget() {
                 navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ Powered by OHC</a></div>`);
                 alert('Embed code copied to clipboard!');
               }}
-              className="w-full app-button min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white border-none py-3 px-6 text-sm"
+              className="w-full app-button min-h-[44px] bg-[#0071E3] hover:bg-blue-700 text-white border-none py-3 px-6 text-sm"
             >
               Copy Embed Code
             </button>

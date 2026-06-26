@@ -85,7 +85,7 @@ function LeaveReviewContent() {
                           setCopied(true);
                           setTimeout(() => setCopied(false), 2000);
                         }}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${copied ? "bg-green-500 text-white" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${copied ? "bg-[#34C759] text-white" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
                       >
                         {copied ? "Copied!" : "Copy"}
                       </button>

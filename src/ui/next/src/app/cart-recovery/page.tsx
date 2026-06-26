@@ -136,7 +136,7 @@ export default function CartRecoveryPage() {
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder="e.g. Alice"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF9500]"
                 />
               </div>
               <div>
@@ -147,7 +147,7 @@ export default function CartRecoveryPage() {
                   value={cartValue}
                   onChange={(e) => setCartValue(e.target.value)}
                   placeholder="e.g. $45.00"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF9500]"
                 />
               </div>
               <button

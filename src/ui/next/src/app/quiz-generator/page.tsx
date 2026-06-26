@@ -34,7 +34,7 @@ export default function QuizGeneratorPage() {
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-shadow"
               placeholder="e.g. What kind of startup founder are you?"
             />
           </div>
@@ -48,7 +48,7 @@ export default function QuizGeneratorPage() {
               type="text"
               value={prize}
               onChange={(e) => setPrize(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-shadow"
               placeholder="e.g. Get a free business plan template!"
             />
           </div>
@@ -57,7 +57,7 @@ export default function QuizGeneratorPage() {
             onClick={handleGenerate}
             disabled={!topic}
             className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-md ${
-              topic ? 'bg-blue-600 hover:bg-blue-700 active:scale-95' : 'bg-gray-400 cursor-not-allowed'
+              topic ? 'bg-[#0071E3] hover:bg-blue-700 active:scale-95' : 'bg-gray-400 cursor-not-allowed'
             }`}
           >
             Generate Quiz Link
@@ -73,7 +73,7 @@ export default function QuizGeneratorPage() {
                 type="text"
                 readOnly
                 value={generatedUrl}
-                className="flex-1 px-3 py-2 border border-green-300 rounded-l-lg bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="flex-1 px-3 py-2 border border-green-300 rounded-l-lg bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-[#34C759]"
               />
               <button
                 onClick={() => navigator.clipboard.writeText(generatedUrl)}

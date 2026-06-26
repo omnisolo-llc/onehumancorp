@@ -58,7 +58,7 @@ export default function GooseMcpPage() {
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Goose MCP Extensions UI</h1>
       {error && (
-        <div className="border border-red-500 p-2 mb-4" id="goose-error">
+        <div className="border border-[#FF3B30] p-2 mb-4" id="goose-error">
           <p className="font-bold">Error:</p>
           <p>{error}</p>
         </div>
@@ -75,7 +75,7 @@ export default function GooseMcpPage() {
               <h3 className="font-bold" id={`extension-${ext.id}`}>{ext.name}</h3>
               <p>{ext.description}</p>
               <button
-                className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="mt-2 px-4 py-2 bg-[#0066FF] text-white rounded hover:bg-[#0071E3]"
                 onClick={() => handleExecute(ext.id)}
                 id={`execute-${ext.id}`}
               >

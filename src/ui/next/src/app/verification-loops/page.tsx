@@ -52,7 +52,7 @@ export default function VerificationLoopsPage() {
             Task Context
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white/50 backdrop-blur-[30px] saturate-[210%]"
+            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors bg-white/50 backdrop-blur-[30px] saturate-[210%]"
             rows={4}
             value={taskContext}
             onChange={(e) => setTaskContext(e.target.value)}
@@ -65,7 +65,7 @@ export default function VerificationLoopsPage() {
             Agent Output / Command / Path
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white/50 backdrop-blur-[30px] saturate-[210%] font-mono text-sm"
+            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors bg-white/50 backdrop-blur-[30px] saturate-[210%] font-mono text-sm"
             rows={4}
             value={outputText}
             onChange={(e) => setOutputText(e.target.value)}
@@ -77,7 +77,7 @@ export default function VerificationLoopsPage() {
           <button
             onClick={() => handleVerify('computational')}
             disabled={loading || !outputText}
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors shadow-sm"
+            className="px-6 py-2.5 bg-[#0071E3] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors shadow-sm"
           >
             {loading ? 'Verifying...' : 'Run Computational Guide'}
           </button>

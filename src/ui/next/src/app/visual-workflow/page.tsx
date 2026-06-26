@@ -71,7 +71,7 @@ export default function VisualWorkflowPage() {
         <div className="flex gap-4">
           <WalkthroughTarget id="vw-add-node">
             <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition"
+              className="bg-[#0071E3] hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition"
               onClick={() => addNode("Input")}
             >
               + Add Input Node
@@ -119,7 +119,7 @@ export default function VisualWorkflowPage() {
 
                 {i > 0 && (
                   <button
-                    className="text-xs text-blue-600 hover:underline"
+                    className="text-xs text-[#0071E3] hover:underline"
                     onClick={() => addEdge(nodes[i-1].id, n.id)}
                   >
                     Connect from previous

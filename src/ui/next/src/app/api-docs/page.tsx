@@ -45,7 +45,7 @@ export default function ApiDocsPage() {
       </div>
       {mounted && loading && (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div>
         </div>
       )}
       {mounted && !loading && spec && (

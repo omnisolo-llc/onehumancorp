@@ -95,14 +95,14 @@ function BookingForm() {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center" data-testid="booking-checkout-container">
-            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-blue-100 text-[#0071E3] rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Almost there!</h2>
             <p className="text-gray-600 mb-8">Please complete your deposit to secure your time slot.</p>
-            <a href={checkoutUrl} className="w-full inline-block bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors" data-testid="pay-deposit-btn">
+            <a href={checkoutUrl} className="w-full inline-block bg-[#0071E3] text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors" data-testid="pay-deposit-btn">
               Pay Deposit
             </a>
           </div>
@@ -128,7 +128,7 @@ function BookingForm() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
       <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden">
-        <div className="bg-blue-600 px-8 py-10 text-white text-center">
+        <div className="bg-[#0071E3] px-8 py-10 text-white text-center">
           <h1 className="text-3xl font-bold font-outfit tracking-tight mb-2">Book an Appointment</h1>
           <p className="text-blue-100 font-medium">Select a time that works for you.</p>
         </div>
@@ -143,7 +143,7 @@ function BookingForm() {
                   required
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors"
                   placeholder="Jane Doe"
                 />
               </div>
@@ -154,7 +154,7 @@ function BookingForm() {
                   required
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors"
                   placeholder="jane@example.com"
                 />
               </div>
@@ -167,7 +167,7 @@ function BookingForm() {
                 required
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors"
               />
             </div>
 
@@ -188,7 +188,7 @@ function BookingForm() {
                           onClick={() => setSelectedSlot(slot.start_time)}
                           className={`py-2 text-sm font-medium rounded-lg border transition-all ${
                             selectedSlot === slot.start_time
-                              ? 'bg-blue-600 border-blue-600 text-white shadow-md transform scale-[1.02]'
+                              ? 'bg-[#0071E3] border-[#0071E3] text-white shadow-md transform scale-[1.02]'
                               : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
                           }`}
                         >
@@ -212,7 +212,7 @@ function BookingForm() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors resize-none"
                 placeholder="What do you need help with?"
               />
             </div>

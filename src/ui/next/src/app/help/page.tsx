@@ -54,7 +54,7 @@ export default function HelpCenterPage() {
                 placeholder="Search for help articles and videos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xl text-gray-900 bg-white/80 dark:bg-black/50 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
+                className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-2xl text-gray-900 bg-white/80 dark:bg-black/50 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
               />
             </WithTooltip>
           </div>
@@ -73,7 +73,7 @@ export default function HelpCenterPage() {
             </p>
             <WithTooltip id="ask-ai-tooltip" defaultText="Open AI Help Chat to get answers instantly.">
             <button
-              className="mt-6 px-6 py-3 bg-blue-600/95 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg backdrop-blur-md saturate-[210%] transition-all min-h-[44px] hover:scale-105 active:scale-95"
+              className="mt-6 px-6 py-3 bg-[#0071E3]/95 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg backdrop-blur-md saturate-[210%] transition-all min-h-[44px] hover:scale-105 active:scale-95"
               onClick={() => {
                 const event = new CustomEvent('open-help-chat');
                 window.dispatchEvent(event);
@@ -97,7 +97,7 @@ export default function HelpCenterPage() {
                       {filteredArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
                         <Link key={idx} href={article.link} className="block group">
                           <div className="backdrop-blur-xl saturate-[210%] bg-white/80 dark:bg-black/50 border border-white/50 dark:border-white/20 p-5 sm:p-6 rounded-3xl shadow-xl group-hover:border-blue-400 group-hover:shadow-2xl group-hover:-translate-y-1 hover:bg-white/90 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[120px] sm:min-h-[140px]">
-                            <h3 className="text-lg sm:text-xl font-bold font-outfit text-blue-600 mb-2 sm:mb-3 group-hover:text-blue-700">{article.title}</h3>
+                            <h3 className="text-lg sm:text-xl font-bold font-outfit text-[#0071E3] mb-2 sm:mb-3 group-hover:text-blue-700">{article.title}</h3>
                             <p className="text-sm sm:text-base text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
                           </div>
                         </Link>
@@ -126,7 +126,7 @@ export default function HelpCenterPage() {
                       {advancedArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
                         <Link key={idx} href={article.link} className="block group">
                           <div className="backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-white/10 border border-white/40 p-5 sm:p-6 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[120px] sm:min-h-[140px]">
-                            <h3 className="text-lg sm:text-xl font-bold font-outfit text-blue-600 mb-2 sm:mb-3 group-hover:text-blue-700">{article.title}</h3>
+                            <h3 className="text-lg sm:text-xl font-bold font-outfit text-[#0071E3] mb-2 sm:mb-3 group-hover:text-blue-700">{article.title}</h3>
                             <p className="text-sm sm:text-base text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
                           </div>
                         </Link>

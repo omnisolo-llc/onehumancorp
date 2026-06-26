@@ -117,7 +117,7 @@ export default function GiveawayGeneratorPage() {
           {giveawayLink && (
             <div className="p-6 shadow-md bg-white border border-green-200 rounded-[16px]">
               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2 flex items-center gap-2">
-                <span className="text-green-500">✅</span> Link Ready!
+                <span className="text-[#34C759]">✅</span> Link Ready!
               </h3>
               <p className="text-sm text-gray-600 mb-4">Share this link with your audience to start capturing emails.</p>
 

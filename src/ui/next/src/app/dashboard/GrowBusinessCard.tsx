@@ -21,7 +21,7 @@ export function GrowBusinessCard() {
           <Link
             id="review-storefront-btn"
             href="/edge-storefront-setup"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            className="px-4 py-2 bg-[#0071E3] hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
           >
             Review Storefront
           </Link>
