@@ -660,7 +660,7 @@ export default function OnboardingWizard() {
                 <button
                   type="button"
                   className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all"
-                  onClick={() => { updateState({ bio: "" }); updateState({ step: -1 }); syncStateToBackend({ step: -1, bio: "" }); }}
+                  onClick={() => { updateState({ step: -1 }); syncStateToBackend({ step: -1 }); }}
                 >
                   Instant Build
                 </button>

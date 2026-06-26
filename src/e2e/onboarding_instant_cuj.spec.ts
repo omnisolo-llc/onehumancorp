@@ -32,6 +32,13 @@ test.describe('Instant Setup CUJ', () => {
     const generateBtn = page.getByTestId('generate-storefront-btn');
     await expect(generateBtn).toBeEnabled();
 
+    // Test the bug fix by navigating back and forward to ensure text is preserved
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    await page.getByRole('button', { name: 'Instant Build' }).click();
+    await expect(instantInput).toHaveValue('I make custom vegan cakes in Austin. I need a website and a way to take bookings.');
+    await expect(generateBtn).toBeEnabled();
+
     // 4. Click generate
     await generateBtn.click();
 
