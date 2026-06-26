@@ -697,11 +697,11 @@ input[type="url"],
 input[type="search"],
 textarea,
 select {
-  border-radius: 8px;
+  border-radius: 8px !important;
 }
 
 button, .app-button, .charge-btn {
-  border-radius: 8px;
+  border-radius: 8px !important;
 }
 
 
