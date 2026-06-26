@@ -325,6 +325,8 @@ message StartOnboardingRequest {
   repeated IntakeProductProto initial_products = 16;
   repeated string ai_agents = 17;
   bool ai_auto_respond = 18;
+  optional int32 deposit_percentage = 19;
+  optional int32 lead_time_days = 20;
 }
 
 message StartOnboardingResponse {
