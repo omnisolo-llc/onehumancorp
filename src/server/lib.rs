@@ -2553,6 +2553,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, Some(cb))); let _ = consolidation_worker.clone().spawn_background_task();
     let _ = consolidation_worker.clone().spawn_background_task();
 
+    let replenishment_job = crate::workers::subscription_replenishment_job::SubscriptionReplenishmentJob::new(db.clone());
+    replenishment_job.start();
+    // Start Subscription Replenishment Worker
+    let replenishment_worker = std::sync::Arc::new(crate::workers::subscription_replenishment_worker::SubscriptionReplenishmentWorker::new(db.clone()));
+    replenishment_worker.start();
+
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
@@ -6637,6 +6643,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/sync", api::sync_gateway::router())
+        .nest("/api/ohc_job_queue", api::ohc_job_queue::handler::router())
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))

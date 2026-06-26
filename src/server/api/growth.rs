@@ -3306,7 +3306,7 @@ pub async fn handle_zero_click_generate(
             }
         }).collect(),
         ai_agents: vec![],
-        ai_auto_respond: false,
+        ai_auto_respond: false, deposit_percentage: intake_data.deposit_percentage, lead_time_days: intake_data.lead_time_days,
     };
 
     let _start_res = agent.start_onboarding(start_req).await.map_err(|e| {

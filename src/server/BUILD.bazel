@@ -84,6 +84,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:fulfillment.rs",
     "//src/server/api:shipping.rs",
     "//src/server/api/booking:mod.rs",
+
+
     "//src/server/api/booking:request.rs",
     "//src/server/api/booking:available_slots.rs",
     "//src/server/api/booking:reserve.rs",
@@ -99,6 +101,7 @@ SERVER_RS_SRCS = [
     "//src/server/api/agents:client_intake.rs",
     "//src/server/api/onboarding:mod.rs",
     "//src/server/api/inbox:srcs",
+    "//src/server/api/ohc_job_queue:srcs",
     "//src/server/autodream:mod.rs",
     "//src/server/autodream_pipeline:llm_client.rs",
     "//src/server/autodream_pipeline:mod.rs",
@@ -346,6 +349,8 @@ SERVER_RS_SRCS = [
     "//src/server/workers:calendar_sync.rs",
     "//src/server/workers:booking_reengagement.rs",
     "//src/server/workers:mod.rs",
+    "//src/server/workers:subscription_replenishment_job.rs",
+    "//src/server/workers:subscription_replenishment_worker.rs",
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",
     "//src/server/voice:router.rs",
