@@ -66,7 +66,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     const saveDraftBtn = page.getByTestId('save-draft-btn').last();
     await expect(saveDraftBtn).toBeVisible();
     await saveDraftBtn.click();
-    await expect(saveDraftBtn).toHaveText('Saved!', { timeout: 3000 });
+    await expect(saveDraftBtn).toHaveText('Draft Saved!', { timeout: 3000 });
     await page.route('**/success.html', async route => {
       await route.fulfill({ status: 200, body: 'Success' });
     });
