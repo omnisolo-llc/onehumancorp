@@ -1348,6 +1348,59 @@
             Next
           </button>
         </div>
+        <script>
+          document.getElementById('generate-storefront-btn').addEventListener('click', async () => {
+            const bio = document.getElementById('instant-bio').value.trim();
+            const imgUrl = document.getElementById('instant-image-url').value.trim();
+            if (!bio) return;
+
+            const btn = document.getElementById('generate-storefront-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 8px; vertical-align: middle;"></div>Generating...';
+
+            try {
+               let backendUrl = window.location.protocol === "file:" || ["1420", "3000", "8081"].includes(window.location.port) ? "http://127.0.0.1:18789" : "";
+
+               let payload = { input: bio };
+               if (imgUrl) payload.image_url = imgUrl;
+
+               let resData;
+               if (window.__TAURI__ && window.__TAURI__.core) {
+                  resData = await window.__TAURI__.core.invoke("process_intake", payload);
+               } else {
+                  const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                  });
+                  if (!res.ok) throw new Error("Network request failed");
+                  resData = await res.json();
+               }
+
+               state.businessName = resData.business_name || "Generated Business";
+               state.workContext = resData.business_type || "Local Service";
+               state.categories = (resData.categories && resData.categories.length > 0) ? resData.categories[0] : "";
+
+               inputs.name.value = state.businessName;
+               goToStep('step-offer');
+            } catch (err) {
+               document.getElementById('instant-error').innerText = err.message || "Failed to generate";
+               document.getElementById('instant-error').style.display = "block";
+            } finally {
+               btn.disabled = false;
+               btn.innerText = "Next";
+            }
+          });
+
+          document.getElementById('instant-bio').addEventListener('input', (e) => {
+             const val = e.target.value.trim();
+             document.getElementById('generate-storefront-btn').disabled = !val;
+             document.getElementById('instant-error').style.display = "none";
+          });
+
+          document.getElementById('generate-storefront-btn').disabled = !document.getElementById('instant-bio').value.trim();
+        </script>
+
       </div>
 
       <div class="step" id="step-loading">

@@ -4,9 +4,21 @@ import * as path from 'path';
 test.describe('Onboarding Wizard E2E Flow', () => {
 
   test.beforeEach(async ({ page }) => {
+    const fs = require('fs');
+    const path = require('path');
+
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
       window.localStorage.clear();
+    });
+
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            body: fileContent
+        });
     });
   });
 
@@ -121,6 +133,9 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   test.beforeEach(async ({ page }) => {
+    const fs = require('fs');
+    const path = require('path');
+
     // mock the tauri backend
     await page.addInitScript(() => {
         (window as any).__TAURI__ = {
@@ -149,6 +164,15 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
                 }
             }
         };
+    });
+
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            body: fileContent
+        });
     });
   });
 
