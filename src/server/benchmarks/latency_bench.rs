@@ -868,6 +868,11 @@ pub async fn bench_crm_opportunities_latency() {
         println!("  - list_opportunities_handler (Parallel Execution Optimization verified, Hybrid Cache)");
     }
 }
+#[tokio::test]
+async fn test_bench_ai_token_efficiency() {
+    bench_ai_token_efficiency().await;
+}
+
 
 pub async fn bench_ai_token_efficiency() {
     println!("Benchmarking AI Token Efficiency...");
