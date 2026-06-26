@@ -70,6 +70,8 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .and_then(Value::as_str)
                         .unwrap_or("unknown_tenant")
                         .to_string();
+                    let count_clone = count;
+                    let model_clone = model_string.clone();
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
                         let _ = ::server_telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
@@ -79,6 +81,13 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                             "model": model_string.clone()
                         });
                         let _ = ::server_telemetry::buffer_metric_i64(&pool, "ohc_llm_cost_total_cents", "counter", cost_cents, labels_cents).await;
+
+                        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+                            if let Ok(client) = redis::Client::open(redis_url) {
+                                let limiter = ::server_pricing::rate_limit::RedisRateLimiter::new(client);
+                                let _ = limiter.record_token_usage(&tenant_id, &model_clone, count_clone).await;
+                            }
+                        }
                     });
                 }
             }

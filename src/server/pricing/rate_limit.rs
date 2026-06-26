@@ -210,6 +210,39 @@ impl RedisRateLimiter {
         conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())
     }
 
+    pub async fn record_token_usage(&self, tenant_id: &str, model: &str, tokens: i64) -> Result<(), String> {
+        if tokens <= 0 {
+            return Ok(());
+        }
+        let mut conn = self.get_connection().await?;
+        let now = chrono::Utc::now();
+        let month_key = now.format("%Y-%m").to_string();
+
+        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model);
+
+        let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
+        let model_key = format!("tenant:{}:tokens_used:{}:{}", tenant_id, model, month_key);
+
+        let _ : () = redis::AsyncCommands::incr(&mut conn, &tenant_key, tokens).await.unwrap_or(());
+        let _ : () = redis::AsyncCommands::incr(&mut conn, &model_key, tokens).await.unwrap_or(());
+
+        // Expire keys after ~2 months to save space
+        let _ : () = redis::AsyncCommands::expire(&mut conn, &tenant_key, 60 * 60 * 24 * 60).await.unwrap_or(());
+        let _ : () = redis::AsyncCommands::expire(&mut conn, &model_key, 60 * 60 * 24 * 60).await.unwrap_or(());
+
+        Ok(())
+    }
+
+    pub async fn get_token_usage(&self, tenant_id: &str) -> Result<i64, String> {
+        let mut conn = self.get_connection().await?;
+        let now = chrono::Utc::now();
+        let month_key = now.format("%Y-%m").to_string();
+        let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
+
+        let count: i64 = redis::AsyncCommands::get(&mut conn, &tenant_key).await.unwrap_or(0);
+        Ok(count)
+    }
+
     pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(store) = &self.telemetry_store {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
@@ -688,6 +721,31 @@ mod tests {
                 }
                 let status = limiter.record_action(tenant_id, agent_id).await.expect("failed to unwrap");
                 assert!(status.soft_limit_reached);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_record_token_usage() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-tokens";
+
+                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let now = chrono::Utc::now();
+                let month_key = now.format("%Y-%m").to_string();
+                let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
+                let _ : () = redis::AsyncCommands::del(&mut conn, &tenant_key).await.unwrap_or(());
+
+                let usage = limiter.get_token_usage(tenant_id).await.expect("failed to get usage");
+                assert_eq!(usage, 0);
+
+                limiter.record_token_usage(tenant_id, "gpt-4o", 1500).await.expect("failed to record tokens");
+                limiter.record_token_usage(tenant_id, "gpt-4o", 500).await.expect("failed to record tokens");
+
+                let usage = limiter.get_token_usage(tenant_id).await.expect("failed to get usage");
+                assert_eq!(usage, 2000);
             }
         }
     }
