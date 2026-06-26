@@ -1976,6 +1976,20 @@
         <p>Set up your login details.</p>
 
         <input
+          type="text"
+          id="admin-name"
+          data-testid="admin-name"
+          class="glassmorphism"
+          placeholder="Your Name (e.g. Maya)"
+          inputmode="text"
+          autocomplete="name"
+          enterkeyhint="next"
+        />
+        <div id="admin-name-error" class="error-msg" aria-live="polite">
+          Please enter your name.
+        </div>
+
+        <input
           type="email"
           id="admin-email"
           data-testid="admin-email"
@@ -2482,6 +2496,7 @@
         tagline: document.getElementById("business-tagline"),
         assistantName: document.getElementById("assistant-name"),
         assistantTone: document.getElementById("assistant-tone"),
+        adminName: document.getElementById("admin-name"),
         adminEmail: document.getElementById("admin-email"),
         adminPassword: document.getElementById("admin-password"),
         firstOffer: document.getElementById("first-offer"),
@@ -2497,6 +2512,7 @@
         name: document.getElementById("name-error"),
         assistantName: document.getElementById("assistant-name-error"),
         assistantTone: document.getElementById("tone-error"),
+        adminName: document.getElementById("admin-name-error"),
         adminEmail: document.getElementById("email-error"),
         adminPassword: document.getElementById("password-error"),
         firstOffer: document.getElementById("offer-error"),
@@ -2800,6 +2816,7 @@
         state.tagline = inputs.tagline.value;
         state.assistantName = inputs.assistantName.value;
         state.assistantTone = inputs.assistantTone.value;
+        state.adminName = inputs.adminName.value;
         state.first_offer = inputs.firstOffer.value;
         state.templateSelection = inputs.templateSelection.value;
         if (inputs.domainName) state.domain = inputs.domainName.value;
@@ -2944,9 +2961,19 @@
             state.assistantTone = inputs.assistantTone.value;
           }
         } else if (stepId === "step-admin") {
+          const nameVal = inputs.adminName.value.trim();
           const emailVal = inputs.adminEmail.value.trim();
           const passVal = inputs.adminPassword.value.trim();
           let stepValid = true;
+
+          if (nameVal === "") {
+            errors.adminName.style.display = "block";
+            inputs.adminName.classList.add("invalid-input");
+            stepValid = false;
+          } else {
+            errors.adminName.style.display = "none";
+            inputs.adminName.classList.remove("invalid-input");
+          }
 
           if (emailVal === "" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
             errors.adminEmail.style.display = "block";
