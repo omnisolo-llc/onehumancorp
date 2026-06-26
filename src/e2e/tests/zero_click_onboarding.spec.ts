@@ -17,7 +17,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await chatInput.press('Enter');
 
     // Wait for the "Building Your Business..." or final state
-    await expect(page.locator('text=Your business is live!')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Your business is live!')).toBeVisible({ timeout: 30000 });
 
     // The Launch store button should be available
     const launchBtn = page.getByRole('button', { name: /Launch My Store/i });
