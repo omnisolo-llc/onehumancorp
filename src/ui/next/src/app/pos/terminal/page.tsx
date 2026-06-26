@@ -330,9 +330,9 @@ export default function POSTerminal() {
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 mobile-pos-container">
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-6 px-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] border-b border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] sticky top-0 z-10 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff?.name}</h1>
+            <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100 tracking-tight">{activeStaff?.name}</h1>
             <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff?.role)}</p>
             {isOffline ? (
               <div className="inline-flex items-center gap-1.5 mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">
@@ -352,9 +352,9 @@ export default function POSTerminal() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 bg-[#F5F5F7]">
+        <div className="flex-1 overflow-y-auto px-4 py-6 bg-[#F5F5F7] dark:bg-gray-900">
 
-           <div className="app-card rounded-2xl p-6 shadow-lg mb-6 text-center bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+           <div className="app-card rounded-[16px] p-6 shadow-lg mb-6 text-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -390,7 +390,7 @@ export default function POSTerminal() {
              <button
                 onClick={handleQuickCharge}
                 disabled={reserving}
-                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[16px] text-left shadow-lg bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -398,7 +398,7 @@ export default function POSTerminal() {
                <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
 
-             <button className="min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg active:scale-[0.98] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+             <button className="min-h-[44px] min-w-[44px] p-4 rounded-[16px] text-left shadow-lg active:scale-[0.98] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                <div className="text-orange-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
@@ -415,12 +415,12 @@ export default function POSTerminal() {
                 <button
                   key={product.id}
                   onClick={() => handleAddToCart(product)} disabled={reserving || isCartOpen}
-                  className={`p-4 rounded-[8px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] shadow-lg backdrop-blur-[30px] saturate-[210%] ${selectedProduct?.id === product.id ? 'bg-white/80 ring-1 ring-[#0066FF] border border-[#0066FF]' : 'bg-white/65 border border-white/40'}`}
+                  className={`p-4 rounded-[16px] text-left transition-all active:scale-[0.98] min-h-[64px] min-w-[44px] shadow-lg backdrop-blur-[30px] saturate-[210%] ${selectedProduct?.id === product.id ? 'bg-[rgba(255,255,255,0.8)] dark:bg-[rgba(22,22,26,0.8)] ring-1 ring-[#0066FF] border border-[#0066FF]' : 'bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]'}`}
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <div className="font-bold text-gray-900">{product.name}</div>
-                      <div className="text-xs text-gray-500 line-clamp-1">{product.description} &bull; Stock: {product.stock}</div>
+                      <div className="font-bold text-gray-900 dark:text-gray-100">{product.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{product.description} &bull; Stock: {product.stock}</div>
                     </div>
                     <div className="text-blue-600 font-bold">
                       ${(product.price_cents / 100).toFixed(2)}
@@ -432,10 +432,10 @@ export default function POSTerminal() {
 
            {/* Bottom Bar */}
            {cartItemCount > 0 && !checkoutComplete && (
-             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-[30px] border-t border-gray-200 z-40 pb-safe pb-8">
+             <div className="fixed bottom-0 left-0 right-0 p-4 bg-[rgba(255,255,255,0.8)] dark:bg-[rgba(22,22,26,0.8)] backdrop-blur-[30px] border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] z-40 pb-safe pb-8">
                <button
                  onClick={() => setIsCartOpen(true)}
-                 className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
+                 className="w-full bg-[#0066FF] text-white rounded-[16px] min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
                >
                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{cartItemCount} item{cartItemCount > 1 ? 's' : ''}</span>
                  <span>Charge ${(cartTotal / 100).toFixed(2)}</span>
@@ -447,22 +447,22 @@ export default function POSTerminal() {
            {isCartOpen && !checkoutComplete && (
              <div className="fixed inset-0 z-50 flex flex-col justify-end">
                <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => setIsCartOpen(false)}></div>
-               <div className="relative bg-white/85 backdrop-blur-[40px] saturate-[210%] border-t border-white/40 rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+               <div className="relative bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(22,22,26,0.85)] backdrop-blur-[40px] saturate-[210%] border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-t-[24px] p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
                  <div className="flex justify-between items-center mb-6">
-                   <h2 className="text-xl font-bold font-outfit text-gray-900">Current Order</h2>
-                   <button onClick={() => setIsCartOpen(false)} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">
+                   <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-gray-100">Current Order</h2>
+                   <button onClick={() => setIsCartOpen(false)} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">
                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                    </button>
                  </div>
 
                  <div className="space-y-4 mb-6">
                    {cart.map((item, idx) => (
-                     <div key={idx} className="flex justify-between items-center p-4 bg-white/50 rounded-xl border border-white/60 shadow-sm">
+                     <div key={idx} className="flex justify-between items-center p-4 bg-[rgba(255,255,255,0.5)] dark:bg-[rgba(22,22,26,0.5)] rounded-[16px] border border-[rgba(255,255,255,0.6)] dark:border-[rgba(255,255,255,0.2)] shadow-sm">
                        <div className="flex flex-col">
-                         <span className="font-bold text-gray-900">{item.product.name}</span>
-                         <span className="text-sm text-gray-500">Qty: {item.quantity}</span>
+                         <span className="font-bold text-gray-900 dark:text-gray-100">{item.product.name}</span>
+                         <span className="text-sm text-gray-500 dark:text-gray-400">Qty: {item.quantity}</span>
                        </div>
-                       <span className="font-bold text-gray-900">${(item.product.price_cents * item.quantity / 100).toFixed(2)}</span>
+                       <span className="font-bold text-gray-900 dark:text-gray-100">${(item.product.price_cents * item.quantity / 100).toFixed(2)}</span>
                      </div>
                    ))}
                  </div>
@@ -489,8 +489,8 @@ export default function POSTerminal() {
 
            {/* Post-Sale Screen */}
            {checkoutComplete && (
-             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-white/80 backdrop-blur-[30px] saturate-[210%]">
-               <div className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-200 w-full max-w-sm text-center animate-in zoom-in-95">
+             <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[rgba(255,255,255,0.8)] dark:bg-[rgba(22,22,26,0.8)] backdrop-blur-[30px] saturate-[210%]">
+               <div className="bg-white dark:bg-gray-800 rounded-[24px] p-8 shadow-2xl border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] w-full max-w-sm text-center animate-in zoom-in-95">
                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                  </div>

@@ -117,19 +117,51 @@ pub fn inventory_locks_for_payment_success(object: &Value) -> Vec<String> {
 }
 
 async fn release_inventory_locks_for_payment(webhook_state: &WebhookState, object: &Value) {
+    let tenant_id_opt = object.get("metadata")
+        .and_then(|m| m.get("tenant_id"))
+        .and_then(|id| id.as_str());
+
+    let product_id_opt = object.get("metadata")
+        .and_then(|m| m.get("product_id"))
+        .and_then(|id| id.as_str());
+
+    let quantity_opt = object.get("metadata")
+        .and_then(|m| m.get("quantity"))
+        .and_then(|q| q.as_str())
+        .and_then(|q| q.parse::<i32>().ok());
+
     let locks = inventory_locks_for_payment_success(object);
     if locks.is_empty() {
         return;
     }
-    match webhook_state.rate_limiter.get_connection().await {
-        Ok(mut conn) => {
-            for lock_id in locks {
-                let _: Result<(), _> = redis::cmd("DEL").arg(&lock_id).query_async(&mut conn).await;
+
+    if let (Some(tenant_id), Some(product_id), Some(quantity)) = (tenant_id_opt, product_id_opt, quantity_opt) {
+        let redis_client = Some(webhook_state.rate_limiter.client());
+        let inventory_service = crate::services::inventory::InventoryService::new(redis_client);
+        for lock_id in &locks {
+            match inventory_service.commit_inventory(tenant_id, product_id, quantity, lock_id).await {
+                Ok(res) if !res.success => {
+                    tracing::error!("Failed to commit inventory lock {} after successful payment: {}", lock_id, res.error_message);
+                }
+                Ok(_) => {
+                    tracing::info!("Successfully committed inventory lock {} for payment", lock_id);
+                }
+                Err(err) => {
+                    tracing::error!("Failed to commit inventory lock {}: {}", lock_id, err);
+                }
             }
         }
-        Err(err) => {
-            ::server_telemetry::record_error_signal("[bug] Failed to get redis connection for payment inventory lock release");
-            tracing::warn!("Failed to release payment inventory locks: {}", err);
+    } else {
+        match webhook_state.rate_limiter.get_connection().await {
+            Ok(mut conn) => {
+                for lock_id in locks {
+                    let _: Result<(), _> = redis::cmd("DEL").arg(&lock_id).query_async(&mut conn).await;
+                }
+            }
+            Err(err) => {
+                ::server_telemetry::record_error_signal("[bug] Failed to get redis connection for payment inventory lock release");
+                tracing::warn!("Failed to release payment inventory locks: {}", err);
+            }
         }
     }
 }

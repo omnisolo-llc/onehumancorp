@@ -135,6 +135,10 @@ impl RedisRateLimiter {
         Self { client, connection: OnceCell::new(), telemetry_store: None, db_pool: None }
     }
 
+    pub fn client(&self) -> Client {
+        self.client.clone()
+    }
+
     pub fn with_db(mut self, pool: sqlx::PgPool) -> Self {
         self.db_pool = Some(pool);
         self

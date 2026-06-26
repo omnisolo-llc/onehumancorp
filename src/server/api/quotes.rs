@@ -487,6 +487,8 @@ async fn approve_quote(
         &quote.customer_id.to_string(),
         amount_usd,
         None,
+        None,
+        None,
         None
     ).await {
         Ok(url) => {

@@ -53,7 +53,7 @@ impl StripeClient {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 
-    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>, product_id: Option<String>) -> Result<String, String> {
+    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>, product_id: Option<String>, inventory_lock_id: Option<String>, quantity: Option<i32>) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);
         tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${} in fees", savings);
@@ -109,10 +109,18 @@ impl StripeClient {
         let display_name = if price_id_or_name.trim().is_empty() { "Checkout".to_string() } else { price_id_or_name.to_string() };
         form.insert("line_items[0][price_data][product_data][name]".to_string(), display_name);
         form.insert("line_items[0][price_data][unit_amount]".to_string(), amount_cents.to_string());
-        form.insert("line_items[0][quantity]".to_string(), "1".to_string());
+        form.insert("line_items[0][quantity]".to_string(), quantity.unwrap_or(1).to_string());
         form.insert("client_reference_id".to_string(), customer_id.to_string());
         if let Some(pid) = product_id {
             form.insert("metadata[product_id]".to_string(), pid);
+        }
+        if let Some(lock_id) = inventory_lock_id {
+            if !lock_id.is_empty() {
+                form.insert("metadata[inventory_lock_id]".to_string(), lock_id);
+            }
+        }
+        if let Some(q) = quantity {
+            form.insert("metadata[quantity]".to_string(), q.to_string());
         }
 
         match pm {
