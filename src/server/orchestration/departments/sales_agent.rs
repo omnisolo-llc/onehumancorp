@@ -321,18 +321,44 @@ impl Department for SalesAgent {
                     intent.original_message, service_name, price, context_summary
                 );
 
-                let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                    .as_deref()
-                {
-                    Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                        crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                let mut raw_response = String::new();
+                let mut attempts = 0;
+                while attempts < 3 {
+                    let ai_op = async {
+                        match std::env::var("OHC_SALES_LLM_PROVIDER")
+                            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                            .as_deref()
+                        {
+                            Ok("minimax") => {
+                                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                                crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await
+                            }
+                            _ => {
+                                crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await
+                            }
+                        }
+                    };
+                    match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                        Ok(Ok(content)) => {
+                            raw_response = content;
+                            break;
+                        },
+                        _ => {
+                            attempts += 1;
+                            if attempts == 3 {
+                                let _ = self.orchestrator.execute_action(
+                                    DepartmentType::Sales,
+                                    "AI Agent Paused: Sales".to_string(),
+                                    event.tenant_id.clone(),
+                                    ActionRisk::DraftForReview,
+                                    serde_json::json!({"error": "The AI agent responsible for sales proposals is paused because the AI service is unavailable.", "proposed_content": "System is paused. Please manually review."})
+                                ).await;
+                            } else {
+                                tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                            }
+                        }
                     }
-                    _ => {
-                        crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
-                    }
-                };
+                }
 
                 let mut scope = format!("{} including labor and standard materials.", service_name);
                 let mut suggested_time = "Tomorrow at 2 PM".to_string();

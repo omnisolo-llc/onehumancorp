@@ -134,20 +134,46 @@ impl Department for TranslationAgent {
                 let mut translated_name = format!("[{}] {}", lang, name);
                 let mut translated_desc = format!("[{}] {}", lang, description);
 
-                let raw_response = match std::env::var("OHC_TRANSLATION_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                    .as_deref()
-                {
-                    Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                        if api_key.trim().is_empty() {
-                            crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
-                        } else {
-                            crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                let mut raw_response = String::new();
+                let mut attempts = 0;
+                while attempts < 3 {
+                    let ai_op = async {
+                        match std::env::var("OHC_TRANSLATION_LLM_PROVIDER")
+                            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                            .as_deref()
+                        {
+                            Ok("minimax") => {
+                                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                                if api_key.trim().is_empty() {
+                                    crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await
+                                } else {
+                                    crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await
+                                }
+                            },
+                            _ => crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await,
                         }
-                    },
-                    _ => crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default(),
-                };
+                    };
+                    match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                        Ok(Ok(content)) => {
+                            raw_response = content;
+                            break;
+                        },
+                        _ => {
+                            attempts += 1;
+                            if attempts == 3 {
+                                let _ = self.orchestrator.execute_action(
+                                    DepartmentType::Translation,
+                                    "AI Agent Paused: Translation".to_string(),
+                                    event.tenant_id.clone(),
+                                    ActionRisk::DraftForReview,
+                                    serde_json::json!({"error": "The AI agent responsible for translation is paused because the AI service is unavailable.", "proposed_content": "System is paused. Please manually translate."})
+                                ).await;
+                            } else {
+                                tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                            }
+                        }
+                    }
+                }
 
                 let clean_res = raw_response.trim_matches('`').trim_start_matches("json\n").trim_end();
                 if let Ok(translated_json) = serde_json::from_str::<serde_json::Value>(clean_res) {

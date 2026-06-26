@@ -154,12 +154,35 @@ impl Department for OperationsAgent {
                     let llm_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                     let prompt = format!("Context: We have an offline sync conflict. The user tried to sell/deduct {} of item {} but the actual stock is {}. Transaction ID: {}. Please analyze this business conflict. If it can be safely merged (e.g., small negative stock allowed based on typical policies), output exactly 'AUTO_RESOLVE'. Otherwise, formulate a brief, polite question for the business owner to decide how to handle it (e.g. asking to cancel or restock).", expected, product_id, actual, transaction_id);
 
-                    let llm_response = if !llm_key.is_empty() {
-                        let llm = crate::minimax::MinimaxClient::new(llm_key);
-                        llm.reason(&prompt).await.unwrap_or_else(|_| format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id))
-                    } else {
-                        format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id)
-                    };
+                    let mut llm_response = format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id);
+                    let mut attempts = 0;
+                    if !llm_key.is_empty() {
+                        while attempts < 3 {
+                            let ai_op = async {
+                                crate::minimax::MinimaxClient::new(llm_key.clone()).reason(&prompt).await
+                            };
+                            match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                                Ok(Ok(content)) => {
+                                    llm_response = content;
+                                    break;
+                                },
+                                _ => {
+                                    attempts += 1;
+                                    if attempts == 3 {
+                                        let _ = self.orchestrator.execute_action(
+                                            DepartmentType::Operations,
+                                            "AI Agent Paused: Operations".to_string(),
+                                            event.tenant_id.clone(),
+                                            ActionRisk::DraftForReview,
+                                            serde_json::json!({"error": "The AI agent responsible for restocking drafts is paused because the AI service is unavailable.", "proposed_content": "System is paused. Please manually check inventory."})
+                                        ).await;
+                                    } else {
+                                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     if llm_response.contains("AUTO_RESOLVE") {
                         // Let's create an auto-resolution action

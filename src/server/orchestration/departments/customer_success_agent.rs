@@ -205,15 +205,41 @@ impl Department for CustomerSuccessAgent {
                 );
                 let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-                let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-                    Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                        crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
+                let mut generated_response = "Hi, looks like you might be running low! Reply Yes to restock.".to_string();
+                let mut attempts = 0;
+                while attempts < 3 {
+                    let ai_op = async {
+                        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                            Ok("minimax") => {
+                                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
+                            }
+                            _ => {
+                                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
+                            }
+                        }
+                    };
+                    match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                        Ok(Ok(content)) => {
+                            generated_response = content;
+                            break;
+                        },
+                        _ => {
+                            attempts += 1;
+                            if attempts == 3 {
+                                let _ = self.orchestrator.execute_action(
+                                    DepartmentType::CustomerSuccess,
+                                    "AI Agent Paused: Customer Success".to_string(),
+                                    event.tenant_id.clone(),
+                                    ActionRisk::DraftForReview,
+                                    serde_json::json!({"error": "The AI agent responsible for drafting replies is paused because the AI service is unavailable.", "proposed_content": "System is paused. Please manually reply to customer messages."})
+                                ).await;
+                            } else {
+                                tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                            }
+                        }
                     }
-                    _ => {
-                        crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
-                    }
-                };
+                }
 
                 let action_payload = serde_json::json!({
                     "feature_type": "predictive_restock_draft",
@@ -313,18 +339,44 @@ impl Department for CustomerSuccessAgent {
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                .as_deref()
-            {
-                Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
+            let mut generated_response = "Thank you for your message. We will get back to you shortly.".to_string();
+            let mut attempts = 0;
+            while attempts < 3 {
+                let ai_op = async {
+                    match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                        .as_deref()
+                    {
+                        Ok("minimax") => {
+                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                            crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
+                        }
+                        _ => {
+                            crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
+                        }
+                    }
+                };
+                match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                    Ok(Ok(content)) => {
+                        generated_response = content;
+                        break;
+                    },
+                    _ => {
+                        attempts += 1;
+                        if attempts == 3 {
+                            let _ = self.orchestrator.execute_action(
+                                DepartmentType::CustomerSuccess,
+                                "AI Agent Paused: Customer Success".to_string(),
+                                event.tenant_id.clone(),
+                                ActionRisk::DraftForReview,
+                                serde_json::json!({"error": "The AI agent responsible for drafting replies is paused because the AI service is unavailable.", "proposed_content": "System is paused. Please manually reply to customer messages."})
+                            ).await;
+                        } else {
+                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                        }
+                    }
                 }
-                _ => {
-                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
-                }
-            };
+            }
 
             let description = if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
