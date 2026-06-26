@@ -5287,40 +5287,56 @@ async fn ui_dashboard_unified_feed_handler(
             let t_key = format!("ui_triage:{}:mobile:{}", t_bg, mobile_optimized);
             let p_key = format!("ui_priority_tasks:{}:mobile:{}", t_bg, mobile_optimized);
 
-            let (metrics_val, orders, inbox, triage, priority_tasks, approvals, agent_feed) = tokio::join!(
-                async {
+            let db_bg_1 = db_bg.clone(); let t_bg_1 = t_bg.clone(); let m_key_1 = m_key.clone();
+            let db_bg_2 = db_bg.clone(); let t_bg_2 = t_bg.clone(); let o_key_2 = o_key.clone();
+            let db_bg_3 = db_bg.clone(); let t_bg_3 = t_bg.clone(); let i_key_3 = i_key.clone();
+            let db_bg_4 = db_bg.clone(); let t_bg_4 = t_bg.clone(); let t_key_4 = t_key.clone();
+            let db_bg_5 = db_bg.clone(); let t_bg_5 = t_bg.clone(); let p_key_5 = p_key.clone();
+            let db_bg_6 = db_bg.clone(); let t_bg_6 = t_bg.clone();
+            let db_bg_7 = db_bg.clone(); let t_bg_7 = t_bg.clone();
+
+            let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res) = tokio::join!(
+                tokio::spawn(async move {
                     if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&m_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&m_key_1).await { return v; }
                     }
-                    load_ui_dashboard_metrics(&db_bg, &t_bg, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
-                },
-                async {
+                    load_ui_dashboard_metrics(&db_bg_1, &t_bg_1, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
+                }),
+                tokio::spawn(async move {
                     if let Some(c) = UI_ORDERS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&o_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&o_key_2).await { return v; }
                     }
-                    load_ui_orders_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
-                },
-                async {
+                    load_ui_orders_from_db(&db_bg_2, &t_bg_2, mobile_optimized).await.unwrap_or_default()
+                }),
+                tokio::spawn(async move {
                     if let Some(c) = UI_INBOX_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&i_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&i_key_3).await { return v; }
                     }
-                    load_ui_inbox_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
-                },
-                async {
+                    load_ui_inbox_from_db(&db_bg_3, &t_bg_3, mobile_optimized).await.unwrap_or_default()
+                }),
+                tokio::spawn(async move {
                     if let Some(c) = UI_TRIAGE_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&t_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&t_key_4).await { return v; }
                     }
-                    load_ui_triage_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
-                },
-                async {
+                    load_ui_triage_from_db(&db_bg_4, &t_bg_4, mobile_optimized).await.unwrap_or_default()
+                }),
+                tokio::spawn(async move {
                     if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&p_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&p_key_5).await { return v; }
                     }
-                    load_ui_priority_tasks_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
-                },
-                async { load_ui_agent_approvals_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default() },
-                async { load_ui_agent_feed_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default() }
+                    load_ui_priority_tasks_from_db(&db_bg_5, &t_bg_5, mobile_optimized).await.unwrap_or_default()
+                }),
+                tokio::spawn(async move { load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default() }),
+                tokio::spawn(async move { load_ui_agent_feed_from_db(&db_bg_7, &t_bg_7, mobile_optimized).await.unwrap_or_default() })
             );
+
+            let metrics_val = metrics_res.unwrap_or_default();
+            let orders = orders_res.unwrap_or_default();
+            let inbox = inbox_res.unwrap_or_default();
+            let triage = triage_res.unwrap_or_default();
+            let priority_tasks = priority_tasks_res.unwrap_or_default();
+            let approvals = approvals_res.unwrap_or_default();
+            let agent_feed = agent_feed_res.unwrap_or_default();
 
             let result = serde_json::json!({
                 "metrics": metrics_val,
@@ -5352,59 +5368,86 @@ async fn ui_dashboard_unified_feed_handler(
     let t_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
     let p_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
 
-    let (metrics_val, orders, inbox, triage, priority_tasks, approvals, agent_feed, supply_res) = tokio::join!(
-        async {
+    let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res, supply_res) = tokio::join!(
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&m_key).await { return v; }
+            let m_key_clone = m_key.clone();
+            async move {
+                if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&m_key_clone).await { return v; }
+                }
+                load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
             }
-            load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_ORDERS_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&o_key).await { return v; }
+            let o_key_clone = o_key.clone();
+            async move {
+                if let Some(c) = UI_ORDERS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&o_key_clone).await { return v; }
+                }
+                load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
             }
-            load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_INBOX_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&i_key).await { return v; }
+            let i_key_clone = i_key.clone();
+            async move {
+                if let Some(c) = UI_INBOX_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&i_key_clone).await { return v; }
+                }
+                load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
             }
-            load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_TRIAGE_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&t_key).await { return v; }
+            let t_key_clone = t_key.clone();
+            async move {
+                if let Some(c) = UI_TRIAGE_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&t_key_clone).await { return v; }
+                }
+                load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
             }
-            load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&p_key).await { return v; }
+            let p_key_clone = p_key.clone();
+            async move {
+                if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&p_key_clone).await { return v; }
+                }
+                load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
             }
-            load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+            async move {
+                load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            }
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
+            async move {
+                load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            }
+        }),
         supply_future
     );
+
+    let metrics_val = metrics_res.unwrap_or_default();
+    let orders = orders_res.unwrap_or_default();
+    let inbox = inbox_res.unwrap_or_default();
+    let triage = triage_res.unwrap_or_default();
+    let priority_tasks = priority_tasks_res.unwrap_or_default();
+    let approvals = approvals_res.unwrap_or_default();
+    let agent_feed = agent_feed_res.unwrap_or_default();
 
     let supply_val = supply_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
 
