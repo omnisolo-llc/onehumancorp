@@ -178,7 +178,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
               payload: {
                  entity_id: item.product.id,
                  data: {
-                    pn_counter_n_increment: item.quantity
+                    pn_counter_n_increment: -item.quantity
                  }
               }
             };
@@ -281,7 +281,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
               payload: {
                  entity_id: item.product.id,
                  data: {
-                    pn_counter_n_increment: item.quantity
+                    pn_counter_n_increment: -item.quantity
                  }
               }
             };
