@@ -383,9 +383,9 @@ const INVENTORY_LOCK_TTL: Duration = Duration::from_secs(15 * 60);
 const INVENTORY_CAPACITY_LOCK_TTL: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct SoftLockReceipt {
-    key: String,
-    owner: String,
+pub struct SoftLockReceipt {
+    pub key: String,
+    pub owner: String,
 }
 
 #[derive(Debug)]
@@ -451,7 +451,7 @@ impl LocalBookingSoftLockStore {
 }
 
 #[derive(Clone)]
-struct BookingSoftLockStore {
+pub struct BookingSoftLockStore {
     redis_client: Option<redis::Client>,
     local: Arc<LocalBookingSoftLockStore>,
 }
