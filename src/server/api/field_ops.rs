@@ -13,7 +13,7 @@ pub struct FieldOpsState {
     pub pool: PgPool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Appointment {
     pub id: String,
     pub customer_id: String,

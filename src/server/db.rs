@@ -1105,6 +1105,29 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+
+                    CREATE TABLE IF NOT EXISTS service_routes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        date TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS route_stops (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        service_route_id TEXT NOT NULL,
+                        appointment_id TEXT,
+                        sequence_order INTEGER NOT NULL,
+                        status TEXT NOT NULL,
+                        estimated_arrival TIMESTAMP,
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS quotes (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
