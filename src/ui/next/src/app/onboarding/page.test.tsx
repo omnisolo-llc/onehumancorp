@@ -1005,7 +1005,6 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText('Please tell us what you sell.')).toBeInTheDocument();
     });
   });
-});
 
   it('renders error banner with premium macOS aesthetic on API failure', async () => {
     const user = userEvent.setup();
@@ -1031,23 +1030,15 @@ describe('OnboardingWizard', () => {
       </TooltipProvider>
     );
 
-
-
-
-
-    // Wait for the chat to render
+    // Wait for the setup to render
     await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Skip setup' })).toBeInTheDocument();
     });
-
-
-
 
     const skipBtn = screen.getByRole('button', { name: 'Skip setup' });
     await user.click(skipBtn);
 
     // We verify the route got skipped or completed properly. The error banner is fully tested by E2E test suite.
     // The previous tests were skipping over the start logic without admin fields initialized.
-
-
   });
+});
