@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ohc.offline_sync;
+
+message SyncMutation {
+    string id = 1;
+    string table_name = 2;
+    string operation = 3; // INSERT, UPDATE, DELETE
+    string payload_json = 4;
+    int64 timestamp = 5;
+    string idempotency_key = 6;
+}
+
+message SyncPushRequest {
+    repeated SyncMutation mutations = 1;
+}
+
+message SyncPushResponse {
+    repeated string acked_ids = 1;
+    repeated string failed_ids = 2;
+}
+
+service OfflineSyncService {
+    rpc PushMutations(SyncPushRequest) returns (SyncPushResponse);
+}
