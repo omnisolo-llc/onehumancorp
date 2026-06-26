@@ -95,7 +95,7 @@ mod tests {
         "ok"
     }
 
-    fn setup_router(multitenant: bool) -> Router {
+    fn setup_router(_multitenant: bool) -> Router {
         Router::new()
             .route("/api/public/test", get(dummy_handler))
             .route("/api/v1/auth/test", get(dummy_handler))
@@ -175,8 +175,11 @@ mod tests {
             organization_id: Some("tenant_1".to_string()),
             exp: 10000000000,
             iat: 0,
+            session_id: Some("1".to_string()),
+            roles: vec![],
+            username: "test@example.com".to_string(),
+            jti: "a".to_string(),
             email: "test@example.com".to_string(),
-            name: "Test".to_string(),
         });
 
         let response = app.oneshot(req).await.unwrap();
