@@ -8,21 +8,39 @@ test.describe('Onboarding Flow', () => {
     await page.goto('/onboarding');
     await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
 
-    // Step 1: Tell Us About Your Business
-    await expect(page.locator('h1')).toHaveText(/Tell Us About Your Business|What do you do\?/i);
-    await page.fill('input[placeholder="e.g. Maya\'s Cakes"]', 'Test Business');
-    await page.fill('textarea[placeholder="What do you sell or what service do you provide?"]', 'I sell awesome widgets.');
+    // Initial Screen
+    await expect(page.locator('h2', { hasText: '10-Minute Setup Wizard' })).toBeVisible({ timeout: 15000 });
+    await page.click('button:has-text("Start My Business")');
+
+    // Step 1: Name
+    await expect(page.locator('h2', { hasText: "What's the name of your business?" })).toBeVisible({ timeout: 15000 });
+    await page.fill('input[placeholder="e.g. Maya\'s Custom Cakes"]', 'Test Business');
     await page.click('button:has-text("Next")');
 
-    // Step 2: More details
-    await expect(page.locator('h2')).toHaveText(/Where are you located\?/i);
+    // Step 2: What do you sell
+    await expect(page.locator('h2', { hasText: "What do you sell?" })).toBeVisible({ timeout: 15000 });
+    await page.fill('textarea[placeholder="e.g. I bake custom vegan cakes"]', 'I sell awesome widgets.');
     await page.click('button:has-text("Next")');
 
-    // Step 3: Admin Details & Launch
-    await expect(page.locator('label:has-text("Admin Name")')).toBeVisible({ timeout: 10000 });
-    await page.fill('input[placeholder="Jane Doe"]', 'Test Admin');
+    // Step 3: Location
+    await expect(page.locator('h2', { hasText: "Where are you located?" })).toBeVisible({ timeout: 15000 });
+    await page.fill('input[placeholder="e.g. Portland, OR"]', 'Austin, TX');
+    await page.click('button:has-text("Next")');
+
+    // Step 4: Target Audience
+    await expect(page.locator('h2', { hasText: "Who is your target audience?" })).toBeVisible({ timeout: 15000 });
+    await page.fill('input[placeholder="e.g. Local families, Tech startups"]', 'Tech startups');
+    await page.click('button:has-text("Next")');
+
+    // Step 5: Review Details
+    await expect(page.locator('h2', { hasText: "Review Details" })).toBeVisible({ timeout: 15000 });
+    await page.click('button:has-text("Continue")');
+
+    // Step 6: Style & Team
+    await expect(page.locator('h2', { hasText: "Style & Team" })).toBeVisible({ timeout: 15000 });
+    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Test Admin');
     await page.fill('input[placeholder="you@example.com"]', 'admin@test-business.com');
-    await page.fill('input[type="password"]', 'Password123');
+    await page.fill('input[placeholder="••••••••"]', 'Password123!');
 
     // Submit
     const publishButton = page.locator('button:has-text("Approve & Publish")');
