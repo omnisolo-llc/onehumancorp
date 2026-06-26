@@ -630,13 +630,14 @@ export default function OnboardingWizard() {
           ></div>
         </div>
 
-        <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar">
-          {error && (
-            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-4 text-sm animate-shake">
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="mx-6 mt-4 z-10 bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-md border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <p className="flex-1">{error}</p>
+          </div>
+        )}
 
+        <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar relative">
           {step === -2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
