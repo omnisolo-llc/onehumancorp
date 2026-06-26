@@ -1632,8 +1632,8 @@ initWalkthrough();
         if (generalMutations.length > 0) {
             try {
                 const deltas = generalMutations.map(m => ({
-                    id: crypto.randomUUID(),
-                    entity_id: m.product_id || m.transaction_id || "general",
+                    id: m.id || crypto.randomUUID(),
+                    entity_id: (m.payload && m.payload.entity_id) ? m.payload.entity_id : (m.product_id || m.transaction_id || "general"),
                     data: JSON.stringify(m),
                     updated_at: new Date().toISOString()
                 }));
