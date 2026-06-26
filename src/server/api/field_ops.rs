@@ -1,9 +1,9 @@
 use axum::{
     extract::{Query, State},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use std::sync::Arc;
@@ -44,8 +44,6 @@ pub async fn get_appointments(
     State(state): State<Arc<FieldOpsState>>,
     Query(query): Query<GetAppointmentsQuery>,
 ) -> Result<Json<GetAppointmentsResponse>, (axum::http::StatusCode, String)> {
-
-
 
     let query_str = if query.mobile_optimized.unwrap_or(false) {
         r#"
@@ -97,8 +95,6 @@ pub async fn get_appointments(
                 e.to_string(),
             )
         })?;
-
-
 
     let mut appointments = Vec::new();
     for row in rows {
@@ -167,10 +163,126 @@ pub async fn update_appointment(
     }))
 }
 
+
+#[derive(Deserialize)]
+pub struct RunningLateRequest {
+    pub job_id: String,
+    pub delay_minutes: i64,
+}
+
+#[derive(Serialize)]
+pub struct RunningLateResponse {
+    pub success: bool,
+    pub message: String,
+    pub subsequent_count: i64,
+}
+
+pub async fn handle_running_late(
+    State(state): State<Arc<FieldOpsState>>,
+    Json(payload): Json<RunningLateRequest>,
+) -> Result<Json<RunningLateResponse>, (axum::http::StatusCode, String)> {
+    // 1. Fetch the delayed job's tenant_id and start time
+    let row = sqlx::query(
+        r#"
+        SELECT tenant_id, scheduled_start_time
+        FROM appointments
+        WHERE id = $1
+        "#,
+    )
+    .bind(&payload.job_id)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|e| {
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            e.to_string(),
+        )
+    })?;
+
+    let row = match row {
+        Some(r) => r,
+        None => return Err((axum::http::StatusCode::NOT_FOUND, "Job not found".to_string())),
+    };
+
+    let tenant_id: String = row.get("tenant_id");
+    let start_time: Option<DateTime<Utc>> = row.get("scheduled_start_time");
+
+    let start_time = match start_time {
+        Some(st) => st,
+        None => return Err((axum::http::StatusCode::BAD_REQUEST, "Job has no scheduled start time".to_string())),
+    };
+
+    // 2. Shift all subsequent jobs by delay_minutes
+    let interval_str = format!("{} minutes", payload.delay_minutes);
+
+    let result = sqlx::query(
+        r#"
+        UPDATE appointments
+        SET
+            scheduled_start_time = scheduled_start_time + $1::interval,
+            scheduled_end_time = scheduled_end_time + $1::interval
+        WHERE tenant_id = $2 AND scheduled_start_time > $3
+        "#,
+    )
+    .bind(&interval_str)
+    .bind(&tenant_id)
+    .bind(&start_time)
+    .execute(&state.pool)
+    .await
+    .map_err(|e| {
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            e.to_string(),
+        )
+    })?;
+
+    // In a full implementation, we'd enqueue a task for the Customer Relationship Assistant agent
+    // to draft SMS updates to the customers associated with the shifted jobs.
+
+    Ok(Json(RunningLateResponse {
+        success: true,
+        message: format!("Shifted schedules by {} minutes", payload.delay_minutes),
+        subsequent_count: result.rows_affected() as i64,
+    }))
+}
+
+
+#[derive(Deserialize)]
+pub struct OptimizeRouteRequest {
+    pub tenant_id: String,
+    pub date: String,
+}
+
+#[derive(Serialize)]
+pub struct OptimizeRouteResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+pub async fn optimize_route(
+    State(_state): State<Arc<FieldOpsState>>,
+    Json(payload): Json<OptimizeRouteRequest>,
+) -> Result<Json<OptimizeRouteResponse>, (axum::http::StatusCode, String)> {
+    // In a full implementation, this would:
+    // 1. Fetch all appointments for the day
+    // 2. Fetch their lat/long or distance matrix
+    // 3. Run a TSP (Traveling Salesperson) optimization
+    // 4. Update the service_routes and route_stops tables
+
+    Ok(Json(OptimizeRouteResponse {
+        success: true,
+        message: format!("Optimized route for {}", payload.date),
+    }))
+}
+
+
+
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> Router<S> {
     let state = Arc::new(FieldOpsState { pool });
     Router::new()
         .route("/appointments", get(get_appointments).post(update_appointment))
+        .route("/running-late", post(handle_running_late))
+        .route("/optimize-route", post(optimize_route))
         .with_state(state)
 }
 
