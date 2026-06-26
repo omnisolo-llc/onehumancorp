@@ -73,7 +73,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:sync_gateway.rs",
     "//src/server/api:offline_sync.rs",
     "//src/server/api:sync.rs",
-        "//src/server/api:pos.rs",
+    "//src/server/api:pos.rs",
     "//src/server/api:staff_mesh.rs",
     "//src/server/api:subscription.rs",
     "//src/server/api:telemetry.rs",
@@ -261,9 +261,6 @@ SERVER_RS_SRCS = [
     "//src/server/services/growth:quota.rs",
     "//src/server/services/growth:referral_api.rs",
     "//src/server/services/growth:referrals.rs",
-
-
-
     "//src/server/services/growth:service.rs",
     "//src/server/services/growth:viral_loop.rs",
     "//src/server/services/growth:event_listener.rs",
@@ -347,6 +344,8 @@ SERVER_RS_SRCS = [
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",
     "//src/server/voice:router.rs",
+    "//src/server/workers:ai_job_queue.rs",
+    "//src/server/workers:ai_job_queue_test.rs",
 ]
 
 # build_script removed as protos are now built with Bazel rules
