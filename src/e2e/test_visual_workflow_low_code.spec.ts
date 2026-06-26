@@ -1,8 +1,26 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Visual/low-code orchestration', () => {
-  test('user can visually construct a workflow by connecting blocks and execute it', async ({ page }) => {
+  const initFetchMock = async (page) => {
+    await page.addInitScript(() => {
+        window.fetch = async (url, options) => {
+            if (url.includes('/api/workflow/run')) {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        success: true,
+                        result: JSON.stringify({ nodes: [ { type: 'Action', label: 'Wait for Approval', id: 'trigger_123' } ] })
+                    })
+                };
+            }
+            return { ok: true, json: async () => ({}) };
+        };
+    });
     await page.goto('file:///app/src/ui/tauri/src/ui/workflow-builder.html');
+  };
+
+  test('user can visually construct a workflow by connecting blocks and execute it', async ({ page }) => {
+    await initFetchMock(page);
 
     // The visual builder should be visible
     await expect(page.getByTestId('visual-workflow-builder')).toBeVisible();
@@ -31,7 +49,8 @@ test.describe('Visual/low-code orchestration', () => {
     await expect(page.getByTestId('canvas-block-4')).toContainText('Draft Reply');
 
     // Remove the 4th block (index 4)
-    await page.getByTestId('canvas-block-4').getByRole('button', { name: 'Remove' }).click();
+    await page.getByTestId('canvas-block-4').hover();
+    await page.getByTestId('canvas-block-4').locator('button').click();
     await expect(page.getByTestId('canvas-block-4')).not.toBeVisible();
 
     // Create & Run
@@ -47,11 +66,11 @@ test.describe('Visual/low-code orchestration', () => {
   });
 
   test('visual workflow builder prevents saving without name or blocks', async ({ page }) => {
-    await page.goto('file:///app/src/ui/tauri/src/ui/workflow-builder.html');
+    await initFetchMock(page);
 
     await expect(page.locator('#btn-create-run-workflow')).toBeDisabled();
 
-    await page.getByRole('textbox').fill('Test Workflow');
+    await page.locator('#visual-workflow-name').fill('Test Workflow');
     await expect(page.locator('#btn-create-run-workflow')).toBeDisabled();
 
     await page.getByTestId('palette-block-trigger_message').click();
@@ -59,7 +78,7 @@ test.describe('Visual/low-code orchestration', () => {
   });
 
   test('visual workflow blocks correctly display their types visually', async ({ page }) => {
-    await page.goto('file:///app/src/ui/tauri/src/ui/workflow-builder.html');
+    await initFetchMock(page);
 
     await page.getByTestId('palette-block-trigger_message').click();
     await page.getByTestId('palette-block-action_research').click();
@@ -74,21 +93,22 @@ test.describe('Visual/low-code orchestration', () => {
   });
 
   test('visual builder canvas is empty initially', async ({ page }) => {
-    await page.goto('file:///app/src/ui/tauri/src/ui/workflow-builder.html');
+    await initFetchMock(page);
 
     await expect(page.getByText('Click blocks on the left to add them to your workflow', { exact: true })).toBeVisible();
     await expect(page.getByTestId('canvas-block-0')).not.toBeVisible();
   });
 
   test('removing all blocks disables save and shows empty state', async ({ page }) => {
-    await page.goto('file:///app/src/ui/tauri/src/ui/workflow-builder.html');
+    await initFetchMock(page);
 
-    await page.getByRole('textbox').fill('Temp Workflow');
+    await page.locator('#visual-workflow-name').fill('Temp Workflow');
 
     await page.getByTestId('palette-block-trigger_message').click();
     await expect(page.locator('#btn-create-run-workflow')).toBeEnabled();
 
-    await page.getByTestId('canvas-block-0').getByRole('button', { name: 'Remove' }).click();
+    await page.getByTestId('canvas-block-0').hover();
+    await page.getByTestId('canvas-block-0').locator('button').click();
 
     await expect(page.getByText('Click blocks on the left to add them to your workflow', { exact: true })).toBeVisible();
     await expect(page.locator('#btn-create-run-workflow')).toBeDisabled();
