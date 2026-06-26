@@ -65,7 +65,7 @@
         margin-top: 0;
         color: #1d1d1f;
         font-size: 24px;
-        font-weight: 700;
+        font-weight: 800;
       }
       p {
         color: #555555;
@@ -621,9 +621,9 @@
       select:focus,
       textarea:focus {
         outline: none;
-        border-color: #0071e3;
-        background: rgba(255, 255, 255, 0.65);
-        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+        border-color: #0066ff;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.5);
       }
 
       .work-context-cards {
@@ -902,8 +902,9 @@
         input:focus,
         select:focus,
         textarea:focus {
-          border-color: #0071e3;
-          background: rgba(22, 22, 26, 0.7);
+          border-color: #0066ff;
+          background: rgba(22, 22, 26, 0.9);
+          box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.5);
         }
         .radio-option {
           min-height: 44px;
@@ -1255,10 +1256,7 @@
               transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
               box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
             "
-            onclick="
-              document.getElementById('instant-bio').value = '';
-              goToStep('step-instant');
-            "
+            onclick="goToStep('step-instant');"
           >
             Instant Build
           </button>
@@ -1311,6 +1309,13 @@
         ></div>
 
         <div class="btn-group" style="margin-top: 24px">
+          <button
+            type="button"
+            class="btn-secondary"
+            onclick="goToStep('step-initial')"
+          >
+            Back
+          </button>
           <button
             id="generate-storefront-btn"
             data-testid="generate-storefront-btn"
@@ -2482,6 +2487,8 @@
         tagline: document.getElementById("business-tagline"),
         assistantName: document.getElementById("assistant-name"),
         assistantTone: document.getElementById("assistant-tone"),
+        instantBio: document.getElementById("instant-bio"),
+        instantImageUrl: document.getElementById("instant-image-url"),
         adminEmail: document.getElementById("admin-email"),
         adminPassword: document.getElementById("admin-password"),
         firstOffer: document.getElementById("first-offer"),
@@ -2729,6 +2736,8 @@
         if (state.domain) inputs.domainName.value = state.domain;
         if (state.instantBio && inputs.instantBio) inputs.instantBio.value = state.instantBio;
         if (state.instantImageUrl && inputs.instantImageUrl) inputs.instantImageUrl.value = state.instantImageUrl;
+        if (state.instantBio && inputs.instantBio) inputs.instantBio.value = state.instantBio;
+        if (state.instantImageUrl && inputs.instantImageUrl) inputs.instantImageUrl.value = state.instantImageUrl;
         if (state.chatHistory) {
           chatHistory = state.chatHistory;
           const chatMessagesEl = document.getElementById("chat-messages");
@@ -2803,6 +2812,8 @@
         state.first_offer = inputs.firstOffer.value;
         state.templateSelection = inputs.templateSelection.value;
         if (inputs.domainName) state.domain = inputs.domainName.value;
+        if (inputs.instantBio) state.instantBio = inputs.instantBio.value;
+        if (inputs.instantImageUrl) state.instantImageUrl = inputs.instantImageUrl.value;
         if (inputs.instantBio) state.instantBio = inputs.instantBio.value;
         if (inputs.instantImageUrl) state.instantImageUrl = inputs.instantImageUrl.value;
         state.chatHistory = chatHistory;
@@ -3150,7 +3161,7 @@
           stepId === "step-instant" &&
           document.getElementById("instant-bio")
         ) {
-          document.getElementById("instant-bio").value = "";
+
           const generateStorefrontBtn = document.getElementById(
             "generate-storefront-btn",
           );
