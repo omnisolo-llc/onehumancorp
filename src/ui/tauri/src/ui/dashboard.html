@@ -1813,7 +1813,7 @@
           // If items use 'status' (ui/triage) instead of 'lifecycle_state' (agent-feed)
           const proposals = items.filter(i => i.status !== 'resolved' && i.status !== 'dismissed' && i.lifecycle_state !== 'APPROVED' && i.lifecycle_state !== 'DISMISSED');
           if (proposals.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now</div>';
             return;
           }
           triageQueue.innerHTML = proposals.map(item => {

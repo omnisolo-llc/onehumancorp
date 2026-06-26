@@ -723,12 +723,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             )}
             {!loading && items.length === 0 && (
               <div
-                className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center"
+                className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] shadow-sm opacity-90 text-center triage-card empty"
                 data-testid="triage-feed-empty"
               >
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
-                  All caught up!
+                  No items need your attention right now
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   Your agents are currently monitoring the business. While
@@ -766,7 +766,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
-              <div className="w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center">
+              <div className="w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] text-center triage-card empty">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   No recent activity found.
                 </p>
