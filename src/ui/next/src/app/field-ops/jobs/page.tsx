@@ -211,7 +211,7 @@ export default function FieldOpsJobsPage() {
   }
 
   return (
-    <div className="p-4 bg-gray-50 min-h-screen">
+    <div className="p-4 bg-[#F5F5F7] min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold font-outfit text-gray-900">
           Today's Route
@@ -224,7 +224,7 @@ export default function FieldOpsJobsPage() {
       </div>
 
       {delayAction && (
-        <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl shadow-sm relative">
+        <div className="mb-6 p-4 bg-orange-50/80 backdrop-blur-[30px] saturate-[210%] border border-orange-200/50 rounded-[16px] shadow-sm relative">
           <button
             onClick={() => setDelayAction(null)}
             className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-1"
@@ -260,7 +260,7 @@ export default function FieldOpsJobsPage() {
       )}
 
       {agentSuggestion && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl shadow-sm relative">
+        <div className="mb-6 p-4 bg-blue-50/80 backdrop-blur-[30px] saturate-[210%] border border-blue-200/50 rounded-[16px] shadow-sm relative">
           <button
             onClick={() => setAgentSuggestion(null)}
             className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-1"
@@ -298,7 +298,7 @@ export default function FieldOpsJobsPage() {
         {jobs.map((job) => (
           <div
             key={job.id}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+            className="bg-white/65 backdrop-blur-[30px] saturate-[210%] rounded-[16px] shadow-sm border border-white/40 overflow-hidden"
           >
             <div className="p-5 border-b border-gray-100 bg-gray-50/50">
               <div className="flex justify-between items-start mb-2">
