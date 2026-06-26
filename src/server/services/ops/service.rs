@@ -347,6 +347,9 @@ impl OpsService for MyOpsService {
         Ok(Response::new(updated.unwrap()))
     }
 
+
+
+
     async fn scale(
         &self,
         request: Request<ScaleRequest>,
@@ -410,6 +413,9 @@ impl OpsService for MyOpsService {
         }))
     }
 
+
+
+
     type StreamScaleEventsStream = Pin<Box<dyn Stream<Item = Result<ScaleEvent, Status>> + Send + 'static>>;
 
     async fn stream_scale_events(
@@ -427,6 +433,9 @@ impl OpsService for MyOpsService {
         let stream = tokio_stream::iter(events).map(|e| Ok(e));
         Ok(Response::new(Box::pin(stream) as Self::StreamScaleEventsStream))
     }
+
+
+
 
     async fn prune_missions(
         &self,
@@ -447,6 +456,9 @@ impl OpsService for MyOpsService {
             Err(e) => Err(Status::internal(format!("failed to prune missions: {}", e))),
         }
     }
+
+
+
 }
 #[cfg(test)]
 mod tests {
