@@ -300,7 +300,7 @@ describe('OnboardingWizard', () => {
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
+        return Promise.resolve({ ok: false, status: 500, json: async () => ({ error: "Failed to process business details" }), clone: function() { return this; } });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: { bio: "Draft Bio" } }) });
     });
@@ -589,7 +589,7 @@ describe('OnboardingWizard', () => {
       if (url === '/api/onboarding/draft') {
         fetchCalls++;
         if (fetchCalls < 2) {
-          return Promise.resolve({ ok: false, status: 500 });
+          return Promise.resolve({ ok: false, status: 500, json: async () => ({}), clone: function() { return this; } });
         }
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
@@ -605,7 +605,7 @@ describe('OnboardingWizard', () => {
       await user.click(screen.getByRole('button', { name: 'Start My Business' }));
     }
 
-    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
+    const saveDraftButton = await screen.findByRole('button', { name: /Save Draft/i });
     await user.click(saveDraftButton);
 
     await waitFor(() => {
@@ -704,7 +704,7 @@ describe('OnboardingWizard', () => {
       await user.click(screen.getByRole('button', { name: 'Start My Business' }));
     }
 
-    const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
+    const saveDraftButton = await screen.findByRole('button', { name: /Save Draft/i });
     expect(saveDraftButton).toBeInTheDocument();
 
     await user.click(saveDraftButton);
