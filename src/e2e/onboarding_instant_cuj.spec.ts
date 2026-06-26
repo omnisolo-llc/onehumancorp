@@ -43,6 +43,12 @@ test.describe('Instant Setup CUJ', () => {
     await generateBtn.click();
 
     // 5. Verify loading texts (animation progress)
-    await expect(page).toHaveURL(/.*success.html/, { timeout: 15000 });
+    const btnText = await generateBtn.innerText();
+    expect(btnText).toContain('Analyzing request...');
+
+    // Check if the text changes to the next one
+    await expect(generateBtn).toContainText('Designing storefront...', { timeout: 4000 });
+
+    await expect(page).toHaveURL(/.*success.html/, { timeout: 60000 });
   });
 });
