@@ -1072,6 +1072,8 @@ async fn handle_send_receipt(
 #[derive(Debug, serde::Deserialize)]
 pub struct ZeroClickGenerateRequest {
     pub prompt: String,
+    #[serde(default)]
+    pub image_url: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -2491,6 +2493,7 @@ mod tests {
 
         let req = ZeroClickGenerateRequest {
             prompt: "I sell coffee".to_string(),
+            image_url: None,
         };
 
         // Note: the actual OnboardingAgent requires external API calls, but we can verify
@@ -2727,6 +2730,7 @@ mod tests {
 
         let req = ZeroClickGenerateRequest {
             prompt: "I am a home baker selling cakes.".to_string(),
+            image_url: None,
         };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
@@ -3258,7 +3262,12 @@ pub async fn handle_zero_click_generate(
         state.hub.clone()
     );
 
-    let intake_data = agent.process_intake(&req.prompt).await.map_err(|e| {
+    let mut combined_prompt = req.prompt.clone();
+    if let Some(image_url) = &req.image_url {
+        combined_prompt.push_str(&format!("\nImage provided: {}", image_url));
+    }
+
+    let intake_data = agent.process_intake(&combined_prompt).await.map_err(|e| {
         tracing::error!("Intake error: {}", e);
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
