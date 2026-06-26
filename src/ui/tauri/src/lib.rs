@@ -75,6 +75,8 @@ struct StartOnboardingRequest {
     target_audience: Option<String>,
     ai_agents: Option<Vec<String>>,
     ai_auto_respond: Option<bool>,
+    deposit_percentage: Option<i32>,
+    lead_time_days: Option<i32>,
 }
 
 fn onboarding_state_path() -> std::path::PathBuf {
