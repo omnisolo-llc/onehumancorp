@@ -646,6 +646,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_parse_structured_output_missing_data_parameter() {
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"wrong_key": {"result": "missing_data"}}),
+                ), // Missing "data" param
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "recovered_missing_data"}}),
+                ),
+            ]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "recovered_missing_data");
+    }
+
+    #[tokio::test]
     async fn test_parse_structured_output_plain_markdown_wrapper() {
         let client = Arc::new(MockLlmClient {
             responses: Mutex::new(vec![
@@ -981,14 +1004,16 @@ mod tests_clamped {
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, failing_client.clone() as Arc<dyn LlmClientForParser>);
 
+        // Provide a custom retry strategy with zero backoff to speed up the test
+        struct NoBackoffStrategy;
+        impl RetryStrategy for NoBackoffStrategy {
+            fn next_backoff(&self, _attempt: usize) -> std::time::Duration {
+                std::time::Duration::from_millis(1)
+            }
+        }
+
         // Pass max_retries = 10, but it should be clamped to 2
-        let handle = tokio::spawn(async move {
-            retry_parser.parse_with_prompt(req, 10).await
-        });
-
-        tokio::time::sleep(std::time::Duration::from_millis(30000)).await;
-
-        let result = handle.await.expect("Expected TestOutput in test");
+        let result = retry_parser.parse_with_prompt_and_strategy(req, 10, &NoBackoffStrategy).await;
 
         assert!(result.is_err());
         match result {
