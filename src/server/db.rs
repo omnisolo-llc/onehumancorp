@@ -90,6 +90,13 @@ pub struct SearchResult {
 }
 
 
+fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, sqlx::Error> {
+    chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+        .or_else(|_| chrono::DateTime::parse_from_rfc3339(s).map(|d| d.with_timezone(&chrono::Utc)))
+        .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+}
+
 impl DB {
     pub async fn query_available_slots(&self, tenant_id: &str, service_id: &str) -> Result<Vec<AvailableSlot>, sqlx::Error> {
         match &self.store {
@@ -136,18 +143,12 @@ impl DB {
                     // Sqlite might return string or integer for DateTime depending on the setup.
                     // To handle safely:
                     let start_time = match row.try_get::<String, _>("start_time") {
-                        Ok(s) => chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
-                            .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
-                            .or_else(|_| chrono::DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&chrono::Utc)))
-                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+                        Ok(s) => parse_sqlite_datetime(&s)?,
                         Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("start_time"),
                     };
 
                     let end_time = match row.try_get::<String, _>("end_time") {
-                        Ok(s) => chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
-                            .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
-                            .or_else(|_| chrono::DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&chrono::Utc)))
-                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+                        Ok(s) => parse_sqlite_datetime(&s)?,
                         Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("end_time"),
                     };
 
@@ -238,7 +239,7 @@ impl DB {
                                         }
                                     }
                                 } else {
-                                    ::server_telemetry::record_error_signal("[infra] Failed to securely create DB directory");
+                                    ::server_telemetry::record_error_signal("[bug] Failed to securely create DB directory");
                                     tracing::error!("Failed to securely create DB directory: {}", e);
                                     return Err(e.into());
                                 }
@@ -247,7 +248,7 @@ impl DB {
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                ::server_telemetry::record_error_signal("[infra] Failed to create DB directory");
+                                ::server_telemetry::record_error_signal("[bug] Failed to create DB directory");
                                 tracing::error!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }
@@ -641,15 +642,17 @@ impl DB {
         let timeout_duration = std::time::Duration::from_secs(60);
 
         loop {
-            if start_time.elapsed() > timeout_duration {
-                return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
+            // Note: Since tokio::time::Instant interacts with paused time during tests,
+            // we will evaluate whether the time has eclipsed the timeout here.
+            if start_time.elapsed() >= timeout_duration {
+                return Err(E::from(format!("Database operation '{}' timed out", operation)));
             }
             let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
             match timeout_res {
                 Err(_) => {
-                    return Err(E::from(format!("Database operation '{}' timed out after 60 seconds", operation)));
+                    return Err(E::from(format!("Database operation '{}' timed out", operation)));
                 }
                 Ok(Ok(val)) => return Ok(val),
                 Ok(Err(err)) => {
@@ -1800,6 +1803,15 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_sqlite_datetime() {
+        let dt1 = parse_sqlite_datetime("2023-10-25 14:30:00").unwrap();
+        assert_eq!(dt1.to_rfc3339(), "2023-10-25T14:30:00+00:00");
+
+        let dt2 = parse_sqlite_datetime("2023-10-25T14:30:00Z").unwrap();
+        assert_eq!(dt2.to_rfc3339(), "2023-10-25T14:30:00+00:00");
+    }
 
     #[test]
     fn test_db_new_fails_without_server() {
