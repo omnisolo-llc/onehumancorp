@@ -57,6 +57,8 @@
         .glassmorphism {
           border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
       }
@@ -3212,8 +3214,9 @@
           const generateStorefrontBtn = document.getElementById(
             "generate-storefront-btn",
           );
-          if (generateStorefrontBtn) {
-            generateStorefrontBtn.disabled = document.getElementById("instant-bio").value.trim().length === 0;
+          const instantBioEl = document.getElementById("instant-bio");
+          if (generateStorefrontBtn && instantBioEl) {
+            generateStorefrontBtn.disabled = instantBioEl.value.trim().length === 0;
           }
         }
         if (stepId === "step-categories") {
@@ -3306,7 +3309,7 @@
       if (instantBioInputEl) {
         // Initialize disabled state
         if (generateStorefrontBtn && !instantBioInputEl.value.trim()) {
-          generateStorefrontBtn.disabled = true;
+          generateStorefrontBtn.disabled = instantBioInputEl.value.trim().length === 0;
         }
         instantBioInputEl.addEventListener("input", () => {
           instantBioInputEl.classList.remove("invalid-input");
@@ -3317,7 +3320,7 @@
             instantErrorEl.style.borderColor = "";
           }
           if (generateStorefrontBtn) {
-            generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
+            generateStorefrontBtn.disabled = instantBioInputEl.value.trim().length === 0;
           }
         });
       }
