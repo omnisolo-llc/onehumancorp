@@ -63,7 +63,9 @@ describe('OnboardingWizard', () => {
 
   it('Step 1: Renders initial screen correctly', async () => {
     await renderOnboardingWizard();
-
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
     expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).not.toBeDisabled();
@@ -90,6 +92,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     // Chat Step 1 - Use Enter Key
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -118,6 +123,9 @@ describe('OnboardingWizard', () => {
     const user = userEvent.setup({ delay: null });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     // Chat Step 1 - Enter Key with short name
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -196,6 +204,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -295,6 +306,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -355,6 +369,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const launchButton = screen.getByRole('button', { name: /Approve & Publish/i });
 
@@ -386,6 +403,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const nextButton = screen.getByRole('button', { name: /Next/i });
 
@@ -410,6 +430,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     expect(continueButton).not.toBeDisabled(); // Button should not be disabled based on input length, but validation will stop it
@@ -445,6 +468,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
     expect(continueButton).not.toBeDisabled();
@@ -481,6 +507,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
 
@@ -498,6 +527,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     // Verify initial Web Address options
     const subdomainOption = screen.getByText('Free Subdomain');
@@ -537,6 +569,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
@@ -566,6 +601,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
     await user.click(saveDraftButton);
@@ -628,6 +666,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
     await user.type(targetAudienceInput, 'Local families');
@@ -659,6 +700,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const saveDraftButton = screen.getByRole('button', { name: /Save Draft/i });
     expect(saveDraftButton).toBeInTheDocument();
@@ -683,6 +727,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const nameInput = screen.getByPlaceholderText(/e.g. Maya Smith/i);
     const emailInput = screen.getByPlaceholderText(/you@example.com/i);
@@ -742,6 +789,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
@@ -789,6 +839,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     const skipButton = screen.getByRole('button', { name: /Skip setup/i });
     await user.click(skipButton);
@@ -811,6 +864,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
 
     expect(screen.getByText('Style & Team')).toBeInTheDocument();
 
@@ -830,7 +886,9 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
-
+    if (screen.queryByRole('button', { name: 'Start My Business' })) {
+      await user.click(screen.getByRole('button', { name: 'Start My Business' }));
+    }
     expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
 
     // Get all back buttons and take the visible one
