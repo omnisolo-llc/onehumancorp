@@ -12,6 +12,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
         .route("/chat", post(process_chat_handler))
+        .route("/launch-zero-click", post(launch_zero_click_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
@@ -154,6 +155,58 @@ async fn save_draft(
             tracing::error!("Failed to save onboarding draft: {}", e);
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         },
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub struct ZeroClickRequest {
+    pub prompt: String,
+}
+
+async fn launch_zero_click_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<ZeroClickRequest>,
+) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
+    // 1. Process intake from the single prompt
+    let intake_data = match agent.process_intake(&payload.prompt).await {
+        Ok(data) => data,
+        Err(e) => {
+            tracing::error!("Failed to process zero-click intake: {}", e);
+            return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    // 2. Build the StartOnboardingRequest
+    let start_req = StartOnboardingRequest {
+        business_type: intake_data.business_type,
+        company_name: intake_data.business_name.clone(),
+        company_description: payload.prompt.clone(),
+        selling_categories: intake_data.categories,
+        payment_pref: "online".to_string(), // Default
+        admin_email: "admin@example.com".to_string(), // Placeholder or from context
+        website_template: "Modern".to_string(),
+        first_product_name: intake_data.initial_products.first().map(|p| p.name.clone()).unwrap_or_else(|| "Signature Product".to_string()),
+        first_product_price: intake_data.initial_products.first().map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string()),
+        domain_choice: "subdomain".to_string(),
+        admin_name: "Admin".to_string(),
+        admin_password: "password123".to_string(),
+        price_type: "fixed".to_string(),
+        location: intake_data.location.unwrap_or_else(|| "Online".to_string()),
+        target_audience: intake_data.target_audience.unwrap_or_else(|| "Everyone".to_string()),
+        initial_products: vec![],
+        ai_agents: vec!["The Salesperson".to_string(), "The Receptionist".to_string()],
+        ai_auto_respond: true,
+        deposit_percentage: None,
+        lead_time_days: None,
+    };
+
+    // 3. Start Onboarding
+    match agent.start_onboarding(start_req).await {
+        Ok(res) => Ok(Json(res)),
+        Err(e) => {
+            tracing::error!("Failed to start zero-click onboarding: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }
 

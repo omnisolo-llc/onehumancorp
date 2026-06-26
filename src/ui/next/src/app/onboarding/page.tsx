@@ -638,475 +638,70 @@ export default function OnboardingWizard() {
         )}
 
         <div className="p-6 flex-1 flex flex-col overflow-y-auto custom-scrollbar relative">
-          {step === -2 && (
+          {(step === -2 || step === -1 || step === 0 || step === 1) && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">10-Minute Setup Wizard</h2>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 text-center">Tell me about your business...</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-8 leading-relaxed max-w-sm">
-                Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.
+                I'm your AI agent. I'll automatically generate your fully-operational storefront and configure payments in seconds.
               </p>
 
-              <div className="flex flex-col gap-4 w-full">
-                <button
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
-                  onClick={() => { updateState({ step: 1 }); syncStateToBackend({ step: 1 }); }}
-                >
-                  Start My Business
-                </button>
-                <button
-                  type="button"
-                  className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all"
-                  onClick={() => { updateState({ step: -1 }); syncStateToBackend({ step: -1 }); }}
-                >
-                  Instant Build
-                </button>
-                <button
-                  type="button"
-                  className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all"
-                  onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }}
-                >
-                  Conversational Setup
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 0 && (
-            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full">
-              <button onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 text-center">Setup Assistant</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-4 leading-relaxed max-w-sm mx-auto">
-                Talk to our AI to build your business.
-              </p>
-
-              <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
-                <div id="chat-messages" className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4">
-                  {chatMessages.length === 0 && (
-                    <div className="mb-2"><strong>Assistant:</strong> What do you do? (e.g. I bake custom vegan cakes in Austin)</div>
-                  )}
-                  {chatMessages.map((msg, index) => (
-                    <div key={index} className={`mb-2 ${msg.role === 'user' ? 'text-[#0066FF]' : 'text-[#333] dark:text-[#A1A1A6]'}`}>
-                      <strong>{msg.role === 'user' ? 'You' : 'Assistant'}:</strong> {msg.content}
-                      {msg.image_url && <><br /><span className="text-xs text-gray-500 dark:text-gray-400">[Attached Image: {msg.image_url}]</span></>}
-                    </div>
-                  ))}
-                  {isLoading && (
-                    <div className="mb-2 text-[#333] dark:text-[#A1A1A6]">
-                       <span className="flex items-center gap-2">
-                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <strong>Assistant:</strong> Thinking...
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-2 shrink-0">
-                  <input
-                    type="url"
-                    id="chat-image-url"
-                    value={chatImageUrl}
-                    onChange={(e) => setChatImageUrl(e.target.value)}
-                    className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] min-h-[44px]"
-                    placeholder="Image URL (Optional)"
-                    inputMode="url"
-                    autoComplete="url"
-                    enterKeyHint="next"
-                  />
-                  <div className="flex gap-2 w-full">
-                    <button
-                      id="chat-upload-btn"
-                      className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
-                      onClick={() => {
-                        const url = prompt("Enter image URL");
-                        if (url) setChatImageUrl(url);
-                      }}
-                      title="Upload Image"
-                      aria-label="Upload Image"
-                    >
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                      </svg>
-                    </button>
-                    <input
-                      type="text"
-                      id="chat-input"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={(e) => {
-                         if (e.key === 'Enter') handleSendChatMessage();
-                      }}
-                      className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none flex-1 transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] min-h-[44px]"
-                      placeholder="Type a message..."
-                      enterKeyHint="send"
-                    />
-                    <button
-                      id="chat-send-btn"
-                      onClick={handleSendChatMessage}
-                      disabled={isLoading}
-                      className="bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === -1 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-8 leading-relaxed max-w-sm">
-                Our AI will handle the rest in 30 seconds.
-              </p>
-
-              <div className="flex flex-col gap-4 w-full">
+              <div className="flex flex-col gap-4 w-full max-w-lg">
                 <textarea
-                  id="instant-bio"
-                  data-testid="instant-bio"
-                  className={`bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] ${error === "Please tell us about your business." || error ? "border border-[#FF3B30]" : "border border-white/20 focus:border-[#0066FF]"}`}
-                  placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
-                  rows={6}
+                  id="zero-click-prompt"
+                  data-testid="zero-click-prompt"
+                  className={`bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] text-lg leading-relaxed ${error === "Please tell us about your business." || error ? "border border-[#FF3B30]" : "border border-white/20 focus:border-[#0066FF]"}`}
+                  placeholder="e.g. I'm Maya, I sell custom vegan cakes in Austin via Instagram..."
+                  rows={5}
                   style={{ resize: 'none' }}
                   value={bio}
                   onChange={(e) => {
                     updateState({ bio: e.target.value });
-                    if (error) updateState({ error: '' });
+                    if (e.target.value.trim() && error === "Please tell us about your business.") updateState({ error: '' });
                   }}
                 />
 
-                <input
-                  id="instant-image-url"
-                  data-testid="instant-image-url"
-                  type="url"
-                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] min-h-[44px]"
-                  placeholder="Image URL (Optional)"
-                  value={instantImageUrl}
-                  onChange={(e) => updateState({ instantImageUrl: e.target.value })}
-                  inputMode="url"
-                  autoComplete="url"
-                />
+                <button
+                  id="zero-click-launch-btn"
+                  data-testid="zero-click-launch-btn"
+                  onClick={async () => {
+                    if (!bio.trim()) {
+                       updateState({ error: "Please tell us about your business." });
+                       return;
+                    }
+                    updateState({ isLoading: true, step: 4, error: '' });
+                    try {
+                      const backendUrl = (typeof window !== 'undefined' && (window.location.origin.includes('localhost') || window.location.protocol === 'file:')) ? 'http://127.0.0.1:18789' : '';
+                      const res = await fetch(`${backendUrl}/api/onboarding/launch-zero-click`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ prompt: bio })
+                      });
+                      if (!res.ok) throw new Error('Failed to launch business');
+                      const data = await res.json();
 
-                <div className="mt-4">
-                  <button
-                    onClick={handleInstantBuild}
-                    disabled={!bio.trim() || isLoading}
-                    className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
-                  >
-                    Next
-                  </button>
-                </div>
+                      updateState({
+                        startResult: data,
+                        businessName: data.organization_id || 'My Business',
+                        step: 5
+                      });
+                      syncStateToBackend({ step: 5 });
+                    } catch (err: any) {
+                      updateState({ error: err.message || 'Launch failed', step: -2 });
+                    } finally {
+                      updateState({ isLoading: false });
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 flex justify-center items-center gap-2"
+                >
+                  <IconLabel icon="launch">Build & Launch Instantly</IconLabel>
+                </button>
               </div>
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-
-              {chatStep === 1 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
-                  <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
-                      Our AI will instantly generate your storefront, products, and back-office agents.
-                    </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-
-                        autoCapitalize="words"
-                        autoComplete="organization"
-                        value={businessName}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateState({ businessName: val });
-                          if (val.trim().length < 3) { setValidationError('Business Name must be at least 3 characters.'); }
-                          else { setValidationError(''); }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            if (businessName.trim().length < 3) {
-                              setValidationError('Business Name must be at least 3 characters.');
-                              return;
-                            }
-                            setValidationError('');
-                            updateState({ chatStep: 2 }); syncStateToBackend({ chatStep: 2 });
-                          }
-                        }}
-                        placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF]'} min-h-[44px]`}
-                        inputMode="text"
-                        enterKeyHint="next"
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (businessName.trim().length < 3) {
-                          setValidationError('Business Name must be at least 3 characters.');
-                          return;
-                        }
-                        setValidationError('');
-                        updateState({ chatStep: 2 }); syncStateToBackend({ chatStep: 2 });
-                      }}
-                      disabled={false}
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <IconLabel icon="next">Next</IconLabel>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 2 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { updateState({ chatStep: 1 }); syncStateToBackend({ chatStep: 1 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
-                  <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
-                      Tell us a bit about your products or services.
-                    </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <textarea
-                        autoFocus
-
-                        autoCapitalize="sentences"
-                        value={whatYouSell}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          updateState({ whatYouSell: val });
-                          if (!val.trim()) { setValidationError('Please tell us what you sell.'); }
-                          else { setValidationError(''); }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            if (!whatYouSell.trim()) {
-                              setValidationError('Please tell us what you sell.');
-                              return;
-                            }
-                            setValidationError('');
-                            updateState({ chatStep: 3 }); syncStateToBackend({ chatStep: 3 });
-                          }
-                        }}
-                        placeholder="e.g. I bake custom vegan cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (!whatYouSell.trim()) {
-                          setValidationError('Please tell us what you sell.');
-                          return;
-                        }
-                        setValidationError('');
-                        updateState({ chatStep: 3 }); syncStateToBackend({ chatStep: 3 });
-                      }}
-                      disabled={false}
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <IconLabel icon="next">Next</IconLabel>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 3 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { updateState({ chatStep: 2 }); syncStateToBackend({ chatStep: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
-                  <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
-                      This helps us set up your shipping and tax settings.
-                    </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-
-                        autoCapitalize="words"
-                        value={location}
-                        onChange={(e) => updateState({ location: e.target.value })}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!location.trim()) {
-                              setValidationError('Please tell us your location.');
-                              return;
-                            }
-                            setValidationError('');
-                            updateState({ chatStep: 4 }); syncStateToBackend({ chatStep: 4 });
-                          }
-                        }}
-                        placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF]'} min-h-[44px]`}
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (!location.trim()) {
-                          setValidationError('Please tell us your location.');
-                          return;
-                        }
-                        setValidationError('');
-                        updateState({ chatStep: 4 }); syncStateToBackend({ chatStep: 4 });
-                      }}
-                      disabled={false}
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <IconLabel icon="next">Next</IconLabel>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {chatStep === 4 && (
-                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { updateState({ chatStep: 3 }); syncStateToBackend({ chatStep: 3 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-                  </button>
-                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Who is your target audience?</h2>
-                  <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
-                      This helps our AI generate the perfect storefront copy and select the best tools for your business.
-                    </p>
-                    <button
-                      onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
-                    >
-                      <IconLabel icon="save">Save Draft</IconLabel>
-                    </button>
-                  </div>
-
-                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
-
-                  <div className="space-y-4 flex-1">
-                    <div>
-                      <input
-                        type="text"
-                        autoFocus
-
-                        autoCapitalize="words"
-                        value={targetAudience}
-                        onChange={(e) => updateState({ targetAudience: e.target.value })}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!targetAudience.trim()) {
-                              setValidationError('Please tell us your target audience.');
-                              return;
-                            }
-                            setValidationError('');
-                            handleIntake();
-                          }
-                        }}
-                        placeholder="e.g. Local families, Tech startups"
-                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF]'} min-h-[44px]`}
-                      />
-                    </div>
-                  </div>
-
-                  {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
-                  <div className="mt-auto pt-6">
-                    <button
-                      onClick={() => {
-                        if (!targetAudience.trim()) {
-                          setValidationError('Please tell us your target audience.');
-                          return;
-                        }
-                        setValidationError('');
-                        handleIntake();
-                      }}
-                      disabled={isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? (
-                        <span className="flex items-center justify-center gap-2">
-                          <svg className="animate-spin h-5 w-5 text-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" style={{ backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)' }} fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Analyzing...
-                        </span>
-                      ) : <IconLabel icon="launch">Next</IconLabel>}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
