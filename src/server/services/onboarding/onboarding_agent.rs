@@ -294,8 +294,8 @@ Your response:",
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
+        // First, fetch existing state to merge safely
         use sqlx::Row;
-
         let row = sqlx::query("SELECT state_json, current_step FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2")
             .bind(tenant_id)
             .bind(user_id)
@@ -322,7 +322,15 @@ Your response:",
         let new_step = std::cmp::max(prev_step, current_step);
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at)              VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)              ON CONFLICT (tenant_id, user_id) DO UPDATE              SET state_json = EXCLUDED.state_json,                  current_step = EXCLUDED.current_step,                  updated_at = CURRENT_TIMESTAMP"
+            r#"
+            INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json, updated_at)
+            VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+            ON CONFLICT (tenant_id, user_id)
+            DO UPDATE SET
+                current_step = EXCLUDED.current_step,
+                state_json = EXCLUDED.state_json,
+                updated_at = CURRENT_TIMESTAMP
+            "#
         )
         .bind(tenant_id)
         .bind(user_id)
