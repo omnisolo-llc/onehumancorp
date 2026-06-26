@@ -191,3 +191,34 @@ impl Client {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_circuit_breaker() {
+        let cb = CircuitBreaker::new(2, Duration::from_millis(50));
+        assert!(cb.allow());
+
+        cb.record_failure();
+        assert!(cb.allow());
+
+        cb.record_failure();
+        assert!(!cb.allow());
+
+        // Wait for reset timeout
+        std::thread::sleep(Duration::from_millis(60));
+        assert!(cb.allow());
+
+        // Record success should reset failures
+        cb.record_success();
+        assert!(cb.allow());
+    }
+
+    #[test]
+    fn test_client_new_from_env() {
+        // Just verify it doesn't panic
+        let _client = Client::new_from_env();
+    }
+}

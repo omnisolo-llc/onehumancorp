@@ -74,3 +74,78 @@ impl MicroAgentRegistry {
         active_instructions.join("\n\n")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+    use std::fs::File;
+    use std::io::Write;
+
+    #[test]
+    fn test_microagent_registry_new() {
+        let registry = MicroAgentRegistry::new();
+        assert!(registry.agents.is_empty());
+    }
+
+    #[test]
+    fn test_load_from_dir_non_existent() {
+        let mut registry = MicroAgentRegistry::new();
+        let result = registry.load_from_dir("/path/that/does/not/exist");
+        assert!(result.is_ok());
+        assert!(registry.agents.is_empty());
+    }
+
+    #[test]
+    fn test_load_from_dir_valid() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("agent1.json");
+        let mut file = File::create(file_path).unwrap();
+        let agent_json = r#"{
+            "name": "TestAgent",
+            "description": "A test agent",
+            "triggers": ["test_trigger"],
+            "instructions": "Do the test thing."
+        }"#;
+        writeln!(file, "{}", agent_json).unwrap();
+
+        let mut registry = MicroAgentRegistry::new();
+        registry.load_from_dir(dir.path()).unwrap();
+        assert_eq!(registry.agents.len(), 1);
+        assert_eq!(registry.agents[0].name, "TestAgent");
+        assert_eq!(registry.agents[0].triggers, vec!["test_trigger"]);
+        assert_eq!(registry.agents[0].instructions, "Do the test thing.");
+    }
+
+    #[test]
+    fn test_get_active_instructions() {
+        let mut registry = MicroAgentRegistry::new();
+        registry.agents.push(MicroAgent {
+            name: "AgentA".to_string(),
+            description: None,
+            triggers: vec!["triggerA".to_string()],
+            instructions: "Instruction A".to_string(),
+        });
+        registry.agents.push(MicroAgent {
+            name: "AgentB".to_string(),
+            description: None,
+            triggers: vec!["triggerB".to_string()],
+            instructions: "Instruction B".to_string(),
+        });
+
+        let ctx = "We have triggerA in context.";
+        let instructions = registry.get_active_instructions(ctx);
+        assert!(instructions.contains("--- MicroAgent: AgentA ---"));
+        assert!(instructions.contains("Instruction A"));
+        assert!(!instructions.contains("AgentB"));
+
+        let ctx2 = "We have triggerA and triggerB.";
+        let instructions2 = registry.get_active_instructions(ctx2);
+        assert!(instructions2.contains("AgentA"));
+        assert!(instructions2.contains("AgentB"));
+
+        let ctx3 = "Nothing matches.";
+        let instructions3 = registry.get_active_instructions(ctx3);
+        assert!(instructions3.is_empty());
+    }
+}
