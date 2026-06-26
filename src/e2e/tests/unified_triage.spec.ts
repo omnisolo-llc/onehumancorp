@@ -95,7 +95,6 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     const emptyMessage = page.locator('.triage-card.empty', { hasText: 'No recent activity found' });
     await expect(emptyMessage).toBeVisible();
   });
-});
 
   test('Triage Feed properly links a customer context', async ({ page }) => {
      const customTenant = 'e2e-triage-customer-tenant';
@@ -150,3 +149,5 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
    const actionBtn = triageCard.getByRole('button', { name: /Approve|Send|Review/i });
    await expect(actionBtn).toBeVisible();
  });
+
+});

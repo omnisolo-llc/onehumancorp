@@ -13,10 +13,10 @@ test.describe('Agentic Work Triage Feed', () => {
     const triageItemId = json.id;
 
     // 3. Go to the dashboard
-    await page.goto('/triage.html');
+    await page.goto('/api/ui/triage.html');
 
     // Wait for the feed to load
-    const feed = page.locator('#triage-list');
+    const feed = page.locator('[data-testid^="triage-card-"]').first();
     await expect(feed).toBeVisible({ timeout: 10000 });
 
     // 4. Verify the triage card exists
@@ -42,7 +42,7 @@ test.describe('Agentic Work Triage Feed', () => {
     const json = await response.json();
     const triageItemId = json.id;
 
-    await page.goto('/triage.html');
+    await page.goto('/api/ui/triage.html');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
@@ -56,12 +56,12 @@ test.describe('Agentic Work Triage Feed', () => {
 
   test('Triage feed handles empty state correctly', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    await page.goto('/triage.html');
+    await page.goto('/api/ui/triage.html');
 
     // It should either show the empty state or an empty feed, but given we might have real data,
     // let's just ensure it loads without crashing and either shows items or caught up state.
-    const emptyState = page.locator('text=No items need your attention right now');
-    const feed = page.locator('#triage-list');
+    const emptyState = page.locator('text=All caught up');
+    const feed = page.locator('[data-testid^="triage-card-"]').first();
 
     // Wait for either to be visible
     await Promise.race([
@@ -76,7 +76,7 @@ test.describe('Agentic Work Triage Feed', () => {
     const json = await response.json();
     const triageItemId = json.id;
 
-    await page.goto('/triage.html');
+    await page.goto('/api/ui/triage.html');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
@@ -95,7 +95,7 @@ test.describe('Agentic Work Triage Feed', () => {
     const json = await response.json();
     const triageItemId = json.id;
 
-    await page.goto('/triage.html');
+    await page.goto('/api/ui/triage.html');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
