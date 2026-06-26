@@ -682,6 +682,11 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_bench_assistant_mobile_payload() {
+        bench_assistant_mobile_payload().await;
+    }
+
+    #[tokio::test]
     async fn test_stress_verification_cloud_standalone() {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
