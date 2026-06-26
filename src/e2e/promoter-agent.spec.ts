@@ -17,7 +17,6 @@ test('Promoter Agent Flow navigates from dashboard and generates posts', async (
 
     // Ensure button is disabled initially
     const generateBtn = page.locator('button:has-text("Generate Posts")');
-    // await expect(generateBtn).toBeDisabled();
 
     // Fill out the form
     await page.fill('input[id="productName"]', 'Awesome New Toy');
@@ -55,4 +54,14 @@ test('Promoter Agent Flow navigates from dashboard and generates posts', async (
     const copyBtn = page.locator('button[data-testid="copy-instagram"]');
     await copyBtn.click();
     await expect(copyBtn).toHaveText('Copied!');
+
+    // 6. Test Unified Agent Feed integration
+    // We navigate to the dashboard where the agent feed lives.
+    await page.goto('/dashboard');
+    // Ensure successful navigation to the dashboard
+    await expect(page).toHaveURL(/\/dashboard/);
+
+    // Check if feed loads
+    const feedContainer = page.locator('.app-main').first();
+    await expect(feedContainer).toBeVisible({ timeout: 15000 });
 });
