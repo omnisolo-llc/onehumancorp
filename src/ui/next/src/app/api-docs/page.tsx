@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, memo } from "react";
 import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
 
 import { WithTooltip } from "../../components/TooltipRegistry";
+
+const MemoizedSwaggerUI = memo(SwaggerUI);
 
 export default function ApiDocsPage() {
   const [mounted, setMounted] = useState(false);
@@ -49,9 +51,9 @@ export default function ApiDocsPage() {
         </div>
       )}
       {mounted && !loading && spec && (
-        <div className="w-full max-w-6xl flex flex-col h-full bg-white/60 backdrop-blur-[40px] saturate-[210%] rounded-2xl p-4 sm:p-6 overflow-x-hidden shadow-[0_8px_32px_rgba(0,0,0,0.2)] border border-white/40">
+        <div className="w-full max-w-6xl flex flex-col h-full bg-white/40 backdrop-blur-[60px] saturate-[250%] rounded-2xl p-4 sm:p-6 overflow-x-hidden shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/60 transition-all">
           <div className="overflow-x-auto w-full max-w-[calc(100vw-32px)] sm:max-w-none">
-            <SwaggerUI spec={spec} />
+            <MemoizedSwaggerUI spec={spec} />
           </div>
         </div>
       )}
