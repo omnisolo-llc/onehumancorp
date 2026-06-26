@@ -88,4 +88,56 @@ describe('FieldOpsJobsPage', () => {
     expect(await screen.findByText('Saved Notes:')).toBeInTheDocument();
     expect(screen.getByText(/"Needs new piping"/)).toBeInTheDocument();
   });
+  it('allows simulating urgent request and approving', async () => {
+    render(<FieldOpsJobsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+    });
+
+    const simButton = screen.getByText('Simulate Urgent');
+
+    // Mock the next fetch
+    global.fetch = vi.fn().mockImplementationOnce(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({
+          success: true,
+          optimizedRoute: [
+            {
+              id: 'urgent-inject',
+              customer_id: 'cust-urgent',
+              customer_name: 'Emergency Leak',
+              job_template_id: 'job-plumbing',
+              job_name: 'Urgent Repair',
+              status: 'Requested',
+              location_address: '123 Main St (Urgent)',
+              notes: 'AI injected urgent job'
+            }
+          ],
+          agentSuggestion: 'AI suggests inserting at slot 1'
+        })
+      })
+    ) as any;
+
+    fireEvent.click(simButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/AI suggests inserting/)).toBeInTheDocument();
+    });
+
+    const acceptBtn = screen.getByText('Accept & Notify');
+
+    // Mock updates
+    global.fetch = vi.fn().mockImplementationOnce(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ success: true })
+      })
+    ) as any;
+
+    fireEvent.click(acceptBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Emergency Leak')).toBeInTheDocument();
+    });
+  });
 });

@@ -187,6 +187,29 @@ export default function FieldOpsJobsPage() {
     setAgentSuggestion(null);
   };
 
+
+  const handleSimulateUrgentRequest = () => {
+    fetch("/api/v1/field-ops/suggest-injection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        current_appointments: jobs,
+        new_job_lat: 40.7128,
+        new_job_lng: -74.0060,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setProposedRoute(data.optimizedRoute);
+          if (data.agentSuggestion) {
+            setAgentSuggestion(data.agentSuggestion);
+          }
+        }
+      })
+      .catch((err) => console.error("Simulate urgent request failed", err));
+  };
+
   const handleComplete = (jobId: string) => {
     const job = jobs.find((j) => j.id === jobId);
     if (!job) return;
@@ -212,16 +235,26 @@ export default function FieldOpsJobsPage() {
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold font-outfit text-gray-900">
           Today's Route
         </h1>
-        {isOffline && (
-          <div className="flex items-center text-orange-600 bg-orange-50 px-3 py-1 rounded-full text-sm font-semibold">
-            <span className="mr-2">☁️</span> Offline Mode
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSimulateUrgentRequest}
+            className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-semibold"
+          >
+            Simulate Urgent
+          </button>
+          {isOffline && (
+            <div className="flex items-center text-orange-600 bg-orange-50 px-3 py-1 rounded-full text-sm font-semibold">
+              <span className="mr-2">☁️</span> Offline Mode
+            </div>
+          )}
+        </div>
       </div>
+
 
       {delayAction && (
         <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl shadow-sm relative">
@@ -275,20 +308,44 @@ export default function FieldOpsJobsPage() {
               <p className="text-sm font-medium text-gray-900 mb-2">
                 {agentSuggestion}
               </p>
+
               <div className="flex gap-2">
-                <button
-                  onClick={() => setAgentSuggestion(null)}
-                  className="px-3 py-1.5 bg-[#0071E3] text-white text-xs font-semibold rounded-lg"
-                >
-                  Yes, text them
-                </button>
-                <button
-                  onClick={() => setAgentSuggestion(null)}
-                  className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg"
-                >
-                  No, stick to schedule
-                </button>
+                {proposedRoute && proposedRoute.find(j => j.id === "urgent-inject") ? (
+                  <>
+                    <button
+                      onClick={handleApproveDelay}
+                      className="px-3 py-1.5 bg-[#0071E3] text-white text-xs font-semibold rounded-lg"
+                    >
+                      Accept & Notify
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAgentSuggestion(null);
+                        setProposedRoute(null);
+                      }}
+                      className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg"
+                    >
+                      Dismiss
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setAgentSuggestion(null)}
+                      className="px-3 py-1.5 bg-[#0071E3] text-white text-xs font-semibold rounded-lg"
+                    >
+                      Yes, text them
+                    </button>
+                    <button
+                      onClick={() => setAgentSuggestion(null)}
+                      className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg"
+                    >
+                      No, stick to schedule
+                    </button>
+                  </>
+                )}
               </div>
+
             </div>
           </div>
         </div>
