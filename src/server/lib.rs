@@ -1538,7 +1538,7 @@ impl HubService for MyHubService {
         } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
             mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else {
-            client.create_checkout_session(&req.plan_id, &tenant_id, amount, Some("month".to_string())).await
+            client.create_checkout_session(&req.plan_id, &tenant_id, amount, Some("month".to_string()), None).await
         }
             .map_err(|e| tonic::Status::internal(e))?;
 
@@ -3539,7 +3539,7 @@ pub async fn simulate_agent_feed_item_handler(
     match &db.store {
         crate::db::DbStore::Postgres => {
             if let Err(e) = sqlx::query(
-                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
             .bind(item_id.clone())
             .bind(&tenant_id)
@@ -3555,7 +3555,7 @@ pub async fn simulate_agent_feed_item_handler(
         },
         crate::db::DbStore::Sqlite(_) => {
             if let Err(e) = sqlx::query(
-                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
             .bind(item_id.clone())
             .bind(&tenant_id)
@@ -4322,8 +4322,9 @@ async fn ui_dashboard_analytics_briefing_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_analytics_briefing:{}", tenant_id);
+    let cache_key = format!("ui_analytics_briefing:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_ANALYTICS_BRIEFING_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -4339,8 +4340,8 @@ async fn ui_dashboard_analytics_briefing_handler(
             let tenant_id1 = t_bg.clone(); let tenant_id2 = t_bg.clone();
 
             let (metrics_res, inbox_res) = tokio::join!(
-                tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, false).await }),
-                tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, false).await })
+                tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, mobile_optimized).await }),
+                tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, mobile_optimized).await })
             );
 
             let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -4373,8 +4374,8 @@ async fn ui_dashboard_analytics_briefing_handler(
     let tenant_id2 = tenant_id.clone();
 
     let (metrics_res, inbox_res) = tokio::join!(
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, false).await }),
-        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, false).await })
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, mobile_optimized).await }),
+        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, mobile_optimized).await })
     );
 
     let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -4415,13 +4416,14 @@ async fn ui_dashboard_analytics_chat_handler(
     use std::hash::{Hash, Hasher};
 
     let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let text = payload.message.to_lowercase();
 
     let mut hasher = DefaultHasher::new();
     text.hash(&mut hasher);
     let text_hash = hasher.finish();
 
-    let cache_key = format!("ui_analytics_chat:{}:{}", tenant_id, text_hash);
+    let cache_key = format!("ui_analytics_chat:{}:mobile:{}:{}", tenant_id, mobile_optimized, text_hash);
     let cache = UI_ANALYTICS_CHAT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -4438,8 +4440,8 @@ async fn ui_dashboard_analytics_chat_handler(
             let tenant_id1 = t_bg.clone(); let tenant_id2 = t_bg.clone();
 
             let (inbox_res_handle, metrics_res_handle) = tokio::join!(
-                tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, false).await }),
-                tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, false).await })
+                tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, mobile_optimized).await }),
+                tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, mobile_optimized).await })
             );
 
             let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -4474,8 +4476,8 @@ async fn ui_dashboard_analytics_chat_handler(
     let tenant_id2 = tenant_id.clone();
 
     let (inbox_res_handle, metrics_res_handle) = tokio::join!(
-        tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, false).await }),
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, false).await })
+        tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, mobile_optimized).await }),
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, mobile_optimized).await })
     );
 
     let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -5134,7 +5136,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, tenant_id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5150,7 +5152,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                 }).collect::<Vec<_>>())
             } else {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, tenant_id, event_source, context_payload::text, proposed_action::text, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type)::text as context_payload, payload::text as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5173,7 +5175,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, lifecycle_state FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+                    "SELECT id, tenant_id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5189,7 +5191,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                 }).collect::<Vec<_>>())
             } else {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+                    "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -6189,6 +6191,7 @@ async fn create_ui_bom_item_handler(
             }
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .nest("/api/integrations", crate::api::tool_integrations::router(db.clone()))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
@@ -6599,6 +6602,8 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::integrations_settings::connect_whatsapp_cloud_api).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
+        .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/sync", api::sync_gateway::router())

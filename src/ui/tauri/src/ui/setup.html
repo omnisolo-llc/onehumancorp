@@ -72,13 +72,15 @@
         font-size: 14px;
         margin-bottom: 20px;
       }
+      select,
+      textarea,
       input {
         width: 100%;
         padding: 14px;
         min-height: 44px !important;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
+        border-radius: 8px !important;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -89,31 +91,15 @@
           background 0.2s,
           box-shadow 0.2s;
       }
-      select.glassmorphism,
-      textarea.glassmorphism,
-      input.glassmorphism {
-        border-radius: 8px;
-        min-height: 44px;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-      }
 
       @media (prefers-color-scheme: dark) {
-        select.glassmorphism,
-        textarea.glassmorphism,
-        input.glassmorphism {
-          border-radius: 8px;
+        select,
+        textarea,
+        input {
           background: rgba(22, 22, 26, 0.7);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #f5f5f7;
         }
-      }
-
-      select,
-      textarea,
-      input {
-        border-radius: 8px;
       }
       input:focus,
       textarea:focus,
@@ -126,18 +112,14 @@
       button,
       input,
       select,
-      textarea,
-      .glassmorphism {
-        border-radius: 16px;
+      textarea {
+        border-radius: 8px;
         min-height: 44px;
         min-width: 44px;
         box-sizing: border-box;
       }
-      button,
-      input,
-      select,
-      textarea {
-        border-radius: 8px !important;
+      .glassmorphism {
+        border-radius: 16px;
       }
       button {
         min-width: 44px;
@@ -146,7 +128,7 @@
         border: none;
         padding: 14px 24px;
         min-height: 44px !important;
-        border-radius: 16px;
+        border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -615,7 +597,7 @@
         min-height: 44px !important;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
+        border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -1010,9 +992,6 @@
           width: 10px;
           height: 10px;
         }
-        .step-indicator.active {
-          transform: scale(1.2);
-        }
         .radio-option {
           min-height: 44px;
           min-width: 44px;
@@ -1028,7 +1007,7 @@
           min-height: 44px;
           min-width: 44px;
           box-sizing: border-box;
-          border-radius: 16px;
+          border-radius: 8px;
         }
         h1 {
           font-size: 20px;
@@ -1419,6 +1398,39 @@
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
+        <button
+          onclick="goToStep('step-initial')"
+          style="
+            background: none;
+            border: none;
+            color: #0066ff;
+            padding: 0;
+            box-shadow: none;
+            width: auto;
+            font-size: 14px;
+            min-height: 44px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+          "
+        >
+          <svg
+            style="width: 16px; height: auto"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Back
+        </button>
         <h1>Setup Assistant</h1>
         <p>Talk to our AI to build your business.</p>
 
@@ -2475,6 +2487,8 @@
         firstOffer: document.getElementById("first-offer"),
         templateSelection: document.getElementById("template-selection"),
         domainName: document.getElementById("domain-name"),
+        instantBio: document.getElementById("instant-bio"),
+        instantImageUrl: document.getElementById("instant-image-url"),
       };
 
       const errors = {
@@ -2713,6 +2727,30 @@
         if (state.templateSelection)
           inputs.templateSelection.value = state.templateSelection;
         if (state.domain) inputs.domainName.value = state.domain;
+        if (state.instantBio && inputs.instantBio) inputs.instantBio.value = state.instantBio;
+        if (state.instantImageUrl && inputs.instantImageUrl) inputs.instantImageUrl.value = state.instantImageUrl;
+        if (state.chatHistory) {
+          chatHistory = state.chatHistory;
+          const chatMessagesEl = document.getElementById("chat-messages");
+          if (chatMessagesEl && chatHistory.length > 0) {
+            chatMessagesEl.innerHTML = "";
+            chatHistory.forEach((msg) => {
+              const msgDiv = document.createElement("div");
+              msgDiv.className = "chat-message " + (msg.role === "user" ? "user" : "assistant");
+              const senderDiv = document.createElement("div");
+              senderDiv.className = "chat-sender";
+              senderDiv.textContent = msg.role === "user" ? "You" : "OHC Assistant";
+              const bubbleDiv = document.createElement("div");
+              bubbleDiv.className = "chat-bubble";
+              bubbleDiv.textContent = msg.content;
+              msgDiv.appendChild(senderDiv);
+              msgDiv.appendChild(bubbleDiv);
+              chatMessagesEl.appendChild(msgDiv);
+            });
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+          }
+        }
+
         if (state.capabilities && document.getElementById("cap-draft")) {
           document.getElementById("cap-draft").checked =
             state.capabilities.draft !== false;
@@ -2765,6 +2803,10 @@
         state.first_offer = inputs.firstOffer.value;
         state.templateSelection = inputs.templateSelection.value;
         if (inputs.domainName) state.domain = inputs.domainName.value;
+        if (inputs.instantBio) state.instantBio = inputs.instantBio.value;
+        if (inputs.instantImageUrl) state.instantImageUrl = inputs.instantImageUrl.value;
+        state.chatHistory = chatHistory;
+
         state.capabilities = {
           draft: document.getElementById("cap-draft")
             ? document.getElementById("cap-draft").checked

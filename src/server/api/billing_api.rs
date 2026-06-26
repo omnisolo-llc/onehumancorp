@@ -193,7 +193,10 @@ pub async fn create_checkout_session_handler(
         }
     } else if let Some(product_id) = &req.product_id {
         let mut conn = hub.pool.acquire().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let row = sqlx::query("SELECT title, price_cents FROM products WHERE id = $1 AND tenant_id = $2")
+        let row = sqlx::query(
+            "SELECT title, price_cents, is_subscribable, subscription_frequency, subscription_discount_percent \
+             FROM products WHERE id = $1 AND tenant_id = $2"
+        )
             .bind(product_id)
             .bind(&tenant_id)
             .fetch_one(&mut *conn)
@@ -202,31 +205,42 @@ pub async fn create_checkout_session_handler(
         use sqlx::Row;
         let price_cents: i64 = row.try_get("price_cents").unwrap_or(0);
         let title: String = row.try_get("title").unwrap_or_else(|_| "Product".to_string());
+        let is_subscribable: bool = row.try_get("is_subscribable").unwrap_or(false);
+        let subscription_frequency: Option<String> = row.try_get("subscription_frequency").unwrap_or(None);
+        let subscription_discount_percent: i32 = row.try_get("subscription_discount_percent").unwrap_or(0);
+
         let quantity = req.quantity.unwrap_or(1);
         amount_usd = (price_cents as f64 / 100.0) * quantity as f64;
         item_name = title;
 
         if req.is_subscription.unwrap_or(false) {
-            // Check subscription_plans table for discount and interval
-            let plan_row = sqlx::query("SELECT interval, discount_percentage FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
-                .bind(product_id)
-                .bind(&tenant_id)
-                .fetch_optional(&mut *conn)
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-            if let Some(plan) = plan_row {
-                let interval: String = plan.try_get("interval").unwrap_or_else(|_| "month".to_string());
-                let discount_percentage: i32 = plan.try_get("discount_percentage").unwrap_or(0);
-                actual_interval = Some(interval);
-
-                if discount_percentage > 0 {
-                    amount_usd = amount_usd * (1.0 - (discount_percentage as f64 / 100.0));
+            if is_subscribable {
+                actual_interval = subscription_frequency.or_else(|| Some("month".to_string()));
+                if subscription_discount_percent > 0 {
+                    amount_usd = amount_usd * (1.0 - (subscription_discount_percent as f64 / 100.0));
                 }
-            } else if let Some(fallback_interval) = &req.subscription_interval {
-                actual_interval = Some(fallback_interval.clone());
             } else {
-                actual_interval = Some("month".to_string());
+                // Check subscription_plans table for discount and interval
+                let plan_row = sqlx::query("SELECT interval, discount_percentage FROM subscription_plans WHERE product_id = $1 AND tenant_id = $2")
+                    .bind(product_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&mut *conn)
+                    .await
+                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+                if let Some(plan) = plan_row {
+                    let interval: String = plan.try_get("interval").unwrap_or_else(|_| "month".to_string());
+                    let discount_percentage: i32 = plan.try_get("discount_percentage").unwrap_or(0);
+                    actual_interval = Some(interval);
+
+                    if discount_percentage > 0 {
+                        amount_usd = amount_usd * (1.0 - (discount_percentage as f64 / 100.0));
+                    }
+                } else if let Some(fallback_interval) = &req.subscription_interval {
+                    actual_interval = Some(fallback_interval.clone());
+                } else {
+                    actual_interval = Some("month".to_string());
+                }
             }
         }
     } else {
@@ -254,7 +268,8 @@ pub async fn create_checkout_session_handler(
 
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval).await {
+        let product_id_opt = req.product_id.clone();
+        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval, product_id_opt).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
