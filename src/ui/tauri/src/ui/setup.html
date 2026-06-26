@@ -262,7 +262,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: 0.3s;
-        border-radius: 24px;
+        border-radius: 8px;
       }
       .slider:before {
         position: absolute;
@@ -514,7 +514,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: 0.3s;
-        border-radius: 24px;
+        border-radius: 8px;
       }
       .slider:before {
         position: absolute;
@@ -760,7 +760,7 @@
         min-height: 44px !important;
         display: flex;
         align-items: center;
-        border-radius: 20px;
+        border-radius: 8px;
         background: rgba(0, 102, 255, 0.1);
         color: #0066ff;
         font-size: 13px;
@@ -781,7 +781,7 @@
         background: rgba(255, 255, 255, 0.65);
         border: 1px solid rgba(0, 0, 0, 0.05);
         padding: 12px 16px;
-        border-radius: 18px;
+        border-radius: 16px;
         border-bottom-left-radius: 4px;
         font-size: 14px;
         line-height: 1.4;
@@ -846,7 +846,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: 0.3s;
-        border-radius: 24px;
+        border-radius: 8px;
       }
       .slider:before {
         position: absolute;
@@ -1049,7 +1049,7 @@
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
         background: rgba(0, 0, 0, 0.2);
-        border-radius: 10px;
+        border-radius: 8px;
         border: 2px solid transparent;
         background-clip: padding-box;
       }
@@ -1148,7 +1148,7 @@
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
         transition: 0.3s;
-        border-radius: 24px;
+        border-radius: 8px;
       }
       .slider:before {
         position: absolute;
@@ -2149,7 +2149,7 @@
               class="agent-badge"
               style="
                 padding: 6px 12px;
-                border-radius: 9999px;
+                border-radius: 8px;
                 border: 1px solid #34c759;
                 background: rgba(52, 199, 89, 0.1);
                 color: #34c759;
@@ -2179,7 +2179,7 @@
               class="agent-badge"
               style="
                 padding: 6px 12px;
-                border-radius: 9999px;
+                border-radius: 8px;
                 border: 1px solid #34c759;
                 background: rgba(52, 199, 89, 0.1);
                 color: #34c759;
@@ -2209,7 +2209,7 @@
               class="agent-badge"
               style="
                 padding: 6px 12px;
-                border-radius: 9999px;
+                border-radius: 8px;
                 border: 1px solid #34c759;
                 background: rgba(52, 199, 89, 0.1);
                 color: #34c759;
@@ -2470,30 +2470,30 @@
         if (persona === "Baker") {
           state.work_context = "Storefront";
           state.categories = "Bakery";
-          state.businessName = "Maya's Bakery";
-          state.assistantName = "Cookie";
-          state.assistantTone = "Friendly";
+          state.business_name = "Maya's Bakery";
+          state.assistant_name = "Cookie";
+          state.assistant_tone = "Friendly";
           state.first_offer = "Custom Birthday Cake";
         } else if (persona === "Handyman") {
           state.work_context = "Local Service";
           state.categories = "Handyman";
-          state.businessName = "Carlos Repairs";
-          state.assistantName = "Tools";
-          state.assistantTone = "Concise";
+          state.business_name = "Carlos Repairs";
+          state.assistant_name = "Tools";
+          state.assistant_tone = "Concise";
           state.first_offer = "Standard Repair Visit";
         } else if (persona === "Boutique") {
           state.work_context = "Storefront";
           state.categories = "Boutique";
-          state.businessName = "Priya's Boutique";
-          state.assistantName = "Style";
-          state.assistantTone = "Professional";
+          state.business_name = "Priya's Boutique";
+          state.assistant_name = "Style";
+          state.assistant_tone = "Professional";
           state.first_offer = "Signature Dress";
         } else if (persona === "Tutor") {
           state.work_context = "Online Creator";
           state.categories = "Tutoring";
-          state.businessName = "Leo's Music";
-          state.assistantName = "Melody";
-          state.assistantTone = "Friendly";
+          state.business_name = "Leo's Music";
+          state.assistant_name = "Melody";
+          state.assistant_tone = "Friendly";
           state.first_offer = "1-Hour Guitar Lesson";
         }
         populateForm();
@@ -2524,42 +2524,42 @@
         categories: document.getElementById("business-categories"),
         name: document.getElementById("business-name"),
         tagline: document.getElementById("business-tagline"),
-        assistantName: document.getElementById("assistant-name"),
-        assistantTone: document.getElementById("assistant-tone"),
-        adminName: document.getElementById("admin-name"),
-        adminEmail: document.getElementById("admin-email"),
-        adminPassword: document.getElementById("admin-password"),
-        firstOffer: document.getElementById("first-offer"),
-        templateSelection: document.getElementById("template-selection"),
-        domainName: document.getElementById("domain-name"),
-        instantBio: document.getElementById("instant-bio"),
-        instantImageUrl: document.getElementById("instant-image-url"),
+        assistant_name: document.getElementById("assistant-name"),
+        assistant_tone: document.getElementById("assistant-tone"),
+        admin_name: document.getElementById("admin-name"),
+        admin_email: document.getElementById("admin-email"),
+        admin_password: document.getElementById("admin-password"),
+        first_offer: document.getElementById("first-offer"),
+        template_selection: document.getElementById("template-selection"),
+        domain_name: document.getElementById("domain-name"),
+        instant_bio: document.getElementById("instant-bio"),
+        instant_image_url: document.getElementById("instant-image-url"),
       };
 
       const errors = {
         context: document.getElementById("context-error"),
         categories: document.getElementById("categories-error"),
         name: document.getElementById("name-error"),
-        assistantName: document.getElementById("assistant-name-error"),
-        assistantTone: document.getElementById("tone-error"),
-        adminName: document.getElementById("admin-name-error"),
-        adminEmail: document.getElementById("email-error"),
-        adminPassword: document.getElementById("password-error"),
-        firstOffer: document.getElementById("offer-error"),
-        templateSelection: document.getElementById("template-error"),
-        domainName: document.getElementById("domain-error"),
+        assistant_name: document.getElementById("assistant-name-error"),
+        assistant_tone: document.getElementById("tone-error"),
+        admin_name: document.getElementById("admin-name-error"),
+        admin_email: document.getElementById("email-error"),
+        admin_password: document.getElementById("password-error"),
+        first_offer: document.getElementById("offer-error"),
+        template_selection: document.getElementById("template-error"),
+        domain_name: document.getElementById("domain-error"),
       };
 
       let state = {
-        businessName: "",
-        assistantName: "",
-        assistantTone: "",
+        business_name: "",
+        assistant_name: "",
+        assistant_tone: "",
         capabilities: { draft: true, schedule: true, inventory: false },
         work_context: "",
         categories: "",
         tagline: "",
         first_offer: "",
-        templateSelection: "",
+        template_selection: "",
         domain: "",
       };
 
@@ -2712,49 +2712,49 @@
           errors.name.style.display = "none";
           inputs.name.classList.remove("invalid-input");
         }
-        if (inputs.domainName) {
+        if (inputs.domain_name) {
           const suggested = generateSubdomain(inputs.name.value);
-          inputs.domainName.placeholder = `e.g. ${suggested}`;
+          inputs.domain_name.placeholder = `e.g. ${suggested}`;
           // Only auto-fill if the user hasn't typed anything in the domain field yet
           if (!state.domain || state.domain === "") {
-            inputs.domainName.value = suggested;
+            inputs.domain_name.value = suggested;
           }
         }
       });
 
-      inputs.adminEmail.addEventListener("input", () => {
-        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.adminEmail.value.trim())) {
-          errors.adminEmail.style.display = "none";
-          inputs.adminEmail.classList.remove("invalid-input");
+      inputs.admin_email.addEventListener("input", () => {
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.admin_email.value.trim())) {
+          errors.admin_email.style.display = "none";
+          inputs.admin_email.classList.remove("invalid-input");
         }
       });
 
-      inputs.adminPassword.addEventListener("input", () => {
+      inputs.admin_password.addEventListener("input", () => {
         if (
-          inputs.adminPassword.value.trim().length >= 8 &&
-          /\d/.test(inputs.adminPassword.value)
+          inputs.admin_password.value.trim().length >= 8 &&
+          /\d/.test(inputs.admin_password.value)
         ) {
-          errors.adminPassword.style.display = "none";
-          inputs.adminPassword.classList.remove("invalid-input");
+          errors.admin_password.style.display = "none";
+          inputs.admin_password.classList.remove("invalid-input");
         }
       });
 
-      inputs.assistantName.addEventListener("input", () => {
-        if (inputs.assistantName.value.trim().length > 0) {
-          errors.assistantName.style.display = "none";
-          inputs.assistantName.classList.remove("invalid-input");
+      inputs.assistant_name.addEventListener("input", () => {
+        if (inputs.assistant_name.value.trim().length > 0) {
+          errors.assistant_name.style.display = "none";
+          inputs.assistant_name.classList.remove("invalid-input");
         }
       });
 
-      inputs.firstOffer.addEventListener("input", () => {
-        if (inputs.firstOffer.value.trim().length > 0) {
-          errors.firstOffer.style.display = "none";
-          inputs.firstOffer.classList.remove("invalid-input");
+      inputs.first_offer.addEventListener("input", () => {
+        if (inputs.first_offer.value.trim().length > 0) {
+          errors.first_offer.style.display = "none";
+          inputs.first_offer.classList.remove("invalid-input");
         }
       });
 
       function populateForm() {
-        if (state.businessName) inputs.name.value = state.businessName;
+        if (state.business_name) inputs.name.value = state.business_name;
         if (state.tagline) inputs.tagline.value = state.tagline;
 
         if (state.work_context) {
@@ -2762,21 +2762,21 @@
         }
         if (state.categories) inputs.categories.value = state.categories;
 
-        if (state.assistantName)
-          inputs.assistantName.value = state.assistantName;
-        if (state.assistantTone)
-          inputs.assistantTone.value = state.assistantTone;
-        if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
-        if (state.adminPassword)
-          inputs.adminPassword.value = state.adminPassword;
-        if (state.first_offer) inputs.firstOffer.value = state.first_offer;
-        if (state.templateSelection)
-          inputs.templateSelection.value = state.templateSelection;
-        if (state.domain) inputs.domainName.value = state.domain;
-        if (state.instantBio && inputs.instantBio) inputs.instantBio.value = state.instantBio;
-        if (state.instantImageUrl && inputs.instantImageUrl) inputs.instantImageUrl.value = state.instantImageUrl;
-        if (state.chatHistory) {
-          chatHistory = state.chatHistory;
+        if (state.assistant_name)
+          inputs.assistant_name.value = state.assistant_name;
+        if (state.assistant_tone)
+          inputs.assistant_tone.value = state.assistant_tone;
+        if (state.admin_email) inputs.admin_email.value = state.admin_email;
+        if (state.admin_password)
+          inputs.admin_password.value = state.admin_password;
+        if (state.first_offer) inputs.first_offer.value = state.first_offer;
+        if (state.template_selection)
+          inputs.template_selection.value = state.template_selection;
+        if (state.domain) inputs.domain_name.value = state.domain;
+        if (state.instant_bio && inputs.instant_bio) inputs.instant_bio.value = state.instant_bio;
+        if (state.instant_image_url && inputs.instant_image_url) inputs.instant_image_url.value = state.instant_image_url;
+        if (state.chat_history) {
+          chatHistory = state.chat_history;
           const chatMessagesEl = document.getElementById("chat-messages");
           if (chatMessagesEl && chatHistory.length > 0) {
             chatMessagesEl.innerHTML = "";
@@ -2842,17 +2842,17 @@
       var saveStateTimer = null;
       function saveCurrentState() {
         state.categories = inputs.categories.value;
-        state.businessName = inputs.name.value;
+        state.business_name = inputs.name.value;
         state.tagline = inputs.tagline.value;
-        state.assistantName = inputs.assistantName.value;
-        state.assistantTone = inputs.assistantTone.value;
-        state.adminName = inputs.adminName.value;
-        state.first_offer = inputs.firstOffer.value;
-        state.templateSelection = inputs.templateSelection.value;
-        if (inputs.domainName) state.domain = inputs.domainName.value;
-        if (inputs.instantBio) state.instantBio = inputs.instantBio.value;
-        if (inputs.instantImageUrl) state.instantImageUrl = inputs.instantImageUrl.value;
-        state.chatHistory = chatHistory;
+        state.assistant_name = inputs.assistant_name.value;
+        state.assistant_tone = inputs.assistant_tone.value;
+        state.admin_name = inputs.admin_name.value;
+        state.first_offer = inputs.first_offer.value;
+        state.template_selection = inputs.template_selection.value;
+        if (inputs.domain_name) state.domain = inputs.domain_name.value;
+        if (inputs.instant_bio) state.instant_bio = inputs.instant_bio.value;
+        if (inputs.instant_image_url) state.instant_image_url = inputs.instant_image_url.value;
+        state.chat_history = chatHistory;
 
         state.capabilities = {
           draft: document.getElementById("cap-draft")
@@ -2967,105 +2967,105 @@
           } else {
             errors.name.style.display = "none";
             inputs.name.classList.remove("invalid-input");
-            state.businessName = inputs.name.value.trim();
+            state.business_name = inputs.name.value.trim();
             state.tagline = inputs.tagline.value.trim();
           }
         } else if (stepId === "step-assistant") {
-          if (inputs.assistantName.value.trim() === "") {
-            errors.assistantName.style.display = "block";
-            inputs.assistantName.classList.add("invalid-input");
+          if (inputs.assistant_name.value.trim() === "") {
+            errors.assistant_name.style.display = "block";
+            inputs.assistant_name.classList.add("invalid-input");
             isValid = false;
           } else {
-            errors.assistantName.style.display = "none";
-            inputs.assistantName.classList.remove("invalid-input");
-            state.assistantName = inputs.assistantName.value.trim();
+            errors.assistant_name.style.display = "none";
+            inputs.assistant_name.classList.remove("invalid-input");
+            state.assistant_name = inputs.assistant_name.value.trim();
           }
 
-          if (!inputs.assistantTone.value) {
-            errors.assistantTone.style.display = "block";
-            inputs.assistantTone.classList.add("invalid-input");
+          if (!inputs.assistant_tone.value) {
+            errors.assistant_tone.style.display = "block";
+            inputs.assistant_tone.classList.add("invalid-input");
             isValid = false;
           } else {
-            errors.assistantTone.style.display = "none";
-            inputs.assistantTone.classList.remove("invalid-input");
-            state.assistantTone = inputs.assistantTone.value;
+            errors.assistant_tone.style.display = "none";
+            inputs.assistant_tone.classList.remove("invalid-input");
+            state.assistant_tone = inputs.assistant_tone.value;
           }
         } else if (stepId === "step-admin") {
-          const nameVal = inputs.adminName.value.trim();
-          const emailVal = inputs.adminEmail.value.trim();
-          const passVal = inputs.adminPassword.value.trim();
+          const nameVal = inputs.admin_name.value.trim();
+          const emailVal = inputs.admin_email.value.trim();
+          const passVal = inputs.admin_password.value.trim();
           let stepValid = true;
 
           if (nameVal === "") {
-            errors.adminName.style.display = "block";
-            inputs.adminName.classList.add("invalid-input");
+            errors.admin_name.style.display = "block";
+            inputs.admin_name.classList.add("invalid-input");
             stepValid = false;
           } else {
-            errors.adminName.style.display = "none";
-            inputs.adminName.classList.remove("invalid-input");
+            errors.admin_name.style.display = "none";
+            inputs.admin_name.classList.remove("invalid-input");
           }
 
           if (emailVal === "" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-            errors.adminEmail.style.display = "block";
-            errors.adminEmail.innerText =
+            errors.admin_email.style.display = "block";
+            errors.admin_email.innerText =
               emailVal === ""
                 ? "Admin Email is required."
                 : "Please enter a valid email address.";
-            inputs.adminEmail.classList.add("invalid-input");
+            inputs.admin_email.classList.add("invalid-input");
             stepValid = false;
           } else {
-            errors.adminEmail.style.display = "none";
-            inputs.adminEmail.classList.remove("invalid-input");
+            errors.admin_email.style.display = "none";
+            inputs.admin_email.classList.remove("invalid-input");
           }
 
           if (passVal === "" || passVal.length < 8 || !/\d/.test(passVal)) {
-            errors.adminPassword.style.display = "block";
-            errors.adminPassword.innerText =
+            errors.admin_password.style.display = "block";
+            errors.admin_password.innerText =
               passVal === ""
                 ? "Password is required."
                 : "Password must be at least 8 characters and contain a number.";
-            inputs.adminPassword.classList.add("invalid-input");
+            inputs.admin_password.classList.add("invalid-input");
             stepValid = false;
           } else {
-            errors.adminPassword.style.display = "none";
-            inputs.adminPassword.classList.remove("invalid-input");
+            errors.admin_password.style.display = "none";
+            inputs.admin_password.classList.remove("invalid-input");
           }
 
           if (stepValid) {
-            state.adminEmail = emailVal;
-            state.adminPassword = passVal;
+            state.admin_email = emailVal;
+            state.admin_password = passVal;
           } else {
             isValid = false;
           }
         } else if (stepId === "step-offer") {
-          if (inputs.firstOffer.value.trim() === "") {
-            errors.firstOffer.style.display = "block";
-            inputs.firstOffer.classList.add("invalid-input");
+          if (inputs.first_offer.value.trim() === "") {
+            errors.first_offer.style.display = "block";
+            inputs.first_offer.classList.add("invalid-input");
             isValid = false;
           } else {
-            errors.firstOffer.style.display = "none";
-            inputs.firstOffer.classList.remove("invalid-input");
-            state.first_offer = inputs.firstOffer.value.trim();
+            errors.first_offer.style.display = "none";
+            inputs.first_offer.classList.remove("invalid-input");
+            state.first_offer = inputs.first_offer.value.trim();
           }
         } else if (stepId === "step-domain") {
-          if (inputs.domainName.value.trim().length < 3) {
-            errors.domainName.style.display = "block";
-            inputs.domainName.classList.add("invalid-input");
+          if (inputs.domain_name.value.trim().length < 3) {
+            errors.domain_name.style.display = "block";
+            inputs.domain_name.classList.add("invalid-input");
             isValid = false;
           } else {
-            errors.domainName.style.display = "none";
-            inputs.domainName.classList.remove("invalid-input");
-            state.domain = inputs.domainName.value.trim();
+            errors.domain_name.style.display = "none";
+            inputs.domain_name.classList.remove("invalid-input");
+            state.domain = inputs.domain_name.value.trim();
           }
         } else if (stepId === "step-template") {
-          if (inputs.templateSelection.value === "") {
-            errors.templateSelection.style.display = "block";
-            inputs.templateSelection.classList.add("invalid-input");
+          if (inputs.template_selection.value === "") {
+            errors.template_selection.style.display = "block";
+            inputs.template_selection.classList.add("invalid-input");
             isValid = false;
           } else {
-            errors.templateSelection.style.display = "none";
-            inputs.templateSelection.classList.remove("invalid-input");
-            state.templateSelection = inputs.templateSelection.value;
+            errors.template_selection.style.display = "none";
+            inputs.template_selection.classList.remove("invalid-input");
+            state.template_selection = inputs.template_selection.value;
           }
         }
 
@@ -3084,10 +3084,10 @@
       if (togglePasswordBtn) {
         togglePasswordBtn.addEventListener("click", () => {
           const type =
-            inputs.adminPassword.getAttribute("type") === "password"
+            inputs.admin_password.getAttribute("type") === "password"
               ? "text"
               : "password";
-          inputs.adminPassword.setAttribute("type", type);
+          inputs.admin_password.setAttribute("type", type);
           document.getElementById("eye-icon-show").style.display =
             type === "password" ? "block" : "none";
           document.getElementById("eye-icon-hide").style.display =
@@ -3420,37 +3420,37 @@
               : true;
 
             const req = {
-              companyName: intakeData.business_name || "My Business",
-              businessType: intakeData.business_type || "Online Store",
-              companyDescription: chatHistory.map((m) => m.content).join(" "),
-              sellingCategories: intakeData.categories || ["physical"],
-              paymentPref: "online",
-              adminEmail: "admin@mybusiness.com",
-              adminName: "Admin",
-              adminPassword: "password123",
-              websiteTemplate: "auto",
-              firstProductName:
+              company_name: intakeData.business_name || "My Business",
+              business_type: intakeData.business_type || "Online Store",
+              company_description: chatHistory.map((m) => m.content).join(" "),
+              selling_categories: intakeData.categories || ["physical"],
+              payment_pref: "online",
+              admin_email: "admin@mybusiness.com",
+              admin_name: "Admin",
+              admin_password: "password123",
+              website_template: "auto",
+              first_product_name:
                 intakeData.initial_products?.[0]?.name || "First Product",
-              firstProductPrice:
+              first_product_price:
                 intakeData.initial_products?.[0]?.price || "0.00",
-              domainChoice:
-                state.domain || generateSubdomain(state.businessName),
-              priceType: "fixed",
+              domain_choice:
+                state.domain || generateSubdomain(state.business_name),
+              price_type: "fixed",
               location: intakeData.location || "Local",
-              targetAudience: intakeData.target_audience || "General",
-              initialProducts: intakeData.initial_products || [],
-              aiAgents: selectedAgents,
-              aiAutoRespond: autoRespondChecked,
+              target_audience: intakeData.target_audience || "General",
+              initial_products: intakeData.initial_products || [],
+              ai_agents: selectedAgents,
+              ai_auto_respond: autoRespondChecked,
             };
 
             window.pendingOnboardingReq = req;
             let productsHtml = "";
-            if (req.initialProducts && req.initialProducts.length > 0) {
-              productsHtml = req.initialProducts
+            if (req.initial_products && req.initial_products.length > 0) {
+              productsHtml = req.initial_products
                 .map((p) => `<li>${p.name} - ${p.price}</li>`)
                 .join("");
             } else {
-              productsHtml = `<li>${req.firstProductName} - ${req.firstProductPrice}</li>`;
+              productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
             }
 
             const summaryCard = document.createElement("div");
@@ -3471,8 +3471,8 @@
             summaryCard.innerHTML = `
                       <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h2>
                       <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
-                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.companyName}</div>
-                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.businessType}</div>
+                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
+                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
                           <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
                       </div>
                       <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
@@ -3591,22 +3591,22 @@
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                business_type: req.businessType,
-                company_name: req.companyName,
-                company_description: req.companyDescription,
-                selling_categories: req.sellingCategories,
-                payment_pref: req.paymentPref,
-                admin_email: req.adminEmail,
-                website_template: req.websiteTemplate,
-                first_product_name: req.firstProductName,
-                first_product_price: req.firstProductPrice,
-                domain_choice: req.domainChoice,
-                admin_name: req.adminName,
-                admin_password: req.adminPassword,
-                price_type: req.priceType,
+                business_type: req.business_type,
+                company_name: req.company_name,
+                company_description: req.company_description,
+                selling_categories: req.selling_categories,
+                payment_pref: req.payment_pref,
+                admin_email: req.admin_email,
+                website_template: req.website_template,
+                first_product_name: req.first_product_name,
+                first_product_price: req.first_product_price,
+                domain_choice: req.domain_choice,
+                admin_name: req.admin_name,
+                admin_password: req.admin_password,
+                price_type: req.price_type,
                 location: req.location,
-                target_audience: req.targetAudience,
-                initial_products: req.initialProducts,
+                target_audience: req.target_audience,
+                initial_products: req.initial_products,
               }),
             });
 
@@ -3685,7 +3685,8 @@
                   "X-User-ID": "e2e-admin-user",
                 },
                 body: JSON.stringify({
-                  prompt: bioInput + (imageUrl ? " " + imageUrl : ""),
+                  prompt: bioInput,
+                  image_url: imageUrl ? imageUrl : undefined
                 }),
               },
             );
@@ -3821,19 +3822,19 @@
 
             const req = {
               business_type:
-                state.workContext || state.work_context || "Local Service",
-              company_name: state.businessName,
+                state.work_context || state.work_context || "Local Service",
+              company_name: state.business_name,
               company_description: state.tagline || "",
               selling_categories: state.categories ? [state.categories] : [],
               payment_pref: "online",
-              admin_email: state.adminEmail || "admin@mybusiness.com",
-              admin_name: state.assistantName || "Admin",
-              admin_password: state.adminPassword || "password123",
-              website_template: state.templateSelection || "Modern",
-              first_product_name: state.firstOffer || "First Offer",
+              admin_email: state.admin_email || "admin@mybusiness.com",
+              admin_name: state.assistant_name || "Admin",
+              admin_password: state.admin_password || "password123",
+              website_template: state.template_selection || "Modern",
+              first_product_name: state.first_offer || "First Offer",
               first_product_price: "0.00",
               domain_choice:
-                state.domain || generateSubdomain(state.businessName),
+                state.domain || generateSubdomain(state.business_name),
               price_type: "fixed",
               location: "Local",
               target_audience: "General",
@@ -4082,7 +4083,7 @@
         bottom: 0;
         background-color: rgba(0,0,0,0.1);
         transition: .3s;
-        border-radius: 24px;
+        border-radius: 8px;
       }
       .slider:before {
         position: absolute;
@@ -4458,8 +4459,8 @@
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ""}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                 </div>
             `;
 
@@ -4528,7 +4529,6 @@
       initWalkthrough();
     </script>
 
-    <script src="help-widget.mjs"></script>
   </body>
 </html>
 

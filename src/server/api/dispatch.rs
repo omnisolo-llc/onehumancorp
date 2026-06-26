@@ -62,7 +62,7 @@ pub async fn get_run_sheet(
                 rs.id, rs.service_route_id, rs.appointment_id, rs.sequence_order, rs.estimated_arrival, rs.status, rs.notes,
                 a.id as a_id, a.customer_id as a_customer_id, a.job_template_id as a_job_template_id, a.status as a_status,
                 a.scheduled_start_time as a_scheduled_start_time, a.scheduled_end_time as a_scheduled_end_time,
-                a.location_address as a_location_address, a.notes as a_notes,
+                a.location_address as a_location_address, a.location_lat as a_location_lat, a.location_lng as a_location_lng, a.notes as a_notes,
                 c.name as a_customer_name, jt.name as a_job_name
             FROM route_stops rs
             LEFT JOIN appointments a ON rs.appointment_id = a.id
@@ -91,6 +91,8 @@ pub async fn get_run_sheet(
                     scheduled_start_time: r.try_get("a_scheduled_start_time").unwrap_or(None),
                     scheduled_end_time: r.try_get("a_scheduled_end_time").unwrap_or(None),
                     location_address: r.try_get("a_location_address").unwrap_or(None),
+                    location_lat: r.try_get("a_location_lat").unwrap_or(None),
+                    location_lng: r.try_get("a_location_lng").unwrap_or(None),
                     notes: r.try_get("a_notes").unwrap_or(None),
                 })
             } else {

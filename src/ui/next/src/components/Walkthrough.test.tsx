@@ -144,4 +144,14 @@ describe('Walkthrough Component', () => {
 
     consoleWarnMock.mockRestore();
   });
+
+  it('WalkthroughTarget gracefully provides a fallback div when no children are provided', async () => {
+    const { WalkthroughTarget } = await import('./Walkthrough');
+    const { container } = render(
+      <WalkthroughTarget id="some-id" className="my-class" />
+    );
+
+    expect(container.innerHTML).toContain('id="some-id"');
+    expect(container.innerHTML).toContain('aria-hidden="true"');
+  });
 });

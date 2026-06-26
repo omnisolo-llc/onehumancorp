@@ -182,9 +182,9 @@ pub async fn create_checkout_session_handler(
 
     if let Some(tier) = &req.tier {
         amount_usd = match tier.to_lowercase().as_str() {
-            "starter" => 9.0,
-            "pro" => 29.0,
-            "business" => 79.0,
+            "starter" => 29.0,
+            "pro" => 79.0,
+            "business" => 299.0,
             _ => return Err(StatusCode::BAD_REQUEST),
         };
         item_name = tier.clone();

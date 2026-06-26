@@ -298,7 +298,7 @@ export default function FieldOpsJobsPage() {
         {jobs.map((job) => (
           <div
             key={job.id}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+            className="bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] rounded-[16px] shadow-sm border border-white/40-sm border border-gray-100 overflow-hidden"
           >
             <div className="p-5 border-b border-gray-100 bg-gray-50/50">
               <div className="flex justify-between items-start mb-2">
