@@ -77,24 +77,6 @@ impl AgentFeedRepository {
                 updated_at
             FROM agent_approvals
             WHERE tenant_id = $1 AND id = $2
-
-            UNION ALL
-
-            SELECT
-                id,
-                tenant_id,
-                COALESCE(agent_type, 'operations') as event_source,
-                jsonb_build_object('description', 'Action Request: ' || action_type) as context_payload,
-                payload as proposed_action,
-                CASE
-                    WHEN status = 'Pending' THEN 'PENDING_APPROVAL'
-                    WHEN status = 'Rejected' THEN 'DISMISSED'
-                    ELSE status
-                END as lifecycle_state,
-                created_at,
-                updated_at
-            FROM agent_action_requests
-            WHERE tenant_id = $1 AND id = $2
             "#
         )
         .bind(tenant_id)
@@ -138,24 +120,6 @@ impl AgentFeedRepository {
             FROM agent_approvals
             WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
 
-            UNION ALL
-
-            SELECT
-                id,
-                tenant_id,
-                COALESCE(agent_type, 'operations') as event_source,
-                NULL::jsonb as context_payload,
-                NULL::jsonb as proposed_action,
-                CASE
-                    WHEN status = 'Pending' THEN 'PENDING_APPROVAL'
-                    WHEN status = 'Rejected' THEN 'DISMISSED'
-                    ELSE status
-                END as lifecycle_state,
-                created_at,
-                updated_at
-            FROM agent_action_requests
-            WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
-
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
             "#
@@ -190,24 +154,6 @@ impl AgentFeedRepository {
                 updated_at
             FROM agent_approvals
             WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
-
-            UNION ALL
-
-            SELECT
-                id,
-                tenant_id,
-                COALESCE(agent_type, 'operations') as event_source,
-                jsonb_build_object('description', 'Action Request: ' || action_type) as context_payload,
-                payload as proposed_action,
-                CASE
-                    WHEN status = 'Pending' THEN 'PENDING_APPROVAL'
-                    WHEN status = 'Rejected' THEN 'DISMISSED'
-                    ELSE status
-                END as lifecycle_state,
-                created_at,
-                updated_at
-            FROM agent_action_requests
-            WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
 
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
@@ -245,24 +191,12 @@ impl AgentFeedRepository {
 
         // Fallback to agent_approvals
         let legacy_status = if new_state == "APPROVED" { "APPROVED" } else if new_state == "DISMISSED" { "REJECTED" } else { "DRAFT" };
-        let rows_affected = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+        sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
             .bind(legacy_status)
             .bind(tenant_id)
             .bind(id)
             .execute(&self.pool)
-            .await?
-            .rows_affected();
-
-        if rows_affected == 0 {
-             // Fallback to agent_action_requests
-             let request_status = if new_state == "APPROVED" { "Approved" } else if new_state == "DISMISSED" { "Rejected" } else { "Pending" };
-             sqlx::query("UPDATE agent_action_requests SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
-                 .bind(request_status)
-                 .bind(tenant_id)
-                 .bind(id)
-                 .execute(&self.pool)
-                 .await?;
-        }
+            .await?;
 
         let fetched = self.get(tenant_id, id).await?;
         if let Some(f) = fetched {
@@ -292,8 +226,8 @@ impl AgentFeedRepository {
         }
 
         // Fallback for agent_approvals
-        if let Some(action) = &proposed_action {
-            let rows_affected = sqlx::query(
+        if let Some(action) = proposed_action {
+            sqlx::query(
                 r#"
                 UPDATE agent_approvals
                 SET payload = $1, updated_at = NOW()
@@ -304,24 +238,7 @@ impl AgentFeedRepository {
             .bind(tenant_id)
             .bind(id)
             .execute(&self.pool)
-            .await?
-            .rows_affected();
-
-            if rows_affected == 0 {
-                // Fallback for agent_action_requests
-                sqlx::query(
-                    r#"
-                    UPDATE agent_action_requests
-                    SET payload = $1, updated_at = NOW()
-                    WHERE tenant_id = $2 AND id = $3
-                    "#
-                )
-                .bind(action)
-                .bind(tenant_id)
-                .bind(id)
-                .execute(&self.pool)
-                .await?;
-            }
+            .await?;
         }
 
         Ok(())

@@ -342,7 +342,7 @@ impl DB {
                             }
 
                             use std::os::unix::fs::PermissionsExt;
-                            if let Ok(perms) = std::fs::symlink_metadata(&secret_path).map(|m| m.permissions()) {
+                            if let Ok(mut perms) = std::fs::symlink_metadata(&secret_path).map(|m| m.permissions()) {
                                 if perms.mode() & 0o777 != 0o600 {
                                     tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
                                     std::process::exit(1);

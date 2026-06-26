@@ -116,7 +116,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Since this test specifically verifies the manual steps (Context, Categories, etc.),
     // we will navigate to the manual setup now to continue the existing test flow.
-    await page.locator('#step-chat').getByRole('button', { name: 'Back' }).click();
+    await page.locator('#step-chat button').first().click();
     await expect(page.getByRole('heading', { name: "10-Minute Setup Wizard" })).toBeVisible();
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();

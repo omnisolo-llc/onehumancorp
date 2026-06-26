@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PoweredByOHC } from '../components/PoweredByOHC';
-import { OnboardingChatAgent } from './components/OnboardingChatAgent';
 
 export default function ZeroClickBuilderPage() {
   const router = useRouter();
+  const [prompt, setPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState(0);
   const [generatedStore, setGeneratedStore] = useState<any>(null);
   const [hasPro, setHasPro] = useState(false);
 
@@ -16,14 +18,58 @@ export default function ZeroClickBuilderPage() {
     }
   }, []);
 
+  const steps = [
+    "Analyzing your business...",
+    "Designing storefront layout...",
+    "Generating product catalog...",
+    "Configuring booking systems...",
+    "Finalizing your AI assistant..."
+  ];
+
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prompt.trim()) return;
+
+    setIsGenerating(true);
+    setGenerationStep(0);
+
+    // Simulate generation steps for UI feedback
+    const interval = setInterval(() => {
+      setGenerationStep(prev => {
+        if (prev < steps.length - 1) return prev + 1;
+        clearInterval(interval);
+        return prev;
+      });
+    }, 1500);
+
+    try {
+      const response = await fetch('/api/v1/growth/zero-click-builder/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+
+      const data = await response.json();
+
+      clearInterval(interval);
+      setGenerationStep(steps.length - 1);
+
+      setTimeout(() => {
+        setIsGenerating(false);
+        setGeneratedStore(data);
+      }, 1000);
+    } catch (error) {
+      console.error("Error generating store:", error);
+      setIsGenerating(false);
+      clearInterval(interval);
+      alert("Something went wrong. Please try again.");
+    }
+  };
+
   const handleShare = () => {
     const shareText = `I just built my AI-powered business in 30 seconds using OHC! Start your own for free: https://ohc.app/zero-click-builder?ref=new_store \n\n⚡ Powered by OHC`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(shareUrl, '_blank');
-  };
-
-  const handleChatComplete = (data: any) => {
-    setGeneratedStore(data);
   };
 
   return (
@@ -37,12 +83,48 @@ export default function ZeroClickBuilderPage() {
             Zero-Click Business Generator
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-            Chat with our AI assistant to instantly build your storefront, product catalog, and booking system.
+            Describe your business in one sentence. Our AI will instantly build your storefront, product catalog, and booking system.
           </p>
         </div>
 
         {!generatedStore ? (
-          <OnboardingChatAgent onComplete={handleChatComplete} />
+          <div className="glassmorphism p-8 mb-8 relative overflow-hidden">
+            {isGenerating && (
+              <div className="absolute inset-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-[30px] saturate-[210%] flex flex-col items-center justify-center">
+                <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 animate-pulse">
+                  {steps[generationStep]}
+                </h3>
+                <p className="text-sm text-gray-500 font-medium">Please don't close this window.</p>
+              </div>
+            )}
+
+            <form onSubmit={handleGenerate} className="space-y-6">
+              <div>
+                <label htmlFor="prompt" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  What do you do?
+                </label>
+                <textarea
+                  id="prompt"
+                  rows={4}
+                  className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow resize-none"
+                  placeholder="e.g., I am a home baker in Austin selling custom vegan cakes and cupcakes."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  disabled={isGenerating}
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isGenerating || !prompt.trim()}
+                className="w-full min-h-[44px] flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-xl font-semibold text-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-sm hover:shadow-md"
+              >
+                <span>🚀</span> Generate My Business
+              </button>
+            </form>
+          </div>
         ) : (
           <div className="glassmorphism p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center mb-8">

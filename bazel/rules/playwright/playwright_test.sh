@@ -598,10 +598,6 @@ PLAYWRIGHT_OUTPUT_DIR="$BASE_OUTPUT_DIR/results"
 export PLAYWRIGHT_HTML_REPORT="$BASE_OUTPUT_DIR/report"
 mkdir -p "$PLAYWRIGHT_OUTPUT_DIR"
 mkdir -p "$PLAYWRIGHT_HTML_REPORT"
-PLAYWRIGHT_SPEC_MANIFEST="$BASE_OUTPUT_DIR/playwright-specs.txt"
-PLAYWRIGHT_LIST_LOG="$BASE_OUTPUT_DIR/playwright-list.log"
-PLAYWRIGHT_RUN_LOG="$BASE_OUTPUT_DIR/playwright-run.log"
-PLAYWRIGHT_SUMMARY="$BASE_OUTPUT_DIR/playwright-summary.md"
 
 # Prepare sharding argument if running under Bazel sharding or a generated
 # shard target.
@@ -620,26 +616,12 @@ elif [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
   fi
 fi
 
-find src/e2e -maxdepth 1 -name '*.spec.ts' -type f -printf '%P\n' | sort > "$PLAYWRIGHT_SPEC_MANIFEST"
-{
-  echo "# Playwright Bazel Test Details"
-  echo
-  echo "- Target: ${TEST_TARGET:-unknown}"
-  echo "- Shard: ${PLAYWRIGHT_SHARD:-${TEST_SHARD_INDEX:-none}/${TEST_TOTAL_SHARDS:-none}}"
-  echo "- Base URL: ${BASE_URL:-unknown}"
-  echo "- Spec files copied into Playwright workspace: $(wc -l < "$PLAYWRIGHT_SPEC_MANIFEST" | tr -d ' ')"
-  echo "- HTML report directory: $PLAYWRIGHT_HTML_REPORT"
-  echo "- Output directory: $PLAYWRIGHT_OUTPUT_DIR"
-  echo
-  echo "## Spec Files"
-  sed 's/^/- `/' "$PLAYWRIGHT_SPEC_MANIFEST" | sed 's/$/`/'
-} > "$PLAYWRIGHT_SUMMARY"
-
 # Run Playwright
 if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
   echo "[playwright] Validating spec discovery: ${PLAYWRIGHT_SPEC_ARGS[*]}"
-  if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "${PLAYWRIGHT_SPEC_ARGS[@]}" ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_LIST_LOG"; then
-    if grep -q "No tests found" "$PLAYWRIGHT_LIST_LOG"; then
+  LIST_LOG="$TEST_TMPDIR/playwright-list.log"
+  if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "${PLAYWRIGHT_SPEC_ARGS[@]}" 2>&1 | tee "$LIST_LOG"; then
+    if grep -q "No tests found" "$LIST_LOG"; then
       echo "[playwright] No tests found in selected specs."
     else
       exit 1
@@ -647,25 +629,8 @@ if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
   fi
 
   echo "[playwright] Running specs: ${PLAYWRIGHT_SPEC_ARGS[*]}"
-  set +e
-  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "${PLAYWRIGHT_SPEC_ARGS[@]}" ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_RUN_LOG"
-  playwright_status=${PIPESTATUS[0]}
-  set -e
-  exit "$playwright_status"
+  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "${PLAYWRIGHT_SPEC_ARGS[@]}" ${PLAYWRIGHT_SHARD_ARG}
 else
-  echo "[playwright] Listing selected specs/tests"
-  if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_LIST_LOG"; then
-    if grep -q "No tests found" "$PLAYWRIGHT_LIST_LOG"; then
-      echo "[playwright] No tests found in selected specs."
-    else
-      exit 1
-    fi
-  fi
-
   echo "[playwright] Running all specs on host"
-  set +e
-  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_RUN_LOG"
-  playwright_status=${PIPESTATUS[0]}
-  set -e
-  exit "$playwright_status"
+  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" ${PLAYWRIGHT_SHARD_ARG}
 fi

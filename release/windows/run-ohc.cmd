@@ -15,7 +15,6 @@ if not exist ".ohc" mkdir ".ohc"
 set "OHC_SQLITE_KEY_FILE=%CD%\.ohc\sqlite.key"
 if not exist "%OHC_SQLITE_KEY_FILE%" (
   powershell -NoProfile -ExecutionPolicy Bypass -Command "$bytes = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes); [Convert]::ToBase64String($bytes) | Set-Content -Encoding ASCII -NoNewline $env:OHC_SQLITE_KEY_FILE"
-  icacls "%OHC_SQLITE_KEY_FILE%" /inheritance:r /grant "%USERNAME%:F" /c /q >nul 2>&1
 )
 
 if not defined OHC_SQLITE_KEY (

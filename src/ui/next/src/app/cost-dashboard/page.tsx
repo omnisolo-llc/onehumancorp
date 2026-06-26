@@ -146,7 +146,7 @@ export default function CostDashboardPage() {
     >
       <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6 font-inter">
         <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4">
+            <div className="app-panel-header px-6 py-4">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Advisory Summary</h2>
             </div>
             <div className="app-panel-body p-6">
@@ -157,16 +157,16 @@ export default function CostDashboardPage() {
         </section>
 
         {/* My Plan Section */}
-        <section id="my-plan-section" className="app-panel glass-panel">
-          <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4 flex justify-between items-center">
+        <section id="my-plan-section" className="app-panel">
+          <div className="app-panel-header">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">My Plan</h2>
              <button
                onClick={() => router.push('/pricing')}
-               className="min-h-[44px] px-6 py-2 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center">
+               className="px-4 py-2 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl text-sm font-medium transition-all shadow-sm">
                Upgrade
              </button>
           </div>
-          <div className="app-panel-body p-6">
+          <div className="app-panel-body">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="p-4 app-card ohc-growth-card glass-card">
                       <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
@@ -221,7 +221,7 @@ export default function CostDashboardPage() {
 
         {/* Overview Section */}
         <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4">
+            <div className="app-panel-header px-6 py-4">
                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Transparency Dashboard</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
@@ -264,7 +264,7 @@ export default function CostDashboardPage() {
 
         {/* Breakdown Section */}
         <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4">
+            <div className="app-panel-header px-6 py-4">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Breakdown</h2>
             </div>
 

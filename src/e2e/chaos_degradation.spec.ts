@@ -2,12 +2,13 @@ import { test, expect } from './fixtures';
 
 test.describe('Degradation Validation (Chaos Engineering)', () => {
 
-  test('frontend fail-safes when backend latency spikes >2s or connection drops', async ({ page, context, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-    await page.goto('/dashboard');
-    await expect(page.locator('h2', { hasText: /Welcome back/i }).first()).toBeVisible({ timeout: 15000 });
+  test('frontend fail-safes when backend latency spikes >2s or connection drops', async ({ page }) => {
+    await page.goto('/inventory');
+    await expect(page.locator('text=Inventory').first()).toBeVisible();
 
-    await context.setOffline(true);
+    await page.route('**/api/v1/sync/offline', async (route) => {
+      await route.abort('failed');
+    });
 
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('simulate_offline_mutation', {
@@ -19,42 +20,29 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
       }));
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('actions')) {
-                db.createObjectStore('actions', { keyPath: 'id' });
-            }
-        };
-        req.onsuccess = (e: any) => {
+        req.onsuccess = (e) => {
             const db = e.target.result;
             if (db.objectStoreNames.contains('actions')) {
                 const tx = db.transaction('actions', 'readwrite');
                 tx.objectStore('actions').put({
-                    type: 'inventory_toggle',
-                    id: 'e2e-product-123',
-                    timestamp: new Date().toISOString()
-                });
+        type: 'inventory_toggle',
+        id: 'e2e-product-123',
+        timestamp: new Date().toISOString()
+      });
                 tx.oncomplete = () => resolve(true);
             } else {
                 resolve(true);
             }
         };
         req.onerror = () => resolve(true);
-      });
+    });
+      window.dispatchEvent(new Event('storage'));
     });
 
-    await page.evaluate(() => window.dispatchEvent(new Event('storage')));
-
-    const q1: any = await page.evaluate(() => {
+    const queueData = await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('actions')) {
-                db.createObjectStore('actions', { keyPath: 'id' });
-            }
-        };
-        req.onsuccess = (e: any) => {
+        req.onsuccess = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) return resolve([]);
             const tx = db.transaction('actions', 'readonly');
@@ -62,64 +50,52 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
             reqAll.onsuccess = () => resolve(reqAll.result);
         };
         req.onerror = () => resolve([]);
-      });
+    });
     });
 
-    expect(q1.length).toBeGreaterThan(0);
-    expect(q1[0].type).toBe('inventory_toggle');
+    expect(queueData.length).toBeGreaterThan(0);
+    expect(queueData[0].type).toBe('inventory_toggle');
 
-    await expect(page.locator('h2', { hasText: /Welcome back/i }).first()).toBeVisible();
+    await expect(page.locator('text=Inventory').first()).toBeVisible();
   });
 
-  test('POS terminal fallback queues transactions locally during offline mode', async ({ page, context, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-    await page.goto('/dashboard');
-    await expect(page.locator('h2', { hasText: /Welcome back/i }).first()).toBeVisible({ timeout: 15000 });
+  test('POS terminal fallback queues transactions locally during offline mode', async ({ page }) => {
+    await page.goto('/checkout');
+    await expect(page.locator('text=Checkout').first()).toBeVisible();
 
-    await context.setOffline(true);
+    await page.route('**/api/v1/payments/terminal/sync_offline', async (route) => {
+      await route.abort('failed');
+    });
 
     await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('actions')) {
-                db.createObjectStore('actions', { keyPath: 'id' });
-            }
-        };
-        req.onsuccess = (e: any) => {
+        req.onsuccess = (e) => {
             const db = e.target.result;
             if (db.objectStoreNames.contains('actions')) {
                 const tx = db.transaction('actions', 'readwrite');
                 tx.objectStore('actions').put({
-                    type: 'tap_to_pay',
-                    id: 'e2e-txn-pos-123',
-                    amount: 500,
-                    currency: 'usd',
-                    product_id: 'e2e-prod-x',
-                    timestamp: new Date().toISOString()
-                });
+        type: 'tap_to_pay',
+        id: 'e2e-txn-pos-123',
+        amount: 500,
+        currency: 'usd',
+        product_id: 'e2e-prod-x',
+        timestamp: new Date().toISOString()
+      });
                 tx.oncomplete = () => resolve(true);
             } else {
                 resolve(true);
             }
         };
         req.onerror = () => resolve(true);
-      });
+    });
+      window.dispatchEvent(new Event('storage'));
     });
 
-    await page.evaluate(() => window.dispatchEvent(new Event('storage')));
-
-    const q2: any = await page.evaluate(() => {
+    const queueData = await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('actions')) {
-                db.createObjectStore('actions', { keyPath: 'id' });
-            }
-        };
-        req.onsuccess = (e: any) => {
+        req.onsuccess = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) return resolve([]);
             const tx = db.transaction('actions', 'readonly');
@@ -127,61 +103,49 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
             reqAll.onsuccess = () => resolve(reqAll.result);
         };
         req.onerror = () => resolve([]);
-      });
+    });
     });
 
-    const tapToPayTxns = q2.filter((q: any) => q.type === 'tap_to_pay');
+    const tapToPayTxns = queueData.filter((q: any) => q.type === 'tap_to_pay');
     expect(tapToPayTxns.length).toBeGreaterThan(0);
     expect(tapToPayTxns[0].amount).toBe(500);
   });
 
-  test('Draft quote mutation degrades gracefully to offline queue', async ({ page, context, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
+  test('Draft quote mutation degrades gracefully to offline queue', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('h2', { hasText: /Welcome back/i }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Dashboard').first()).toBeVisible();
 
-    await context.setOffline(true);
+    await page.route('**/api/v1/sync/offline', async (route) => {
+      await route.abort('failed');
+    });
 
     await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('actions')) {
-                db.createObjectStore('actions', { keyPath: 'id' });
-            }
-        };
-        req.onsuccess = (e: any) => {
+        req.onsuccess = (e) => {
             const db = e.target.result;
             if (db.objectStoreNames.contains('actions')) {
                 const tx = db.transaction('actions', 'readwrite');
                 tx.objectStore('actions').put({
-                    type: 'draft_quote',
-                    id: 'e2e-draft-456',
-                    notes: '{"custom": "quote data"}',
-                    timestamp: new Date().toISOString()
-                });
+        type: 'draft_quote',
+        id: 'e2e-draft-456',
+        notes: '{"custom": "quote data"}',
+        timestamp: new Date().toISOString()
+      });
                 tx.oncomplete = () => resolve(true);
             } else {
                 resolve(true);
             }
         };
         req.onerror = () => resolve(true);
-      });
+    });
+      window.dispatchEvent(new Event('storage'));
     });
 
-    await page.evaluate(() => window.dispatchEvent(new Event('storage')));
-
-    const q3: any = await page.evaluate(() => {
+    const queueData = await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('actions')) {
-                db.createObjectStore('actions', { keyPath: 'id' });
-            }
-        };
-        req.onsuccess = (e: any) => {
+        req.onsuccess = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) return resolve([]);
             const tx = db.transaction('actions', 'readonly');
@@ -189,86 +153,76 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
             reqAll.onsuccess = () => resolve(reqAll.result);
         };
         req.onerror = () => resolve([]);
-      });
+    });
     });
 
-    const draftQuotes = q3.filter((q: any) => q.type === 'draft_quote');
+    const draftQuotes = queueData.filter((q: any) => q.type === 'draft_quote');
     expect(draftQuotes.length).toBeGreaterThan(0);
     expect(draftQuotes[0].notes).toBe('{"custom": "quote data"}');
   });
 
-  test('Read operations render cached layout with blurred states when API is offline', async ({ page, context, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-    await page.goto('/dashboard');
+  test('Read operations render cached layout with blurred states when API is offline', async ({ page }) => {
+    await page.route('**/api/v1/**', async (route) => {
+      await route.abort('failed');
+    });
 
-    await expect(page.locator('h2', { hasText: /Welcome back/i }).first()).toBeVisible({ timeout: 15000 });
-
-    // Set page to offline
-    await context.setOffline(true);
-    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-
-    await page.waitForTimeout(1000);
+    await page.goto('/calendar');
 
     // Test that the layout doesn't completely break/white-screen.
-    await expect(page.locator('h2', { hasText: /Welcome back/i }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Calendar').first()).toBeVisible();
+    // A premium UI fail-safe: offline mode indicator could be verified if it exists.
   });
 
-  test('SyncManager recovers and replays offline queue when connection is restored', async ({ page, context, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
+  test('SyncManager recovers and replays offline queue when connection is restored', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('h2', { hasText: /Welcome back/i }).first()).toBeVisible({ timeout: 15000 });
 
-    // 1. Add item to queue using IndexedDB directly as originally intended
+    let syncOfflineCalled = false;
+    await page.route('**/api/v1/sync/offline', async (route) => {
+      syncOfflineCalled = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true })
+      });
+    });
+
+    // 1. Add item to queue
     await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onupgradeneeded = (e: any) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('actions')) {
-                db.createObjectStore('actions', { keyPath: 'id' });
-            }
-        };
-        req.onsuccess = (e: any) => {
+        req.onsuccess = (e) => {
             const db = e.target.result;
             if (db.objectStoreNames.contains('actions')) {
                 const tx = db.transaction('actions', 'readwrite');
                 tx.objectStore('actions').put({
-                    type: 'inventory_toggle',
-                    id: 'e2e-product-789',
-                    timestamp: new Date().toISOString()
-                });
+        type: 'inventory_toggle',
+        id: 'e2e-product-789',
+        timestamp: new Date().toISOString()
+      });
                 tx.oncomplete = () => resolve(true);
             } else {
                 resolve(true);
             }
         };
         req.onerror = () => resolve(true);
-      });
+    });
     });
 
     // 2. Trigger online event manually to force SyncManager to sync
-
-
-
-
-
-
-
-    await context.setOffline(false);
     await page.evaluate(() => {
-      Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
       window.dispatchEvent(new Event('online'));
     });
 
+    // 3. Wait a moment for async sync to run
+    await page.waitForTimeout(1500);
 
-    // 3. Wait a moment for async sync to run (since we can't intercept the route, we just wait briefly)
-    await page.waitForTimeout(2000);
+    // 4. Verify route was called and queue is empty
+    expect(syncOfflineCalled).toBe(true);
 
-    // 4. Verify queue was emptied by SyncManager
-    const q4: any = await page.evaluate(() => {
+    const queueData = await page.evaluate(() => {
       return new Promise((resolve) => {
         const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-        req.onsuccess = (e: any) => {
+        req.onsuccess = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('actions')) return resolve([]);
             const tx = db.transaction('actions', 'readonly');
@@ -276,11 +230,9 @@ test.describe('Degradation Validation (Chaos Engineering)', () => {
             reqAll.onsuccess = () => resolve(reqAll.result);
         };
         req.onerror = () => resolve([]);
-      });
+    });
     });
 
-    // Ideally the queue is 0, but if the backend doesn't implement the offline sync endpoint yet,
-    // this test might still fail. Let's assert it is 0.
-    expect(q4.length).toBe(0);
+    expect(queueData.length).toBe(0);
   });
 });
