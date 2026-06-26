@@ -29,7 +29,7 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         const sourceText = await page.locator('[data-testid^="triage-card-"] .font-outfit').first().textContent();
         expect(sourceText).toContain('Instagram DM');
 
-        const messageText = await page.locator('[data-testid^="triage-card-"] .text-[15px]').first().textContent();
+        const messageText = await page.locator('[data-testid^="triage-card-"] .text-\[15px\]').first().textContent();
         expect(messageText).toContain('Do you make vegan cakes for this Saturday?');
 
         // Click the first item to select it
