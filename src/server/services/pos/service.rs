@@ -21,14 +21,19 @@ impl MyPosService {
 
         for payload in payloads {
             if payload.r#type == "inventory" {
-                let _res = sqlx::query(
-                    "UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1) WHERE id = $2 AND tenant_id = $3"
-                )
-                .bind(payload.quantity_delta)
-                .bind(&payload.item_id)
-                .bind(tenant_id)
-                .execute(&mut *db_tx)
-                .await.map_err(|e| e.to_string())?;
+                if payload.quantity_delta < 0 {
+                    let inventory_service = crate::services::inventory::InventoryService::new(None);
+                    let _ = inventory_service.commit_inventory(tenant_id, &payload.item_id, -payload.quantity_delta, "").await;
+                } else {
+                    let _res = sqlx::query(
+                        "UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1) WHERE id = $2 AND tenant_id = $3"
+                    )
+                    .bind(payload.quantity_delta)
+                    .bind(&payload.item_id)
+                    .bind(tenant_id)
+                    .execute(&mut *db_tx)
+                    .await.map_err(|e| e.to_string())?;
+                }
             } else if payload.r#type == "transaction" {
                 // Here we might handle creating the offline transaction, but since it's already recorded we just reconcile
                 // To keep it simple, we record a log for the transaction type CRDT if needed
