@@ -478,13 +478,33 @@ pub async fn stripe_webhook_handler(
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
             if payload.r#type == "checkout.session.completed" {
-                release_inventory_locks_for_payment(&webhook_state, obj).await;
-
-                // Dispatch payment.captured event to Finance agent
                 let tenant_id_opt = obj.get("metadata")
                     .and_then(|m| m.get("tenant_id"))
                     .and_then(|id| id.as_str());
 
+                let product_id_opt = obj.get("metadata")
+                    .and_then(|m| m.get("product_id"))
+                    .and_then(|id| id.as_str());
+
+                if let (Some(tenant_id), Some(product_id)) = (tenant_id_opt, product_id_opt) {
+                    let quantity = obj.get("metadata")
+                        .and_then(|m| m.get("quantity"))
+                        .and_then(|q| q.as_str())
+                        .and_then(|q| q.parse::<i32>().ok())
+                        .unwrap_or(1);
+
+                    let lock_id = obj.get("metadata")
+                        .and_then(|m| m.get("inventory_lock_id"))
+                        .and_then(|id| id.as_str())
+                        .unwrap_or("");
+
+                    let inventory_service = crate::services::inventory::InventoryService::new(None);
+                    let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, lock_id).await;
+                } else {
+                    release_inventory_locks_for_payment(&webhook_state, obj).await;
+                }
+
+                // Dispatch payment.captured event to Finance agent
                 if let Some(tenant_id) = tenant_id_opt {
                     let orch = webhook_state.orchestrator.clone();
                     let payload_val = obj.clone();
