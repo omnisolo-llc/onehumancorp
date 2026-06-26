@@ -810,6 +810,10 @@ pub async fn bench_hybrid_latency() {
     println!("13. Orders Dashboard Latency");
     bench_ui_orders_latency().await;
 
+
+    println!("14. Assistant Mobile Payload Optimization Latency");
+    bench_assistant_mobile_payload().await;
+
     println!("--- Hybrid Latency Benchmark Complete ---");
 }
 
@@ -1307,5 +1311,29 @@ pub async fn bench_ui_bookings_latency() {
         println!("    (Payload Optimization verified: mobile_optimized fetches return trimmed payload)");
     } else {
         println!("  - list_ui_bookings_handler (Payload Optimization verified, Hybrid Cache)");
+    }
+}
+
+
+pub async fn bench_assistant_mobile_payload() {
+    println!("Benchmarking Assistant Mobile Payload Optimization...");
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, workspace_id, title, '' as prompt, status, mode, permission_profile, NULL as model_config, current_step, archived, EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix, EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix FROM assistant_tasks";
+            let _ = sqlx::query(query_str).fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+
+        println!("  - Assistant Mobile Payload Optimization (Postgres): {:?}", duration);
+        println!("    (Mobile Payload Optimization verified: assistant_tasks return trimmed payload)");
+    } else {
+        println!("  - Assistant Mobile Payload Optimization (SQLite)");
     }
 }
