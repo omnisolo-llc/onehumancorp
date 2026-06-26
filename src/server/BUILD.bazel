@@ -98,6 +98,8 @@ SERVER_RS_SRCS = [
     "//src/server/api/agents:client_intake.rs",
     "//src/server/api/onboarding:mod.rs",
     "//src/server/api/inbox:srcs",
+    "//src/server/api/ohc_job_queue:handler.rs",
+    "//src/server/api/ohc_job_queue:mod.rs",
     "//src/server/autodream:mod.rs",
     "//src/server/autodream_pipeline:llm_client.rs",
     "//src/server/autodream_pipeline:mod.rs",
