@@ -9,8 +9,26 @@ export default function BusinessAnalytics() {
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [trialStatus, setTrialStatus] = useState('');
+  const [metrics, setMetrics] = useState<any>(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
 
   useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        setLoadingMetrics(true);
+        const res = await fetch('/api/ui/dashboard/metrics');
+        if (res.ok) {
+          const data = await res.json();
+          setMetrics(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch metrics', err);
+      } finally {
+        setLoadingMetrics(false);
+      }
+    };
+    fetchMetrics();
+
     const isPro = localStorage.getItem('pro_plan') === 'true';
     const trialActive = localStorage.getItem('trial_active') === 'true';
     if (isPro || trialActive) {
@@ -40,7 +58,7 @@ export default function BusinessAnalytics() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="app-card glassmorphism p-5 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Total Revenue</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">$8,450.00</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">{loadingMetrics ? "..." : `${(metrics?.total_sales || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}</div>
               <div className="text-xs font-semibold text-[#34C759] mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                  15% from last month
@@ -49,7 +67,7 @@ export default function BusinessAnalytics() {
 
             <div className="app-card glassmorphism p-5 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Average Order Value</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">$45.50</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">{loadingMetrics ? "..." : `${((metrics?.total_sales || 0) / (metrics?.pending_orders || 1)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}</div>
               <div className="text-xs font-semibold text-[#34C759] mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                  2% from last month
@@ -58,7 +76,7 @@ export default function BusinessAnalytics() {
 
             <div className="app-card glassmorphism p-5 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Orders</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">185</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">{loadingMetrics ? "..." : (metrics?.pending_orders || 0)}</div>
               <div className="text-xs font-semibold text-[#34C759] mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
                  10% from last month
@@ -67,7 +85,7 @@ export default function BusinessAnalytics() {
 
             <div className="app-card glassmorphism p-5 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Conversion Rate</div>
-              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">4.2%</div>
+              <div className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">{loadingMetrics ? "..." : `${((metrics?.active_customers ? (metrics?.pending_orders / metrics?.active_customers) : 0) * 100).toFixed(1)}%`}</div>
               <div className="text-xs font-semibold text-[#FF3B30] mt-2 flex items-center gap-1">
                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
                  -1.5% from last month
@@ -83,62 +101,10 @@ export default function BusinessAnalytics() {
                {!hasPro && <span className="bg-[#0f766e] text-white text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Pro</span>}
            </h2>
 
-           <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-500 ${!hasPro ? 'filter blur-md select-none pointer-events-none opacity-50' : ''}`}>
-               <div className="app-card glassmorphism p-6 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 h-72 flex flex-col">
-                   <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Revenue Forecast</h3>
-                   <div className="flex-1 flex flex-col justify-end gap-2 pb-4 border-b border-gray-100 dark:border-gray-850 relative">
-                        {/* Mock area chart */}
-                       <div className="w-full h-full absolute inset-0 flex items-end">
-                           <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
-                               <path d="M0,50 L0,30 Q10,20 20,25 T40,15 T60,20 T80,5 Q90,10 100,0 L100,50 Z" fill="rgba(15, 118, 110, 0.2)" stroke="#0f766e" strokeWidth="1"></path>
-                               <path d="M80,5 Q90,10 100,0" fill="none" stroke="#0f766e" strokeWidth="2" strokeDasharray="2,2"></path>
-                           </svg>
-                       </div>
-                       <div className="flex justify-between w-full text-xs text-gray-400 mt-2 absolute bottom-0">
-                           <span>Oct</span><span>Nov</span><span>Dec</span><span className="text-[#0f766e] font-semibold">Jan (Est)</span>
-                       </div>
-                   </div>
-               </div>
-
-               <div className="app-card glassmorphism p-6 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 h-72 flex flex-col">
-                   <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Customer Cohort Retention</h3>
-                   <div className="flex-1 flex flex-col gap-2">
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600 dark:text-gray-300">Month 1</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-[#0f766e] rounded-sm" style={{width: '100%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">100%</span>
-                       </div>
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600 dark:text-gray-300">Month 2</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-[#115e59] rounded-sm" style={{width: '65%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">65%</span>
-                       </div>
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600 dark:text-gray-300">Month 3</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-[#14b8a6] rounded-sm" style={{width: '45%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">45%</span>
-                       </div>
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600 dark:text-gray-300">Month 4</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-[#2dd4bf] rounded-sm" style={{width: '35%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">35%</span>
-                       </div>
-                       <div className="flex justify-between items-center text-xs">
-                           <span className="w-16 font-medium text-gray-600 dark:text-gray-300">Month 5</span>
-                           <div className="flex-1 flex gap-1 h-6">
-                               <div className="bg-[#56e39f] rounded-sm" style={{width: '28%'}}></div>
-                           </div>
-                           <span className="w-8 text-right text-gray-500">28%</span>
-                       </div>
-                   </div>
+           <div className={`grid grid-cols-1 gap-6 transition-all duration-500 ${!hasPro ? 'filter blur-md select-none pointer-events-none opacity-50' : ''}`}>
+               <div className="app-card glassmorphism p-6 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col items-center justify-center min-h-[200px] text-center">
+                   <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Predictive Data Not Available Yet</h3>
+                   <p className="text-sm text-gray-500 dark:text-gray-400">Collect more data to unlock your Revenue Forecast and Cohort Retention insights.</p>
                </div>
            </div>
 
