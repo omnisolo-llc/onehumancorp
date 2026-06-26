@@ -90,6 +90,13 @@ pub struct SearchResult {
 }
 
 
+fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, sqlx::Error> {
+    chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
+        .or_else(|_| chrono::DateTime::parse_from_rfc3339(s).map(|d| d.with_timezone(&chrono::Utc)))
+        .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+}
+
 impl DB {
     pub async fn query_available_slots(&self, tenant_id: &str, service_id: &str) -> Result<Vec<AvailableSlot>, sqlx::Error> {
         match &self.store {
@@ -136,18 +143,12 @@ impl DB {
                     // Sqlite might return string or integer for DateTime depending on the setup.
                     // To handle safely:
                     let start_time = match row.try_get::<String, _>("start_time") {
-                        Ok(s) => chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
-                            .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
-                            .or_else(|_| chrono::DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&chrono::Utc)))
-                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+                        Ok(s) => parse_sqlite_datetime(&s)?,
                         Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("start_time"),
                     };
 
                     let end_time = match row.try_get::<String, _>("end_time") {
-                        Ok(s) => chrono::NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
-                            .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
-                            .or_else(|_| chrono::DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&chrono::Utc)))
-                            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?,
+                        Ok(s) => parse_sqlite_datetime(&s)?,
                         Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("end_time"),
                     };
 
@@ -1800,6 +1801,15 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_sqlite_datetime() {
+        let dt1 = parse_sqlite_datetime("2023-10-25 14:30:00").unwrap();
+        assert_eq!(dt1.to_rfc3339(), "2023-10-25T14:30:00+00:00");
+
+        let dt2 = parse_sqlite_datetime("2023-10-25T14:30:00Z").unwrap();
+        assert_eq!(dt2.to_rfc3339(), "2023-10-25T14:30:00+00:00");
+    }
 
     #[test]
     fn test_db_new_fails_without_server() {
