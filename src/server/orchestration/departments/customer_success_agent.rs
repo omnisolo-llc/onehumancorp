@@ -307,8 +307,25 @@ impl Department for CustomerSuccessAgent {
                 context_summary.push_str(&inventory_summary);
             }
 
+            // Subscriptions context logic
+            if !customer_id.is_empty() {
+                let subscriptions: Result<Vec<(String, String)>, sqlx::Error> = sqlx::query_as(
+                    "SELECT stripe_subscription_id, status FROM customer_subscriptions WHERE tenant_id = $1 AND customer_id = $2 AND status = 'active'"
+                )
+                .bind(&event.tenant_id)
+                .bind(&customer_id)
+                .fetch_all(&pool)
+                .await;
+                if let Ok(subs) = subscriptions {
+                    if !subs.is_empty() {
+                        let sub_ids: Vec<String> = subs.into_iter().map(|s| s.0).collect();
+                        context_summary.push_str(&format!("\nActive Subscriptions: {}", sub_ids.join(", ")));
+                    }
+                }
+            }
+
             let prompt = format!(
-                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}",
+                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. If the customer asks to pause, cancel, or modify a subscription, provide them with the billing portal link: https://your-store.com/subscriptions/manage. Tenant: {}. Customer message: {}\n\nContext:\n{}",
                 event.tenant_id, message, context_summary
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);

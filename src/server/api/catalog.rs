@@ -62,6 +62,9 @@ pub struct Product {
     pub description: Option<String>,
     pub item_type: Option<String>,
     pub price_cents: Option<i64>,
+    pub is_subscribable: Option<bool>,
+    pub subscription_frequency: Option<String>,
+    pub subscription_discount_percent: Option<i32>,
 }
 
 async fn handle_get_products(
@@ -85,7 +88,7 @@ async fn handle_get_products(
     };
 
     let rows = sqlx::query(
-        "SELECT id, title, description, type as item_type, price_cents FROM products WHERE tenant_id = $1"
+        "SELECT id, title, description, type as item_type, price_cents, is_subscribable, subscription_frequency, subscription_discount_percent FROM products WHERE tenant_id = $1"
     )
     .bind(&tenant_id)
     .fetch_all(&mut *conn)
@@ -101,6 +104,9 @@ async fn handle_get_products(
                     description: row.try_get("description").ok(),
                     item_type: row.try_get("item_type").ok(),
                     price_cents: row.try_get("price_cents").ok(),
+                    is_subscribable: row.try_get("is_subscribable").unwrap_or(Some(false)),
+                    subscription_frequency: row.try_get("subscription_frequency").unwrap_or(None),
+                    subscription_discount_percent: row.try_get("subscription_discount_percent").unwrap_or(None),
                 });
             }
             (StatusCode::OK, Json(products)).into_response()
