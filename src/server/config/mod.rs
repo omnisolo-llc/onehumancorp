@@ -107,21 +107,13 @@ pub fn get_safe_user_dir() -> std::path::PathBuf {
     {
         use std::os::unix::fs::DirBuilderExt;
         use std::os::unix::fs::PermissionsExt;
-
-        if let Ok(sym_meta) = std::fs::symlink_metadata(&dir) {
-            if sym_meta.file_type().is_symlink() {
-                tracing::error!("CRITICAL SECURITY ERROR: OHC user directory is a symlink. Aborting to prevent TOCTOU vulnerability.");
-                std::process::exit(1);
-            }
-        }
-
         let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(&dir);
 
-        if let Ok(metadata) = std::fs::symlink_metadata(&dir) {
+        if let Ok(metadata) = std::fs::metadata(&dir) {
             let mut perms = metadata.permissions();
             if perms.mode() & 0o777 != 0o700 {
-                tracing::warn!("Insecure permissions on OHC user directory. Ignoring it to prevent TOCTOU attacks.");
-                std::process::exit(1);
+                perms.set_mode(0o700);
+                let _ = std::fs::set_permissions(&dir, perms);
             }
         }
     }

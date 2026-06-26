@@ -32,11 +32,11 @@ pub async fn simulate_inbound_signal_handler(
 
     // Basic LLM simulation
     let intent = "inquiry".to_string();
-    let customer_info = serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"});
+    let customer_info = serde_json::json!({"name": "Simulated Customer"});
     let suggested_actions = serde_json::json!([
         {
             "action_type": "Draft Reply",
-            "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend"
+            "message": "This is an AI-generated draft based on the inbound signal."
         }
     ]);
 

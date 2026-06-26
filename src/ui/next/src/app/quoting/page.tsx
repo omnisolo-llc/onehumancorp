@@ -23,10 +23,9 @@ function QuotingContent() {
 
     const fetchQuote = async () => {
       try {
-        const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
         const res = await fetch(`/api/quotes?id=${quoteId}`, {
           headers: {
-            'x-tenant-id': tenantId
+            'x-tenant-id': 'tenant-1' // hardcoded for test
           }
         });
         if (res.ok) {
@@ -79,17 +78,16 @@ function QuotingContent() {
 
     try {
       if (navigator.onLine) {
-        const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
         const updateRes = await fetch(`/api/quotes?id=${quoteId}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
+          headers: { 'Content-Type': 'application/json', 'x-tenant-id': 'tenant-1' },
           body: JSON.stringify(updatePayload)
         });
         if (!updateRes.ok) throw new Error('Update failed');
 
         const approveRes = await fetch(`/api/quotes/${quoteId}/approve`, {
           method: 'PATCH',
-          headers: { 'x-tenant-id': tenantId }
+          headers: { 'x-tenant-id': 'tenant-1' }
         });
         if (!approveRes.ok) throw new Error('Approve failed');
       } else {

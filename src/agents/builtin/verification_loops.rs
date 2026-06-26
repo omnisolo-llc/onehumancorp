@@ -65,40 +65,6 @@ impl ComputationalGuide for BashComputationalGuide {
     }
 }
 
-pub struct CargoTestGuide {
-    pub workspace_path: Option<String>,
-}
-
-#[async_trait::async_trait]
-impl ComputationalGuide for CargoTestGuide {
-    async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
-        let wd = self
-            .workspace_path
-            .clone()
-            .unwrap_or_else(|| ".".to_string());
-        let mut cmd = tokio::process::Command::new("cargo");
-        cmd.arg("test").current_dir(wd);
-
-        match cmd.output().await {
-            Ok(output) => {
-                if !output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    return Err(format!(
-                        "Computational guide verification failed (cargo test).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                        stdout, stderr
-                    ));
-                }
-                Ok(())
-            }
-            Err(e) => Err(format!(
-                "Failed to execute computational guide cargo test: {}",
-                e
-            )),
-        }
-    }
-}
-
 pub struct BashVisualVerifier {
     pub command: String,
     pub workspace_path: Option<String>,
@@ -477,54 +443,6 @@ mod tests {
         // bash usually returns success=false rather than execution error if inside bash -c
         let res_fail = guide_fail.verify("", "").await;
         assert!(res_fail.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_cargo_test_guide() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().to_string_lossy().to_string();
-
-        // Initialize a dummy cargo project
-        std::process::Command::new("cargo")
-            .arg("init")
-            .arg("--lib")
-            .arg("--name")
-            .arg("test_project")
-            .current_dir(&path)
-            .output()
-            .unwrap();
-
-        let guide = CargoTestGuide {
-            workspace_path: Some(path.clone()),
-        };
-
-        // Valid project should pass
-        let res_pass = guide.verify("", "").await;
-        if res_pass.is_err() {
-            println!("res_pass failed: {:?}", res_pass.clone().err().unwrap());
-        }
-        assert!(res_pass.is_ok());
-
-        // Modify lib.rs to contain a failing test
-        let lib_rs = format!("{}/src/lib.rs", path);
-        std::fs::write(
-            &lib_rs,
-            "
-            #[cfg(test)]
-            mod tests {
-                #[test]
-                fn test_fail() {
-                    assert!(false);
-                }
-            }
-        ",
-        )
-        .unwrap();
-
-        // Project with failing test should return an error containing test output
-        let res_fail = guide.verify("", "").await;
-        assert!(res_fail.is_err());
-        assert!(res_fail.unwrap_err().contains("test_fail"));
     }
 
     #[tokio::test]

@@ -100,8 +100,6 @@ describe('useTooltip Hook sync', () => {
   it('throws an error if used outside TooltipProvider', () => {
     const originalError = console.error;
     console.error = vi.fn();
-    const preventError = (e: any) => e.preventDefault();
-    window.addEventListener('error', preventError);
 
     const TestComponent = () => {
       useTooltip();
@@ -111,7 +109,6 @@ describe('useTooltip Hook sync', () => {
     expect(() => render(<TestComponent />)).toThrow('useTooltip must be used within a TooltipProvider');
 
     console.error = originalError;
-    window.removeEventListener('error', preventError);
   });
 });
 

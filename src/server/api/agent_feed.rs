@@ -20,11 +20,13 @@ use redis::AsyncCommands;
 #[derive(Serialize, Deserialize, Clone)]
 pub struct MobileAgentFeedItem {
     pub id: String,
+    pub tenant_id: String,
     pub event_source: String,
     pub context_payload: Option<sqlx::types::Json<serde_json::Value>>,
     pub proposed_action: Option<sqlx::types::Json<serde_json::Value>>,
     pub lifecycle_state: String,
     pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -207,11 +209,13 @@ async fn list_feed_items(
                 let any_response = if mobile_optimized {
                     let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
                         id: item.id,
+                        tenant_id: item.tenant_id,
                         event_source: item.event_source,
-                        context_payload: None,
-                        proposed_action: None,
+                        context_payload: item.context_payload.clone(),
+                        proposed_action: item.proposed_action.clone(),
                         lifecycle_state: item.lifecycle_state,
                         created_at: item.created_at,
+                        updated_at: item.updated_at,
                     }).collect();
                     AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
                 } else {
@@ -232,11 +236,13 @@ async fn list_feed_items(
             let any_response = if mobile_optimized {
                 let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
                     id: item.id,
+                    tenant_id: item.tenant_id,
                     event_source: item.event_source,
-                    context_payload: None,
-                    proposed_action: None,
+                    context_payload: item.context_payload.clone(),
+                    proposed_action: item.proposed_action.clone(),
                     lifecycle_state: item.lifecycle_state,
                     created_at: item.created_at,
+                    updated_at: item.updated_at,
                 }).collect();
                 AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
             } else {

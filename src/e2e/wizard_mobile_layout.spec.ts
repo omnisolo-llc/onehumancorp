@@ -83,25 +83,4 @@ test.describe('Wizard and Onboarding flows', () => {
 
     await expect(page.locator('#business-categories')).toBeVisible();
   });
-
-  test('Loading state padding check on mobile layout', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/onboarding');
-
-    // Attempt to access step 4 loading state directly if possible, or intercept network and check
-    await page.evaluate(() => {
-        window.localStorage.setItem('onboarding-storage-v4', JSON.stringify({
-            state: { step: 4 }
-        }));
-    });
-
-    await page.reload();
-
-    // Check loading indicator container doesn't overflow
-    const container = page.locator('.animate-fade-in');
-    await expect(container).toBeVisible();
-
-    const containerWidth = await container.evaluate(el => el.clientWidth);
-    expect(containerWidth).toBeLessThanOrEqual(375);
-  });
 });

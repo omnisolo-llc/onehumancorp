@@ -174,7 +174,7 @@ export function HelpChat() {
           <button
             id="ai-chat-trigger"
             onClick={() => setIsOpen(true)}
-            className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
+            className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group "
             aria-label="Open help chat"
             aria-expanded={isOpen}
             aria-controls="ai-chat-interface"
@@ -189,11 +189,11 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/80 dark:bg-black/60 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto glassmorphism rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-800 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
-            className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-md"
+            className="bg-blue-600/90 text-white p-4 flex justify-between items-center backdrop-blur-[40px]"
           >
             <div className="flex items-center gap-2">
               <span className="text-xl drop-shadow-md">✨</span>
@@ -249,10 +249,10 @@ export function HelpChat() {
                 className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-sm backdrop-blur-md saturate-[210%] ${
+                  className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_4px_16px_rgba(0,0,0,0.04)] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/95 text-white rounded-br-sm border border-blue-500/50"
-                      : "bg-white/80 dark:bg-black/50 border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm"
+                      ? "bg-blue-600/95  text-white rounded-br-sm border border-blue-500/50"
+                      : "glassmorphism text-gray-800 dark:text-gray-100 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
@@ -301,12 +301,12 @@ export function HelpChat() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask anything..."
               disabled={isLoading}
-              className="flex-1 bg-white/70 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/20 rounded-2xl px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-100/70"
+              className="flex-1 glassmorphism rounded-xl px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
             />
             <button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
-              className="bg-blue-600/95 backdrop-blur-md text-white p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-md active:scale-95"
+              className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
               aria-label="Send message"
             >
               {isLoading ? (

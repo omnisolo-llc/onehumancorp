@@ -51,10 +51,7 @@ impl ActorSystem {
     /// SOTA Harness Patterns (2025-2026): 1. Actor-model message passing
     /// Spawns a new actor and returns its handle, encapsulating the channel setup
     /// and registration logic required by the actor framework.
-    pub async fn spawn<A: Actor + 'static>(
-        self: &Arc<Self>,
-        actor: A,
-    ) -> tokio::task::JoinHandle<()> {
+    pub async fn spawn<A: Actor + 'static>(self: &Arc<Self>, actor: A) -> tokio::task::JoinHandle<()> {
         let (tx, rx) = mpsc::channel(100);
         let name = actor.name();
 
@@ -933,15 +930,11 @@ mod tests {
 
         struct DummyActor;
         impl Actor for DummyActor {
-            fn name(&self) -> String {
-                "dummy".to_string()
-            }
-            fn start(
-                &self,
-                mut rx: mpsc::Receiver<ActorMessage>,
-                _sys: Arc<ActorSystem>,
-            ) -> tokio::task::JoinHandle<()> {
-                tokio::spawn(async move { while let Some(_) = rx.recv().await {} })
+            fn name(&self) -> String { "dummy".to_string() }
+            fn start(&self, mut rx: mpsc::Receiver<ActorMessage>, _sys: Arc<ActorSystem>) -> tokio::task::JoinHandle<()> {
+                tokio::spawn(async move {
+                    while let Some(_) = rx.recv().await {}
+                })
             }
         }
 

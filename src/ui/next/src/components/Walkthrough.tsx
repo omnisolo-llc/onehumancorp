@@ -123,7 +123,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Target Highlight Overlay (using box-shadow to punch a hole) */}
       {targetRect && (
         <div
-          className="ohc-walkthrough-overlay fixed pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[2px]"
+          className="ohc-walkthrough-overlay fixed pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[2px]"
           style={{
             zIndex: 9999,
             top: targetRect.top - 4,
@@ -139,7 +139,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
         id="walkthrough-bubble"
-        className="ohc-walkthrough-bubble fixed z-[10000] bg-white/80 dark:bg-black/60 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 shadow-2xl rounded-3xl p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
+        className="ohc-walkthrough-bubble fixed z-[10000] backdrop-blur-[40px] saturate-[210%] bg-white/80 dark:bg-black/60 border border-white/40 shadow-2xl rounded-[24px] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
@@ -147,22 +147,22 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         )}
 
         <div className="flex justify-between items-start mb-3">
-          <h4 className="font-bold font-outfit text-gray-900 dark:text-gray-100 text-lg leading-tight pr-4">{currentStep.title}</h4>
-          <button onClick={handleSkip} className="ohc-walkthrough-close text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-full p-1.5 transition-all flex-shrink-0">
+          <h4 className="font-bold font-outfit text-gray-900 text-lg leading-tight pr-4">{currentStep.title}</h4>
+          <button onClick={handleSkip} className="ohc-walkthrough-close text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-all flex-shrink-0">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        <p className="text-sm text-gray-700 dark:text-gray-300 mb-5 leading-relaxed">{currentStep.content}</p>
+        <p className="text-sm text-gray-700 mb-5 leading-relaxed">{currentStep.content}</p>
 
-        <div className="flex justify-between items-center pt-3 border-t border-gray-200/50 dark:border-gray-700/50">
-          <span className="text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
+        <div className="flex justify-between items-center pt-2 border-t border-gray-100/80">
+          <span className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
             Step {currentStepIndex + 1} of {steps.length}
           </span>
           <button
             id="wt-next"
             onClick={handleNext}
-            className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg backdrop-blur-md saturate-[210%] active:scale-95 transition-all"
+            className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95 transition-all"
           >
             {isLastStep ? 'Finish' : 'Next'}
           </button>

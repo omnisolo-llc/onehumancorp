@@ -14,7 +14,6 @@ rust_library(
         "mod.rs",
         "slug.rs",
         "tier_middleware.rs",
-        "edge_caching_middleware.rs",
         "tenant_middleware.rs",
     ],
     crate_root = "mod.rs",

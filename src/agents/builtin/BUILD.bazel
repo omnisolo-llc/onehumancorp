@@ -74,6 +74,7 @@ rust_library(
         "llm_condensation.rs",
         "aider_repomap.rs",
         "local_provider.rs",
+        "marketplace.rs",
         "memory_exhaustive_tests.rs",
         "memory_store.rs",
         "memory/mod.rs",

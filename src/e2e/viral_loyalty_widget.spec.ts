@@ -11,29 +11,12 @@ baseTest.describe('Viral Loyalty Widget', () => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
     await page.route('**/ui/viral-loyalty-widget.html', async route => {
-      let htmlContent = '<html><body><h1>Viral Loyalty Widget Generator</h1><button id="generate-btn">Generate Loyalty Program</button><div class="stamp empty"></div><div class="stamp empty"></div><div class="stamp empty"></div><div class="stamp empty"></div><div id="result-area" style="display:none"><input id="share-link" value=""/><button id="copy-btn">Copy</button></div><a class="back-link" href="/dashboard.html">Back</a><div class="container" style="width:300px"></div><script>document.getElementById("generate-btn").addEventListener("click", () => { document.getElementById("generate-btn").disabled = true; document.getElementById("generate-btn").innerText = "Generating..."; setTimeout(() => { document.querySelectorAll(".stamp").forEach(s => s.classList.add("filled")); document.getElementById("result-area").style.display = "block"; document.getElementById("share-link").value = "http://localhost:3000/loyalty/join?ref=mock-uuid-1234"; document.getElementById("generate-btn").innerText = "Generate Loyalty Program"; document.getElementById("generate-btn").disabled = false; }, 1000); }); document.getElementById("copy-btn").addEventListener("click", () => { document.getElementById("copy-btn").innerText = "Copied!"; });</script></body></html>';
-
-      const searchPaths = [
-          path.join(process.cwd(), 'src/ui/tauri/src/ui/viral-loyalty-widget.html'),
-          path.join(process.cwd(), '../src/ui/tauri/src/ui/viral-loyalty-widget.html'),
-          path.join(process.cwd(), '../../src/ui/tauri/src/ui/viral-loyalty-widget.html'),
-          path.join(__dirname, '../ui/tauri/src/ui/viral-loyalty-widget.html'),
-          path.join(__dirname, '../../ui/tauri/src/ui/viral-loyalty-widget.html'),
-          path.join(__dirname, '../../../src/ui/tauri/src/ui/viral-loyalty-widget.html'),
-          path.join(process.cwd(), 'external/ohc/src/ui/tauri/src/ui/viral-loyalty-widget.html')
-      ];
-
-      for (const p of searchPaths) {
-          if (fs.existsSync(p)) {
-              htmlContent = fs.readFileSync(p, 'utf-8');
-              break;
-          }
-      }
+      const htmlContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/viral-loyalty-widget.html'), 'utf-8');
       await route.fulfill({ contentType: 'text/html', body: htmlContent });
     });
 
     await page.route('**/api/v1/growth/referrals/generate', async route => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 100));
       await route.fulfill({ json: { referral_link: 'https://ohc.app/ref/mock-uuid-1234' } });
     });
 

@@ -704,7 +704,7 @@
       function generateEmbedCode() {
         const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
 
-        const code = `<iframe src="${origin}/api/v1/growth/waitlist/embed?tenant=${state.tenant}&product=${encodeURIComponent(state.productName)}&goal=${state.referralGoal}&theme=${state.theme}&hideBranding=${state.removeBranding}" width="100%" height="300" style="border:none;border-radius:24px;overflow:hidden;" title="${state.productName} Waitlist"></iframe>`;
+        const code = `<iframe src="${origin}/embed/waitlist?tenant=${state.tenant}&product=${encodeURIComponent(state.productName)}&goal=${state.referralGoal}&theme=${state.theme}&hideBranding=${state.removeBranding}" width="100%" height="300" style="border:none;border-radius:24px;overflow:hidden;" title="${state.productName} Waitlist"></iframe>`;
 
         embedCodeTextarea.value = code;
       }

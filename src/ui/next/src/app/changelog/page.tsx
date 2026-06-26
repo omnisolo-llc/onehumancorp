@@ -27,9 +27,9 @@ export default function ChangelogPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-black py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[30px] saturate-[210%]">
       <div className="max-w-3xl mx-auto">
-        <h1 data-testid="changelog-title" className="text-3xl sm:text-4xl font-extrabold font-outfit text-gray-900 dark:text-gray-100 mb-8 text-center tracking-tight">
+        <h1 data-testid="changelog-title" className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">
           Release Notes & Changelog
         </h1>
         <div className="space-y-8">
@@ -38,25 +38,25 @@ export default function ChangelogPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : sections.length === 0 ? (
-            <p className="text-center text-gray-500 font-medium py-8 bg-white/80 dark:bg-black/50 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 shadow-xl rounded-3xl">
+            <p className="text-center text-gray-500 font-medium py-8 bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-2xl">
               No changelog available.
             </p>
           ) : (
             sections.map((section, idx) => (
               <div
                 key={idx}
-                className="bg-white/80 dark:bg-black/50 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 p-6 sm:p-8 rounded-3xl shadow-xl transition-all hover:shadow-2xl"
+                className="bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all"
               >
-                <h2 className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4 font-outfit">
+                <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">
                   {section.version}
                 </h2>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {section.contentLines.map((line, lidx) => {
                     if (line.startsWith("### ")) {
                       return (
                         <h3
                           key={lidx}
-                          className="text-lg font-semibold text-gray-800 dark:text-gray-200 mt-6 mb-2 font-outfit tracking-tight"
+                          className="text-lg font-semibold text-gray-800 mt-4 mb-2"
                         >
                           {line.replace("### ", "")}
                         </h3>
@@ -64,13 +64,13 @@ export default function ChangelogPage() {
                     }
                     if (line.startsWith("- ")) {
                       return (
-                        <li key={lidx} className="text-gray-600 dark:text-gray-300 ml-5 list-disc pl-1 marker:text-blue-500">
+                        <li key={lidx} className="text-gray-600 ml-4 list-disc">
                           {line.replace("- ", "")}
                         </li>
                       );
                     }
                     return (
-                      <p key={lidx} className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                      <p key={lidx} className="text-gray-600">
                         {line}
                       </p>
                     );
@@ -80,19 +80,19 @@ export default function ChangelogPage() {
                   <img
                     src={section.screenshot_url}
                     alt={`${section.version} Screenshot`}
-                    className="rounded-2xl mt-6 w-full shadow-lg border border-gray-200/50 dark:border-gray-700/50 object-cover"
+                    className="rounded-xl mt-4 max-w-full shadow-lg border border-gray-200/50"
                   />
                 )}
               </div>
             ))
           )}
 
-          <div className="mt-10 text-center">
+          <div className="mt-8 text-center">
             <a
               href="https://onehumancorp.com/changelog"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50/80 dark:bg-blue-900/20 px-8 py-4 rounded-full border border-blue-100 dark:border-blue-800/50 inline-block shadow-sm backdrop-blur-xl saturate-[210%] transition-all hover:shadow-md hover:-translate-y-0.5"
+              className="text-blue-600 font-bold hover:underline bg-blue-50/80 px-6 py-3 rounded-full border border-blue-100 inline-block shadow-sm backdrop-blur-[30px] saturate-[210%] saturate-[210%]"
             >
               Read the full technical changelog on our website →
             </a>

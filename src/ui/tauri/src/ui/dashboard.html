@@ -428,7 +428,7 @@
         background: rgba(0, 102, 255, 0.1);
         border: 1px solid rgba(0, 102, 255, 0.2);
         padding: 12px;
-        border-radius: 16px;
+        border-radius: 6px;
         font-size: 13px;
         margin-bottom: 12px;
       }
@@ -1854,7 +1854,7 @@
                 return `
                 <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                   <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 16px; font-weight: 800; letter-spacing: 0.5px;">Welcome</div>
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px;">Welcome</div>
                     <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: #0066FF;">Action Required</div>
                   </div>
                   <div class="triage-context" style="font-size: 15px; font-weight: 600; margin-top: 8px; color: #1D1D1F; line-height: 1.4;">${description}</div>
@@ -2532,13 +2532,10 @@ document.addEventListener('DOMContentLoaded', () => {
 <style>
 .ohc-tooltip {
     position: fixed;
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(30px) saturate(210%);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    color: #1d1d1f;
+    background: #333;
+    color: white;
     padding: 8px 12px;
-    border-radius: 16px;
+    border-radius: 6px;
     font-size: 13px;
     font-family: Outfit, sans-serif;
     z-index: 100000;
@@ -2660,7 +2657,7 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
@@ -2946,13 +2943,10 @@ document.addEventListener('DOMContentLoaded', () => {
         /* Tooltip Styles */
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            color: #1d1d1f;
+            background: #333;
+            color: white;
             padding: 8px 12px;
-            border-radius: 16px;
+            border-radius: 6px;
             font-size: 13px;
             font-family: Outfit, sans-serif;
             z-index: 100000;
@@ -3004,16 +2998,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
-                <div style="margin-bottom: 8px;">
-                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500;">
-                    <input type="checkbox" onchange="document.getElementById('advanced-help-links').style.display = this.checked ? 'block' : 'none';" />
-                    Advanced Settings
-                  </label>
-                </div>
-                <div id="advanced-help-links" style="display: none;">
-                    <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
-                    <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
-                </div>
+                <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
+                <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
             </div>
         </div>
 
@@ -3219,7 +3205,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
 
             function renderStep() {
@@ -3588,26 +3574,5 @@ document.addEventListener('DOMContentLoaded', () => {
     updateOfflineStatus();
 </script>
     <script src="help-widget.mjs"></script>
-<div class="mobile-nav" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border-top: 1px solid rgba(0,0,0,0.1); padding: 12px 24px; z-index: 1000; justify-content: space-around; align-items: center;">
-      <a href="triage.html" style="text-decoration: none; color: #0066FF; display: flex; flex-direction: column; align-items: center; gap: 4px;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-        <span style="font-size: 10px; font-weight: 600;">Today</span>
-      </a>
-      <a href="inbox.html" style="text-decoration: none; color: #86868b; display: flex; flex-direction: column; align-items: center; gap: 4px;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        <span style="font-size: 10px; font-weight: 600;">Chat</span>
-      </a>
-      <a href="assistant.html" style="text-decoration: none; color: #86868b; display: flex; flex-direction: column; align-items: center; gap: 4px;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-        <span style="font-size: 10px; font-weight: 600;">Hub</span>
-      </a>
-    </div>
-    <style>
-      @media (max-width: 768px) {
-        .mobile-nav { display: flex !important; }
-        .sidebar { display: none !important; }
-        body { padding-bottom: 80px; }
-      }
-    </style>
-  </body>
+</body>
 </html>
