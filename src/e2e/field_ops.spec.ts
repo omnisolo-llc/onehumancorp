@@ -55,7 +55,6 @@ test.describe('Field Ops Appointments', () => {
     const body = await response.json();
     expect(body.appointments).toEqual([]);
   });
-});
 
   test('should optimize route based on distance', async ({ request }) => {
     const response = await request.post('/api/v1/field-ops/optimize-route', {
@@ -83,3 +82,59 @@ test.describe('Field Ops Appointments', () => {
     // Check travel time mock insertion
     expect(body.optimizedRoute[0].notes).toContain('[Travel:');
   });
+
+  test('should update subsequent jobs when running late', async ({ request }) => {
+    const t1 = "2023-10-10T09:00:00Z";
+    const t2 = "2023-10-10T10:00:00Z";
+    const t3 = "2023-10-10T11:00:00Z";
+
+    const response = await request.post('/api/v1/field-ops/running-late', {
+      data: {
+        delayJobId: 'job2',
+        appointments: [
+          {
+            id: 'job1',
+            customer_id: 'c1',
+            customer_name: 'Customer 1',
+            job_template_id: 'jt1',
+            job_name: 'Job 1',
+            status: 'Completed',
+            scheduled_start_time: t1,
+            scheduled_end_time: t1
+          },
+          {
+            id: 'job2',
+            customer_id: 'c2',
+            customer_name: 'Customer 2',
+            job_template_id: 'jt2',
+            job_name: 'Job 2',
+            status: 'In-Progress',
+            scheduled_start_time: t2,
+            scheduled_end_time: t2
+          },
+          {
+            id: 'job3',
+            customer_id: 'c3',
+            customer_name: 'Customer 3',
+            job_template_id: 'jt3',
+            job_name: 'Job 3',
+            status: 'Scheduled',
+            scheduled_start_time: t3,
+            scheduled_end_time: t3
+          }
+        ]
+      }
+    });
+
+    expect(response.ok()).toBeTruthy();
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.subsequentCount).toBe(1);
+    expect(body.optimizedRoute.length).toBe(3);
+
+    // Test the expected delay in the output payload
+    const originalDate = new Date(t3);
+    const delayedDate = new Date(originalDate.getTime() + 15 * 60000);
+    expect(body.optimizedRoute[2].scheduled_start_time).toBe(delayedDate.toISOString());
+  });
+});

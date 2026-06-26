@@ -167,15 +167,78 @@ pub async fn update_appointment(
     }))
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunningLateRequest {
+    pub delay_job_id: String,
+    pub appointments: Vec<Appointment>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunningLateResponse {
+    pub success: bool,
+    pub subsequent_count: usize,
+    pub agent_suggestion: Option<String>,
+    pub optimized_route: Vec<Appointment>,
+}
+
+pub fn calculate_delay_and_shift(mut appointments: Vec<Appointment>, delay_job_id: &str) -> (Vec<Appointment>, usize) {
+    let mut delay_idx = None;
+    for (i, appt) in appointments.iter().enumerate() {
+        if appt.id == delay_job_id {
+            delay_idx = Some(i);
+            break;
+        }
+    }
+
+    let mut subsequent_count = 0;
+    if let Some(idx) = delay_idx {
+        for appt in appointments.iter_mut().skip(idx + 1) {
+            subsequent_count += 1;
+            if let Some(st) = appt.scheduled_start_time {
+                appt.scheduled_start_time = Some(st + chrono::Duration::minutes(15));
+            }
+            if let Some(et) = appt.scheduled_end_time {
+                appt.scheduled_end_time = Some(et + chrono::Duration::minutes(15));
+            }
+        }
+    }
+
+    (appointments, subsequent_count)
+}
+
+pub async fn running_late(
+    State(_state): State<Arc<FieldOpsState>>,
+    Json(payload): Json<RunningLateRequest>,
+) -> Result<Json<RunningLateResponse>, (axum::http::StatusCode, String)> {
+    let (optimized_route, subsequent_count) = calculate_delay_and_shift(payload.appointments, &payload.delay_job_id);
+
+    let agent_suggestion = if subsequent_count > 0 {
+        Some(format!("Draft SMS for {} customers: 'Hi, I am running about 15 minutes late but will be there soon!'", subsequent_count))
+    } else {
+        None
+    };
+
+    Ok(Json(RunningLateResponse {
+        success: true,
+        subsequent_count,
+        agent_suggestion,
+        optimized_route,
+    }))
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> Router<S> {
     let state = Arc::new(FieldOpsState { pool });
     Router::new()
         .route("/appointments", get(get_appointments).post(update_appointment))
+        .route("/running-late", axum::routing::post(running_late))
         .with_state(state)
 }
 
 #[cfg(test)]
 mod tests {
+    use chrono::TimeZone;
     use super::*;
     use axum::{body::Body, http::Request};
     use tower::ServiceExt;
@@ -192,5 +255,60 @@ mod tests {
 
         let res = app.oneshot(req).await.unwrap();
         assert_eq!(res.status(), axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn test_calculate_delay_and_shift() {
+        let t1 = Utc.with_ymd_and_hms(2023, 10, 10, 9, 0, 0).unwrap();
+        let t2 = Utc.with_ymd_and_hms(2023, 10, 10, 10, 0, 0).unwrap();
+        let t3 = Utc.with_ymd_and_hms(2023, 10, 10, 11, 0, 0).unwrap();
+
+        let appointments = vec![
+            Appointment {
+                id: "job1".to_string(),
+                customer_id: "c1".to_string(),
+                customer_name: "Customer 1".to_string(),
+                job_template_id: "jt1".to_string(),
+                job_name: "Job 1".to_string(),
+                status: "Completed".to_string(),
+                scheduled_start_time: Some(t1),
+                scheduled_end_time: Some(t1 + chrono::Duration::hours(1)),
+                location_address: None,
+                notes: None,
+            },
+            Appointment {
+                id: "job2".to_string(), // This one is delayed
+                customer_id: "c2".to_string(),
+                customer_name: "Customer 2".to_string(),
+                job_template_id: "jt2".to_string(),
+                job_name: "Job 2".to_string(),
+                status: "In-Progress".to_string(),
+                scheduled_start_time: Some(t2),
+                scheduled_end_time: Some(t2 + chrono::Duration::hours(1)),
+                location_address: None,
+                notes: None,
+            },
+            Appointment {
+                id: "job3".to_string(), // Should be shifted
+                customer_id: "c3".to_string(),
+                customer_name: "Customer 3".to_string(),
+                job_template_id: "jt3".to_string(),
+                job_name: "Job 3".to_string(),
+                status: "Scheduled".to_string(),
+                scheduled_start_time: Some(t3),
+                scheduled_end_time: Some(t3 + chrono::Duration::hours(1)),
+                location_address: None,
+                notes: None,
+            },
+        ];
+
+        let (optimized_route, subsequent_count) = calculate_delay_and_shift(appointments, "job2");
+
+        assert_eq!(subsequent_count, 1);
+        assert_eq!(optimized_route.len(), 3);
+
+        assert_eq!(optimized_route[0].scheduled_start_time.unwrap(), t1);
+        assert_eq!(optimized_route[1].scheduled_start_time.unwrap(), t2);
+        assert_eq!(optimized_route[2].scheduled_start_time.unwrap(), t3 + chrono::Duration::minutes(15));
     }
 }
