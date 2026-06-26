@@ -1853,13 +1853,13 @@ async fn handle_check_milestones(
         },
         Milestone {
             id: "5_referrals".to_string(),
-            title: "🤝 High Connector!".to_string(),
+            title: "High Connector!".to_string(),
             description: "You've successfully referred 5 other businesses to OHC.".to_string(),
             reached: reached_types.contains(&"5_referrals".to_string()),
         },
         Milestone {
             id: "revenue_1k".to_string(),
-            title: "💰 Four-Figure Club".to_string(),
+            title: "Four-Figure Club".to_string(),
             description: "Your business has surpassed $1,000 in total revenue!".to_string(),
             reached: reached_types.contains(&"revenue_1k".to_string()),
         },
