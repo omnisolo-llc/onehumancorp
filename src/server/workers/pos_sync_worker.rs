@@ -204,6 +204,25 @@ impl PosSyncWorker {
                     sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                         .bind(job_id).bind(&job.tenant_id).bind(&job_payload).execute(&mut *tx).await
                         .map_err(|e| e.to_string())?;
+
+                    let feed_id = uuid::Uuid::new_v4().to_string();
+                    let feed_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "remaining_stock": new_stock,
+                        "message": message,
+                    });
+                    let proposed_action = serde_json::json!({
+                        "action": "Review and approve restock order"
+                    });
+                    let _ = sqlx::query(
+                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, 'operations', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL')"
+                    )
+                    .bind(&feed_id)
+                    .bind(&job.tenant_id)
+                    .bind(&feed_payload)
+                    .bind(&proposed_action)
+                    .execute(&mut *tx)
+                    .await;
                 }
 
                 if is_conflict {
@@ -391,6 +410,25 @@ impl PosSyncWorker {
                                 sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                                     .bind(job_id).bind(&job.tenant_id).bind(&job_payload).execute(&mut *tx).await
                                     .map_err(|e| e.to_string())?;
+
+                                let feed_id = uuid::Uuid::new_v4().to_string();
+                                let feed_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "remaining_stock": new_stock,
+                                    "message": message,
+                                });
+                                let proposed_action = serde_json::json!({
+                                    "action": "Review and approve restock order"
+                                });
+                                let _ = sqlx::query(
+                                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, 'operations', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL')"
+                                )
+                                .bind(&feed_id)
+                                .bind(&job.tenant_id)
+                                .bind(&feed_payload)
+                                .bind(&proposed_action)
+                                .execute(&mut *tx)
+                                .await;
                             }
 
                             if is_conflict {
@@ -708,5 +746,9 @@ mod tests {
         let action_request_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_action_requests WHERE tenant_id = 'tenant-worker-test-low' AND product_id = 'prod-worker-test-2' AND action_type = 'Reorder'")
             .fetch_one(&pool).await.unwrap();
         assert!(action_request_count.0 > 0);
+
+        let agent_feed_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_feed_items WHERE tenant_id = 'tenant-worker-test-low' AND context_payload->>'product_id' = 'prod-worker-test-2'")
+            .fetch_one(&pool).await.unwrap();
+        assert!(agent_feed_count.0 > 0);
     }
 }
