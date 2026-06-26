@@ -497,6 +497,11 @@ document.addEventListener('DOMContentLoaded', () => {
         hideTooltip();
     });
 
+    document.addEventListener('touchmove', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
     document.addEventListener('touchcancel', (e) => {
         clearTimeout(window.touchTimer);
         hideTooltip();
