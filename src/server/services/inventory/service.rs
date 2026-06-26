@@ -257,18 +257,36 @@ impl InventoryService {
             let mut conn = client.get_multiplexed_async_connection().await
                 .map_err(|e| format!("Redis conn failed: {}", e))?;
 
-            let current_lock_id: Option<String> = redis::cmd("GET")
-                .arg(&lock_key)
-                .query_async(&mut conn)
+            let script = redis::Script::new(
+                r#"
+                if redis.call("get", KEYS[1]) == ARGV[1] then
+                    return redis.call("del", KEYS[1])
+                else
+                    return 0
+                end
+                "#,
+            );
+
+            let result: i32 = script
+                .key(&lock_key)
+                .arg(lock_id)
+                .invoke_async(&mut conn)
                 .await
                 .map_err(|e| {
-                    tracing::error!("Redis get lock error: {}", e);
-                    e
-                }).unwrap_or(None);
+                    tracing::error!("Redis unlock script error: {}", e);
+                    e.to_string()
+                })?;
 
-            if let Some(cid) = current_lock_id {
-                if cid != lock_id && !lock_id.is_empty() {
-                    return Ok(ReleaseResult {
+            if result == 0 && !lock_id.is_empty() {
+                // The lock was either already deleted (expired) or didn't match our ID
+                let current_lock_id: Option<String> = redis::cmd("GET")
+                    .arg(&lock_key)
+                    .query_async(&mut conn)
+                    .await
+                    .unwrap_or(None);
+
+                if current_lock_id.is_some() && current_lock_id.as_deref() != Some(lock_id) {
+                     return Ok(ReleaseResult {
                         success: false,
                         error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
                     });
@@ -287,15 +305,6 @@ impl InventoryService {
                     let _ = tx.commit().await;
                 }
             }
-
-            let _: () = redis::cmd("DEL")
-                .arg(&lock_key)
-                .query_async(&mut conn)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Redis unlock error: {}", e);
-                    e
-                }).unwrap_or(());
         }
 
         Ok(ReleaseResult {
@@ -317,32 +326,41 @@ impl InventoryService {
             let mut conn = client.get_multiplexed_async_connection().await
                 .map_err(|e| format!("Redis conn failed: {}", e))?;
 
-            let current_lock_id: Option<String> = redis::cmd("GET")
-                .arg(&lock_key)
-                .query_async(&mut conn)
+            let script = redis::Script::new(
+                r#"
+                if redis.call("get", KEYS[1]) == ARGV[1] then
+                    return redis.call("del", KEYS[1])
+                else
+                    return 0
+                end
+                "#,
+            );
+
+            let result: i32 = script
+                .key(&lock_key)
+                .arg(lock_id)
+                .invoke_async(&mut conn)
                 .await
                 .map_err(|e| {
-                    tracing::error!("Redis get lock error: {}", e);
-                    e
-                }).unwrap_or(None);
+                    tracing::error!("Redis unlock script error: {}", e);
+                    e.to_string()
+                })?;
 
-            if let Some(cid) = current_lock_id {
-                if cid != lock_id && !lock_id.is_empty() {
+            if result == 0 && !lock_id.is_empty() {
+                // The lock was either already deleted (expired) or didn't match our ID
+                let current_lock_id: Option<String> = redis::cmd("GET")
+                    .arg(&lock_key)
+                    .query_async(&mut conn)
+                    .await
+                    .unwrap_or(None);
+
+                if current_lock_id.is_none() || current_lock_id.as_deref() != Some(lock_id) {
                     return Ok(CommitResult {
                         success: false,
-                        error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
+                        error_message: "Lock ID mismatch or expired.".to_string(),
                     });
                 }
             }
-
-            let _: () = redis::cmd("DEL")
-                .arg(&lock_key)
-                .query_async(&mut conn)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Redis unlock error: {}", e);
-                    e
-                }).unwrap_or(());
         }
 
         let pool = crate::db::get_pool();

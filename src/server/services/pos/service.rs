@@ -19,24 +19,57 @@ impl MyPosService {
         let pool = crate::db::get_pool();
         let mut db_tx = pool.begin().await.map_err(|e| e.to_string())?;
 
+        let mut products_updated = Vec::new();
+
         for payload in payloads {
             if payload.r#type == "inventory" {
-                let _res = sqlx::query(
-                    "UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1) WHERE id = $2 AND tenant_id = $3"
+                let current_stock: Option<i32> = sqlx::query_scalar(
+                    "UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1) WHERE id = $2 AND tenant_id = $3 RETURNING inventory_count"
                 )
                 .bind(payload.quantity_delta)
                 .bind(&payload.item_id)
                 .bind(tenant_id)
-                .execute(&mut *db_tx)
+                .fetch_optional(&mut *db_tx)
                 .await.map_err(|e| e.to_string())?;
+
+                if let Some(new_stock) = current_stock {
+                    products_updated.push((payload.item_id.clone(), new_stock));
+                }
             } else if payload.r#type == "transaction" {
-                // Here we might handle creating the offline transaction, but since it's already recorded we just reconcile
-                // To keep it simple, we record a log for the transaction type CRDT if needed
                 tracing::info!("Reconciled transaction CRDT for item {}", payload.item_id);
             }
         }
 
         db_tx.commit().await.map_err(|e| e.to_string())?;
+
+        let pool = crate::db::get_pool();
+        for (item_id, new_stock) in products_updated {
+            if new_stock <= 5 {
+                let product_title: String = sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
+                    .bind(&item_id)
+                    .bind(tenant_id)
+                    .fetch_optional(&pool)
+                    .await
+                    .unwrap_or(Some(item_id.clone()))
+                    .unwrap_or_else(|| item_id.clone());
+
+                let action_request_id = uuid::Uuid::new_v4().to_string();
+                let action_payload = serde_json::json!({
+                    "product_id": item_id,
+                    "remaining_stock": new_stock,
+                    "suggested_action": "Restock Item",
+                    "product_title": product_title
+                }).to_string();
+
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .bind(&action_request_id)
+                    .bind(tenant_id)
+                    .bind(&item_id)
+                    .bind(&action_payload)
+                    .execute(&pool)
+                    .await;
+            }
+        }
 
         // Notify KAIROS Orchestrator for Sales and Operations AI agents about POS offline sync completion
         let pool = crate::db::get_pool();
@@ -481,6 +514,15 @@ mod tests {
 
         // Initial was 10, delta is -3, result should be 7
         assert_eq!(count.0, 7);
+
+        let action_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_action_requests WHERE tenant_id = $1 AND product_id = $2")
+            .bind(&tenant_id)
+            .bind(&item_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        // Should not be triggered because 7 > 5
+        assert_eq!(action_count.0, 0);
     }
 
     #[tokio::test]
