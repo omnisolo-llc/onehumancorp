@@ -689,4 +689,20 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_pg_cat'")
             .fetch_one(&pg_pool).await.unwrap();
         assert_eq!(dl_pg.0, 1);
+
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at) VALUES ('stuck_queued_sqlite_cat', 'tenant1', 'QUEUED', datetime('now', '-25 hour'))")
+            .execute(&sqlite_pool).await.unwrap();
+
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at) VALUES ('stuck_queued_pg_cat', 'tenant1', 'QUEUED', NOW() - INTERVAL '25 hours')")
+            .execute(&pg_pool).await.unwrap();
+
+        daemon.prune_stuck_sub_agent_queue().await.unwrap();
+
+        let dl_queue_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_queued_sqlite_cat'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(dl_queue_sqlite.0, 1);
+
+        let dl_queue_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_queued_pg_cat'")
+            .fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(dl_queue_pg.0, 1);
     }
