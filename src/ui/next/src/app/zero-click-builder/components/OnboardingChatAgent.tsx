@@ -217,7 +217,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading || isProvisioning}
-            placeholder="Type your message..."
+            placeholder="e.g. I am a home baker in Austin selling custom vegan cakes."
             className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full py-3 pl-4 pr-12 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           />
           <button
