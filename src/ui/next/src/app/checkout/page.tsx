@@ -36,7 +36,7 @@ function CheckoutContent() {
       lastMessage.action === "reserve"
     ) {
       setIsSoldOut(true);
-      setCheckoutStatus("Item just sold out.");
+      setCheckoutStatus("Oops! Item just sold out.");
       setIsSoldOut(true);
     }
   }, [lastMessage, productId]);
@@ -155,7 +155,7 @@ function CheckoutContent() {
         }),
       });
       if (response.status === 409) {
-        setCheckoutStatus("Item just sold out.");
+        setCheckoutStatus("Oops! Item just sold out.");
         setIsProcessing(false);
         return;
       }
@@ -479,7 +479,7 @@ function CheckoutContent() {
                 </button>
               </WithTooltip>
 
-              {checkoutStatus && checkoutStatus !== "Item just sold out." && (
+              {checkoutStatus && checkoutStatus !== "Oops! Item just sold out." && (
                 <p
                   className="text-sm font-medium text-indigo-700"
                   role="status"
@@ -487,7 +487,7 @@ function CheckoutContent() {
                   {checkoutStatus}
                 </p>
               )}
-              {checkoutStatus === "Item just sold out." && (
+              {checkoutStatus === "Oops! Item just sold out." && (
                 <div className="fixed bottom-0 left-0 right-0 p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] z-[100] shadow-2xl rounded-t-[24px]">
                   <div className="flex items-start gap-4 max-w-lg mx-auto">
                     <div className="w-12 h-12 bg-red-100 rounded-full flex-shrink-0 flex items-center justify-center text-xl text-red-600">
