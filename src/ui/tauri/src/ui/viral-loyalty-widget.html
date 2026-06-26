@@ -46,6 +46,10 @@
       color: #86868b;
     }
 
+    #result-area p {
+      color: #1d1d1f;
+    }
+
     button {
       background-color: #0066FF;
       color: white;
@@ -56,6 +60,7 @@
       font-weight: 600;
       cursor: pointer;
       width: 100%;
+      min-height: 44px;
       transition: background-color 0.2s, transform 0.1s;
       box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
     }
@@ -142,6 +147,44 @@
         font-size: 11px;
       }
     }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #16161a;
+        color: #F5F5F7;
+      }
+      .container, .card-preview {
+        background: rgba(22, 22, 26, 0.7);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      p {
+        color: #a1a1a6;
+      }
+      .stamp {
+        border-color: rgba(255, 255, 255, 0.2);
+        color: #888;
+      }
+      .stamp.free {
+        background-color: rgba(0, 102, 255, 0.1);
+      }
+      #result-area {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      #result-area h2, #result-area p {
+        color: inherit;
+      }
+      #share-link {
+        background-color: #1c1c1e !important;
+        color: #F5F5F7 !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      }
+      #copy-btn {
+        background-color: #333 !important;
+        color: white !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -164,10 +207,10 @@
 
     <div id="result-area">
       <h2 style="font-size: 18px; margin-bottom: 10px;">Program Generated Successfully!</h2>
-      <p style="margin-bottom: 15px; color: #1d1d1f; font-weight: 500;">Share this link to let customers join:</p>
+      <p style="margin-bottom: 15px; font-weight: 500;">Share this link to let customers join:</p>
       <div style="display: flex; gap: 8px;">
-        <input type="text" id="share-link" class="loyalty-share-link" readonly style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255, 255, 255, 0.65);" />
-        <button id="copy-btn" style="width: auto; padding: 12px 20px; background-color: #1d1d1f; box-shadow: none;">Copy</button>
+        <input type="text" id="share-link" class="loyalty-share-link" readonly style="flex: 1; padding: 12px; min-height: 44px; box-sizing: border-box; border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255, 255, 255, 0.65);" />
+        <button id="copy-btn" style="width: auto; padding: 12px 20px; min-height: 44px; background-color: #1d1d1f; box-shadow: none;">Copy</button>
       </div>
     </div>
   </div>
