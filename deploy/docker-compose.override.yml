@@ -9,9 +9,11 @@ services:
 
   postgres:
     image: mirror.gcr.io/ankane/pgvector:v0.5.1
+    pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
 
   valkey:
     image: mirror.gcr.io/library/redis:alpine
+    pull_policy: missing
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]

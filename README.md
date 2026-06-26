@@ -32,6 +32,14 @@ From the root of the repository, you must explicitly run the onboarding CLI:
 
 This premium onboarding flow eliminates friction and ensures maximum developer velocity for Day One setup.
 
+### Local Build & Launch (Docker Hub Fallback)
+If you encounter Docker Hub rate limits (`You have reached your unauthenticated pull rate limit`), you can bypass them by building and loading the OCI images locally using Bazel:
+```bash
+bazel run //deploy:load_all_images
+cd deploy && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+```
+This flow utilizes local `server`, `agent`, and `ohc-core` images without requiring an external pull. It also leverages your local cache for base images like Postgres and Valkey.
+
 ## Identity
 
 One Human Corp employs the **OHC-HA Hybrid Architecture** for its identity and security framework, ensuring zero-trust verification seamlessly across both localized and cloud-native deployments.
