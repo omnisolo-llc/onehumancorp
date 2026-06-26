@@ -18,6 +18,7 @@ export default function AgentMarketplacePage() {
  const [error, setError] = useState<string | null>(null);
  const [installedAgents, setInstalledAgents] = useState<string[]>([]);
  const [toastMessage, setToastMessage] = useState<string | null>(null);
+ const [copiedAgentId, setCopiedAgentId] = useState<string | null>(null);
 
  const fetchAgents = async (searchQuery: string) => {
  setLoading(true);
@@ -39,6 +40,20 @@ export default function AgentMarketplacePage() {
  useEffect(() => {
  fetchAgents(query);
  }, [query]);
+
+ const handleShare = (agent: Agent) => {
+   const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team') : 'default-team';
+   const shareUrl = `${window.location.origin}/api/v1/growth/referrals/click?target=/agent-marketplace&ref=${encodeURIComponent(tenantId)}&agent=${encodeURIComponent(agent.id)}`;
+
+   navigator.clipboard.writeText(`Check out this AI agent for your business: ${agent.name} - ${shareUrl}`).then(() => {
+     setCopiedAgentId(agent.id);
+     setToastMessage(`Share link copied for ${agent.name}!`);
+     setTimeout(() => {
+       setCopiedAgentId(null);
+       setToastMessage(null);
+     }, 3000);
+   });
+ };
 
  return (
  <div className="min-h-screen bg-gray-50 p-8 font-outfit">
@@ -80,14 +95,14 @@ export default function AgentMarketplacePage() {
  key={agent.id}
  className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
 >
- <div className="mb-4 flex-grow">
+ <div className="mb-4 flex-grow relative">
  <h3 className="text-2xl font-bold text-gray-900 mb-2">{agent.name}</h3>
  <p className="text-sm text-gray-500 mb-4">
  By <span className="font-medium text-gray-700">{agent.author}</span> • v{agent.version}
  </p>
  <p className="text-gray-600 leading-relaxed">{agent.description}</p>
  </div>
- <div className="mt-auto">
+ <div className="mt-auto flex gap-2">
  <button
  onClick={() => {
    const isInstalled = installedAgents.includes(agent.id);
@@ -98,9 +113,15 @@ export default function AgentMarketplacePage() {
    setInstalledAgents((current) => current.includes(agent.id) ? current : [...current, agent.id]);
  }}
  aria-pressed={installedAgents.includes(agent.id)}
- className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors focus:ring-4 focus:ring-blue-200"
+ className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors focus:ring-4 focus:ring-blue-200"
 >
  {installedAgents.includes(agent.id) ? 'Installed' : 'Install Agent'}
+ </button>
+ <button
+   onClick={() => handleShare(agent)}
+   className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors border border-gray-200"
+ >
+   {copiedAgentId === agent.id ? 'Copied Link!' : 'Share Agent'}
  </button>
  </div>
  </div>
@@ -115,7 +136,7 @@ export default function AgentMarketplacePage() {
  )}
 
  {toastMessage && (
- <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-[30px] saturate-[210%] shadow-lg rounded-full px-6 py-3 text-gray-900 border border-white/50 animate-in fade-in slide-in-from-bottom-4 flex items-center gap-2">
+ <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-[30px] saturate-[210%] shadow-lg rounded-full px-6 py-3 text-gray-900 border border-white/50 animate-in fade-in slide-in-from-bottom-4 flex items-center gap-2 z-50">
  <span className="text-green-500">✓</span>
  <span className="font-medium">{toastMessage}</span>
  </div>
