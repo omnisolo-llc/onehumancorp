@@ -6,9 +6,31 @@ test.describe('API Documentation', () => {
     // Navigate to API Docs page
     await page.goto('/api/ui/api-docs.html');
 
+    // Advanced Settings toggle
+    const toggle = page.locator('#advanced-settings-toggle');
+    const apiDocsContent = page.locator('#api-docs-content');
+
+    // Check initial state (should be hidden)
+    await expect(apiDocsContent).not.toBeVisible();
+
+    // Click toggle
+    await toggle.check();
+
+    // Check state after click (should be visible)
+    await expect(apiDocsContent).toBeVisible();
+
     // Ensure the advanced warning is visible
     await expect(page.locator('text=Advanced:')).toBeVisible();
     await expect(page.getByText('This section is for developers directly integrating with our APIs.')).toBeVisible();
+
+    // Tooltip hover test
+    const tooltipTarget = page.locator('#api-docs-tooltip');
+    await tooltipTarget.hover();
+
+    // Using string matching as class visible might be tricky depending on the JS
+    const tooltipElement = page.locator('.ohc-tooltip');
+    await expect(tooltipElement).toBeVisible();
+    await expect(tooltipElement).toContainText('Direct API access is only for custom integrations.');
 
     // Verify Swagger UI container wrapper is visible
     // Target the specific wrapper classes for verification
