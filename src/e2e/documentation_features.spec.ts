@@ -7,24 +7,27 @@ test.describe('Help Chat Flow', () => {
     await page.goto('/api/ui/dashboard.html');
 
     // Check that the floating chat button exists
-    const chatButton = page.getByRole('button', { name: 'Open help chat' });
+    const chatButton = page.locator('#ohc-floating-help-btn');
     await expect(chatButton).toBeVisible();
 
     // Open chat
     await chatButton.click();
 
+    // Click the Ask AI tab
+    await page.locator('button[data-target="tab-chat"]').click();
+
     // Verify chat UI appears
-    const chatHeader = page.locator('#ai-chat-header');
+    const chatHeader = page.locator('#ohc-floating-help-header h3');
     await expect(chatHeader).toBeVisible();
-    await expect(page.getByText('Ask AI Help')).toBeVisible();
-    await expect(page.getByText("Hi! I'm your AI Help Agent")).toBeVisible();
+    await expect(page.getByText('In-App Help Center')).toBeVisible();
+    await expect(page.getByText("Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OHC.")).toBeVisible();
 
     // Type a message
-    const input = page.getByPlaceholder('Ask anything...');
+    const input = page.locator('#ohc-help-chat-input');
     await input.fill('What is Operations?');
 
     // Submit
-    const sendButton = page.getByRole('button', { name: 'Send message' });
+    const sendButton = page.locator('#ohc-help-chat-send');
     await sendButton.click({ force: true });
 
     // Wait for the backend mocked response to appear
