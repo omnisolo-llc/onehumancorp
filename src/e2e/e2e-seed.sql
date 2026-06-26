@@ -624,3 +624,20 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('e2e-tenant', 'ohc_llm_cost_total_cents', 'gauge', 200000, '{"agent_id": "agent_test_high_usage"}', CURRENT_TIMESTAMP, 'PENDING');
+
+ALTER TABLE IF EXISTS service_routes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS job_locations DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO service_routes (id, tenant_id, staff_id, route_date, status)
+VALUES
+  ('e2e-route-1', 'e2e-tenant', 'e2e-admin-user', CURRENT_DATE, 'planned')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO job_locations (id, tenant_id, service_route_id, customer_id, job_title, address, lat, lng, scheduled_start, scheduled_end, status, order_index)
+VALUES
+  ('e2e-job-1', 'e2e-tenant', 'e2e-route-1', 'e2e-customer-ava', 'Fix leaking sink', '123 Main St', 37.7749, -122.4194, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + interval '1 hour', 'pending', 0),
+  ('e2e-job-2', 'e2e-tenant', 'e2e-route-1', 'e2e-customer-ben', 'Roof repair estimate', '456 Oak Ave', 37.7849, -122.4294, CURRENT_TIMESTAMP + interval '2 hours', CURRENT_TIMESTAMP + interval '3 hours', 'pending', 1)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS job_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS service_routes ENABLE ROW LEVEL SECURITY;
