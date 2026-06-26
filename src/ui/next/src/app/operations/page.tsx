@@ -38,10 +38,10 @@ export default function OperationsPage() {
 
                 {/* Current Appointment */}
                 <div className="glassmorphism rounded-[16px] p-4 border border-blue-200 dark:border-blue-800 shadow-md flex flex-col sm:flex-row gap-4 items-start sm:items-center relative overflow-hidden">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-[16px]"></div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#0066FF] rounded-l-[16px]"></div>
                     <div className="w-16 flex flex-col items-center justify-center shrink-0">
-                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400">11:00 AM</span>
-                        <span className="text-xs text-blue-500 font-medium">Now</span>
+                        <span className="text-sm font-bold text-[#0071E3] dark:text-blue-400">11:00 AM</span>
+                        <span className="text-xs text-[#0066FF] font-medium">Now</span>
                     </div>
                     <div className="flex-1">
                         <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-lg">Guitar Lesson</h3>
@@ -52,7 +52,7 @@ export default function OperationsPage() {
                     </div>
                     <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto">
                         <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-medium rounded-full self-start sm:self-end">Deposit Required</span>
-                        <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">Message Client</button>
+                        <button className="px-4 py-2 bg-[#0071E3] hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">Message Client</button>
                     </div>
                 </div>
 

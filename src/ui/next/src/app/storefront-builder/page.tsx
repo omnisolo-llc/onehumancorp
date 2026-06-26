@@ -324,7 +324,7 @@ export default function StorefrontBuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
         <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center glassmorphism">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0066FF] mb-4"></div>
             <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
         </div>
       </div>
@@ -343,7 +343,7 @@ export default function StorefrontBuilderPage() {
 
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
-            <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
+            <button className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
           <button
@@ -372,7 +372,7 @@ export default function StorefrontBuilderPage() {
               </div>
               <div className="flex-1 bg-white/50 dark:bg-black/50 rounded-xl p-4 mb-4 min-h-[200px] overflow-y-auto">
                   <div className="flex gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">AI</div>
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0071E3] font-bold shrink-0">AI</div>
                       <div className="app-card dark:bg-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm text-sm">
                           Hi! I'm your Marketing Agent. What would you like to change about your storefront?
                           <br/><br/>
@@ -386,7 +386,7 @@ export default function StorefrontBuilderPage() {
               </div>
               <div className="mt-auto relative">
                   <textarea
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-[12px] p-4 pr-12 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-[12px] p-4 pr-12 text-sm focus:ring-2 focus:ring-[#0066FF] outline-none resize-none"
                       placeholder="e.g. Add a new product..."
                       rows={3}
                       value={chatMessage}
@@ -401,7 +401,7 @@ export default function StorefrontBuilderPage() {
                   <button
                       onClick={handleAgentChat}
                       disabled={!chatMessage.trim()}
-                      className={`absolute bottom-4 right-4 p-2 rounded-full ${chatMessage.trim() ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}
+                      className={`absolute bottom-4 right-4 p-2 rounded-full ${chatMessage.trim() ? 'bg-[#0071E3] text-white' : 'bg-gray-200 text-gray-400'}`}
                   >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" /></svg>
                   </button>
@@ -469,10 +469,10 @@ export default function StorefrontBuilderPage() {
               <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
               Add Block
             </button>
-            <button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 rounded-[16px] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>Agent</button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+            <button onClick={() => updateStatus("chat")} className="flex-1 bg-white border border-gray-200 text-gray-800 py-3 rounded-[16px] font-semibold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm active:scale-[0.98]"><svg className="w-5 h-5 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>Agent</button></div><WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[16px]"
+              className="w-full bg-[#0071E3] text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2 rounded-[16px]"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
@@ -560,7 +560,7 @@ export default function StorefrontBuilderPage() {
                 );
               })}
               <button
-                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl mt-4 shadow-md"
+                className="w-full bg-[#0071E3] text-white font-bold py-3 rounded-xl mt-4 shadow-md"
                 onClick={handleSaveBlock}
               >
                 Save Changes

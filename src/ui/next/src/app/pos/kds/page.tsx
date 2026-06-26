@@ -105,7 +105,7 @@ export default function KDSPage() {
           </div>
           <button
             onClick={toggleLanguage}
-            className="text-blue-600 font-bold px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+            className="text-[#0071E3] font-bold px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
             data-testid="lang-toggle"
           >
             {language === 'en' ? 'عربي' : 'EN'}
@@ -151,7 +151,7 @@ export default function KDSPage() {
                    {order.status === 'Preparing' && (
                       <button
                         onClick={() => handleUpdateOrderStatus(order.id, 'Ready')}
-                        className="col-span-2 w-full py-4 bg-green-500 text-white font-bold text-lg rounded-xl shadow active:scale-95 transition"
+                        className="col-span-2 w-full py-4 bg-[#34C759] text-white font-bold text-lg rounded-xl shadow active:scale-95 transition"
                         data-testid={`btn-ready-${order.id}`}
                       >
                         {texts.ready}
@@ -194,7 +194,7 @@ export default function KDSPage() {
 
         {/* Sync Indicator */}
         {syncing && (
-          <div className="absolute bottom-0 w-full bg-blue-500 text-white text-center py-2 text-sm font-bold animate-pulse z-20">
+          <div className="absolute bottom-0 w-full bg-[#0066FF] text-white text-center py-2 text-sm font-bold animate-pulse z-20">
             {texts.syncing}
           </div>
         )}

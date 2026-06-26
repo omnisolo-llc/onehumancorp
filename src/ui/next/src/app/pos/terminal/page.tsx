@@ -278,13 +278,13 @@ export default function POSTerminal() {
              </div>
              <h1 className="text-2xl font-bold text-gray-900 font-outfit">{t('Terminal Locked')}</h1>
              <p className="text-gray-500 text-sm mt-2">{t('Enter PIN to access terminal')}</p>
-             {isOffline && <p className="text-orange-500 font-bold text-xs mt-2 bg-orange-50 inline-block px-2 py-1 rounded">{t('Offline Mode Active')}</p>}
+             {isOffline && <p className="text-[#FF9500] font-bold text-xs mt-2 bg-orange-50 inline-block px-2 py-1 rounded">{t('Offline Mode Active')}</p>}
            </div>
 
            <div className="flex justify-center mb-8">
              <div className="flex space-x-4">
                {[...Array(4)].map((_, i) => (
-                 <div key={i} className={`w-4 h-4 rounded-full transition-all ${i < pin.length ? 'bg-blue-600 scale-110 shadow-sm' : 'bg-gray-200'}`} />
+                 <div key={i} className={`w-4 h-4 rounded-full transition-all ${i < pin.length ? 'bg-[#0071E3] scale-110 shadow-sm' : 'bg-gray-200'}`} />
                ))}
              </div>
            </div>
@@ -333,7 +333,7 @@ export default function POSTerminal() {
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff?.name}</h1>
-            <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff?.role)}</p>
+            <p className="text-[#0071E3] font-medium text-sm mt-1">{t(activeStaff?.role)}</p>
             {isOffline ? (
               <div className="inline-flex items-center gap-1.5 mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
@@ -377,7 +377,7 @@ export default function POSTerminal() {
              ) : (
                <button
                  onClick={() => handleClockAction('CLOCK_IN')}
-                 className="charge-btn w-full py-4 rounded-[16px] bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px]"
+                 className="charge-btn w-full py-4 rounded-[16px] bg-[#0071E3] text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px]"
                >
                  {t('Clock In')}
                </button>
@@ -392,14 +392,14 @@ export default function POSTerminal() {
                 disabled={reserving}
                 className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
-               <div className="text-blue-500 mb-2">
+               <div className="text-[#0066FF] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                </div>
                <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
 
              <button className="min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg active:scale-[0.98] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
-               <div className="text-orange-500 mb-2">
+               <div className="text-[#FF9500] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
                <span className="font-medium text-gray-900">{t('Refunds')}</span>
@@ -422,7 +422,7 @@ export default function POSTerminal() {
                       <div className="font-bold text-gray-900">{product.name}</div>
                       <div className="text-xs text-gray-500 line-clamp-1">{product.description} &bull; Stock: {product.stock}</div>
                     </div>
-                    <div className="text-blue-600 font-bold">
+                    <div className="text-[#0071E3] font-bold">
                       ${(product.price_cents / 100).toFixed(2)}
                     </div>
                   </div>
@@ -532,7 +532,7 @@ export default function POSTerminal() {
         </div>
 
         {syncing && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#0071E3]/90 backdrop-blur-[30px] saturate-[210%] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>

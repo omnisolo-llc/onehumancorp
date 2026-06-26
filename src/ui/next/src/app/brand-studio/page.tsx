@@ -118,7 +118,7 @@ export default function BrandStudioPage() {
       <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[360px_1fr] lg:px-8">
         <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#0071E3]">
               Brand Studio
             </p>
             <h1 className="mt-1 text-2xl font-bold font-outfit">Create Brand Toolbox</h1>
@@ -129,7 +129,7 @@ export default function BrandStudioPage() {
           </label>
           <textarea
             id="brand-toolbox-description"
-            className="mb-4 h-32 w-full resize-none rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="mb-4 h-32 w-full resize-none rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-blue-100"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
@@ -139,7 +139,7 @@ export default function BrandStudioPage() {
           </label>
           <input
             id="brand-toolbox-website"
-            className="mb-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="mb-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-blue-100"
             value={websiteUrl}
             onChange={(event) => setWebsiteUrl(event.target.value)}
             placeholder="https://example.com"
@@ -150,7 +150,7 @@ export default function BrandStudioPage() {
           </label>
           <input
             id="brand-toolbox-product"
-            className="mb-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="mb-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-blue-100"
             value={productUrl}
             onChange={(event) => setProductUrl(event.target.value)}
             placeholder="https://example.com/product"
@@ -161,13 +161,13 @@ export default function BrandStudioPage() {
           </label>
           <input
             id="brand-toolbox-campaign"
-            className="mb-5 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+            className="mb-5 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-blue-100"
             value={campaignPrompt}
             onChange={(event) => setCampaignPrompt(event.target.value)}
           />
 
           <button
-            className="flex h-12 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700 disabled:bg-gray-300"
+            className="flex h-12 w-full items-center justify-center rounded-lg bg-[#0071E3] px-4 text-sm font-bold text-white transition hover:bg-blue-700 disabled:bg-gray-300"
             onClick={generateToolbox}
             disabled={status === "generating" || description.trim().length < 8}
           >
@@ -210,7 +210,7 @@ export default function BrandStudioPage() {
               <div className="rounded-lg border border-gray-200 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[#0071E3]">
                       Brand DNA
                     </p>
                     <h2 className="mt-1 text-2xl font-bold font-outfit">{toolbox.brand_dna.name}</h2>

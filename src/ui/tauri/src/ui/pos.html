@@ -1464,7 +1464,7 @@ initWalkthrough();
         } else if (queue.length > 0) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-[#0066FF] animate-pulse";
             if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
         } else {
             networkIndicator.style.display = "none";

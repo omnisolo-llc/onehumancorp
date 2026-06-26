@@ -635,7 +635,7 @@
 
       <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
         <div class="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] px-4 py-1.5 rounded-full shadow border border-white/40 dark:border-white/10 flex items-center gap-2 pointer-events-auto">
-          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-orange-500"></div>
+          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-[#FF9500]"></div>
           <span id="network-status-text" class="text-sm font-semibold text-gray-800">Working Offline</span>
         </div>
       </div>
@@ -3417,12 +3417,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!navigator.onLine) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-orange-500";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-[#FF9500]";
             if (text) text.innerText = "Working Offline";
         } else if (queue.length > 0) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-[#0066FF] animate-pulse";
             if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
         } else {
             networkIndicator.style.display = "none";

@@ -101,7 +101,7 @@ export default function SpinToWinGeneratorPage() {
                         <input
                             type="text"
                             placeholder="10%, 20%, Free Shipping"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-black"
                             value={discounts}
                             onChange={(e) => setDiscounts(e.target.value)}
                         />
@@ -114,14 +114,14 @@ export default function SpinToWinGeneratorPage() {
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" className="sr-only peer" checked={hasPro} onChange={handleToggleBranding} />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0071E3]"></div>
                         </label>
                     </div>
 
                     <button
                         onClick={handleGenerate}
                         disabled={!discounts}
-                        className="w-full py-3 mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-3 mt-4 bg-[#0071E3] hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Generate Widget
                     </button>
@@ -137,8 +137,8 @@ export default function SpinToWinGeneratorPage() {
                 <div className="w-full max-w-sm border border-dashed border-gray-300 p-6 rounded-xl text-center bg-gray-50">
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">Spin to Win!</h3>
                     <p className="text-sm text-gray-600 mb-4">Enter your email to spin the wheel.</p>
-                    <input type="email" placeholder="Enter email" className="w-full px-4 py-2 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black" disabled />
-                    <button className="w-full py-2 bg-blue-600 text-white font-bold rounded-lg shadow-sm" disabled>SPIN NOW</button>
+                    <input type="email" placeholder="Enter email" className="w-full px-4 py-2 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-black" disabled />
+                    <button className="w-full py-2 bg-[#0071E3] text-white font-bold rounded-lg shadow-sm" disabled>SPIN NOW</button>
                 </div>
 
                 {!hasPro && (
@@ -171,14 +171,14 @@ export default function SpinToWinGeneratorPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-40 p-4 bg-gray-50 border border-gray-200 rounded-[16px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        className="w-full h-40 p-4 bg-gray-50 border border-gray-200 rounded-[16px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                     />
                 </div>
 
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-[16px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-[16px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>

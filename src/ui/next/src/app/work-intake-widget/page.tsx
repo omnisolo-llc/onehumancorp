@@ -145,7 +145,7 @@ export default function WorkIntakeWidgetPage() {
                                   setRemoveBranding(false);
                               }
                           }}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-[#0066FF]"
+                            className="w-4 h-4 text-[#0071E3] rounded focus:ring-[#0066FF]"
                         />
                         <span className="text-sm text-gray-700">Remove "Powered by OHC" branding</span>
                     </label>
@@ -158,7 +158,7 @@ export default function WorkIntakeWidgetPage() {
                <p className="text-sm text-gray-600">Copy this code snippet to add the widget directly to your own site, Notion document, or blog.</p>
                <button
                   onClick={() => setShowModal(true)}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm"
+                  className="w-full py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm"
                >
                   Get Widget Code
                </button>
@@ -277,12 +277,12 @@ export default function WorkIntakeWidgetPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-blue-500 transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
                             onClick={handleCopy}
-                            className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-blue-600 transition-colors"
+                            className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-[#0071E3] transition-colors"
                             title="Copy to clipboard"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
@@ -293,7 +293,7 @@ export default function WorkIntakeWidgetPage() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>

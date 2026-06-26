@@ -40,8 +40,8 @@ export function AIUsageLimitWidget() {
   const progressPercentage = (actionsUsed / totalActions) * 100;
 
   // Progress bar color based on usage
-  let progressColor = "bg-green-500";
-  if (progressPercentage >= 80) progressColor = "bg-orange-500";
+  let progressColor = "bg-[#34C759]";
+  if (progressPercentage >= 80) progressColor = "bg-[#FF9500]";
   if (progressPercentage >= 95) progressColor = "bg-[#FF3B30]";
 
   const handleGenerateLink = () => {

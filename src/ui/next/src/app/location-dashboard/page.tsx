@@ -154,7 +154,7 @@ export default function LocationManagerDashboard() {
                   <p className="text-xs text-gray-500">{member.role}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <span className="w-2 h-2 rounded-full bg-[#34C759]"></span>
                   <span className="text-xs text-gray-600 dark:text-gray-400">{member.status}</span>
                 </div>
               </div>
@@ -190,7 +190,7 @@ export default function LocationManagerDashboard() {
                   </button>
                   <button
                     onClick={submitEscalation}
-                    className="flex-1 py-3 text-sm font-semibold rounded-xl bg-[#0066FF] text-white hover:bg-blue-600 transition"
+                    className="flex-1 py-3 text-sm font-semibold rounded-xl bg-[#0066FF] text-white hover:bg-[#0071E3] transition"
                   >
                     Send to Owner
                   </button>

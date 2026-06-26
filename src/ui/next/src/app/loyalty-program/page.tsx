@@ -169,7 +169,7 @@ export default function LoyaltyProgramPage() {
                     <button
                       onClick={handleSend}
                       disabled={isSent}
-                      className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${isSent ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                      className={`px-6 py-2 rounded-lg font-bold text-sm transition-colors ${isSent ? 'bg-[#34C759] text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
                     >
                       {isSent ? 'Sent to Top Customers! ✅' : 'Send to Top Customers'}
                     </button>

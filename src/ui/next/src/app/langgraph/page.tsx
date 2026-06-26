@@ -47,7 +47,7 @@ export default function LangGraphPage() {
           </label>
           <textarea
             id="message"
-            className="w-full p-4 border rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-4 border rounded-lg shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF]"
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -59,7 +59,7 @@ export default function LangGraphPage() {
       <button
         onClick={handleExecute}
         disabled={loading || !message}
-        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+        className="px-6 py-3 bg-[#0071E3] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
       >
         {loading ? 'Executing State Graph...' : 'Run LangGraph'}
       </button>

@@ -65,7 +65,7 @@ export default function ShareCardPage({ searchParams }: Props) {
       <meta httpEquiv="refresh" content={`0;url=${safeHtmlTarget}`} />
       <script dangerouslySetInnerHTML={{ __html: `window.location.replace(${JSON.stringify(targetUrl).replace(/</g, '\\u003c')});` }} />
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-600 font-medium">Redirecting to <a href={safeHtmlTarget} className="text-blue-600 hover:underline">{safeHtmlTarget}</a>...</p>
+        <p className="text-gray-600 font-medium">Redirecting to <a href={safeHtmlTarget} className="text-[#0071E3] hover:underline">{safeHtmlTarget}</a>...</p>
       </div>
     </>
   );

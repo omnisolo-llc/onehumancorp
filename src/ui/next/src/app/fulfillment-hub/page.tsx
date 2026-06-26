@@ -69,7 +69,7 @@ export default function FulfillmentHub() {
         {/* App Bar (Translucent Glass) */}
         <div className="sticky top-0 z-50 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] backdrop-saturate-[210%] border-b border-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] px-4 py-3 flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-900 tracking-tight">Fulfillment Hub</h1>
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0071E3] font-bold text-sm">
             OHC
           </div>
         </div>
@@ -82,7 +82,7 @@ export default function FulfillmentHub() {
               {/* To Pack Section */}
               <section>
                 <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span> To Pack
+                  <span className="w-2 h-2 rounded-full bg-[#FF9500] mr-2"></span> To Pack
                 </h2>
                 {toPack.length === 0 ? (
                   <p className="text-sm text-gray-500 italic">All caught up!</p>
@@ -104,7 +104,7 @@ export default function FulfillmentHub() {
                           {order.fulfillment_mode === 'Shipping' ? (
                             <button
                               onClick={() => handleAction(order.id, 'print_label')}
-                              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm"
+                              className="w-full py-2.5 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors shadow-sm"
                             >
                               Print Label
                             </button>
@@ -126,7 +126,7 @@ export default function FulfillmentHub() {
               {/* Awaiting Pickup Section */}
               <section>
                 <h2 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span> Awaiting Pickup
+                  <span className="w-2 h-2 rounded-full bg-[#34C759] mr-2"></span> Awaiting Pickup
                 </h2>
                 {awaitingPickup.length === 0 ? (
                   <p className="text-sm text-gray-500 italic">No pending pickups.</p>

@@ -87,8 +87,8 @@ export default function MissionTrackPage() {
               <div className="w-full bg-gray-100 rounded-full h-2 mb-1.5 overflow-hidden">
                 <div
                   className={`h-2 rounded-full transition-all duration-1000 ${
-                    mission.status === 'completed' ? 'bg-green-500' :
-                    mission.status === 'active' ? 'bg-blue-500 relative overflow-hidden' :
+                    mission.status === 'completed' ? 'bg-[#34C759]' :
+                    mission.status === 'active' ? 'bg-[#0066FF] relative overflow-hidden' :
                     'bg-gray-300'
                   }`}
                   style={{ width: `${mission.progress}%` }}

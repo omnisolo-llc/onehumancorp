@@ -209,7 +209,7 @@ export default function Wrapped() {
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                 }}
-                className={`w-full py-4 rounded-2xl text-sm font-bold transition-all shadow-xl backdrop-blur-[30px] saturate-[210%] flex items-center justify-center gap-2 ${copied ? 'bg-green-500 text-white' : 'bg-white/20 text-white hover:bg-white/30 border border-white/30'}`}
+                className={`w-full py-4 rounded-2xl text-sm font-bold transition-all shadow-xl backdrop-blur-[30px] saturate-[210%] flex items-center justify-center gap-2 ${copied ? 'bg-[#34C759] text-white' : 'bg-white/20 text-white hover:bg-white/30 border border-white/30'}`}
              >
                 {copied ? 'Link Copied!' : 'Copy Link'}
              </button>

@@ -30,7 +30,7 @@ export default function HelpArticlePage() {
         <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-4 font-outfit">Oops!</h1>
             <p className="text-gray-600 mb-8">{error}</p>
-            <Link href="/help" className="text-blue-600 font-medium hover:underline">← Back to Help Center</Link>
+            <Link href="/help" className="text-[#0071E3] font-medium hover:underline">← Back to Help Center</Link>
         </div>
       </div>
     );
@@ -48,7 +48,7 @@ export default function HelpArticlePage() {
     <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8">
-            <Link href="/help" className="text-blue-600 font-medium hover:underline inline-flex items-center">
+            <Link href="/help" className="text-[#0071E3] font-medium hover:underline inline-flex items-center">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 Back to Help Center
             </Link>

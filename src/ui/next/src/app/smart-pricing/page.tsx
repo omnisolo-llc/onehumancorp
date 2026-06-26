@@ -164,7 +164,7 @@ export default function SmartPricingPage() {
                 <label className="font-medium text-[#1D1D1F]">
                   Maximum price adjustment bounds (+/-)
                 </label>
-                <span className="font-bold text-blue-600">
+                <span className="font-bold text-[#0071E3]">
                   {maxAdjustment}%
                 </span>
               </div>

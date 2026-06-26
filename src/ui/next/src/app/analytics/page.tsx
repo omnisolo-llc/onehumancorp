@@ -107,7 +107,7 @@ export default function AnalyticsPage() {
                    <div className="flex-1 flex flex-col justify-center gap-4">
                        <div>
                            <div className="flex justify-between text-xs mb-1.5 font-bold"><span className="text-gray-500">High Intent Visitors</span><span className="text-green-600">28%</span></div>
-                           <div className="w-full bg-gray-100 rounded-full h-2.5"><div className="bg-green-500 h-2.5 rounded-full w-[28%]"></div></div>
+                           <div className="w-full bg-gray-100 rounded-full h-2.5"><div className="bg-[#34C759] h-2.5 rounded-full w-[28%]"></div></div>
                        </div>
                        <div>
                            <div className="flex justify-between text-xs mb-1.5 font-bold"><span className="text-gray-500">Considering</span><span className="text-amber-600">45%</span></div>

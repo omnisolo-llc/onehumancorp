@@ -118,7 +118,7 @@ export default function PublishAgentPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl disabled:bg-blue-300"
+            className="w-full py-4 px-6 bg-[#0071E3] hover:bg-blue-700 text-white font-bold rounded-xl disabled:bg-blue-300"
           >
             {loading ? 'Publishing...' : 'Publish to Marketplace'}
           </button>

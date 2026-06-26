@@ -153,7 +153,7 @@ export default function MenuGeneratorPage() {
               />
               <button
                 onClick={handleCopy}
-                className={`px-4 py-2 min-w-[100px] text-sm font-bold rounded-lg transition-all ${copied ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-800 dark:text-green-100'}`}
+                className={`px-4 py-2 min-w-[100px] text-sm font-bold rounded-lg transition-all ${copied ? 'bg-[#34C759] text-white' : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-800 dark:text-green-100'}`}
               >
                 {copied ? 'Copied!' : 'Copy'}
               </button>

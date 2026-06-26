@@ -26,7 +26,7 @@ export default function SubscriptionsPage() {
   return (
     <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col font-inter pb-20">
       <div className="flex items-center mb-6 border-b border-gray-200 pb-4">
-        <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
+        <Link href="/dashboard" className="text-[#0066FF] font-semibold mr-4">&lt; Back</Link>
         <h1 className="text-xl font-bold font-outfit text-gray-900">Subscriptions</h1>
       </div>
 

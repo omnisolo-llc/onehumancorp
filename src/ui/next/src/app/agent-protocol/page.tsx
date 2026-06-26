@@ -117,7 +117,7 @@ export default function AgentProtocolPage() {
             <button
               onClick={createTask}
               disabled={loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="bg-[#0071E3] text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
               Create
             </button>
@@ -127,7 +127,7 @@ export default function AgentProtocolPage() {
             {tasks.map((task) => (
               <li
                 key={task.task_id}
-                className={`p-3 border rounded-md cursor-pointer transition ${selectedTaskId === task.task_id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                className={`p-3 border rounded-md cursor-pointer transition ${selectedTaskId === task.task_id ? 'border-[#0066FF] bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
                 onClick={() => setSelectedTaskId(task.task_id)}
               >
                 <div className="font-semibold">{task.input || 'Untitled Task'}</div>

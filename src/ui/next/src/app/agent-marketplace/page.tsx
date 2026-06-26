@@ -56,7 +56,7 @@ export default function AgentMarketplacePage() {
  placeholder="Search for agents..."
  value={query}
  onChange={(e) => setQuery(e.target.value)}
- className="w-full p-4 pl-12 text-lg rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
+ className="w-full p-4 pl-12 text-lg rounded-xl shadow-sm focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
  />
  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
  🔍
@@ -71,7 +71,7 @@ export default function AgentMarketplacePage() {
 
  {loading ? (
  <div className="flex justify-center items-center h-64">
- <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+ <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0066FF]"></div>
  </div>
  ) : (
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -98,7 +98,7 @@ export default function AgentMarketplacePage() {
    setInstalledAgents((current) => current.includes(agent.id) ? current : [...current, agent.id]);
  }}
  aria-pressed={installedAgents.includes(agent.id)}
- className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors focus:ring-4 focus:ring-blue-200"
+ className="w-full py-3 px-4 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-xl transition-colors focus:ring-4 focus:ring-blue-200"
 >
  {installedAgents.includes(agent.id) ? 'Installed' : 'Install Agent'}
  </button>
@@ -116,7 +116,7 @@ export default function AgentMarketplacePage() {
 
  {toastMessage && (
  <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white/80 backdrop-blur-[30px] saturate-[210%] shadow-lg rounded-full px-6 py-3 text-gray-900 border border-white/50 animate-in fade-in slide-in-from-bottom-4 flex items-center gap-2">
- <span className="text-green-500">✓</span>
+ <span className="text-[#34C759]">✓</span>
  <span className="font-medium">{toastMessage}</span>
  </div>
  )}

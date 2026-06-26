@@ -41,7 +41,7 @@ export default function EdgeStorefrontSetupPage() {
             <button
               id="start-setup-btn"
               onClick={handleStartSetup}
-              className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              className="w-full py-2 px-4 bg-[#0071E3] hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
             >
               Start Setup
             </button>
@@ -63,7 +63,7 @@ export default function EdgeStorefrontSetupPage() {
                 onClick={() => setSelectedOption('custom-cakes')}
                 className={`w-full text-left px-4 py-3 rounded-lg border ${
                   selectedOption === 'custom-cakes'
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                    ? 'border-[#0066FF] bg-blue-50 dark:bg-blue-900/30'
                     : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
                 }`}
               >
@@ -74,7 +74,7 @@ export default function EdgeStorefrontSetupPage() {
                 onClick={() => setSelectedOption('ready-to-buy')}
                 className={`w-full text-left px-4 py-3 rounded-lg border ${
                   selectedOption === 'ready-to-buy'
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                    ? 'border-[#0066FF] bg-blue-50 dark:bg-blue-900/30'
                     : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'
                 }`}
               >
@@ -86,7 +86,7 @@ export default function EdgeStorefrontSetupPage() {
               id="generate-storefront-btn"
               onClick={handleGenerate}
               disabled={!selectedOption}
-              className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+              className="w-full py-2 px-4 bg-[#0071E3] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
             >
               Generate & Publish
             </button>
@@ -124,7 +124,7 @@ export default function EdgeStorefrontSetupPage() {
             </button>
 
             <div className="mt-4">
-              <a href="/dashboard" className="text-blue-600 hover:underline text-sm ">
+              <a href="/dashboard" className="text-[#0071E3] hover:underline text-sm ">
                 Back to Dashboard
               </a>
             </div>

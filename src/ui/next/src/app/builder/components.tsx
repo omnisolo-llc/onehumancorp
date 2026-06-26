@@ -57,7 +57,7 @@ export function DraggableBlock({
   return (
     <div
       draggable
-      className={`relative group transition-all duration-200 cursor-move ${isSelected ? 'ring-2 ring-blue-500 z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
+      className={`relative group transition-all duration-200 cursor-move ${isSelected ? 'ring-2 ring-[#0066FF] z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
       onDragStart={onDragStart as (e: React.DragEvent) => void}
       onDragOver={(e) => {
         e.preventDefault();
@@ -71,12 +71,12 @@ export function DraggableBlock({
       onClick={onClick}
     >
       {isSelected && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-50 flex items-center gap-2">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0066FF] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-50 flex items-center gap-2">
           <span>DRAG TO REORDER</span>
           {onMoveUp && (
             <button
               onClick={(e) => { e.stopPropagation(); onMoveUp(e); }}
-              className="px-1 hover:bg-blue-600 rounded bg-blue-500"
+              className="px-1 hover:bg-[#0071E3] rounded bg-[#0066FF]"
             >
               ↑
             </button>
@@ -84,7 +84,7 @@ export function DraggableBlock({
           {onMoveDown && (
             <button
               onClick={(e) => { e.stopPropagation(); onMoveDown(e); }}
-              className="px-1 hover:bg-blue-600 rounded bg-blue-500"
+              className="px-1 hover:bg-[#0071E3] rounded bg-[#0066FF]"
             >
               ↓
             </button>

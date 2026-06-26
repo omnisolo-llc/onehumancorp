@@ -48,7 +48,7 @@ export default function ActorModelPage() {
           </label>
           <textarea
             id="message"
-            className="w-full p-4 border rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 glass-card bg-transparent"
+            className="w-full p-4 border rounded-lg shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] glass-card bg-transparent"
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -60,7 +60,7 @@ export default function ActorModelPage() {
       <button
         onClick={handleExecute}
         disabled={loading || !message}
-        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+        className="px-6 py-3 bg-[#0071E3] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
       >
         {loading ? 'Actors are executing...' : 'Send Message to Swarm'}
       </button>

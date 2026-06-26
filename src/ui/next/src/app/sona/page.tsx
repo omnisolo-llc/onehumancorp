@@ -88,7 +88,7 @@ export default function SonaPatternsPage() {
                 })
               }).then(() => { fetch('/api/sona').then(r => r.json()).then(d => { if (d.patterns) { setPatterns(d.patterns); } setNewTaskContext(''); setNewTool(''); }); });
             }}
-            className="bg-blue-600 text-white p-2 rounded w-fit"
+            className="bg-[#0071E3] text-white p-2 rounded w-fit"
             disabled={!newTaskContext || !newTool}
           >
             Record Pattern
