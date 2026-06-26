@@ -35,40 +35,27 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     });
 
     // Route all API calls to the real backend
-    let chatCallCount = 0;
     await page.route('http://mock/api/**/*', async route => {
         const url = new URL(route.request().url());
         if (url.pathname === '/api/onboarding/chat') {
-            chatCallCount++;
-            if (chatCallCount === 1) {
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        reply: "Great! Could you provide an example photo or a little more detail about what you sell?",
-                        is_complete: false
-                    })
-                });
-            } else {
-                await route.fulfill({
-                    status: 200,
-                    contentType: 'application/json',
-                    body: JSON.stringify({
-                        reply: "Give me a minute... I'm building your business.",
-                        is_complete: true,
-                        intake_data: {
-                            business_name: "Plumber Joe",
-                            business_type: "Local Service",
-                            categories: ["plumbing"],
-                            location: "Local",
-                            target_audience: "General",
-                            initial_products: [
-                                { name: "Pipe Fix", price: "100.00" }
-                            ]
-                        }
-                    })
-                });
-            }
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    reply: "Give me a minute... I'm building your business.",
+                    is_complete: true,
+                    intake_data: {
+                        business_name: "Plumber Joe",
+                        business_type: "Local Service",
+                        categories: ["plumbing"],
+                        location: "Local",
+                        target_audience: "General",
+                        initial_products: [
+                            { name: "Pipe Fix", price: "100.00" }
+                        ]
+                    }
+                })
+            });
         } else if (url.pathname === '/api/onboarding/start') {
             await route.fulfill({
                 status: 200,
@@ -137,14 +124,9 @@ test.describe('Onboarding Chat CUJ Flow', () => {
 
     // Check that the user message appears
     await expect(chatMessages).toContainText('YouI am a plumber fixing pipes and stuff.');
-    // Check that the assistant replies (via the real backend fallback)
-    await expect(chatMessages).toContainText('Great! Could you provide an example photo or a little more detail about what you sell?');
 
-    // Send the second message to trigger `is_complete = true`
-    await chatInput.fill("I fix leaky pipes and install faucets.");
-    await sendBtn.click();
-
-    await expect(chatMessages).toContainText('YouI fix leaky pipes and install faucets.');
+    // Check that the assistant replies immediately completing setup (via the updated backend behavior/mock)
+    await expect(chatMessages).toContainText("Give me a minute... I'm building your business.");
 
     // It should automatically transition to show the Ready to Launch sliding summary card, and then zero-click redirect to Dashboard
     await expect(page.getByRole('heading', { name: /You're all set!|Dashboard/ })).toBeVisible({ timeout: 20000 });

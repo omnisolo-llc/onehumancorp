@@ -72,14 +72,6 @@ impl OnboardingAgent {
             Some(m) => m,
             None => {
                 // E2E Test / Local adapter mock fallback when no LLM is configured
-                if user_messages.len() <= 1 {
-                    return Ok(ChatResponse {
-                        is_complete: false,
-                        reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
-                        intake_data: None,
-                    });
-                }
-
                 let combined_input = user_messages.iter().map(|m| {
                     let mut text = m.content.clone();
                     if let Some(url) = &m.image_url {
@@ -108,16 +100,17 @@ impl OnboardingAgent {
         }
 
         let prompt = format!(
-            "You are the OHC Onboarding Expert assistant. Your goal is to gather enough information from the user to set up their business.
-You need to know at least:
+            "You are the OHC Onboarding Expert assistant. Your goal is to synthesize a fully-operational, mobile-first workspace from a single user prompt.
+Extract the business taxonomy, default any missing fields to sensible industry defaults, and generate the configuration. Do NOT ask follow-up questions unless the input is completely empty or nonsensical.
+You need to synthesize at least:
 1. What they sell or what service they provide.
 2. A rough idea of their business type (e.g. bakery, handyman, tutor).
 
 Review the following conversation history:
 {}
 
-If you DO NOT have enough information to confidently create a business profile (including name, type, categories, and initial products), reply with a natural, conversational question asking for the missing information.
-If you DO have enough information, reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have enough information.
+If the input is completely empty or nonsensical, reply with a natural, conversational question asking for clarification.
+Otherwise, since you must complete the setup in a single prompt, reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have enough information.
 
 Your response:",
             conversation_history
