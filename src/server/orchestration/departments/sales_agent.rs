@@ -254,12 +254,44 @@ impl Department for SalesAgent {
                         let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");
                         let deposit_amount = suggested_price * 0.20; // 20% deposit
 
+                        let service_id = payload.get("service").and_then(|v| v.as_str()).unwrap_or("unknown_service");
+                        let customer_id_str = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let start_time_str = payload.get("suggested_start_time").and_then(|v| v.as_str()).unwrap_or("");
+                        let end_time_str = payload.get("suggested_end_time").and_then(|v| v.as_str()).unwrap_or("");
+
                         tracing::info!(
                             "Executing approved quote draft for inquiry: '{}'. Suggested price: ${}. Deposit: ${}",
                             customer_inquiry,
                             suggested_price,
                             deposit_amount
                         );
+
+                        // Finalize the tentative hold into a real booking
+                        if !start_time_str.is_empty() && !end_time_str.is_empty() {
+                            let pool = crate::db::get_pool();
+                            let booking_id = uuid::Uuid::new_v4().to_string();
+                            let customer_id = uuid::Uuid::parse_str(customer_id_str).ok();
+
+                            let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str).unwrap_or(chrono::Utc::now().into());
+                            let end_time = chrono::DateTime::parse_from_rfc3339(end_time_str).unwrap_or(chrono::Utc::now().into());
+
+                            let _ = sqlx::query(
+                                "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending_payment')"
+                            )
+                            .bind(&booking_id)
+                            .bind(&event.tenant_id)
+                            .bind(customer_id)
+                            .bind(service_id)
+                            .bind(start_time.with_timezone(&chrono::Utc))
+                            .bind(end_time.with_timezone(&chrono::Utc))
+                            .execute(&pool)
+                            .await;
+
+                            tracing::info!("SalesAgent: Finalized booking slot {} upon quote approval.", booking_id);
+
+                            // Note: We don't explicitly delete the redis lock here because the TTL manages it,
+                            // or it could be proactively deleted using the `lock_key` if we pass it along.
+                        }
 
                         // Simulate creating a Stripe checkout session for the deposit
                         let stripe_client = crate::integrations::stripe::client::StripeClient::new(
@@ -353,6 +385,37 @@ impl Department for SalesAgent {
                     }
                 }
 
+                // Attempt to place a soft lock on the time slot using BookingSoftLockStore
+                let now = chrono::Utc::now();
+                let mut start_time = now + chrono::Duration::hours(24);
+                let mut end_time = start_time + chrono::Duration::hours(1);
+
+                // Use a proper distributed lock if configured, fallback to isolated for missing config
+                let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_default();
+                let store = if !redis_url.is_empty() {
+                    let client = redis::Client::open(redis_url).ok();
+                    crate::services::booking::BookingSoftLockStore::for_service(client)
+                } else {
+                    crate::services::booking::BookingSoftLockStore::isolated_for_tests()
+                };
+
+                let mut lock_receipt = None;
+                if let Ok(Some(receipt)) = store.acquire_slot_lock(
+                    &event.tenant_id,
+                    start_time,
+                    end_time,
+                    "SalesAgent_Estimator",
+                    std::time::Duration::from_secs(600)
+                ).await {
+                    lock_receipt = Some(receipt);
+                    tracing::info!("SalesAgent: Acquired tentative slot lock for quote generation.");
+                } else {
+                    tracing::warn!("SalesAgent: Failed to acquire tentative slot lock for quote generation. Using fallback time.");
+                    start_time = start_time + chrono::Duration::hours(24);
+                    end_time = start_time + chrono::Duration::hours(1);
+                    suggested_time = "Day after tomorrow at 2 PM".to_string();
+                }
+
                 let risk =
                     risk_for_service_price(self.get_config(&event.tenant_id).as_ref(), price);
 
@@ -370,9 +433,12 @@ impl Department for SalesAgent {
                     "suggested_price": price,
                     "scope": scope,
                     "suggested_time": suggested_time,
+                    "suggested_start_time": start_time.to_rfc3339(),
+                    "suggested_end_time": end_time.to_rfc3339(),
                     "generated_response": drafted_message,
                     "service": service_name.clone(),
                     "price": price,
+                    "lock_key": lock_receipt.map(|r| r.key),
                 });
 
                 self.orchestrator

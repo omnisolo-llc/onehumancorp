@@ -457,7 +457,7 @@ struct BookingSoftLockStore {
 }
 
 impl BookingSoftLockStore {
-    fn for_service(redis_client: Option<redis::Client>) -> Self {
+    pub fn for_service(redis_client: Option<redis::Client>) -> Self {
         static LOCAL_LOCKS: OnceLock<Arc<LocalBookingSoftLockStore>> = OnceLock::new();
         Self {
             redis_client,
@@ -467,12 +467,28 @@ impl BookingSoftLockStore {
         }
     }
 
-    #[cfg(test)]
-    fn isolated_for_tests() -> Self {
+    pub fn isolated_for_tests() -> Self {
         Self {
             redis_client: None,
             local: Arc::new(LocalBookingSoftLockStore::new()),
         }
+    }
+
+    pub async fn acquire_slot_lock(
+        &self,
+        tenant_id: &str,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+        owner: &str,
+        ttl: Duration,
+    ) -> Result<Option<SoftLockReceipt>, String> {
+        let key = format!(
+            "ohc:lock:{}:slot:{}:{}",
+            tenant_id,
+            start_time.timestamp(),
+            end_time.timestamp()
+        );
+        self.acquire_key(key, owner, ttl).await
     }
 
     async fn acquire_capacity_lock(
@@ -1817,5 +1833,35 @@ mod native_booking_tests {
         let res = svc.reserve_time_slot(req).await;
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().code(), tonic::Code::InvalidArgument);
+    }
+}
+
+#[cfg(test)]
+mod tentative_booking_tests {
+    use super::*;
+    use chrono::{TimeZone, Utc};
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_slot_lock_acquisition() {
+        let store = BookingSoftLockStore::isolated_for_tests();
+        let start_time = Utc.with_ymd_and_hms(2025, 1, 1, 10, 0, 0).unwrap();
+        let end_time = Utc.with_ymd_and_hms(2025, 1, 1, 11, 0, 0).unwrap();
+        let tenant_id = "test_tenant";
+        let owner = "test_owner";
+
+        let receipt = store
+            .acquire_slot_lock(tenant_id, start_time, end_time, owner, Duration::from_secs(600))
+            .await
+            .unwrap();
+
+        assert!(receipt.is_some());
+
+        let receipt2 = store
+            .acquire_slot_lock(tenant_id, start_time, end_time, "other_owner", Duration::from_secs(600))
+            .await
+            .unwrap();
+
+        assert!(receipt2.is_none());
     }
 }
