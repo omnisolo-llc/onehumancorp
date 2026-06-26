@@ -3314,6 +3314,18 @@ pub async fn handle_zero_click_generate(
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    // Add default Stripe deposit rules to onboarding state
+    let stripe_rules = serde_json::json!({
+        "stripe_deposit_rules": {
+            "deposit_percentage": 50,
+            "notice_days": 3
+        }
+    });
+    agent.save_onboarding_state(&_start_res.organization_id, &_start_res.user_id, 100, &stripe_rules).await.map_err(|e| {
+        tracing::error!("Failed to save deposit rules: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     let tasks_to_insert = intake_data.initial_tasks.unwrap_or_else(|| vec!["Follow up with new leads".to_string()]);
     for task_title in tasks_to_insert {
         let task_id = uuid::Uuid::new_v4().to_string();
