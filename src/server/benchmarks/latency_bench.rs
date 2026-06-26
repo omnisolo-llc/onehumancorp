@@ -746,8 +746,8 @@ pub async fn bench_dashboard_analytics_briefing_latency() {
         let pool1 = pg_pool.clone();
         let pool2 = pg_pool.clone();
         let _ = tokio::join!(
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2)
+            sqlx::query("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind("test_tenant").execute(&pool1),
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool2)
         );
         let duration = start_sim.elapsed();
 
@@ -826,9 +826,9 @@ pub async fn bench_ui_supply_latency() {
         let pool3 = pg_pool.clone();
 
         let _ = tokio::join!(
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2),
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool3)
+            sqlx::query("SELECT id, name FROM vendors WHERE tenant_id = $1 ORDER BY name").bind("test_tenant").execute(&pool1),
+            sqlx::query("SELECT id, name, current_quantity FROM raw_materials WHERE tenant_id = $1 ORDER BY name").bind("test_tenant").execute(&pool2),
+            sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id").bind("test_tenant").execute(&pool3)
         );
         let duration = start_sim.elapsed();
 
@@ -1138,7 +1138,12 @@ pub async fn bench_ui_triage_mobile_payload() {
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
-        let _ = tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1).await }).await;
+        let _ = tokio::spawn(async move {
+            let _ = sqlx::query("SELECT id, status, CAST(created_at AS text) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50")
+            .bind("test_tenant")
+            .fetch_all(&pool1)
+            .await;
+        }).await;
         let duration = start_sim.elapsed();
 
         println!("  - Mobile Payload Optimization Simulation (Postgres): {:?}", duration);
@@ -1187,7 +1192,7 @@ pub async fn bench_ui_omni_inbox_latency() {
         let pool1 = pg_pool.clone();
 
         let _ = tokio::join!(
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1)
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool1)
         );
         let duration = start_sim.elapsed();
 
