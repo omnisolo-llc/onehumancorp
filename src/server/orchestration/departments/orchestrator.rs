@@ -300,7 +300,85 @@ impl DepartmentOrchestrator {
 
     }
 
-    pub async fn execute_action(
+
+    pub async fn soft_lock_booking_slot(&self, tenant_id: &str, service_id: &str, _suggested_time_str: &str, ttl: std::time::Duration) -> Result<Option<String>, String> {
+        // Attempt to parse time or default to next day if natural language (simplified for now)
+        let start_time = if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(_suggested_time_str) {
+            parsed.with_timezone(&chrono::Utc)
+        } else {
+            // Fallback for demo parsing: Assume next day at 2PM UTC
+            let now = chrono::Utc::now();
+            now.date_naive().and_hms_opt(14, 0, 0).unwrap().and_utc() + chrono::Duration::days(1)
+        };
+        let end_time = start_time + chrono::Duration::hours(1);
+
+        let time_id = format!("{}_{}", start_time.timestamp(), service_id);
+
+        let lock_acquired = self.mesh.acquire_lock(&time_id, "sales_agent", ttl.as_secs()).await.unwrap_or(false);
+
+        if lock_acquired {
+            let slot_id = uuid::Uuid::new_v4().to_string();
+            match &self.db.store {
+                crate::db::DbStore::Postgres => {
+                    let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+                    sqlx::query(
+                        "INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'soft_locked')"
+                    )
+                    .bind(&slot_id)
+                    .bind(tenant_id)
+                    .bind(service_id)
+                    .bind(start_time)
+                    .bind(end_time)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query(
+                        "INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'soft_locked')"
+                    )
+                    .bind(&slot_id)
+                    .bind(tenant_id)
+                    .bind(service_id)
+                    .bind(start_time)
+                    .bind(end_time)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+            }
+            Ok(Some(slot_id))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub async fn confirm_booking_slot(&self, tenant_id: &str, slot_id: &str) -> Result<(), String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+                sqlx::query("UPDATE booking_slots SET status = 'booked' WHERE id = $1")
+                    .bind(slot_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("UPDATE booking_slots SET status = 'booked' WHERE id = ? AND tenant_id = ?")
+                    .bind(slot_id)
+                    .bind(tenant_id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+pub async fn execute_action(
         &self,
         department: DepartmentType,
         description: String,
