@@ -3286,7 +3286,7 @@ pub async fn handle_zero_click_generate(
         admin_name: "Owner".to_string(),
         admin_password: uuid::Uuid::new_v4().to_string(),
         website_template: "Modern".to_string(),
-        first_product_name,
+        first_product_name: first_product_name.clone(),
         first_product_price,
         domain_choice: "subdomain".to_string(),
         price_type: "fixed".to_string(),
@@ -3314,7 +3314,9 @@ pub async fn handle_zero_click_generate(
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let tasks_to_insert = intake_data.initial_tasks.unwrap_or_else(|| vec!["Follow up with new leads".to_string()]);
+    let mut tasks_to_insert = intake_data.initial_tasks.unwrap_or_else(|| vec!["Follow up with new leads".to_string()]);
+    tasks_to_insert.push(format!("Review Product: {}", first_product_name));
+
     for task_title in tasks_to_insert {
         let task_id = uuid::Uuid::new_v4().to_string();
         sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title, description, status) VALUES ($1, $2, $3, $4, 'PENDING')")

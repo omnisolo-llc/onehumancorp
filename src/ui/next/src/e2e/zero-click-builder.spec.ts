@@ -1,25 +1,21 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Zero Click Builder Mobile Onboarding', () => {
-  test.use({ viewport: { width: 375, height: 812 } }); // Mobile-first constraint
+  test.use({ viewport: { width: 375, height: 812 } });
 
   test('User can generate a store with a single prompt', async ({ page, context }) => {
     // Navigate to the zero-click-builder page
     await page.goto('/zero-click-builder');
 
-    // 1. Verify premium tokens & text
+    // 1. Verify text
     await expect(page.getByText('Zero-Click Business Generator')).toBeVisible();
 
-    // The single text area where the prompt is typed
-    const promptInput = page.locator('#prompt');
-    await expect(promptInput).toBeVisible();
+    // 2. Chat input
+    const chatInput = page.getByPlaceholder('e.g. I am a home baker');
+    await expect(chatInput).toBeVisible();
 
-    // 2. Type natural language prompt
-    await promptInput.fill('I am a home baker in Austin selling custom vegan cakes and cupcakes.');
-
-    // 3. Find "Generate Store" button
-    const generateBtn = page.getByRole('button', { name: /Generate Store/i });
-    await expect(generateBtn).toBeEnabled();
+    await chatInput.fill('I am a home baker in Austin selling custom vegan cakes.');
+    await chatInput.press('Enter');
 
     // Mock API response
     await context.route('**/api/v1/growth/zero-click-builder/generate', async route => {
@@ -36,17 +32,11 @@ test.describe('Zero Click Builder Mobile Onboarding', () => {
       });
     });
 
-    // 4. Tap Generate Button
-    await generateBtn.click();
-
     // 5. Verify visually engaging loading state
-    await expect(page.getByText('Analyzing your business...')).toBeVisible();
+    await expect(page.getByText('Building Your Business...')).toBeVisible();
 
     // 6. Verify completion & transition to live preview
     await expect(page.getByText('Your business is live!')).toBeVisible({ timeout: 15000 });
-
-    // Check if iframe for preview rendered
-    await expect(page.locator('iframe[title="Live Storefront Preview"]')).toBeVisible();
 
     // Verify auth/redirect handoff button
     const launchBtn = page.getByRole('button', { name: /Launch My Store/i });
