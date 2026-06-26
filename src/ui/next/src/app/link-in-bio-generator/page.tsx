@@ -11,6 +11,7 @@ export default function LinkInBioGeneratorPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [links, setLinks] = useState([{ title: 'Shop Now', url: 'https://ohc.app' }]);
   const [tenant, setTenant] = useState('my-store');
+  const [removeBranding, setRemoveBranding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -30,6 +31,7 @@ export default function LinkInBioGeneratorPage() {
              setBio(data.bio || '');
              setTheme(data.theme || 'light');
              setLinks(data.links && data.links.length > 0 ? data.links : [{ title: 'Shop Now', url: 'https://ohc.app' }]);
+             setRemoveBranding(data.remove_branding || false);
           }
         }
       } catch (e) {
@@ -65,7 +67,8 @@ export default function LinkInBioGeneratorPage() {
           store_name: storeName,
           bio,
           theme,
-          links
+          links,
+          remove_branding: removeBranding
         })
       });
       if (res.ok) {
@@ -173,6 +176,23 @@ export default function LinkInBioGeneratorPage() {
             </div>
 
             <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
+              <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-4">Branding</h2>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="removeBrandingCheckbox"
+                  aria-label="Remove branding"
+                  checked={removeBranding}
+                  onChange={(e) => setRemoveBranding(e.target.checked)}
+                  className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                />
+                <label htmlFor="removeBrandingCheckbox" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Remove "Powered by OHC" branding
+                </label>
+              </div>
+            </div>
+
+            <div className="glassmorphism rounded-2xl p-6 bg-white border border-gray-100 shadow-sm dark:bg-[#2C2C2E] dark:border-white/10">
               <h2 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-4">Theme</h2>
               <div className="flex gap-4">
                 <button
@@ -233,9 +253,11 @@ export default function LinkInBioGeneratorPage() {
                             ))}
                         </div>
 
-                        <div className="mt-auto pt-8 pb-4">
-                            <PoweredByOHC tenantId={tenant} />
-                        </div>
+                        {!removeBranding && (
+                          <div className="mt-auto pt-8 pb-4">
+                              <PoweredByOHC tenantId={tenant} />
+                          </div>
+                        )}
                     </div>
                 </div>
              </div>
