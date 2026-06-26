@@ -738,7 +738,7 @@ mod tests {
 #[cfg(test)]
 mod retry_tests {
     use super::*;
-    use crate::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
+    use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
     use serde::Deserialize;
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -932,7 +932,7 @@ mod exponential_backoff_tests {
 #[cfg(test)]
 mod tests_clamped {
     use super::*;
-    use crate::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
+    use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
     use serde::Deserialize;
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -986,7 +986,6 @@ mod tests_clamped {
             retry_parser.parse_with_prompt(req, 10).await
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(30000)).await;
 
         let result = handle.await.expect("Expected TestOutput in test");
 
