@@ -43,16 +43,26 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [windowWidth, setWindowWidth] = useState(1000);
 
   useEffect(() => {
-    setWindowWidth(window.innerWidth);
+    if (typeof window !== "undefined") {
+      setWindowWidth(window.innerWidth);
+    }
     let timeoutId: NodeJS.Timeout;
     const handleResize = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => setWindowWidth(window.innerWidth), 100);
+      timeoutId = setTimeout(() => {
+        if (typeof window !== "undefined") {
+          setWindowWidth(window.innerWidth);
+        }
+      }, 100);
     };
-    window.addEventListener('resize', handleResize);
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", handleResize);
+    }
     return () => {
       clearTimeout(timeoutId);
-      window.removeEventListener('resize', handleResize);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("resize", handleResize);
+      }
     };
   }, []);
 
@@ -61,7 +71,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
-          className="fixed z-[100] bg-white/80 dark:bg-black/60 backdrop-blur-[30px] saturate-[210%] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 rounded-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.15)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed animate-fade-in-up"
+          className="fixed z-[100] bg-white/65 dark:bg-black/65 backdrop-blur-[30px] saturate-[210%] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 rounded-[16px] border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.15)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
             left: Math.max(128, Math.min(windowWidth - 128, tooltipRect.left + tooltipRect.width / 2)),
