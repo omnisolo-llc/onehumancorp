@@ -112,6 +112,7 @@ rust_library(
         "tool_integrations.rs",
         "sync_gateway.rs",
         "//src/server/api/inbox:srcs",
+    "//src/server/api/ohc_job_queue:srcs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
         "//src/server/api/agents:hire.rs",
