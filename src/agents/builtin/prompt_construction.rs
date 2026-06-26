@@ -1,7 +1,8 @@
 #![allow(clippy::collapsible_if)]
 use crate::agent::AgentRunConfig;
 use crate::types::Message;
-/// Master Catalog B.5. Prompt Construction
+/// Master Catalog B.5. Prompt Construction: Implemented as a strict hierarchical priority stack.
+/// OpenAI Codex Mechanic: 1. Server-controlled System Message (Highest Priority) -> 2. Tool Definitions -> 3. Developer Instructions -> 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB) -> 5. Conversation History.
 use std::fmt::Write;
 
 pub struct PromptBuilder;
@@ -188,7 +189,7 @@ pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) ->
     combined
 }
 
-/// 4. User Instructions (capped at 32 KiB)
+/// 4. User Instructions (Cascading AGENTS.md files) (capped at 32 KiB)
 // Prompt Construction: OpenAI Codex Hierarchy
 pub struct HierarchicalPromptBuilder {
     server_system_message: String,
@@ -312,7 +313,7 @@ impl HierarchicalPromptBuilder {
             combined_system.push_str("\n</developer_instructions>");
         }
 
-        // 4. User Instructions
+        // 4. User Instructions (Cascading AGENTS.md files)
         if !self.user_instructions.is_empty() {
             if !combined_system.is_empty() {
                 combined_system.push_str("\n\n");

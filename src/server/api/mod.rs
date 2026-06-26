@@ -37,6 +37,7 @@ pub mod booking;
 pub mod recovery;
 pub mod agent_feed;
 pub mod invoice;
+pub mod ohc_job_queue;
 pub mod audio_command;
 pub mod incidents;
 pub mod cart;
