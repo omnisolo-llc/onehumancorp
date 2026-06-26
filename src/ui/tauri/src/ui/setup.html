@@ -2669,16 +2669,27 @@
           }
         }
 
-        // Merge from localStorage as fallback
+        // Start with localStorage if it exists
         const stored = localStorage.getItem("onboardingState");
+        let storedState = null;
         if (stored) {
-          state = { ...state, ...JSON.parse(stored) };
+          try {
+            storedState = JSON.parse(stored);
+            state = { ...state, ...storedState };
+          } catch (err) {
+            console.error("Failed to parse stored state:", err);
+          }
         }
 
-        // Merge backend state, taking priority
+        // Merge backend state only if it is ahead or at the same step
         if (loadedState && Object.keys(loadedState).length > 0) {
-          state = { ...state, ...loadedState };
-          localStorage.setItem("onboardingState", JSON.stringify(state));
+          const loadedStep = loadedState.step || 0;
+          const storedStep = storedState ? (storedState.step || 0) : 0;
+
+          if (loadedStep >= storedStep) {
+            state = { ...state, ...loadedState };
+            localStorage.setItem("onboardingState", JSON.stringify(state));
+          }
         }
 
         populateForm();
@@ -2766,6 +2777,7 @@
           inputs.assistantName.value = state.assistantName;
         if (state.assistantTone)
           inputs.assistantTone.value = state.assistantTone;
+        if (state.adminName) inputs.adminName.value = state.adminName;
         if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
         if (state.adminPassword)
           inputs.adminPassword.value = state.adminPassword;
@@ -3200,9 +3212,6 @@
       }
 
       function goToStep(stepId) {
-        saveCurrentState();
-        localStorage.setItem("onboardingState", JSON.stringify(state));
-
         if (
           stepId === "step-instant" &&
           document.getElementById("instant-bio")
@@ -3229,6 +3238,9 @@
         document.getElementById(stepId).classList.add("active");
         document.getElementById(stepId).style.display = "block";
         updateStepper(stepId);
+
+        saveCurrentState();
+        localStorage.setItem("onboardingState", JSON.stringify(state));
       }
 
       document.querySelectorAll(".next-step-btn").forEach((btn) => {
@@ -3237,7 +3249,6 @@
           const nextStepId = e.target.getAttribute("data-next");
           if (validateStep(currentStep)) {
             goToStep(nextStepId);
-            saveCurrentState();
           }
         });
       });

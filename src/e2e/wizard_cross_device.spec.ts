@@ -49,7 +49,8 @@ test.describe('Wizard Cross Device E2E', () => {
     // Also trigger save to backend
     await page.locator('#step-name .next-step-btn').click();
     await expect(page.getByRole('heading', { name: "Set up your Assistant" })).toBeVisible();
-    await page.waitForTimeout(1000);
+    // Wait for the backend debounce (1000ms) + network travel time
+    await page.waitForTimeout(2000);
 
     // 4. Simulate a cross-device session with a new browser context
     const newContext = await browser.newContext();
