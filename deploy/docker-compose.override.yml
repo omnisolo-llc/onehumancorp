@@ -13,7 +13,7 @@ services:
     command: ["postgres", "-c", "wal_level=logical"]
 
   valkey:
-    image: mirror.gcr.io/library/redis:alpine
+    image: mirror.gcr.io/library/redis:7
     pull_policy: missing
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
