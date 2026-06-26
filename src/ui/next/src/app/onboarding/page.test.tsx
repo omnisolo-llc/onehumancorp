@@ -273,7 +273,7 @@ describe('OnboardingWizard', () => {
 
     // Verify it transitions to Step 5 (Live Screen) on success
     await waitFor(() => {
-      expect(screen.getByText("You're Live!")).toBeInTheDocument();
+      expect(screen.getByText("Store setup complete")).toBeInTheDocument();
       expect(screen.getByText("maya-bakery.ohc.app")).toBeInTheDocument();
     });
 
@@ -564,7 +564,7 @@ describe('OnboardingWizard', () => {
     act(() => {
       useOnboardingStore.setState({
         step: 5,
-        startResult: { message: "Your business has been successfully launched." }
+        startResult: { message: "Your shop is ready! We created sample products and set up a deposit booking link." }
       });
     });
 
@@ -574,8 +574,8 @@ describe('OnboardingWizard', () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
+      expect(screen.getByText("Store setup complete")).toBeInTheDocument();
+      expect(screen.getByText("Your shop is ready! We created sample products and set up a deposit booking link.")).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Open Assistant/i })).toHaveAttribute('href', '/assistant');
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });

@@ -666,7 +666,7 @@ export default function OnboardingWizard() {
                 <button
                   type="button"
                   className="w-full bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all"
-                  onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }}
+                  onClick={() => { updateState({ step: 0 }); syncStateToBackend({ step: 0 }); }}
                 >
                   Conversational Setup
                 </button>
@@ -687,7 +687,7 @@ export default function OnboardingWizard() {
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
                 <div id="chat-messages" className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4">
                   {chatMessages.length === 0 && (
-                    <div className="mb-2"><strong>Assistant:</strong> What do you do? (e.g. I bake custom vegan cakes in Austin)</div>
+                    <div className="mb-2"><strong>Assistant:</strong> What kind of business do you run?</div>
                   )}
                   {chatMessages.map((msg, index) => (
                     <div key={index} className={`mb-2 ${msg.role === 'user' ? 'text-[#0066FF]' : 'text-[#333] dark:text-[#A1A1A6]'}`}>
@@ -702,7 +702,7 @@ export default function OnboardingWizard() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        <strong>Assistant:</strong> Thinking...
+                        <strong>Assistant:</strong> Agent is setting up your shop...
                       </span>
                     </div>
                   )}
@@ -1452,9 +1452,9 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h2>
+              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Store setup complete</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
-                {startResult.message || "Your business has been successfully launched."}
+                {startResult.message || "Your shop is ready! We created sample products and set up a deposit booking link."}
               </p>
 
               <div className="w-full space-y-3 mt-auto">
