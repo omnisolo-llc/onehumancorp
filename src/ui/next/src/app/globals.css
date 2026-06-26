@@ -748,10 +748,7 @@ button, .app-button, .charge-btn {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #d8e0ea;
   border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12);
 }
 
 .setup-page #setup-screen > div:first-child {
@@ -899,7 +896,7 @@ button, .app-button, .charge-btn {
 
 .setup-page #setup-screen button {
   min-height: 44px;
-  border-radius: 16px;
+  border-radius: 8px;
   cursor: pointer;
 }
 
@@ -953,7 +950,7 @@ button, .app-button, .charge-btn {
   min-height: 44px;
   padding: 12px 14px;
   border: 1px solid #cfd8e3;
-  border-radius: 16px;
+  border-radius: 8px;
   background: #ffffff;
   color: #18212f;
   font: inherit;
