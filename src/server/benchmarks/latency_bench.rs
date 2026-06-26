@@ -697,15 +697,17 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn test_ml_resilience_60s_timeout_rule() {
-        let timeout_duration = std::time::Duration::from_millis(150);
-        let (_tx, _rx) = tokio::sync::oneshot::channel::<()>();
+        // Enforce the specific 60-second ML Resilience timeout rule using the agent's actual timeout function
+        let timeout_duration = ohc_builtin_agent::agent::agent_task_timeout();
+        assert_eq!(timeout_duration.as_secs(), 60, "Agent tasks must have a strictly enforced 60s timeout");
 
         let result = tokio::time::timeout(timeout_duration, async {
-            std::future::pending::<()>().await;
+            // Simulate a long-running hung AI operation that exceeds 60s
+            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
             Ok::<(), String>(())
         }).await;
 
-        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
+        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience 60s timeout rule to prevent cascading failure");
     }
 
     #[tokio::test(start_paused = true)]
