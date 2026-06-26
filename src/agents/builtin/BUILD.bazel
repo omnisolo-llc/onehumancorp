@@ -59,6 +59,7 @@ rust_library(
         "checkpointer.rs",
         "claude_subagents.rs",
         "codex_runner.rs",
+        "compaction.rs",
         "consolidation_worker.rs",
         "departments.rs",
         "gpt_researcher.rs",

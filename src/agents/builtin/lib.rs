@@ -1,3 +1,4 @@
+pub mod compaction;
 pub mod claude_subagents;
 pub mod omni_context;
 pub mod plugins;

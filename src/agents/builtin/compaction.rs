@@ -39,9 +39,9 @@ pub async fn compact_context(
                 for tr in &m.tool_results {
                     // Discard redundant/raw tool outputs, but preserve errors if any
                     let status = if tr.error.is_empty() {
-                        "Success (raw output discarded during compaction)"
+                        "Success (raw output discarded during compaction)".to_string()
                     } else {
-                        &tr.error
+                        format!("Error: {}", tr.error)
                     };
                     middle_text.push_str(&format!("  tool_call_id: {} -> {}\n", tr.tool_call_id, status));
                 }
@@ -149,11 +149,20 @@ mod tests {
             error: "".to_string(),
         });
 
+        let mut msg_result_err = Message::user("");
+        msg_result_err.role = Role::Tool;
+        msg_result_err.tool_results.push(ToolResult {
+            tool_call_id: "call_2".to_string(),
+            content: "".to_string(),
+            error: "This is a critical error".to_string(),
+        });
+
         let messages = vec![
             Message::user("Message 0 (Start)"),
             Message::assistant("Message 1"),
             msg_tool,
             msg_result,
+            msg_result_err,
             Message::user("Message 4"),
             Message::assistant("Message 5"),
             Message::user("Message 6"),
