@@ -10,9 +10,15 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::sync::Arc;
 use uuid::Uuid;
+use axum::extract::Query;
 
 use crate::db::{DB, DbStore};
 use ::server_common::Claims;
+
+#[derive(Deserialize)]
+pub struct SupplyQuery {
+    pub mobile_optimized: Option<bool>,
+}
 
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct Vendor {
@@ -51,38 +57,86 @@ where
 async fn list_vendors(
     State(db): State<Arc<DB>>,
     Extension(claims): Extension<Claims>,
+    Query(query): Query<SupplyQuery>,
 ) -> impl IntoResponse {
     let tenant_id = claims.organization_id.unwrap_or_default();
     if tenant_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json::<Vec<Vendor>>(vec![])).into_response();
+        return (StatusCode::UNAUTHORIZED, Json::<Vec<serde_json::Value>>(vec![])).into_response();
     }
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let rows: Vec<Vendor> = match &db.store {
+    let rows: Vec<serde_json::Value> = match &db.store {
         DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
                 Ok(tx) => tx,
                 Err(e) => {
                     tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<Vendor>::new())).into_response();
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<serde_json::Value>::new())).into_response();
                 }
             };
             if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
                 tracing::error!("Failed to set org context: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<Vendor>::new())).into_response();
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<serde_json::Value>::new())).into_response();
             }
-            let res = sqlx::query_as::<_, Vendor>("SELECT id, name, contact_info FROM vendors WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_all(&mut *tx).await.unwrap_or_default();
+            let res = if mobile_optimized {
+                sqlx::query("SELECT id, name FROM vendors WHERE tenant_id = $1")
+                    .bind(&tenant_id)
+                    .fetch_all(&mut *tx).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "name": row.get::<String, _>("name")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            } else {
+                sqlx::query("SELECT id, name, contact_info FROM vendors WHERE tenant_id = $1")
+                    .bind(&tenant_id)
+                    .fetch_all(&mut *tx).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "name": row.get::<String, _>("name"),
+                                "contact_info": row.try_get::<String, _>("contact_info").ok()
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            };
             if let Err(e) = tx.commit().await {
                 tracing::error!("Failed to commit transaction: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<Vendor>::new())).into_response();
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<serde_json::Value>::new())).into_response();
             }
             res
         }
         DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, Vendor>("SELECT id, name, contact_info FROM vendors WHERE tenant_id = ?")
-                .bind(&tenant_id)
-                .fetch_all(pool).await.unwrap_or_default()
+            if mobile_optimized {
+                sqlx::query("SELECT id, name FROM vendors WHERE tenant_id = ?")
+                    .bind(&tenant_id)
+                    .fetch_all(pool).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "name": row.get::<String, _>("name")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            } else {
+                sqlx::query("SELECT id, name, contact_info FROM vendors WHERE tenant_id = ?")
+                    .bind(&tenant_id)
+                    .fetch_all(pool).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "name": row.get::<String, _>("name"),
+                                "contact_info": row.try_get::<String, _>("contact_info").ok()
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            }
         }
     };
 
@@ -140,38 +194,90 @@ async fn create_vendor(
 async fn list_raw_materials(
     State(db): State<Arc<DB>>,
     Extension(claims): Extension<Claims>,
+    Query(query): Query<SupplyQuery>,
 ) -> impl IntoResponse {
     let tenant_id = claims.organization_id.unwrap_or_default();
     if tenant_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json::<Vec<RawMaterial>>(vec![])).into_response();
+        return (StatusCode::UNAUTHORIZED, Json::<Vec<serde_json::Value>>(vec![])).into_response();
     }
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let rows: Vec<RawMaterial> = match &db.store {
+    let rows: Vec<serde_json::Value> = match &db.store {
         DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
                 Ok(tx) => tx,
                 Err(e) => {
                     tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<RawMaterial>::new())).into_response();
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<serde_json::Value>::new())).into_response();
                 }
             };
             if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
                 tracing::error!("Failed to set org context: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<RawMaterial>::new())).into_response();
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<serde_json::Value>::new())).into_response();
             }
-            let res = sqlx::query_as::<_, RawMaterial>("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_all(&mut *tx).await.unwrap_or_default();
+            let res = if mobile_optimized {
+                sqlx::query("SELECT id, name, current_quantity FROM raw_materials WHERE tenant_id = $1")
+                    .bind(&tenant_id)
+                    .fetch_all(&mut *tx).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "name": row.get::<String, _>("name"),
+                                "current_quantity": row.get::<i32, _>("current_quantity")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            } else {
+                sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1")
+                    .bind(&tenant_id)
+                    .fetch_all(&mut *tx).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "name": row.get::<String, _>("name"),
+                                "current_quantity": row.get::<i32, _>("current_quantity"),
+                                "reorder_threshold": row.get::<i32, _>("reorder_threshold")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            };
             if let Err(e) = tx.commit().await {
                 tracing::error!("Failed to commit transaction: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<RawMaterial>::new())).into_response();
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<serde_json::Value>::new())).into_response();
             }
             res
         }
         DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, RawMaterial>("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ?")
-                .bind(&tenant_id)
-                .fetch_all(pool).await.unwrap_or_default()
+            if mobile_optimized {
+                sqlx::query("SELECT id, name, current_quantity FROM raw_materials WHERE tenant_id = ?")
+                    .bind(&tenant_id)
+                    .fetch_all(pool).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "name": row.get::<String, _>("name"),
+                                "current_quantity": row.get::<i32, _>("current_quantity")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            } else {
+                sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ?")
+                    .bind(&tenant_id)
+                    .fetch_all(pool).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "name": row.get::<String, _>("name"),
+                                "current_quantity": row.get::<i32, _>("current_quantity"),
+                                "reorder_threshold": row.get::<i32, _>("reorder_threshold")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            }
         }
     };
 
@@ -227,38 +333,90 @@ async fn create_raw_material(
 async fn list_bom_items(
     State(db): State<Arc<DB>>,
     Extension(claims): Extension<Claims>,
+    Query(query): Query<SupplyQuery>,
 ) -> impl IntoResponse {
     let tenant_id = claims.organization_id.unwrap_or_default();
     if tenant_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, Json::<Vec<BomItem>>(vec![])).into_response();
+        return (StatusCode::UNAUTHORIZED, Json::<Vec<serde_json::Value>>(vec![])).into_response();
     }
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let rows: Vec<BomItem> = match &db.store {
+    let rows: Vec<serde_json::Value> = match &db.store {
         DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
                 Ok(tx) => tx,
                 Err(e) => {
                     tracing::error!("Failed to begin transaction: {:?}", e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<BomItem>::new())).into_response();
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<serde_json::Value>::new())).into_response();
                 }
             };
             if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
                 tracing::error!("Failed to set org context: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<BomItem>::new())).into_response();
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<serde_json::Value>::new())).into_response();
             }
-            let res = sqlx::query_as::<_, BomItem>("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_all(&mut *tx).await.unwrap_or_default();
+            let res = if mobile_optimized {
+                sqlx::query("SELECT id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1")
+                    .bind(&tenant_id)
+                    .fetch_all(&mut *tx).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "raw_material_id": row.get::<String, _>("raw_material_id"),
+                                "quantity_required": row.get::<i32, _>("quantity_required")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            } else {
+                sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1")
+                    .bind(&tenant_id)
+                    .fetch_all(&mut *tx).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "finished_good_id": row.get::<String, _>("finished_good_id"),
+                                "raw_material_id": row.get::<String, _>("raw_material_id"),
+                                "quantity_required": row.get::<i32, _>("quantity_required")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            };
             if let Err(e) = tx.commit().await {
                 tracing::error!("Failed to commit transaction: {:?}", e);
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<BomItem>::new())).into_response();
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(Vec::<serde_json::Value>::new())).into_response();
             }
             res
         }
         DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, BomItem>("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ?")
-                .bind(&tenant_id)
-                .fetch_all(pool).await.unwrap_or_default()
+            if mobile_optimized {
+                sqlx::query("SELECT id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ?")
+                    .bind(&tenant_id)
+                    .fetch_all(pool).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "raw_material_id": row.get::<String, _>("raw_material_id"),
+                                "quantity_required": row.get::<i32, _>("quantity_required")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            } else {
+                sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ?")
+                    .bind(&tenant_id)
+                    .fetch_all(pool).await.map(|rows| {
+                        rows.into_iter().map(|row| {
+                            use sqlx::Row;
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "finished_good_id": row.get::<String, _>("finished_good_id"),
+                                "raw_material_id": row.get::<String, _>("raw_material_id"),
+                                "quantity_required": row.get::<i32, _>("quantity_required")
+                            })
+                        }).collect()
+                    }).unwrap_or_default()
+            }
         }
     };
 
