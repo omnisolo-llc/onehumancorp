@@ -4977,42 +4977,72 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             let mut daily_work_rows_json = Vec::new();
             match &db4.store {
                 crate::db::DbStore::Postgres => {
-                    if let Ok(rows) = sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50")
-                        .bind(&t_id4).fetch_all(&db4.pool).await {
+                    let query_str = if mobile_optimized {
+                        "SELECT id, signal_id, intent, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                    } else {
+                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                    };
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id4).fetch_all(&db4.pool).await {
                         for row in rows {
                             use sqlx::Row;
-                            let customer_info: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("customer_info").ok().map(|j| j.0);
-                            let suggested_actions: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("suggested_actions").ok().map(|j| j.0);
-                            daily_work_rows_json.push(serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "tenant_id": t_id4,
-                                "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
-                                "intent": row.get::<String, _>("intent"),
-                                "customer_info": customer_info,
-                                "suggested_actions": suggested_actions,
-                                "status": row.get::<String, _>("status"),
-                                "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                            }));
+                            if mobile_optimized {
+                                daily_work_rows_json.push(serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": t_id4,
+                                    "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                    "intent": row.get::<String, _>("intent"),
+                                    "status": row.get::<String, _>("status"),
+                                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                                }));
+                            } else {
+                                let customer_info: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("customer_info").ok().map(|j| j.0);
+                                let suggested_actions: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("suggested_actions").ok().map(|j| j.0);
+                                daily_work_rows_json.push(serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": t_id4,
+                                    "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                    "intent": row.get::<String, _>("intent"),
+                                    "customer_info": customer_info,
+                                    "suggested_actions": suggested_actions,
+                                    "status": row.get::<String, _>("status"),
+                                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                                }));
+                            }
                         }
                     }
                 }
                 crate::db::DbStore::Sqlite(pool) => {
-                    if let Ok(rows) = sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS TEXT) AS created_at FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50")
-                        .bind(&t_id4).fetch_all(pool).await {
+                    let query_str = if mobile_optimized {
+                        "SELECT id, signal_id, intent, status, CAST(created_at AS TEXT) AS created_at FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                    } else {
+                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS TEXT) AS created_at FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                    };
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id4).fetch_all(pool).await {
                         for row in rows {
                             use sqlx::Row;
-                            let customer_info: Option<serde_json::Value> = row.try_get::<String, _>("customer_info").ok().and_then(|s| serde_json::from_str(&s).ok());
-                            let suggested_actions: Option<serde_json::Value> = row.try_get::<String, _>("suggested_actions").ok().and_then(|s| serde_json::from_str(&s).ok());
-                            daily_work_rows_json.push(serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "tenant_id": t_id4,
-                                "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
-                                "intent": row.get::<String, _>("intent"),
-                                "customer_info": customer_info,
-                                "suggested_actions": suggested_actions,
-                                "status": row.get::<String, _>("status"),
-                                "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                            }));
+                            if mobile_optimized {
+                                daily_work_rows_json.push(serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": t_id4,
+                                    "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                    "intent": row.get::<String, _>("intent"),
+                                    "status": row.get::<String, _>("status"),
+                                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                                }));
+                            } else {
+                                let customer_info: Option<serde_json::Value> = row.try_get::<String, _>("customer_info").ok().and_then(|s| serde_json::from_str(&s).ok());
+                                let suggested_actions: Option<serde_json::Value> = row.try_get::<String, _>("suggested_actions").ok().and_then(|s| serde_json::from_str(&s).ok());
+                                daily_work_rows_json.push(serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": t_id4,
+                                    "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                    "intent": row.get::<String, _>("intent"),
+                                    "customer_info": customer_info,
+                                    "suggested_actions": suggested_actions,
+                                    "status": row.get::<String, _>("status"),
+                                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                                }));
+                            }
                         }
                     }
                 }
