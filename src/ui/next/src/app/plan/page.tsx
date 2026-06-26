@@ -169,7 +169,7 @@ export default function MyPlanPage() {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                           <div
-                              className="bg-blue-500 h-3 rounded-full transition-all duration-500"
+                              className="bg-[#0066FF] h-3 rounded-full transition-all duration-500"
                               style={{ width: data?.storage_limit_bytes ? `${Math.min(100, ((data?.storage_used_bytes || 0) / data.storage_limit_bytes) * 100)}%` : '5%' }}>
                           </div>
                       </div>

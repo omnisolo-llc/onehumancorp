@@ -98,10 +98,10 @@ export function WorkTriageFeed({
         .map((item) => (
           <div
             key={item.id}
-            className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden"
+            className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-[#FF9500]/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden"
             data-testid={`triage-card-${item.id}`}
           >
-            <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+            <div className="absolute top-0 left-0 w-1 h-full bg-[#FF9500]"></div>
             <div className="flex justify-between items-start mb-3">
               <div>
                 <h2 className="text-xl font-bold font-outfit text-orange-900 dark:text-orange-100 flex items-center gap-2">
@@ -130,7 +130,7 @@ export function WorkTriageFeed({
             <div className="flex flex-col gap-3 mt-2 w-full">
               <button
                 onClick={() => onDecision(item.id, true)}
-                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-[#FF9500] hover:bg-orange-600 text-white font-medium shadow-sm transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                 data-testid={`triage-approve-${item.id}`}
               >
                 Approve & Execute

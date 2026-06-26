@@ -92,7 +92,7 @@
             <h2 class="text-xl font-bold mb-4 tracking-tight">Chaos Resilience Metrics</h2>
             <div class="space-y-3 font-mono text-sm opacity-90">
                 <div id="metric-latency-cloud" class="flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span class="w-2 h-2 rounded-full bg-[#0066FF]"></span>
                     <span>API Latency (P99) under 100 Cloud Users: <span id="val-latency-cloud" class="font-bold">Loading...</span></span>
                 </div>
                 <div id="metric-latency-standalone" class="flex items-center gap-2">
@@ -100,7 +100,7 @@
                     <span>API Latency (P99) under 10 Standalone Users: <span id="val-latency-standalone" class="font-bold">Loading...</span></span>
                 </div>
                 <div id="metric-error-outage" class="flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span class="w-2 h-2 rounded-full bg-[#34C759]"></span>
                     <span>Error Rate during LLM Outage: <span id="val-error-outage" class="font-bold">Loading...</span></span>
                 </div>
             </div>
@@ -265,21 +265,21 @@
                 // Update marker styles and bar colors
                 document.querySelectorAll('.error-marker').forEach(marker => {
                     if (isDarkMode) {
-                        marker.classList.remove('bg-red-500', 'ring-white');
+                        marker.classList.remove('bg-[#FF3B30]', 'ring-white');
                         marker.classList.add('bg-red-400', 'ring-gray-900');
                     } else {
                         marker.classList.remove('bg-red-400', 'ring-gray-900');
-                        marker.classList.add('bg-red-500', 'ring-white');
+                        marker.classList.add('bg-[#FF3B30]', 'ring-white');
                     }
                 });
 
                 document.querySelectorAll('.latency-bar').forEach(bar => {
                     if (isDarkMode) {
-                        bar.classList.remove('bg-blue-500/60');
-                        bar.classList.add('bg-blue-500/80');
+                        bar.classList.remove('bg-[#0066FF]/60');
+                        bar.classList.add('bg-[#0066FF]/80');
                     } else {
-                        bar.classList.remove('bg-blue-500/80');
-                        bar.classList.add('bg-blue-500/60');
+                        bar.classList.remove('bg-[#0066FF]/80');
+                        bar.classList.add('bg-[#0066FF]/60');
                     }
                 });
 
@@ -356,7 +356,7 @@
                     wrapper.className = 'flex-1 flex flex-col items-center justify-end h-full bar-container relative';
 
                     const bar = document.createElement('div');
-                    bar.className = `w-full rounded-t-md transition-all duration-500 latency-bar hover:bg-blue-400 relative z-10 ${isDarkMode ? 'bg-blue-500/80' : 'bg-blue-500/60'}`;
+                    bar.className = `w-full rounded-t-md transition-all duration-500 latency-bar hover:bg-blue-400 relative z-10 ${isDarkMode ? 'bg-[#0066FF]/80' : 'bg-[#0066FF]/60'}`;
                     bar.style.height = `${height}%`;
 
                     const tooltip = document.createElement('div');
@@ -394,7 +394,7 @@
                     pathFillD += `L ${x} ${y} `;
 
                     const marker = document.createElement('div');
-                    marker.className = `absolute w-3 h-3 rounded-full -ml-1.5 -mb-1.5 cursor-pointer transition-transform hover:scale-150 error-marker pointer-events-auto ring-2 ${isDarkMode ? 'bg-red-400 ring-gray-900' : 'bg-red-500 ring-white'}`;
+                    marker.className = `absolute w-3 h-3 rounded-full -ml-1.5 -mb-1.5 cursor-pointer transition-transform hover:scale-150 error-marker pointer-events-auto ring-2 ${isDarkMode ? 'bg-red-400 ring-gray-900' : 'bg-[#FF3B30] ring-white'}`;
                     marker.style.left = `${x}%`;
                     marker.style.bottom = `${val * 1000}%`;
                     marker.title = `${(val * 100).toFixed(1)}% error rate`;

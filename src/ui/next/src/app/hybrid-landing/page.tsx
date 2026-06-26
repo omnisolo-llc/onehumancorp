@@ -91,7 +91,7 @@ export default function HybridLandingPage() {
             <ul className="space-y-4 mb-10">
               <li className="flex items-start">
                 <svg
-                  className="w-6 h-6 text-green-500 mr-3 shrink-0"
+                  className="w-6 h-6 text-[#34C759] mr-3 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -109,7 +109,7 @@ export default function HybridLandingPage() {
               </li>
               <li className="flex items-start">
                 <svg
-                  className="w-6 h-6 text-green-500 mr-3 shrink-0"
+                  className="w-6 h-6 text-[#34C759] mr-3 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -127,7 +127,7 @@ export default function HybridLandingPage() {
               </li>
               <li className="flex items-start">
                 <svg
-                  className="w-6 h-6 text-green-500 mr-3 shrink-0"
+                  className="w-6 h-6 text-[#34C759] mr-3 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -239,7 +239,7 @@ export default function HybridLandingPage() {
             <ul className="space-y-4 mb-10">
               <li className="flex items-start">
                 <svg
-                  className="w-6 h-6 text-green-500 mr-3 shrink-0"
+                  className="w-6 h-6 text-[#34C759] mr-3 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -257,7 +257,7 @@ export default function HybridLandingPage() {
               </li>
               <li className="flex items-start">
                 <svg
-                  className="w-6 h-6 text-green-500 mr-3 shrink-0"
+                  className="w-6 h-6 text-[#34C759] mr-3 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -275,7 +275,7 @@ export default function HybridLandingPage() {
               </li>
               <li className="flex items-start">
                 <svg
-                  className="w-6 h-6 text-green-500 mr-3 shrink-0"
+                  className="w-6 h-6 text-[#34C759] mr-3 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

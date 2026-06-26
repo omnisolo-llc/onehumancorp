@@ -97,7 +97,7 @@ export default function ExitIntentBuilder() {
                 type="text"
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none"
                 placeholder="Wait! Before you go..."
               />
             </div>
@@ -110,7 +110,7 @@ export default function ExitIntentBuilder() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none resize-none"
                 placeholder="Get 10% off your first order..."
               />
             </div>
@@ -123,7 +123,7 @@ export default function ExitIntentBuilder() {
                 type="text"
                 value={buttonText}
                 onChange={(e) => setButtonText(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none"
                 placeholder="Claim My 10% Off"
               />
             </div>
@@ -151,7 +151,7 @@ export default function ExitIntentBuilder() {
               <button
                 onClick={handleBrandingToggle}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  removeBranding ? "bg-blue-600" : "bg-gray-200"
+                  removeBranding ? "bg-[#0071E3]" : "bg-gray-200"
                 }`}
                 role="switch"
                 aria-checked={removeBranding}
@@ -207,7 +207,7 @@ export default function ExitIntentBuilder() {
               </h2>
               <button
                 onClick={handleCopyCode}
-                className="text-blue-600 text-sm font-medium hover:text-blue-800 transition-colors"
+                className="text-[#0071E3] text-sm font-medium hover:text-blue-800 transition-colors"
               >
                 {isCopied ? "Copied!" : "Copy to Clipboard"}
               </button>
@@ -223,7 +223,7 @@ export default function ExitIntentBuilder() {
       {showPaywall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[30px] saturate-[210%] p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+            <div className="w-16 h-16 bg-blue-100 text-[#0071E3] rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
               ✨
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Remove OHC Branding</h3>
@@ -233,7 +233,7 @@ export default function ExitIntentBuilder() {
             <div className="flex flex-col space-y-3">
               <button
                 onClick={handleUpgrade}
-                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                className="w-full bg-[#0071E3] text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
               >
                 Upgrade to Pro
               </button>

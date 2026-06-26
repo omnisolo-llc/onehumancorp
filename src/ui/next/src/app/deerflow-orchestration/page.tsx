@@ -51,7 +51,7 @@ export default function DeerFlowOrchestration() {
         />
         <button
           type="submit"
-          className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+          className="bg-[#0071E3] text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
           disabled={!task.trim() || loading}
         >
           {loading ? 'Orchestrating Sub-agents...' : 'Execute Task via DeerFlow'}

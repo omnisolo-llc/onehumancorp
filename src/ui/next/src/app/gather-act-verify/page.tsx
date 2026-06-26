@@ -50,7 +50,7 @@ export default function GatherActVerifyPage() {
               id="task"
               name="task"
               rows={4}
-              className="w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-3 border rounded-md focus:ring-2 focus:ring-[#0066FF] outline-none"
               placeholder="E.g., Analyze the recent customer reviews and propose an action plan..."
               value={task}
               onChange={(e) => setTask(e.target.value)}
@@ -60,7 +60,7 @@ export default function GatherActVerifyPage() {
           <button
             type="submit"
             disabled={isLoading || !task.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-2 bg-[#0071E3] text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? "Processing..." : "Run Agent"}
           </button>

@@ -64,7 +64,7 @@ export default function EmailSignatureGeneratorPage() {
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] outline-none transition-all"
                             placeholder="e.g. Jane Doe"
                         />
                     </div>
@@ -74,7 +74,7 @@ export default function EmailSignatureGeneratorPage() {
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] outline-none transition-all"
                             placeholder="e.g. Founder & CEO"
                         />
                     </div>
@@ -84,7 +84,7 @@ export default function EmailSignatureGeneratorPage() {
                             type="text"
                             value={company}
                             onChange={(e) => setCompany(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] outline-none transition-all"
                             placeholder="e.g. Jane's Bakery"
                         />
                     </div>
@@ -94,7 +94,7 @@ export default function EmailSignatureGeneratorPage() {
                             type="text"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] outline-none transition-all"
                             placeholder="e.g. +1 (555) 123-4567"
                         />
                     </div>
@@ -104,7 +104,7 @@ export default function EmailSignatureGeneratorPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] outline-none transition-all"
                             placeholder="e.g. jane@example.com"
                         />
                     </div>
@@ -114,7 +114,7 @@ export default function EmailSignatureGeneratorPage() {
                             type="text"
                             value={website}
                             onChange={(e) => setWebsite(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] outline-none transition-all"
                             placeholder="e.g. www.example.com"
                         />
                     </div>
@@ -151,7 +151,7 @@ export default function EmailSignatureGeneratorPage() {
                                     setRemoveBranding(false);
                                 }
                             }}
-                            className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            className="mt-1 w-4 h-4 text-[#0071E3] rounded focus:ring-[#0066FF]"
                         />
                         <div>
                             <span className="text-sm font-medium text-gray-900 dark:text-gray-200">Remove "Powered by OHC" branding</span>
@@ -268,7 +268,7 @@ export default function EmailSignatureGeneratorPage() {
               </button>
             </div>
 
-            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-3xl shadow-inner text-blue-600 mx-auto mb-6">
+            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-3xl shadow-inner text-[#0071E3] mx-auto mb-6">
               ✨
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-3">Upgrade to Pro</h2>
@@ -278,7 +278,7 @@ export default function EmailSignatureGeneratorPage() {
 
             <button
               onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
-              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-blue-600 hover:bg-blue-700"
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-[#0071E3] hover:bg-blue-700"
             >
               Upgrade to Pro
             </button>

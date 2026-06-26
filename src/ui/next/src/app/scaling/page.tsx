@@ -130,7 +130,7 @@ export default function ScalingPage() {
               <div className="max-h-60 overflow-y-auto bg-transparent p-4 rounded-md border border-gray-200">
                 {results.slice(0, 20).map((r, i) => (
                   <div key={i} className="text-sm mb-2 pb-2 border-b border-gray-200 last:border-0 last:mb-0 last:pb-0">
-                    <span className="font-semibold text-blue-600">Agent {i + 1}: </span>
+                    <span className="font-semibold text-[#0071E3]">Agent {i + 1}: </span>
                     {r}
                   </div>
                 ))}

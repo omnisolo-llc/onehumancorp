@@ -61,7 +61,7 @@ function QuizContent() {
                     </p>
                     <button
                         onClick={handleNext}
-                        className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 transition-all hover:-translate-y-0.5"
+                        className="w-full py-3 bg-[#0071E3] text-white font-bold rounded-xl shadow-md hover:bg-blue-700 transition-all hover:-translate-y-0.5"
                     >
                         Start Quiz
                     </button>
@@ -115,7 +115,7 @@ function QuizContent() {
 
                 {isFinished && (
                   <div className="w-full animate-fade-in-up">
-                    <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                    <div className="w-16 h-16 bg-blue-100 text-[#0071E3] rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
                       ✨
                     </div>
                     <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2">Your Result is Ready!</h2>

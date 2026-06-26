@@ -74,7 +74,7 @@ export default function CalendarPage() {
             aria-label="Toggle AI Scheduling"
             aria-pressed={aiEnabled}
             onClick={() => setAiEnabled(!aiEnabled)}
-            className={`w-11 h-6 rounded-full relative transition-colors duration-300 focus:outline-none ${aiEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+            className={`w-11 h-6 rounded-full relative transition-colors duration-300 focus:outline-none ${aiEnabled ? 'bg-[#34C759]' : 'bg-gray-300'}`}
           >
             <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${aiEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>

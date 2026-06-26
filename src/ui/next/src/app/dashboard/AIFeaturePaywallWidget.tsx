@@ -90,7 +90,7 @@ export function AIFeaturePaywallWidget() {
 
   if (unlocked) {
       return (
-          <div className="mb-6 ohc-growth-card glassmorphism p-6 rounded-[16px] border border-green-400/50 dark:border-green-500/30 bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 shadow-md">
+          <div className="mb-6 ohc-growth-card glassmorphism p-6 rounded-[16px] border border-green-400/50 dark:border-[#34C759]/30 bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 shadow-md">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center shrink-0">
                  <span className="text-2xl">✨</span>

@@ -53,7 +53,7 @@ export default function PreOrderWidgetPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] p-8 font-sans">
       <div className="max-w-4xl mx-auto">
-        <Link href="/dashboard" className="text-blue-600 hover:underline mb-8 inline-block">
+        <Link href="/dashboard" className="text-[#0071E3] hover:underline mb-8 inline-block">
           &larr; Back to Dashboard
         </Link>
 
@@ -118,7 +118,7 @@ export default function PreOrderWidgetPage() {
                 id="removeBranding"
                 checked={removeBranding}
                 onChange={handleBrandingToggle}
-                className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="w-5 h-5 rounded border-gray-300 text-[#0071E3] focus:ring-[#0066FF]"
               />
               <div className="flex flex-col">
                  <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -132,7 +132,7 @@ export default function PreOrderWidgetPage() {
 
             <button
               onClick={() => setShowEmbed(true)}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
+              className="w-full py-3 bg-[#0071E3] hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
             >
               Get Widget Embed Code
             </button>
@@ -164,7 +164,7 @@ export default function PreOrderWidgetPage() {
                   placeholder="Enter your email"
                   className={`flex-1 px-4 py-2 rounded-lg border ${theme === 'light' ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700 text-white'}`}
                 />
-                <button className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+                <button className="px-6 py-2 bg-[#0071E3] text-white rounded-lg font-medium hover:bg-blue-700">
                   Join
                 </button>
               </div>
@@ -207,7 +207,7 @@ export default function PreOrderWidgetPage() {
                   </>
                 )}
               </div>
-              <button onClick={() => setShowEmbed(false)} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors">
+              <button onClick={() => setShowEmbed(false)} className="w-full py-3 bg-[#0071E3] hover:bg-blue-700 text-white rounded-xl font-medium transition-colors">
                 Done
               </button>
             </div>
