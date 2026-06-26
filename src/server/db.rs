@@ -334,11 +334,18 @@ impl DB {
                     if secret_path.exists() {
                         #[cfg(unix)]
                         {
+                            if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
+                                if sym_meta.file_type().is_symlink() {
+                                    tracing::error!("CRITICAL SECURITY ERROR: .ohc_sqlite_key is a symlink. Aborting to prevent TOCTOU vulnerability.");
+                                    std::process::exit(1);
+                                }
+                            }
+
                             use std::os::unix::fs::PermissionsExt;
-                            if let Ok(metadata) = std::fs::metadata(&secret_path) {
-                                let perms = metadata.permissions();
+                            if let Ok(mut perms) = std::fs::symlink_metadata(&secret_path).map(|m| m.permissions()) {
                                 if perms.mode() & 0o777 != 0o600 {
-                                    panic!("CRITICAL SECURITY ERROR: .ohc_sqlite_key has insecure permissions. Must be exactly 0600.");
+                                    tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
+                                    std::process::exit(1);
                                 }
                             }
                         }
@@ -365,15 +372,6 @@ impl DB {
                             .open(&secret_path)
                         {
                             let _ = file.write_all(new_key.as_bytes());
-                        }
-
-                        // Ensure permissions are strictly 0o600
-                        use std::os::unix::fs::PermissionsExt;
-                        if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
-                            if (perms.mode() & 0o777) != 0o600 {
-                                perms.set_mode(0o600);
-                                let _ = std::fs::set_permissions(&secret_path, perms);
-                            }
                         }
                     }
                     #[cfg(not(unix))]
@@ -882,7 +880,36 @@ impl DB {
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
-                    CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+
+                    CREATE TABLE IF NOT EXISTS triage_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        source TEXT,
+                        priority TEXT,
+                        context TEXT,
+                        status TEXT DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS triage_proposed_actions (
+                        id TEXT PRIMARY KEY,
+                        triage_item_id TEXT NOT NULL REFERENCES triage_items(id) ON DELETE CASCADE,
+                        tenant_id TEXT NOT NULL,
+                        action_type TEXT,
+                        payload TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS auto_reply_policies (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        enabled BOOLEAN NOT NULL DEFAULT 1,
+                        delay_minutes INTEGER NOT NULL DEFAULT 5,
+                        tone_instructions TEXT DEFAULT '',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id)
+                    );
+CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         source TEXT NOT NULL,

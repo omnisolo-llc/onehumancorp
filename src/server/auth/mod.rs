@@ -174,11 +174,18 @@ impl Store {
                 if secret_path.exists() {
                     #[cfg(unix)]
                     {
+                        if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
+                            if sym_meta.file_type().is_symlink() {
+                                tracing::error!("CRITICAL SECURITY ERROR: .ohc_jwt_secret is a symlink. Aborting to prevent TOCTOU vulnerability.");
+                                std::process::exit(1);
+                            }
+                        }
+
                         use std::os::unix::fs::PermissionsExt;
-                        if let Ok(metadata) = std::fs::metadata(&secret_path) {
-                            let perms = metadata.permissions();
+                        if let Ok(mut perms) = std::fs::symlink_metadata(&secret_path).map(|m| m.permissions()) {
                             if perms.mode() & 0o777 != 0o600 {
-                                panic!("CRITICAL SECURITY ERROR: .ohc_jwt_secret has insecure permissions. Must be exactly 0600.");
+                                tracing::warn!("Insecure permissions on .ohc_jwt_secret. Ignoring it to prevent TOCTOU attacks.");
+                                std::process::exit(1);
                             }
                         }
                     }
@@ -194,11 +201,18 @@ impl Store {
                     if secret_path.exists() {
                         #[cfg(unix)]
                         {
+                            if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
+                                if sym_meta.file_type().is_symlink() {
+                                    tracing::error!("CRITICAL SECURITY ERROR: .ohc_sqlite_key is a symlink. Aborting to prevent TOCTOU vulnerability.");
+                                    std::process::exit(1);
+                                }
+                            }
+
                             use std::os::unix::fs::PermissionsExt;
-                            if let Ok(metadata) = std::fs::metadata(&secret_path) {
-                                let perms = metadata.permissions();
+                            if let Ok(mut perms) = std::fs::symlink_metadata(&secret_path).map(|m| m.permissions()) {
                                 if perms.mode() & 0o777 != 0o600 {
-                                    panic!("CRITICAL SECURITY ERROR: .ohc_sqlite_key has insecure permissions. Must be exactly 0600.");
+                                    tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
+                                    std::process::exit(1);
                                 }
                             }
                         }
@@ -237,14 +251,6 @@ impl Store {
                         let _ = file.write_all(&new_secret);
                     }
 
-                    // Ensure permissions are strictly 0o600
-                    use std::os::unix::fs::PermissionsExt;
-                    if let Ok(metadata) = std::fs::metadata(&secret_path) {
-                        let perms = metadata.permissions();
-                        if perms.mode() & 0o777 != 0o600 {
-                            panic!("CRITICAL SECURITY ERROR: .ohc_jwt_secret has insecure permissions. Must be exactly 0600.");
-                        }
-                    }
                 }
                 #[cfg(not(unix))]
                 {

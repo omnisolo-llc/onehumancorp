@@ -33,12 +33,14 @@ fn cosine_distance(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 1.0;
     }
+
     let (dot_product, norm_a, norm_b) = a
         .iter()
         .zip(b.iter())
         .fold((0.0f32, 0.0f32, 0.0f32), |(dot, na, nb), (&x, &y)| {
             (dot + x * y, na + x * x, nb + y * y)
         });
+
     if norm_a == 0.0 || norm_b == 0.0 {
         return 1.0;
     }
@@ -822,7 +824,6 @@ impl VectorRepository {
                         embedding: Vec<f32>,
                     }
 
-                    let _batch_size = 1000;
                     let mut conflicting_pairs_ids: Vec<(String, String)> = Vec::new();
                     let mut match_count = 0;
 
@@ -847,14 +848,23 @@ impl VectorRepository {
                             .await
                             .map_err(|e| e.to_string())?;
 
-                        let mut records_in_tenant: Vec<MinimalRecord> = Vec::new();
+                        let mut records_in_tenant: Vec<MinimalRecord> =
+                            Vec::with_capacity(rows.len());
                         for row in rows {
                             let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
                                 String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
                                     .unwrap_or_default()
                             });
-                            let embedding: Vec<f32> =
+                            let mut embedding: Vec<f32> =
                                 serde_json::from_str(&emb_str).unwrap_or_default();
+
+                            // Precompute L2 normalization to speed up the O(N^2) loop
+                            let norm: f32 = embedding.iter().map(|&x| x * x).sum::<f32>().sqrt();
+                            if norm > 0.0 {
+                                for v in embedding.iter_mut() {
+                                    *v /= norm;
+                                }
+                            }
 
                             let record = MinimalRecord {
                                 id: row.get("id"),
@@ -865,33 +875,19 @@ impl VectorRepository {
                         }
 
                         let records = records_in_tenant;
-                        let magnitudes: Vec<f32> = records
-                            .iter()
-                            .map(|r| r.embedding.iter().map(|&val| val * val).sum::<f32>().sqrt())
-                            .collect();
 
                         for i in 0..records.len() {
-                            let mag_a = magnitudes[i];
-                            if mag_a == 0.0 {
-                                continue;
-                            }
-
                             for j in (i + 1)..records.len() {
-                                let mag_b = magnitudes[j];
-                                if mag_b == 0.0 {
-                                    continue;
-                                }
-
                                 let a = &records[i];
                                 let b = &records[j];
 
-                                let dot_product: f32 = a
+                                // Both vectors are already L2-normalized, so dot product is the cosine similarity
+                                let similarity: f32 = a
                                     .embedding
                                     .iter()
                                     .zip(b.embedding.iter())
                                     .map(|(x, y)| x * y)
                                     .sum();
-                                let similarity = dot_product / (mag_a * mag_b);
                                 let distance = 1.0 - similarity;
 
                                 if distance < 0.05 {

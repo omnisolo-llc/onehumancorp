@@ -368,9 +368,13 @@
 
       document.addEventListener('DOMContentLoaded', async () => {
         const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const token = localStorage.getItem('token');
         const headers = {};
         if (tenant) {
             headers['x-ohc-tenant-id'] = tenant;
+        }
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
 
         try {
@@ -592,6 +596,29 @@
 
 
 <style>
+.ohc-tooltip {
+    position: fixed;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #1d1d1f;
+    padding: 8px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-family: Outfit, sans-serif;
+    z-index: 100000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 250px;
+    line-height: 1.4;
+}
+.ohc-tooltip.visible {
+    opacity: 1;
+}
+
       .btn-outline {
         background-color: transparent;
         color: #1d1d1f;

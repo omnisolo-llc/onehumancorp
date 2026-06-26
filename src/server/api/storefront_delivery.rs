@@ -8,6 +8,9 @@ use axum::http::StatusCode;
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
+use sha2::{Digest, Sha256};
+use std::sync::Arc;
+use crate::utils::cache::HybridCache;
 use crate::builder::edge::{get_edge_cache, regenerate_cache, get_ongoing_generation, inject_dynamic_inventory};
 
 #[derive(Clone)]
@@ -17,8 +20,25 @@ pub struct DeliveryState {
 
 pub fn router() -> Router<DeliveryState> {
     Router::new()
-        .route("/{tenant_id}/{product_id}", get(get_storefront_product))
+        .route("/{tenant_id}/{product_id}", get(get_storefront_product).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)))
         .route("/webhook/invalidate", post(invalidate_cache_webhook))
+}
+
+
+pub struct CacheInvalidationService {
+    cache: Arc<HybridCache<String>>,
+}
+
+impl CacheInvalidationService {
+    pub fn new(cache: Arc<HybridCache<String>>) -> Self {
+        Self { cache }
+    }
+
+    pub async fn invalidate(&self, tags: Vec<String>) {
+        for tag in tags {
+            self.cache.invalidate_by_tag(&tag).await;
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -31,11 +51,11 @@ async fn invalidate_cache_webhook(
     Json(payload): Json<InvalidateRequest>,
 ) -> impl IntoResponse {
     let cache = get_edge_cache();
-    for tag in payload.tags {
-        cache.invalidate_by_tag(&tag).await;
-    }
+    let service = CacheInvalidationService::new(cache);
+    service.invalidate(payload.tags).await;
     StatusCode::OK
 }
+
 
 async fn get_storefront_product(
     State(state): State<DeliveryState>,
@@ -49,15 +69,8 @@ async fn get_storefront_product(
 
     if let Some((cached_html, is_stale)) = cache.get_with_swr(&cache_key).await {
         let html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
-        let mut response = Html(html).into_response();
-        let cache_tag = format!("tenant-id:{}", tenant_id);
-        if let Ok(val) = cache_tag.parse() {
-            response.headers_mut().insert("Cache-Tag", val);
-        }
-        response.headers_mut().insert(
-            axum::http::header::CACHE_CONTROL,
-            "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
-        );
+        let mut response = Html(html.clone()).into_response();
+        set_storefront_headers(&mut response, &html, tenant_id, None);
 
         if !is_stale {
             return Ok(response);
@@ -94,15 +107,8 @@ async fn get_storefront_product(
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         if let Some((cached_html, _)) = cache.get_with_swr(&cache_key).await {
             let html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
-            let mut response = Html(html).into_response();
-            let cache_tag = format!("tenant-id:{}", tenant_id);
-            if let Ok(val) = cache_tag.parse() {
-                response.headers_mut().insert("Cache-Tag", val);
-            }
-            response.headers_mut().insert(
-                axum::http::header::CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
-            );
+            let mut response = Html(html.clone()).into_response();
+        set_storefront_headers(&mut response, &html, tenant_id, None);
             return Ok(response);
         }
     }
@@ -116,25 +122,15 @@ async fn get_storefront_product(
 
     if let Ok((html, tags)) = result {
         let final_html = inject_dynamic_inventory(html, tenant_id, &state.pool, cache.clone()).await;
-        let mut response = Html(final_html).into_response();
-        if !tags.is_empty() {
-            if let Ok(cache_tag) = tags.join(", ").parse() {
-                response.headers_mut().insert("Cache-Tag", cache_tag);
-            }
-        }
-        response.headers_mut().insert(
-            axum::http::header::CACHE_CONTROL,
-            "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
-        );
+        let mut response = Html(final_html.clone()).into_response();
+        set_storefront_headers(&mut response, &final_html, tenant_id, Some(tags));
         return Ok(response);
     }
 
     // Fallback simple HTML
-    let mut response = Html(format!("<!DOCTYPE html><html><body>Product {} not found</body></html>", product_id)).into_response();
-    response.headers_mut().insert(
-        axum::http::header::CACHE_CONTROL,
-        "public, max-age=10".parse().unwrap(),
-    );
+    let html = format!("<!DOCTYPE html><html><body>Product {} not found</body></html>", product_id);
+    let mut response = Html(html.clone()).into_response();
+    set_storefront_headers(&mut response, &html, tenant_id, None);
     Ok(response)
 }
 
@@ -211,4 +207,36 @@ async fn regenerate_storefront_product(
         }
     }
     Err(StatusCode::NOT_FOUND)
+}
+
+
+fn set_storefront_headers(response: &mut axum::response::Response, html: &str, tenant_id: Uuid, custom_tags: Option<Vec<String>>) {
+    let mut hasher = Sha256::new();
+    hasher.update(html.as_bytes());
+    let result = hasher.finalize();
+    let etag = format!("\"{:x}\"", result);
+
+    let mut cache_tag = format!("tenant-id:{}", tenant_id);
+    if let Some(tags) = custom_tags {
+        if !tags.is_empty() {
+            cache_tag = tags.join(", ");
+        }
+    }
+
+    if let Ok(val) = cache_tag.parse() {
+        response.headers_mut().insert("Cache-Tag", val);
+    }
+
+    if let Ok(val) = cache_tag.parse() {
+        response.headers_mut().insert("Surrogate-Key", val);
+    }
+
+    if let Ok(val) = etag.parse() {
+        response.headers_mut().insert("ETag", val);
+    }
+
+    response.headers_mut().insert(
+        axum::http::header::CACHE_CONTROL,
+        "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+    );
 }

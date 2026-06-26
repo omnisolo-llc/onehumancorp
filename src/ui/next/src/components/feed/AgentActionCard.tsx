@@ -1,16 +1,17 @@
 import { InstagramDMCard } from "../../app/dashboard/InstagramDMCard";
 import { AmbassadorReplyCard } from "../../app/dashboard/AmbassadorReplyCard";
+import { ReviewFeedCard } from "../../app/dashboard/ReviewFeedCard";
 import React from "react";
 
 type AgentFeedItem = {
   id: string;
-  tenant_id: string;
+  tenant_id?: string;
   event_source: string;
   context_payload: any;
   proposed_action: any;
   lifecycle_state: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 };
 
 interface AgentActionCardProps {
@@ -155,11 +156,72 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "instagram_dm" && (
-              <InstagramDMCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} />
+              <InstagramDMCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} onDismiss={() => handleDecision(approval.id, false, undefined, approval.event_source)} />
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "ambassador_reply" && (
               <AmbassadorReplyCard approval={approval} />
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "review" && (
+              <ReviewFeedCard
+                 review={approval.context_payload?.review}
+                 response={approval.proposed_action?.response}
+                 onApprove={async (id, content) => {
+                     await handleDecision(approval.id, true, content, 'review');
+                 }}
+                 onDismiss={async (id) => {
+                     await handleDecision(approval.id, false, undefined, 'review');
+                 }}
+               />
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "order" && (
+              <div className="mb-4 p-4 rounded-[16px] bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-yellow-600 font-semibold text-sm">
+                  <span className="w-5 h-5 flex items-center justify-center">📦</span>
+                  Order Needs Fulfillment
+                </div>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  {approval.context_payload?.description || "An order is waiting to be fulfilled."}
+                </p>
+                <div className="flex gap-2 w-full mt-1">
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'order')}>Fulfill Order</button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'order')}>Dismiss</button>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "triage" && (
+              <div className="mb-4 p-4 rounded-[16px] bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm">
+                  <span className="w-5 h-5 flex items-center justify-center">✉️</span>
+                  Message Requires Attention
+                </div>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  {approval.context_payload?.description || "You have an open customer conversation waiting for your reply."}
+                </p>
+                <div className="flex gap-2 w-full mt-1">
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'triage')}>Resolve Message</button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'triage')}>Dismiss</button>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "task" && (
+              <div className="mb-4 p-4 rounded-[16px] bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-purple-600 font-semibold text-sm">
+                  <span className="w-5 h-5 flex items-center justify-center">✅</span>
+                  Pending Task
+                </div>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  {approval.context_payload?.description || "You have a pending task."}
+                </p>
+                <div className="flex gap-2 w-full mt-1">
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'task')}>Complete Task</button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'task')}>Dismiss</button>
+                </div>
+              </div>
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "quote_draft" && (
@@ -740,14 +802,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     );
                     setEditingId(null);
                   }}
-                  className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                   data-testid="save-booking-draft"
                 >
                   Save & Approve
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                   data-testid="cancel-edit-booking-draft"
                 >
                   Cancel
@@ -850,40 +912,6 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss Plan"
               data-testid="dismiss-incident-resolution"
-            >
-              Dismiss
-            </button>
-          </div>
-        ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "instagram_dm" ? (
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            <button
-              onClick={() =>
-                handleDecision(
-                  approval.id,
-                  true,
-                  undefined,
-                  approval.event_source,
-                )
-              }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-pink-600 text-white font-medium hover:bg-pink-700 transition-all duration-200 shadow-md flex items-center justify-center"
-              aria-label="Approve & Send"
-              data-testid="approve-instagram-dm"
-            >
-              Approve & Send
-            </button>
-            <button
-              onClick={() =>
-                handleDecision(
-                  approval.id,
-                  false,
-                  undefined,
-                  approval.event_source,
-                )
-              }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-              aria-label="Dismiss"
-              data-testid="dismiss-instagram-dm"
             >
               Dismiss
             </button>
@@ -1112,6 +1140,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
+        ) : ((approval.proposed_action || approval.context_payload)
+            ?.feature_type === "review" ||
+            (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "order" ||
+            (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "triage" ||
+            (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "task") ? (
+           null
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ? (
           editingId === approval.id ? (
@@ -1135,14 +1172,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     );
                     setEditingId(null);
                   }}
-                  className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                   data-testid="save-send-ambassador-reply"
                 >
                   Save & Send
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                   data-testid="cancel-edit-ambassador-reply"
                 >
                   Cancel
@@ -1243,14 +1280,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     );
                     setEditingId(null);
                   }}
-                  className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                   data-testid="modal-approve-btn"
                 >
                   Approve & Send
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                   data-testid="cancel-edit-quote"
                 >
                   Cancel
@@ -1462,14 +1499,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   );
                   setEditingId(null);
                 }}
-                className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                 data-testid="save-proposal"
               >
                 Save & Approve
               </button>
               <button
                 onClick={() => setEditingId(null)}
-                className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                 data-testid="cancel-edit-proposal"
               >
                 Cancel
@@ -1489,7 +1526,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve proposal"
-              data-testid="approve-proposal"
+              data-testid={`triage-approve-${approval.id}`}
             >
               Approve
             </button>

@@ -6,7 +6,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     const productId = 'e2e-product-cake-pos';
 
     // Simulate POS (User B) acquiring lock
-    const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
+    const reserveRes = await page.request.post('/api/pos/terminal/reserve', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -25,7 +25,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     expect(lockData.success).toBe(true);
 
     // Simulate Online User (User A) attempting checkout for the same item
-    const reserveRes2 = await page.request.post('/api/v1/payments/terminal/reserve', {
+    const reserveRes2 = await page.request.post('/api/pos/terminal/reserve', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -44,7 +44,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     expect(lockData2.error_message).toContain('another customer');
 
     // POS (User B) completes checkout
-    const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
+    const commitRes = await page.request.post('/api/pos/terminal/commit', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -72,7 +72,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     }, tenantId);
 
     // Simulate POS (User B) acquiring lock
-    const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
+    const reserveRes = await page.request.post('/api/pos/terminal/reserve', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -101,7 +101,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
 
     // Cleanup: Release lock so it doesn't affect other tests if they run concurrently
     // (Actually the lock will expire in 15 seconds, but let's release it cleanly)
-    await page.request.post('/api/v1/payments/terminal/commit', {
+    await page.request.post('/api/pos/terminal/commit', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -118,7 +118,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     const tenantId = 'e2e-tenant-pos-additional';
     const productId = 'e2e-product-cake-pos-additional';
 
-    const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
+    const reserveRes = await page.request.post('/api/pos/terminal/reserve', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -135,7 +135,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     const lockData = await reserveRes.json();
     expect(lockData.success).toBe(true);
 
-    const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
+    const commitRes = await page.request.post('/api/pos/terminal/commit', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -151,6 +151,81 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
 
     const commitData = await commitRes.json();
     expect(commitData.success).toBe(true);
+  });
+
+  test('Operations Agent generates a Restock notification in the owner feed when item sells out', async ({ page }) => {
+    // 1. Log in to get token
+    await page.goto('/login');
+    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Password').fill('admin');
+    await page.getByRole('button', { name: 'Sign In' }).click();
+    await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
+
+    const response = await page.request.post('/api/v1/auth/login', {
+        data: {
+            email: 'admin@ohc.local',
+            password: 'admin'
+        }
+    });
+    expect(response.ok()).toBeTruthy();
+    const { token } = await response.json();
+
+    const tenantId = 'default';
+    const productId = 'e2e-product-restock-' + Date.now();
+
+    // 2. Create the product with stock 1
+    const createProductRes = await page.request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            id: productId,
+            title: 'Limited Restock Item',
+            inventory_count: 1,
+            price_cents: 1000
+        }
+    });
+    expect(createProductRes.ok()).toBeTruthy();
+
+    // Simulate POS (User B) acquiring lock
+    const reserveRes = await page.request.post('/api/pos/terminal/reserve', {
+        data: {
+            tenant_id: tenantId,
+            product_id: productId,
+            quantity: 1,
+            ttl_seconds: 15
+        },
+        headers: {
+            'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
+            'x-tenant-id': tenantId
+        }
+    });
+
+    expect(reserveRes.ok()).toBe(true);
+    const lockData = await reserveRes.json();
+    expect(lockData.success).toBe(true);
+
+    // POS (User B) completes checkout
+    const commitRes = await page.request.post('/api/pos/terminal/commit', {
+        data: {
+            tenant_id: tenantId,
+            product_id: productId,
+            quantity: 1,
+            lock_id: lockData.lock_id
+        },
+        headers: {
+            'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
+            'x-tenant-id': tenantId
+        }
+    });
+
+    expect(commitRes.ok()).toBe(true);
+
+    await page.waitForTimeout(5000);
+
+    // Navigate to Action Center
+    await page.goto('/dashboard');
+
+    // Check if the agent action request appears in the feed
+    await expect(page.getByText('Action Request: Reorder').first()).toBeVisible({ timeout: 15000 });
   });
 
 });
