@@ -5,13 +5,19 @@ test.describe('Quoting UI e2e', () => {
 
   test('owner can navigate to quoting page, view a real quote from the backend, and approve it', async ({ page }) => {
     // Navigate to the quoting page
-    await page.goto('/ui/quote.html?id=823e4567-e89b-12d3-a456-426614174000');
+    await page.goto('/quotes/823e4567-e89b-12d3-a456-426614174000');
 
-    await expect(page.locator('text=Quote Details')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Review Estimate')).toBeVisible({ timeout: 15000 });
 
-    const approveBtn = page.getByRole('button', { name: 'Pay Deposit with Pay' });
+    // The component has a title "Review Estimate" and subtitle with Quote #
+    await expect(page.locator('text=Quote #823e4567')).toBeVisible();
+
+    const approveBtn = page.getByRole('button', { name: 'Approve & Send Quote' });
     await expect(approveBtn).toBeVisible();
 
     await approveBtn.click();
+
+    // wait for approving to finish
+    await expect(approveBtn).not.toHaveText('Approving...');
   });
 });
