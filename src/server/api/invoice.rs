@@ -326,15 +326,37 @@ impl InvoiceService for InvoiceServiceImpl {
     ) -> Result<Response<DraftInvoiceFromContextResponse>, Status> {
         let req = request.into_inner();
 
-        // Simple mock of agent extraction
-        let line_item1 = InvoiceLineItem {
-            id: "".to_string(),
-            invoice_id: "".to_string(),
-            description: "Consulting Services".to_string(),
-            quantity: 10,
-            unit_price: 150.0,
-            amount: 1500.0,
-        };
+        // Use LLM to extract line items from the context
+        let prompt = format!(
+            "Extract invoice line items from the following job context. Provide a JSON array where each object has 'description', 'quantity', 'unit_price', and 'amount'. Context: {}",
+            req.project_context
+        );
+
+        let mut extracted_items = vec![];
+        let mut total = 0.0;
+
+        if let Ok(llm_res) = crate::minimax::LocalLLMClient::new().reason(&prompt).await {
+            let cleaned_res = llm_res.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+            if let Ok(parsed_items) = serde_json::from_str::<Vec<serde_json::Value>>(&cleaned_res) {
+                for item in parsed_items {
+                    let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Unknown Item").to_string();
+                    let qty = item.get("quantity").and_then(|v| v.as_f64()).unwrap_or(1.0) as i32;
+                    let price = item.get("unit_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                    let amount = item.get("amount").and_then(|v| v.as_f64()).unwrap_or(qty as f64 * price);
+
+                    total += amount;
+
+                    extracted_items.push(InvoiceLineItem {
+                        id: "".to_string(),
+                        invoice_id: "".to_string(),
+                        description: desc,
+                        quantity: qty,
+                        unit_price: price,
+                        amount,
+                    });
+                }
+            }
+        }
 
         let invoice = Invoice {
             id: "draft-temp".to_string(),
@@ -343,14 +365,14 @@ impl InvoiceService for InvoiceServiceImpl {
             status: "draft".to_string(),
             due_date: chrono::Utc::now().timestamp() + 30 * 24 * 3600, // +30 days
             currency: "USD".to_string(),
-            total_amount: 1500.0,
-            total_amount_cents: 150000,
+            total_amount: total,
+            total_amount_cents: (total * 100.0) as i32,
             payment_status: "draft".to_string(),
             view_count: 0,
             amount_paid_cents: 0,
             stripe_invoice_id: "".to_string(),
             stripe_payment_link: "".to_string(),
-            line_items: vec![line_item1],
+            line_items: extracted_items,
             created_at: chrono::Utc::now().timestamp(),
             updated_at: chrono::Utc::now().timestamp(),
         };

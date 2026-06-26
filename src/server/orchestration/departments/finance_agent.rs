@@ -22,7 +22,8 @@ impl Department for FinanceAgent {
             "tenant.payment.received".to_string(),
             "payment.captured".to_string(),
             "charge.dispute.created".to_string(),
-            "invoice.overdue".to_string()
+            "invoice.overdue".to_string(),
+            "job.completed".to_string()
         ]
     }
 
@@ -44,6 +45,8 @@ impl Department for FinanceAgent {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
             "Draft personalized invoice follow-up for review".to_string()
+        } else if event.event_type == "job.completed" {
+            "Draft invoice based on completed job details".to_string()
         } else {
             "Record deposit and track payment".to_string()
         };
@@ -70,6 +73,42 @@ impl Department for FinanceAgent {
                 "generated_response": format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id),
                 "operational_action": "Draft personalized reminder",
                 "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+        } else if event.event_type == "job.completed" {
+            let job_id = event.payload.get("job_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let client_name = event.payload.get("client_name").and_then(|v| v.as_str()).unwrap_or("Unknown Client");
+
+            let context = event.payload.get("project_context").and_then(|v| v.as_str()).unwrap_or("");
+            let prompt = format!(
+                "Extract invoice line items from the following job context. Provide a JSON array where each object has 'description', 'quantity', 'unit_price', and 'amount'. Context: {}",
+                context
+            );
+
+            let mut extracted_items = serde_json::json!([]);
+            let mut total = 0.0;
+
+            if let Ok(llm_res) = crate::minimax::LocalLLMClient::new().reason(&prompt).await {
+                let cleaned_res = llm_res.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                if let Ok(parsed_items) = serde_json::from_str::<Vec<serde_json::Value>>(&cleaned_res) {
+                    extracted_items = serde_json::json!(parsed_items);
+                    for item in parsed_items {
+                        let qty = item.get("quantity").and_then(|v| v.as_f64()).unwrap_or(1.0);
+                        let price = item.get("unit_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let amount = item.get("amount").and_then(|v| v.as_f64()).unwrap_or(qty * price);
+                        total += amount;
+                    }
+                }
+            }
+
+            payload = serde_json::json!({
+                "feature_type": "draft_invoice",
+                "job_id": job_id,
+                "client_name": client_name,
+                "original_message": format!("Job {} completed for {}", job_id, client_name),
+                "generated_response": "I have drafted an invoice based on the completed job notes. Please review and approve.",
+                "operational_action": "Draft Invoice",
+                "line_items": extracted_items,
+                "total_amount": total
             });
         }
 

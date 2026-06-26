@@ -338,7 +338,60 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </p>
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+        ) : (approval.proposed_action || approval.context_payload)?.feature_type === "draft_invoice" ? (
+          <div className="flex flex-col gap-3 w-full">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+              <div className="font-semibold mb-2">Draft Invoice Line Items:</div>
+              {((approval.proposed_action || approval.context_payload).line_items || []).map((item: any, i: number) => (
+                <div key={i} className="flex justify-between mb-1">
+                  <span>{item.description} (x{item.quantity})</span>
+                  <span>${item.amount?.toFixed(2)}</span>
+                </div>
+              ))}
+              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 font-bold flex justify-between">
+                <span>Total:</span>
+                <span>${(approval.proposed_action || approval.context_payload).total_amount?.toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() => handleDecision(approval.id, true, undefined, approval.event_source)}
+                className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md"
+                data-testid="approve-invoice"
+              >
+                Approve & Send
+              </button>
+              <button
+                onClick={() => handleDecision(approval.id, false, undefined, approval.event_source)}
+                className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                data-testid="edit-invoice"
+              >
+                Edit
+              </button>
+            </div>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_followup" ? (
+          <div className="flex flex-col gap-3 w-full">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+              "{(approval.proposed_action || approval.context_payload).generated_response}"
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleDecision(approval.id, true, undefined, approval.event_source)}
+                className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all shadow-md"
+                data-testid="send-reminder"
+              >
+                Send Reminder
+              </button>
+              <button
+                onClick={() => handleDecision(approval.id, false, undefined, approval.event_source)}
+                className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)
                 ?.feature_type === "social_post_draft" ? (
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center text-sm">
