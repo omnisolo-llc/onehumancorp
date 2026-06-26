@@ -197,10 +197,10 @@ SET name = EXCLUDED.name,
     preferences = EXCLUDED.preferences,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
+INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata, is_subscribable, subscription_frequency, subscription_discount_percent)
 VALUES
-  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb),
-  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}'::jsonb)
+  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb, true, 'monthly', 10),
+  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}'::jsonb, false, null, null)
 ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
     description = EXCLUDED.description,
