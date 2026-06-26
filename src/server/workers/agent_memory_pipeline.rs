@@ -80,52 +80,64 @@ impl AgentMemoryPipeline {
                 }
             }
             DbStore::Postgres => {
-                let mut conn = self.db.pool.acquire().await?;
-                // Fetch the rows, bypassing RLS locally for the read
-                sqlx::query("SET LOCAL app.current_tenant = ''").execute(&mut *conn).await?;
-                let rows = sqlx::query("SELECT s.session_id, s.agent_id, s.context_data, a.tenant_id FROM agent_session_data s JOIN agents a ON s.agent_id = a.id ORDER BY s.last_accessed ASC LIMIT 100")
-                    .fetch_all(&mut *conn)
-                    .await?;
-                drop(conn);
-
-                for row in rows {
-                    use sqlx::Row;
-                    let session_id: String = row.get("session_id");
-                    let agent_id: String = row.get("agent_id");
-                    let context_data: String = row.get("context_data");
-                    let tenant_id: String = row.get("tenant_id");
-
-                    let embedding = match self.embedding_api.generate_embedding(&context_data).await {
-                        Ok(emb) => emb,
-                        Err(e) => {
-                            ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
-                            tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
-                            vec![0.0; 1536]
-                        }
-                    };
-
-                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                    let mem_id = Uuid::new_v4();
-
+                for _ in 0..100 {
                     let mut tx = self.db.pool.begin().await?;
-                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+                    // Fetch one row, bypassing RLS locally for the read
+                    sqlx::query("SET LOCAL app.current_tenant = ''").execute(&mut *tx).await?;
 
-                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
-                        .bind(mem_id.to_string())
-                        .bind(&tenant_id)
-                        .bind(&agent_id)
-                        .bind("SESSION_DATA")
-                        .bind(&context_data)
-                        .bind(&emb_str)
-                        .execute(&mut *tx)
-                        .await?;
+                    let row = sqlx::query("
+                        SELECT s.session_id, s.agent_id, s.context_data, a.tenant_id
+                        FROM agent_session_data s
+                        JOIN agents a ON s.agent_id = a.id
+                        ORDER BY s.last_accessed ASC
+                        LIMIT 1
+                        FOR UPDATE OF s SKIP LOCKED
+                    ")
+                    .fetch_optional(&mut *tx)
+                    .await?;
 
-                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
-                        .bind(&session_id)
-                        .execute(&mut *tx)
-                        .await?;
+                    if let Some(row) = row {
+                        use sqlx::Row;
+                        let session_id: String = row.get("session_id");
+                        let agent_id: String = row.get("agent_id");
+                        let context_data: String = row.get("context_data");
+                        let tenant_id: String = row.get("tenant_id");
 
-                    tx.commit().await?;
+                        let embedding = match self.embedding_api.generate_embedding(&context_data).await {
+                            Ok(emb) => emb,
+                            Err(e) => {
+                                ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
+                                tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
+                                vec![0.0; 1536]
+                            }
+                        };
+
+                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                        let mem_id = Uuid::new_v4();
+
+                        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+
+                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
+                            .bind(mem_id.to_string())
+                            .bind(&tenant_id)
+                            .bind(&agent_id)
+                            .bind("SESSION_DATA")
+                            .bind(&context_data)
+                            .bind(&emb_str)
+                            .execute(&mut *tx)
+                            .await?;
+
+                        sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                            .bind(&session_id)
+                            .execute(&mut *tx)
+                            .await?;
+
+                        tx.commit().await?;
+                    } else {
+                        // No more rows available
+                        tx.rollback().await?;
+                        break;
+                    }
                 }
             }
         }

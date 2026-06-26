@@ -64,6 +64,7 @@ impl InventoryService {
                 }).unwrap_or(false);
 
             if !acquired {
+
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
