@@ -3117,12 +3117,13 @@
           stepId === "step-instant" &&
           document.getElementById("instant-bio")
         ) {
-          document.getElementById("instant-bio").value = "";
+          // We no longer blindly clear the bio here so users can review what they entered
+          // if they come back to this step.
           const generateStorefrontBtn = document.getElementById(
             "generate-storefront-btn",
           );
           if (generateStorefrontBtn) {
-            generateStorefrontBtn.disabled = true;
+            generateStorefrontBtn.disabled = document.getElementById("instant-bio").value.trim().length === 0;
           }
         }
         if (stepId === "step-categories") {
@@ -3187,7 +3188,7 @@
 
           saveCurrentState();
 
-          btn.innerText = "Saved!";
+          btn.innerText = "Draft Saved!";
           btn.style.backgroundColor = "#34C759";
           btn.style.color = "white";
           btn.style.borderColor = "#34C759";
