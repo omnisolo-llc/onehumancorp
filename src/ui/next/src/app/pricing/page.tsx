@@ -132,7 +132,7 @@ export default function PricingPage() {
             <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">Recommended</div>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Starter</h3>
-              <p className="text-xl font-semibold mb-2 text-gray-900">$9 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+              <p className="text-xl font-semibold mb-2 text-gray-900">$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <p className="text-xs text-indigo-600 font-medium mb-4">Suggested for growing stores</p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
                 <li className="flex items-center gap-2"><span>✓</span> 3 Agents Limit</li>
@@ -160,7 +160,7 @@ export default function PricingPage() {
           <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Pro</h3>
-              <p className="text-xl font-semibold mb-4 text-gray-900">$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+              <p className="text-xl font-semibold mb-4 text-gray-900">$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
                 <li className="flex items-center gap-2"><span>✓</span> 10 Agents Limit</li>
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
@@ -187,7 +187,7 @@ export default function PricingPage() {
           <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Business</h3>
-              <p className="text-xl font-semibold mb-4 text-gray-900">$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+              <p className="text-xl font-semibold mb-4 text-gray-900">$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Agents</li>
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
