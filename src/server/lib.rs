@@ -6744,7 +6744,7 @@ async fn create_ui_bom_item_handler(
             if query.contains("getting started") {
                 reply = format!("Based on our help center: {}", help_articles[0].1);
                 link_url = "/help/getting-started-1";
-            } else if query.contains("store") {
+            } else if query.contains("store") || query.contains("product") {
                 reply = format!("Based on our help center: {}", help_articles[1].1);
                 link_url = "/help/add-products";
             } else if query.contains("payment") {
