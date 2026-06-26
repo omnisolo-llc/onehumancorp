@@ -1337,13 +1337,13 @@
             aiSavingsTitle.innerText = `You saved ${data.hours_saved} hours this week`;
             aiSavingsDesc.innerText = `Your AI agents handled ${data.inquiries_handled} customer inquiries, scheduled ${data.appointments_scheduled} appointments, and recovered ${data.carts_recovered} abandoned carts.`;
           } else {
-            aiSavingsTitle.innerText = "You saved 0 hours this week";
-            aiSavingsDesc.innerText = "No tasks processed this week.";
+            document.getElementById("ai-savings-widget").parentElement.style.display = "none";
+
           }
         } catch (error) {
           console.error("Error fetching time savings data:", error);
-          aiSavingsTitle.innerText = "You saved 0 hours this week";
-          aiSavingsDesc.innerText = "No tasks processed this week.";
+          document.getElementById("ai-savings-widget").parentElement.style.display = "none";
+
         }
 
         if (shareSavingsBtn) {
@@ -3631,7 +3631,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener("ohc_queue_updated", updateOfflineStatus);
     updateOfflineStatus();
 </script>
-    <script src="help-widget.mjs"></script>
 <div class="mobile-nav" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border-top: 1px solid rgba(0,0,0,0.1); padding: 12px 24px; z-index: 1000; justify-content: space-around; align-items: center;">
       <a href="triage.html" style="text-decoration: none; color: #0066FF; display: flex; flex-direction: column; align-items: center; gap: 4px;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
