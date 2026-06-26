@@ -1,234 +1,131 @@
-import React, { useState, useRef, useEffect } from 'react';
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-interface IntakeData {
-  business_name: string;
-  business_type: string;
-  categories: string[];
-  location?: string;
-  target_audience?: string;
-  initial_products: { name: string; price: string }[];
-}
+import React, { useState, useEffect } from 'react';
 
 interface OnboardingChatAgentProps {
   onComplete: (data: any) => void;
 }
 
 export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: "Hi there! I'm your OHC setup assistant. What kind of business do you want to build or manage today?" }
-  ]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [loadingText, setLoadingText] = useState('Setting up your catalog...');
 
-  const scrollToBottom = () => {
-    if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
-      try {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      } catch (e) {
-        // Ignore scroll errors in tests
-      }
-    }
-  };
+  const predefinedChips = [
+    "I'm a dog walker in Seattle",
+    "Custom vegan cakes in Austin",
+    "Mobile car detailing service",
+    "Boutique yoga studio"
+  ];
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading, isProvisioning]);
+    let interval: NodeJS.Timeout;
+    if (isProvisioning) {
+      const messages = [
+        "Setting up your catalog...",
+        "Applying a clean, modern design...",
+        "Configuring booking and payment flows...",
+        "Finalizing your storefront..."
+      ];
+      let i = 0;
+      interval = setInterval(() => {
+        i = (i + 1) % messages.length;
+        setLoadingText(messages[i]);
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [isProvisioning]);
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!input.trim() || isLoading || isProvisioning) return;
+    if (!input.trim() || isProvisioning) return;
 
-    const userMessage: ChatMessage = { role: 'user', content: input.trim() };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInput('');
-    setIsLoading(true);
+    setIsProvisioning(true);
 
     try {
-      const response = await fetch('/api/v1/onboarding/chat', {
+      const response = await fetch('/api/v1/onboarding/zero-click-intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ description: input.trim(), image_url: null }),
       });
 
-      if (!response.ok) throw new Error('Failed to communicate with agent');
+      if (!response.ok) throw new Error('Failed to generate business');
 
       const data = await response.json();
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-
-      if (data.is_complete && data.intake_data) {
-        setIsProvisioning(true);
-        handleProvisioning(data.intake_data, newMessages.map(m => m.content).join(' '));
-      }
+      setTimeout(() => {
+        onComplete(data);
+        setIsProvisioning(false);
+      }, 1000);
     } catch (error) {
-      console.error("Chat error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I ran into an issue processing that. Please try again." }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleProvisioning = async (intakeData: IntakeData, fullPrompt: string) => {
-    try {
-      const firstProduct = intakeData.initial_products?.[0] || { name: 'Standard Service', price: '10.00' };
-
-      const payload = {
-        business_type: intakeData.business_type || 'Service Business',
-        company_name: intakeData.business_name || 'My New Business',
-        company_description: fullPrompt,
-        selling_categories: intakeData.categories || [],
-        payment_pref: 'online',
-        admin_email: `owner_${Math.floor(Math.random() * 10000)}@example.com`,
-        admin_name: 'Owner',
-        admin_password: 'Password123!',
-        website_template: 'Modern',
-        first_product_name: firstProduct.name,
-        first_product_price: firstProduct.price,
-        domain_choice: 'subdomain',
-        price_type: 'fixed',
-        location: intakeData.location || 'Online',
-        target_audience: intakeData.target_audience || 'Everyone',
-        initial_products: intakeData.initial_products.map((p: any) => ({
-          name: p.name,
-          price: p.price,
-          description: p.description || '',
-          variants: p.variants || []
-        })),
-        ai_agents: [],
-        ai_auto_respond: false
-      };
-
-      const res = await fetch('/api/v1/onboarding/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) throw new Error('Provisioning failed');
-
-      const provisionedData = await res.json();
-
-      // Complete immediately in tests to avoid timeout issues
-      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-         setIsProvisioning(false);
-         onComplete(provisionedData);
-      } else {
-        setTimeout(() => {
-          setIsProvisioning(false);
-          onComplete(provisionedData);
-        }, 1500);
-      }
-
-    } catch (error) {
-      console.error("Provisioning error:", error);
+      console.error(error);
       setIsProvisioning(false);
-      setMessages(prev => [...prev, { role: 'assistant', content: "I have the details, but failed to create the account. Please try again later." }]);
+      alert('Failed to generate your business. Please try again.');
     }
   };
-
-  const predefinedChips = [
-    "I'm a local baker selling custom cakes",
-    "I run a neighborhood handyman service",
-    "I am an online music tutor"
-  ];
 
   return (
-    <div className="flex flex-col h-full bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-2xl overflow-hidden shadow-xl w-full max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3 bg-white/50 dark:bg-black/50">
-        <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xl">
-          ✨
-        </div>
-        <div>
-          <h3 className="font-bold text-gray-900 dark:text-white">OHC Setup Assistant</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Usually replies instantly</p>
-        </div>
-      </div>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col relative w-full mb-8">
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px] max-h-[500px]">
-        {messages.map((msg, idx) => (
-          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-              msg.role === 'user'
-                ? 'bg-indigo-600 text-white rounded-br-sm'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-sm border border-gray-200 dark:border-gray-700'
-            }`}>
-              {msg.content}
-            </div>
-          </div>
-        ))}
-
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-200 dark:border-gray-700 flex gap-1 items-center">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Provisioning Overlay */}
+      {/* Provisioning Overlay with Glassmorphism */}
       {isProvisioning && (
-        <div className="absolute inset-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-[10px] flex flex-col items-center justify-center rounded-2xl">
-          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
+        <div className="absolute inset-0 z-10 bg-white/60 dark:bg-black/60 backdrop-blur-md flex flex-col items-center justify-center rounded-2xl">
+          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6 shadow-lg"></div>
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 animate-pulse">
             Building Your Business...
           </h3>
-          <p className="text-sm text-gray-500 font-medium">Provisioning workspace, products, and agents.</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 font-medium transition-all duration-500">
+            {loadingText}
+          </p>
         </div>
       )}
 
-      {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-black/50">
-        {messages.length === 1 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {predefinedChips.map((chip, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setInput(chip);
-                  // Optional: auto send after setting
-                  // setTimeout(() => handleSend(), 0);
-                }}
-                className="text-xs font-medium px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 transition-colors border border-gray-200 dark:border-gray-700"
-              >
-                {chip}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Single Prompt Input Area */}
+      <div className="p-6">
+        <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white text-center">Tell me about your business...</h2>
 
-        <form onSubmit={handleSend} className="relative flex items-center">
-          <input
-            type="text"
+        <div className="flex flex-wrap justify-center gap-2 mb-6">
+          {predefinedChips.map((chip, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                setInput(chip);
+              }}
+              className="text-sm font-medium px-4 py-2 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 transition-colors border border-gray-200 dark:border-gray-700"
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSend} className="relative flex flex-col gap-4">
+          <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            disabled={isLoading || isProvisioning}
-            placeholder="Type your message..."
-            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full py-3 pl-4 pr-12 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            disabled={isProvisioning}
+            placeholder="E.g., I'm a dog walker in Seattle..."
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-4 min-h-[120px] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 resize-none shadow-inner"
           />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading || isProvisioning}
-            className="absolute right-2 w-8 h-8 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-full transition-colors"
-          >
-            <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-            </svg>
-          </button>
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              disabled={isProvisioning}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              Add Photo (Optional)
+            </button>
+            <button
+              type="submit"
+              disabled={!input.trim() || isProvisioning}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-sm active:scale-[0.98]"
+            >
+              Generate Store
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+              </svg>
+            </button>
+          </div>
         </form>
       </div>
     </div>

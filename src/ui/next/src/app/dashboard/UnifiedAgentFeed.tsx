@@ -194,6 +194,21 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         if (mounted) {
           if (unifiedData?.items) {
             let combinedItems = [...unifiedData.items];
+
+            if (typeof localStorage !== "undefined" && localStorage.getItem("new_store") === "true") {
+              combinedItems.unshift({
+                id: "new-store-ready",
+                type: "approval_required",
+                priority: 100,
+                title: "Your storefront is ready.",
+                description: "Your business has been provisioned. Launch it now.",
+                agent_name: "Onboarding Agent",
+                timestamp: new Date().toISOString(),
+                action_type: "link",
+                action_url: "/dashboard"
+              } as any);
+              localStorage.removeItem("new_store");
+            }
             // Integrate Priority Tasks
             if (
               unifiedData.priority_tasks &&

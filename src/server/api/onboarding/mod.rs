@@ -12,6 +12,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
         .route("/chat", post(process_chat_handler))
+        .route("/zero-click-intake", post(process_zero_click_intake_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
@@ -47,6 +48,63 @@ pub struct IntakeRequest {
 #[derive(serde::Deserialize)]
 pub struct ChatRequest {
     pub messages: Vec<crate::services::onboarding::onboarding_agent::ChatMessage>,
+}
+
+async fn process_zero_click_intake_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<IntakeRequest>,
+) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
+    let mut combined_input = payload.description.clone();
+    if let Some(image_url) = &payload.image_url {
+        combined_input.push_str(&format!("\nImage provided: {}", image_url));
+    }
+    match agent.process_intake(&combined_input).await {
+        Ok(data) => {
+            let req = StartOnboardingRequest {
+                business_type: data.business_type.clone(),
+                company_name: data.business_name.clone(),
+                company_description: combined_input,
+                selling_categories: data.categories.clone(),
+                payment_pref: "online".to_string(),
+                admin_email: data.sample_customer_email.unwrap_or_else(|| "admin@example.com".to_string()),
+                admin_name: data.sample_customer_name.unwrap_or_else(|| "Admin User".to_string()),
+                admin_password: "password123".to_string(),
+                website_template: "Modern".to_string(),
+                first_product_name: data.initial_products.get(0).map(|p| p.name.clone()).unwrap_or_else(|| "Product".to_string()),
+                first_product_price: data.initial_products.get(0).map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string()),
+                domain_choice: "subdomain".to_string(),
+                price_type: "fixed".to_string(),
+                location: data.location.unwrap_or_else(|| "Unknown".to_string()),
+                target_audience: data.target_audience.unwrap_or_else(|| "Everyone".to_string()),
+                ai_agents: vec!["onboarding".to_string(), "operations".to_string()],
+                ai_auto_respond: true,
+                initial_products: data.initial_products.into_iter().map(|p| {
+                    ::server_ohc::orchestration::IntakeProductProto {
+                        name: p.name,
+                        price: p.price,
+                        description: p.description.unwrap_or_default(),
+                        variants: p.variants.unwrap_or_default().into_iter().map(|v| {
+                            ::server_ohc::orchestration::IntakeProductVariantProto {
+                                name: v.name,
+                                price_modifier: v.price_modifier,
+                            }
+                        }).collect(),
+                    }
+                }).collect(),
+            };
+            match agent.start_onboarding(req).await {
+                Ok(res) => Ok(Json(res)),
+                Err(e) => {
+                    tracing::error!("zero click start_onboarding error: {}", e);
+                    Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+                }
+            }
+        },
+        Err(error) => {
+            tracing::error!("zero click intake agent error: {}", error);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 async fn process_intake_handler(
