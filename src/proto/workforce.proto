@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package ohc.orchestration;
+
+option go_package = "github.com/onehumancorp/mono/src/proto;pb";
+
+import "google/protobuf/timestamp.proto";
+
+message StaffMember {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  repeated string roles = 4;
+  string status = 5; // "CLOCKED_IN", "ON_BREAK", "CLOCKED_OUT"
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message Shift {
+  string id = 1;
+  string tenant_id = 2;
+  string staff_member_id = 3;
+  google.protobuf.Timestamp start_time = 4;
+  google.protobuf.Timestamp end_time = 5;
+  string status = 6; // "ACTIVE", "COMPLETED"
+}
+
+message Task {
+  string id = 1;
+  string tenant_id = 2;
+  string staff_member_id = 3;
+  string description = 4;
+  string status = 5; // "PENDING", "IN_PROGRESS", "COMPLETED", "ESCALATED"
+  int32 priority = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  string related_order_id = 9;
+}
+
+message GetStaffRequest {
+  string tenant_id = 1;
+}
+
+message GetStaffResponse {
+  repeated StaffMember staff = 1;
+}
+
+message ClockInRequest {
+  string staff_member_id = 1;
+  string tenant_id = 2;
+}
+
+message ClockInResponse {
+  Shift shift = 1;
+}
+
+message ClockOutRequest {
+  string staff_member_id = 1;
+  string tenant_id = 2;
+}
+
+message ClockOutResponse {
+  Shift shift = 1;
+}
+
+message GetTasksRequest {
+  string staff_member_id = 1;
+  string tenant_id = 2;
+}
+
+message GetTasksResponse {
+  repeated Task tasks = 1;
+}
+
+message CompleteTaskRequest {
+  string task_id = 1;
+  string tenant_id = 2;
+}
+
+message CompleteTaskResponse {
+  Task task = 1;
+}
+
+service WorkforceService {
+  rpc GetStaff(GetStaffRequest) returns (GetStaffResponse);
+  rpc ClockIn(ClockInRequest) returns (ClockInResponse);
+  rpc ClockOut(ClockOutRequest) returns (ClockOutResponse);
+
+  rpc GetTasks(GetTasksRequest) returns (GetTasksResponse);
+  rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse);
+}

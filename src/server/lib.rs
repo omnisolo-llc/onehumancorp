@@ -6934,6 +6934,8 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .add_service(::server_ohc::app::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::ops_service_server::OpsServiceServer::with_interceptor(crate::services::ops::service::MyOpsService::new(hub.clone()), spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::workforce_service_server::WorkforceServiceServer::with_interceptor(crate::services::ops::workforce::MyWorkforceService::new(hub.clone()), spiffe_interceptor))
 
         .serve(addr)
         .await?;

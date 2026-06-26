@@ -312,3 +312,24 @@ proto_rust_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
+
+proto_library(
+    name = "workforce_proto",
+    srcs = ["workforce.proto"],
+    deps = [
+        "@com_google_protobuf//:timestamp_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "workforce_rust_proto",
+    proto = ":workforce_proto",
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "workforce_rust_grpc",
+    proto = ":workforce_proto",
+    visibility = ["//visibility:public"],
+)
