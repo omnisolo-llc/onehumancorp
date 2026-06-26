@@ -87,7 +87,7 @@ export default function OnboardingWizard() {
     };
 
     try {
-      await fetch('/api/onboarding/state', {
+      await fetchWithRetry('/api/onboarding/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ wizardState })
@@ -173,10 +173,10 @@ export default function OnboardingWizard() {
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
     Promise.all([
-      fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
+      fetchWithRetry('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
         .then(res => res.ok ? res.json() : null)
         .catch(() => null),
-      fetch('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
+      fetchWithRetry('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
         .then(res => res.ok ? res.json() : null)
         .catch(() => null)
     ])
@@ -250,7 +250,7 @@ export default function OnboardingWizard() {
     };
 
     const timer = setTimeout(() => {
-      fetch('/api/onboarding/state', {
+      fetchWithRetry('/api/onboarding/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
         body: JSON.stringify({ step, ...wizardState })
@@ -275,7 +275,7 @@ export default function OnboardingWizard() {
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
       updateState({ bio: combinedDescription });
 
-      const intakeRes = await fetch('/api/onboarding/intake', {
+      const intakeRes = await fetchWithRetry('/api/onboarding/intake', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -344,7 +344,7 @@ export default function OnboardingWizard() {
     try {
       const backendUrl = (typeof window !== 'undefined' && (window.location.origin.includes('localhost') || window.location.protocol === 'file:')) ? 'http://127.0.0.1:18789' : '';
 
-      const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
+      const res = await fetchWithRetry(`${backendUrl}/api/onboarding/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newHistory })
