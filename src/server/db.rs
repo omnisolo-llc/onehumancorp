@@ -239,7 +239,7 @@ impl DB {
                                         }
                                     }
                                 } else {
-                                    ::server_telemetry::record_error_signal("[infra] Failed to securely create DB directory");
+                                    ::server_telemetry::record_error_signal("[bug] Failed to securely create DB directory");
                                     tracing::error!("Failed to securely create DB directory: {}", e);
                                     return Err(e.into());
                                 }
@@ -248,7 +248,7 @@ impl DB {
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                ::server_telemetry::record_error_signal("[infra] Failed to create DB directory");
+                                ::server_telemetry::record_error_signal("[bug] Failed to create DB directory");
                                 tracing::error!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }

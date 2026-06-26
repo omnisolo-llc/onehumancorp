@@ -658,7 +658,7 @@ fn test_record_error_signal() {
     // It's hard to test the opentelemetry meter without mocking the provider,
     // but we can at least test that `record_error_signal` executes without panicking
     // and categorize correctly behind the scenes.
-    ::server_telemetry::record_error_signal("panic: test");
+    ::server_telemetry::record_error_signal("[bug] panic: test");
 }
 
     #[test]
