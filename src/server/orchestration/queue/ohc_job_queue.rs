@@ -121,30 +121,49 @@ impl OHCJobQueue {
 
         // Reset jobs that have been in PROCESSING for more than 1 hour.
         // We move them back to PENDING and increment retry_count.
-        let result = sqlx::query(
+        let is_standalone = crate::is_standalone_runtime();
+        let query_str = if is_standalone {
+            "UPDATE ohc_job_queue
+             SET status = 'PENDING', retry_count = retry_count + 1, updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'PROCESSING' AND updated_at < datetime('now', '-1 hours')"
+        } else {
             "UPDATE ohc_job_queue
              SET status = 'PENDING', retry_count = retry_count + 1, updated_at = CURRENT_TIMESTAMP
              WHERE status = 'PROCESSING' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '1 hour'"
-        )
+        };
+
+        let result = sqlx::query(query_str)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
         // Clean up stagnant backlog items: PENDING jobs stuck for > 24 hours
-        sqlx::query(
+        let query_str = if is_standalone {
+            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
+             SELECT id, tenant_id, 'job_failed', 'job_queue', CAST(payload AS TEXT), '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
+             FROM ohc_job_queue
+             WHERE status = 'PENDING' AND created_at < datetime('now', '-24 hours')"
+        } else {
             "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message)
              SELECT id, tenant_id, 'job_failed', 'job_queue', payload::text, '[cleanup] Stagnant backlog item stuck in PENDING for > 24 hours'
              FROM ohc_job_queue
              WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
-        )
+        };
+
+        sqlx::query(query_str)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
-        let stagnant_result = sqlx::query(
+        let query_str = if is_standalone {
+            "DELETE FROM ohc_job_queue
+             WHERE status = 'PENDING' AND created_at < datetime('now', '-24 hours')"
+        } else {
             "DELETE FROM ohc_job_queue
              WHERE status = 'PENDING' AND created_at < CURRENT_TIMESTAMP - INTERVAL '24 hours'"
-        )
+        };
+
+        let stagnant_result = sqlx::query(query_str)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
