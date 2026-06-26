@@ -126,6 +126,7 @@ rust_library(
         "//src/server/api/booking:mod.rs",
         "//src/server/api/booking:request.rs",
         "//src/server/api/booking:reserve.rs",
+        "//src/server/api/booking:proposal.rs",
         "//src/server/api/booking:available_slots.rs",
     ],
     compile_data = [

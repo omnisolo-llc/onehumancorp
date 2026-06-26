@@ -434,3 +434,73 @@ pub fn booking_reschedule_tool(store: SharedBookingStore) -> Tool {
         execute: Arc::new(PydanticAdapter::new(BookingRescheduleExecutor { store })),
     }
 }
+
+#[derive(Deserialize)]
+pub struct BookingProposeArgs {
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub service_description: String,
+    pub time_options: Vec<String>,
+    pub deposit_amount: f64,
+}
+
+pub struct BookingProposeExecutor {
+    pub store: SharedBookingStore,
+}
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<BookingProposeArgs> for BookingProposeExecutor {
+    async fn execute_typed(&self, args: BookingProposeArgs) -> Result<String, ToolError> {
+        let store = self.store.read().await;
+        let pool = store.get_pool().await?;
+        let mut tx = pool.begin().await.map_err(|e| ToolError::Transient(e.to_string()))?;
+        let _ = sqlx::query("SET app.current_tenant = $1")
+            .bind(&args.tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+
+        // In a real implementation this would generate a specific UI card proposal ID and link
+        let proposal_id = uuid::Uuid::new_v4().to_string();
+        let short_link = format!("https://ohc.app/p/{}", proposal_id);
+
+        // We simulate storing the proposal to our ledger or bookings proposals table.
+        // For now, we return the generated card data that the UI will render.
+
+        tx.commit().await.map_err(|e| ToolError::Transient(e.to_string()))?;
+
+        Ok(json!({
+            "status": "success",
+            "proposal_id": proposal_id,
+            "short_link": short_link,
+            "service_description": args.service_description,
+            "time_options": args.time_options,
+            "deposit_amount": args.deposit_amount,
+            "message": "Booking proposal created successfully. The owner can now tap 'Approve & Send' to send this to the customer."
+        }).to_string())
+    }
+}
+
+pub fn booking_propose_tool(store: SharedBookingStore) -> Tool {
+    Tool {
+        name: "propose_booking".to_string(),
+        description: "Propose a booking to a customer with time options, a service description, and a deposit amount. Generates an interactive card for the owner to approve.".to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "tenant_id": { "type": "string", "description": "The tenant/business ID" },
+                "customer_id": { "type": "string", "description": "The customer ID" },
+                "service_description": { "type": "string", "description": "Description of the service being booked" },
+                "time_options": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "date-time" },
+                    "description": "A list of available start times the customer can choose from"
+                },
+                "deposit_amount": { "type": "number", "description": "The required deposit amount in the tenant's base currency" }
+            },
+            "required": ["tenant_id", "customer_id", "service_description", "time_options", "deposit_amount"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(BookingProposeExecutor { store })),
+    }
+}

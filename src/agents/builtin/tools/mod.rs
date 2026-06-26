@@ -137,6 +137,7 @@ pub fn all_tools(
         booking::booking_create_appointment_tool(booking_store.clone()),
         booking::booking_negotiate_time_tool(booking_store.clone()),
         booking::booking_reschedule_tool(booking_store.clone()),
+        booking::booking_propose_tool(booking_store.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
         toolsearch::toolsearch_tool(),
         task::task_create_tool(task_store.clone()),
