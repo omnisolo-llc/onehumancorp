@@ -192,7 +192,7 @@ export default function TriagePage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-4 w-full max-w-[375px] sm:max-w-full mx-auto px-4 pb-20">
+      <div className="flex flex-col gap-4 w-full max-w-full pb-20">
         {error && <div className="app-empty">{error}</div>}
         {loading ? (
           <div className="p-6 space-y-4">
