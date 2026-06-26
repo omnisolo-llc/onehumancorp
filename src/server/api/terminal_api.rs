@@ -603,7 +603,7 @@ pub async fn commit_inventory_handler(
                             "quantity": req_data.quantity,
                             "reason": "in_person_sale_inventory_check"
                         });
-                        let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, product_id, payload) VALUES ($1, $2, 'InventoryCheck', 'Pending', $3, $4)")
+                        let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, product_id, payload) VALUES ($1, $2, 'terminal', 'operations', 'InventoryCheck', 'Pending', $3, $4)")
                             .bind(&action_req_id)
                             .bind(&tenant_id)
                             .bind(&req_data.product_id)

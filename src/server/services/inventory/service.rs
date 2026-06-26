@@ -72,7 +72,7 @@ impl InventoryService {
                     "reason": "Lock contention on limited item"
                 }).to_string();
 
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'terminal', 'operations', 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)
@@ -437,7 +437,7 @@ impl InventoryService {
                     "remaining_stock": new_stock,
                     "suggested_action": "Restock Item"
                 }).to_string();
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'terminal', 'operations', 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)

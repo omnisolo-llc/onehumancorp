@@ -183,7 +183,7 @@ impl PosSyncWorker {
                         "remaining_stock": new_stock,
                         "suggested_action": "Restock Item"
                     }).to_string();
-                    sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'terminal', 'operations', 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                         .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await
                         .map_err(|e| e.to_string())?;
 
@@ -370,7 +370,7 @@ impl PosSyncWorker {
                                     "remaining_stock": new_stock,
                                     "suggested_action": "Restock Item"
                                 }).to_string();
-                                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'terminal', 'operations', 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await
                                     .map_err(|e| e.to_string())?;
 
