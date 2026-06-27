@@ -31,7 +31,7 @@ export const GroupedAgentActionCard = ({
     >
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
              <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#0066FF]/20 px-2 py-1 rounded-[8px]">
                Grouped Actions
              </span>

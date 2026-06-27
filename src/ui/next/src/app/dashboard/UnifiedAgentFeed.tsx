@@ -865,7 +865,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-md font-semibold font-sans text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
+                  <h3 className="text-md font-semibold font-sans text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug break-words">
                     {(() => {
                       try {
                         const p =

@@ -1,65 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Help Center", () => {
-  test.beforeEach(async ({ page }) => {
-    // Mock backend API responses for tests
-    await page.route("**/api/help", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            category: "Getting Started",
-            id: "getting-started-1",
-            title: "Getting Started with Your Store",
-            desc: "Welcome to OneHumanCorp!",
-            link: "/help/getting-started-1",
-          },
-          {
-            category: "My Store",
-            id: "my-store",
-            title: "My Store",
-            desc: "My store info",
-            link: "/help/my-store",
-          },
-          {
-            category: "Payments",
-            id: "accept-payments",
-            title: "Accepting Payments",
-            desc: "Learn how to accept credit cards.",
-            link: "/help/accept-payments",
-          },
-        ]),
-      });
-    });
-
-    await page.route("**/api/help/search*", async (route) => {
-      const url = new URL(route.request().url());
-      const query = url.searchParams.get("q") || "";
-      if (query.toLowerCase().includes("my store")) {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify([
-            {
-              category: "My Store",
-              id: "my-store",
-              title: "My Store",
-              desc: "My store info",
-              link: "/help/my-store",
-            },
-          ]),
-        });
-      } else {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify([]),
-        });
-      }
-    });
-  });
-
   test("renders help center and navigates to an article", async ({ page }) => {
     await page.goto("/help");
 
@@ -79,8 +20,6 @@ test.describe("Help Center", () => {
     );
     await searchInput.fill("Getting Started");
 
-    // The mock backend search for "Getting Started" returns [] based on our mock setup, so we don't click it via search.
-    // Instead we just click the visible link from the initial load.
     // Wait for search debounce to complete and clear it
     await searchInput.fill("");
 
@@ -116,14 +55,14 @@ test.describe("Help Center", () => {
       "Search for help articles and videos...",
     );
 
-    await searchInput.fill("My Store");
+    await searchInput.fill("Adding Products");
 
     // Wait for UI to update (non-matching articles should disappear)
     await expect(
       page.locator('a[href="/help/getting-started-1"]'),
     ).not.toBeVisible({ timeout: 10000 });
 
-    const articleLink = page.locator('a[href="/help/my-store"]');
+    const articleLink = page.locator('a[href="/help/add-products"]');
     await expect(articleLink).toBeVisible({ timeout: 10000 });
   });
 
