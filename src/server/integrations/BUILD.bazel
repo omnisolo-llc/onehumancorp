@@ -94,6 +94,7 @@ rust_library(
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/taxjar:server_integrations_taxjar",
         "//src/server/integrations/zoom:server_integrations_zoom",
+        "//src/server/integrations/whatsapp:server_integrations_whatsapp",
         "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
