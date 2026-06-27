@@ -447,8 +447,8 @@
         let graphNodes = [];
 
         nodes.forEach(n => {
-           let nodeObj = { id: n.id, type: "Action", label: n.label || "Wait for Approval" };
-           // Keep original parsing structure but inject dummy type/label variables to satisfy visual-only E2E checks
+           let nodeObj = { id: n.id, type: n.type, label: n.label };
+           // Generate proper node configuration for visual builder output
            if (n.type === 'Input') {
                nodeObj.node_type = { Input: { name: "input_var" } };
            } else if (n.type === 'Output') {
