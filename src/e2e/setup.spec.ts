@@ -34,7 +34,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.getByTestId('business-name').fill('Test Bakery');
     await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
     // Assistant step
-    await page.getByTestId('assistant-name').fill('Buddy');
+    await page.getByTestId('team-support').click();
     await page.getByTestId('assistant-tone').selectOption('Friendly');
     await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
     // Admin step

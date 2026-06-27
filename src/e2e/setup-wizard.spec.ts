@@ -58,7 +58,7 @@ test.describe('Setup Wizard 375px Flow', () => {
         await page.locator('#step-name .next-step-btn').click();
 
         // Assistant Setup
-        await page.locator('#assistant-name').fill('Jarvis');
+        await page.getByTestId('team-operations').click();
         await page.locator('#assistant-tone').selectOption('Professional');
 
         // Check toggles
