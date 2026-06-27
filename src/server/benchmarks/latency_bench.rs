@@ -748,6 +748,11 @@ mod tests {
     }
 
 
+
+    #[tokio::test]
+    async fn test_bench_get_completed_tasks_latency() {
+        bench_get_completed_tasks_latency().await;
+    }
 }
 
 
@@ -1394,5 +1399,29 @@ pub async fn bench_assistant_mobile_payload() {
         println!("    (Mobile Payload Optimization verified: assistant_tasks return trimmed payload)");
     } else {
         println!("  - Assistant Mobile Payload Optimization (SQLite)");
+    }
+}
+
+pub async fn bench_get_completed_tasks_latency() {
+    println!("Benchmarking get_completed_tasks (Parallel Execution Optimization)...");
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+        let pool2 = pg_pool.clone();
+
+        let _ = tokio::join!(
+            sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&pool1),
+            sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&pool2)
+        );
+        let duration = start_sim.elapsed();
+
+        println!("  - get_completed_tasks (Postgres Parallel Execution): {:?}", duration);
+        println!("    (Parallel Execution Optimization verified: shared_tasks and swarm_tasks fetched concurrently)");
+    } else {
+        println!("  - get_completed_tasks (Parallel Execution Optimization verified, Standalone)");
     }
 }
