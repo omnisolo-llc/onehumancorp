@@ -66,7 +66,7 @@ test --test_output=errors
 test --build_tests_only
 # Keep the default wildcard suite complete: `bazel test //...` should validate
 # the Docker-backed Playwright E2E targets along with unit and integration tests.
-test --test_timeout=600,1200,2400,3600
+test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion and avoid
 # oversubscribing heavyweight local tests such as Playwright E2E shards.
 test --local_test_jobs=1
@@ -74,7 +74,7 @@ test --local_test_jobs=1
 test --sandbox_add_mount_pair=/var/run/docker.sock
 test --test_output=errors
 test --test_summary=terse
-test --test_timeout=900,1800,3600,7200
+test --test_timeout=300,600,900,7200
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
