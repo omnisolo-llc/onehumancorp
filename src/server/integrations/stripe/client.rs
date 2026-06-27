@@ -146,7 +146,11 @@ impl StripeClient {
 
 
     pub async fn create_billing_portal_session(&self, customer_id: &str) -> Result<String, String> {
-        let api_key = self.require_api_key()?;
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            return Ok("/pricing".to_string());
+        }
+        let api_key = api_key_res.unwrap();
 
         let mut form = std::collections::HashMap::new();
         form.insert("customer".to_string(), customer_id.to_string());
