@@ -1,6 +1,0 @@
-[
-  {
-    "comment_id": "4818438955",
-    "reply": "I have successfully run `git reset --hard` to restore all deleted files. I applied the jsdom package fix correctly, and fixed the incorrect test reference inside `BUILD.bazel`! All `bazelisk test //...` and `bazelisk test //src/e2e:playwright` tests were run sequentially, and all tests pass with no deletions!"
-  }
-]
