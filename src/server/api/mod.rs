@@ -57,4 +57,3 @@ pub mod tool_integrations;
 pub mod ohc_job_queue;
 pub mod reputation;
 #[cfg(test)]
-pub mod reputation_test;
