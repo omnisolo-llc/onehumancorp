@@ -625,6 +625,7 @@ fn inventory_lock_prefix(tenant_id: &str, product_id: &str) -> String {
     format!("ohc:lock:{}:inventory:{}:", tenant_id, product_id)
 }
 
+#[allow(dead_code)]
 fn inventory_lock_key(tenant_id: &str, product_id: &str, session_id: &str) -> String {
     format!("{}{}", inventory_lock_prefix(tenant_id, product_id), session_id)
 }
@@ -689,6 +690,7 @@ async fn redis_release_if_owner(
     Ok(released == 1)
 }
 
+#[allow(dead_code)]
 async fn redis_scan_count(client: &redis::Client, pattern: &str) -> Result<usize, String> {
     let mut conn = redis_connection(client).await?;
     let mut cursor = 0_u64;
