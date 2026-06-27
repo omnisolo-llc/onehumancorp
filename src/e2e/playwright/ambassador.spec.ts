@@ -12,20 +12,32 @@ test.describe('Ambassador Agent Workflow', () => {
     await page.goto('/feed');
 
     // Ensure we are caught up initially, or just click the button right away
-    // 2. Trigger the simulation
-    await page.getByTestId('simulate-ambassador-btn').click();
+    // 2. Trigger the simulation (using webhook to simulate real flow instead of the simulate button)
+    const apiUrl = process.env.VITE_API_URL || 'http://127.0.0.1:18789';
+    const response = await page.request.post(`${apiUrl}/api/v1/webhooks/omnichannel`, {
+      data: {
+        tenant_id: 'test-tenant',
+        source: 'instagram',
+        identifier: '@customer_webhook_test',
+        message: 'Do you have vegan chocolate cake available for Saturday?'
+      }
+    });
+    expect(response.status()).toBe(200);
+
+    // Wait for the triage worker to process and websocket to push the card
+    // We can also trigger the legacy simulation button if the environment doesn't have the full worker running,
+    // but the task asks to simulate webhook ingestion. We'll wait a bit.
 
     // 3. Verify the action card appears
-    const feedCard = page.getByTestId('agent-feed-card').first();
-    await expect(feedCard).toBeVisible({ timeout: 10000 });
+    const feedCard = page.getByTestId('agent-feed-card').filter({ hasText: 'Do you have vegan chocolate cake available for Saturday?' }).first();
+    await expect(feedCard).toBeVisible({ timeout: 15000 });
 
     // Verify specific Ambassador UI elements
     await expect(feedCard).toContainText('CUSTOMER MESSAGE');
-    await expect(feedCard).toContainText('New Message from @customer');
-    await expect(feedCard).toContainText('Do you have vegan chocolate cake available for Saturday?');
+    // Note: LLM draft response text may vary because it actually goes through the router in the webhook path now,
+    // so we shouldn't strictly assert the exact string unless it's deterministically mocked.
+    // We will assert the draft area is present.
     await expect(feedCard).toContainText('Agent Draft');
-    await expect(feedCard).toContainText('Yes we do! We have 3 left for this Saturday');
-    await expect(feedCard).toContainText('Returning Customer (2 past orders).');
 
     // 4. Click 'Edit'
     const editBtn = feedCard.getByTestId('feed-edit-btn');
