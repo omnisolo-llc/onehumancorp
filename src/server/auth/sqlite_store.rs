@@ -91,8 +91,8 @@ impl UserRepository for SqliteUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: String = row.get("roles");
-        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
             id: row.get("id"),
@@ -128,8 +128,8 @@ impl UserRepository for SqliteUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: String = row.get("roles");
-        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
             id: row.get("id"),
@@ -165,8 +165,8 @@ impl UserRepository for SqliteUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: String = row.get("roles");
-        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
             id: row.get("id"),
@@ -202,8 +202,8 @@ impl UserRepository for SqliteUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: String = row.get("roles");
-        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
             id: row.get("id"),
@@ -236,8 +236,8 @@ impl UserRepository for SqliteUserRepository {
 
         let mut users = Vec::new();
         for row in rows {
-            let roles_json: String = row.get("roles");
-            let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+            let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+            let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
             users.push(User {
                 id: row.get("id"),
