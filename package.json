@@ -48,7 +48,7 @@
     "ink-spinner": "^5.0.0",
     "ink-testing-library": "^4.0.0",
     "ink-text-input": "^6.0.0",
-    "jsdom": "^29.1.1",
+    "jsdom": "^22.1.0",
     "next-router-mock": "^1.0.5",
     "playwright": "1.50.1",
     "postcss": "^8.5.15",
