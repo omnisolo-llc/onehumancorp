@@ -1593,7 +1593,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               aria-label="Approve proposal"
               data-testid={`triage-approve-${approval.id}`}
             >
-              Approve
+              {approval.event_source === 'customer_service_agent' || (approval.proposed_action || approval.context_payload)?.feature_type === 'customer_service_draft' ? 'View & Approve' : 'Approve'}
             </button>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <button
