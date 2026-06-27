@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { e2eTest } from '../fixtures';
 
-e2eTest.describe('Field Service Routing Mobile App', () => {
-  e2eTest('Carlos views today route and updates job status', async ({ page }) => {
+test.describe('Field Service Routing Mobile App', () => {
+  test('Carlos views today route and updates job status', async ({ page }) => {
     // 1. Emulate a mobile device layout by changing viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
