@@ -79,8 +79,8 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
         data: {
             tenant_id: 'e2e-tenant',
             customer_id: 'cust_demo1',
-            total_amount: 15000,
-            required_deposit: 7500,
+            total_amount_cents: 15000,
+            required_deposit_cents: 7500,
             stripe_payment_link: 'https://buy.stripe.com/test_mock',
             line_items: []
         }
@@ -104,8 +104,8 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
         data: {
             tenant_id: 'e2e-tenant',
             customer_id: 'cust_demo1',
-            total_amount: 10000,
-            required_deposit: 5000,
+            total_amount_cents: 10000,
+            required_deposit_cents: 5000,
             stripe_payment_link: 'https://buy.stripe.com/test_mock',
             line_items: []
         }

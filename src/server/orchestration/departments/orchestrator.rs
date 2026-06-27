@@ -933,7 +933,7 @@ impl DepartmentOrchestrator {
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let deposit_amount = (price * 0.20) as i64 * 100;
-                        let total_amount_cents_cents = (price * 100.0) as i64;
+                        let total_amount_cents = (price * 100.0) as i64;
                         let now = Utc::now();
                         let _expires_at = now + chrono::Duration::days(2);
                         let quote_id = uuid::Uuid::new_v4().to_string();
@@ -957,12 +957,12 @@ impl DepartmentOrchestrator {
                         let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
                         if let DbStore::Postgres = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents_cents, required_deposit_cents_cents, stripe_payment_link) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
                                 .bind("SENT")
-                                .bind(total_amount_cents_cents)
+                                .bind(total_amount_cents)
                                 .bind(deposit_amount)
 
                                 .bind(&stripe_link)
@@ -1006,13 +1006,13 @@ impl DepartmentOrchestrator {
                             }
 
                             let invoice_id = uuid::Uuid::new_v4().to_string();
-                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount_cents, total_amount_cents_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, 'Client', 'draft', $5, 'USD', $6, 0, 'draft', 0, 0)")
+                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, 'Client', 'draft', $5, 'USD', $6, 0, 'draft', 0, 0)")
                                 .bind(&invoice_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
                                 .bind(deposit_amount)
                                 .bind(now + chrono::Duration::days(7))
-                                .bind(total_amount_cents_cents as f64 / 100.0)
+                                .bind(total_amount_cents as f64 / 100.0)
                                 .execute(&self.db.pool)
                                 .await
                             {
@@ -1036,7 +1036,7 @@ impl DepartmentOrchestrator {
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
                                 .bind("SENT")
-                                .bind(total_amount_cents_cents)
+                                .bind(total_amount_cents)
                                 .bind(deposit_amount)
 
                                 .bind(&stripe_link)
@@ -1080,13 +1080,13 @@ impl DepartmentOrchestrator {
                             }
 
                             let invoice_id = uuid::Uuid::new_v4().to_string();
-                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount_cents, total_amount_cents_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'draft', ?, 'USD', ?, 0, 'draft', 0, 0)")
+                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'draft', ?, 'USD', ?, 0, 'draft', 0, 0)")
                                 .bind(&invoice_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
                                 .bind(deposit_amount)
                                 .bind(now + chrono::Duration::days(7))
-                                .bind(total_amount_cents_cents as f64 / 100.0)
+                                .bind(total_amount_cents as f64 / 100.0)
                                 .execute(pool)
                                 .await
                             {
