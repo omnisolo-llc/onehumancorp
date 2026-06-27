@@ -159,7 +159,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     await page.getByPlaceholder('Email address').fill('admin@ohc.local');
     await page.getByPlaceholder('Password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
-    // Dashboard UI wait removed for flakiness
+    await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
 
     const response = await page.request.post('/api/v1/auth/login', {
         data: {

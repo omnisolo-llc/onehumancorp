@@ -253,9 +253,6 @@ message ConversationalCheckoutSession {
   int64 expires_at_unix = 8;
 }
 
-  bool success = 1;
-  string error_message = 2;
-}
 
 // POS Engine messages
 message PosOfflineTransaction {
