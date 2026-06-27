@@ -33,14 +33,22 @@ pub struct JsonRpcError {
     pub data: Option<serde_json::Value>,
 }
 
-pub struct AppState {
-    pub runner: Arc<Runner>,
-}
-
 #[derive(Debug, Deserialize)]
 struct RunParams {
     initial_message: String,
 }
+
+#[derive(Debug, Deserialize)]
+struct VerifyOutputParams {
+    output_text: String,
+    task_context: String,
+    verification_type: String,
+}
+
+pub struct AppState {
+    pub runner: Arc<Runner>,
+}
+
 
 async fn handle_rpc(
     axum::extract::State(state): axum::extract::State<Arc<AppState>>,
@@ -142,6 +150,47 @@ async fn handle_rpc(
     let _cfg = AgentRunConfig::default();
 
     let result = match payload.method.as_str() {
+        "verify_output" => {
+            let p_params = payload.params.clone().unwrap_or(serde_json::Value::Null);
+            let params: VerifyOutputParams = match serde_json::from_value(p_params) {
+                Ok(p) => p,
+                Err(e) => return Json(JsonRpcResponse { jsonrpc: "2.0".to_string(), result: None, error: Some(JsonRpcError { code: -32602, message: format!("Invalid params: {}", e), data: None }), id: payload.id.clone() }),
+            };
+
+            let mut manager = crate::verification_loops::VerificationManager::new();
+            if params.verification_type == "computational" {
+                manager.add_computational(std::sync::Arc::new(crate::verification_loops::BashComputationalGuide {
+                    command: params.output_text.clone(),
+                    workspace_path: None,
+                }));
+                match manager.run_computational_guides(&params.output_text, &params.task_context).await {
+                    Ok(_) => return Json(JsonRpcResponse { jsonrpc: "2.0".to_string(), result: Some(serde_json::json!({"message": "Verification passed successfully."})), error: None, id: payload.id }),
+                    Err(e) => return Json(JsonRpcResponse { jsonrpc: "2.0".to_string(), result: None, error: Some(JsonRpcError { code: -32000, message: format!("Computational verification failed: {}", e), data: None }), id: payload.id })
+                }
+            } else if params.verification_type == "visual" {
+                manager.add_visual(std::sync::Arc::new(crate::verification_loops::BashVisualVerifier {
+                    command: params.output_text.clone(),
+                    workspace_path: None,
+                }));
+                match manager.run_visual_verifiers(&params.output_text).await {
+                    Ok(_) => return Json(JsonRpcResponse { jsonrpc: "2.0".to_string(), result: Some(serde_json::json!({"message": "Verification passed successfully."})), error: None, id: payload.id }),
+                    Err(e) => return Json(JsonRpcResponse { jsonrpc: "2.0".to_string(), result: None, error: Some(JsonRpcError { code: -32000, message: format!("Visual verification failed: {}", e), data: None }), id: payload.id })
+                }
+            } else if params.verification_type == "inferential" {
+                manager.add_inferential(std::sync::Arc::new(crate::verification_loops::LlmJudgeSensor {
+                    llm: state.runner.core.agent.llm.clone(),
+                    model: "default".to_string(),
+                    criteria: Some(params.task_context.clone()),
+                    confidence_threshold: 0.8,
+                }));
+                match manager.run_inferential_sensors(&params.output_text, &params.task_context).await {
+                    Ok(_) => return Json(JsonRpcResponse { jsonrpc: "2.0".to_string(), result: Some(serde_json::json!({"message": "Verification passed successfully."})), error: None, id: payload.id }),
+                    Err(e) => return Json(JsonRpcResponse { jsonrpc: "2.0".to_string(), result: None, error: Some(JsonRpcError { code: -32000, message: format!("Inferential verification failed: {}", e), data: None }), id: payload.id })
+                }
+            } else {
+                return Json(JsonRpcResponse { jsonrpc: "2.0".to_string(), result: None, error: Some(JsonRpcError { code: -32602, message: "Unknown verification_type".to_string(), data: None }), id: payload.id });
+            }
+        },
         "run_async" => state.runner.run_async(&params.initial_message).await,
         "run_sync_blocking" => {
             // Note: in a real async server you wouldn't want to actually block the tokio worker thread,
