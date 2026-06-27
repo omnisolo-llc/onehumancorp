@@ -17,6 +17,7 @@ export default function MyPlanPage() {
   const router = useRouter();
   const [data, setData] = useState<MyPlanData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isManagingBilling, setIsManagingBilling] = useState(false);
 
   useEffect(() => {
     const fetchPlanData = async () => {
@@ -47,6 +48,7 @@ export default function MyPlanPage() {
   };
 
   const handleManageBilling = async () => {
+    setIsManagingBilling(true);
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('/api/billing/create-billing-portal-session', {
@@ -68,6 +70,7 @@ export default function MyPlanPage() {
     } catch (error) {
       console.error('Billing portal error:', error);
       alert('Failed to initiate billing portal. Please try again.');
+      setIsManagingBilling(false);
     }
   };
 
@@ -125,8 +128,9 @@ export default function MyPlanPage() {
                 </button>
                 <button
                     onClick={handleManageBilling}
-                    className="w-full sm:w-auto px-6 py-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-medium transition-all shadow-sm text-center">
-                    Manage Billing
+                    disabled={isManagingBilling}
+                    className="w-full sm:w-auto px-6 py-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-medium transition-all shadow-sm text-center disabled:opacity-75 disabled:cursor-not-allowed">
+                    {isManagingBilling ? "Redirecting..." : "Manage Billing"}
                 </button>
                 <button
                     onClick={() => router.push('/cost-dashboard')}
