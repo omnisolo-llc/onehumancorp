@@ -62,7 +62,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           </span>
           {approval.lifecycle_state === "PENDING_APPROVAL" && (
             <span className="text-xs font-bold uppercase tracking-wider text-green-700 bg-green-100 px-2 py-1 rounded-[8px]">
-              {approval.event_source === "customer_success_agent" ? "Action Required" : "Action Needed"}
+              {approval.event_source === "customer_success_agent" || approval.event_source === "instagram_dm" || approval.payload?.feature_type === "ambassador_reply" ? "Action Required: Approve Reply" : "Action Needed"}
             </span>
           )}
           {queuedActionIds.has(approval.id) && (
