@@ -362,7 +362,9 @@ export default function Dashboard() {
       ]}
     >
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
+        <WalkthroughTarget id="dashboard-title">
+          <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
+        </WalkthroughTarget>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
@@ -590,13 +592,13 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
             <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
-              <WalkthroughTarget id="sales-card-target" className="app-card">
+              <div className="app-card">
                 <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from your orders.">
                   <div className="app-metric-label">Total Sales</div>
                 </WithTooltip>
                 <div className="app-metric-value">{money(metrics.total_sales)}</div>
                 <div className="app-metric-note">{loading ? "Loading your data..." : "All recorded orders"}</div>
-              </WalkthroughTarget>
+              </div>
               <div className="app-card">
                 <div className="app-metric-label">Customers</div>
                 <div className="app-metric-value">{metrics.active_customers}</div>
@@ -619,7 +621,7 @@ export default function Dashboard() {
         </section>
 
         <section className="app-grid two">
-          <WalkthroughTarget id="operations-map-target" className="app-panel glassmorphism border border-white/40 dark:border-white/10">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div>
                 <div className="app-panel-title">Operations Map</div>
@@ -646,7 +648,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-          </WalkthroughTarget>
+          </div>
 
         </section>
 

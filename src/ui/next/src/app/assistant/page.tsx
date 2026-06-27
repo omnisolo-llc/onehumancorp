@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '../components/AppShell';
 import styles from './assistant.module.css';
+import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 
 type AssistantTaskStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'planning' | 'pending' | 'archived';
 type Section =
@@ -164,7 +165,19 @@ export default function AssistantPage() {
   const [resourceLoading, setResourceLoading] = useState('');
   const [resourceError, setResourceError] = useState('');
 
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
+
   useEffect(() => {
+    fetch("/api/walkthrough/assistant")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setWalkthroughSteps(data);
+        }
+      })
+      .catch((err) => console.error("Walkthrough fetch failed:", err));
+
     let mounted = true;
 
     async function loadTasks() {
@@ -360,6 +373,21 @@ export default function AssistantPage() {
       subtitle="Task-backed workspace for creating work, reviewing conversations, and inspecting artifacts."
       actions={[{ label: 'Expert Center', href: '/agents' }]}
     >
+      <InteractiveWalkthrough
+        steps={walkthroughSteps}
+        isOpen={isWalkthroughOpen}
+        onClose={() => setIsWalkthroughOpen(false)}
+      />
+      <div className="mb-4 flex flex-wrap gap-2 px-6 pt-4">
+         <button
+           type="button"
+           onClick={() => setIsWalkthroughOpen(true)}
+           className="app-button min-h-[44px]"
+         >
+           Start Tour
+         </button>
+      </div>
+
       <div className={styles.shell} data-testid="assistant-shell">
         <main className={styles.workstation} data-testid="assistant-workstation">
         <nav className={cx(styles.panel, styles.sectionMenu)} aria-label="Assistant section menu">
@@ -404,10 +432,12 @@ export default function AssistantPage() {
             <section className={styles.panel}>
               <h2 className={styles.sectionTitle}>New Task</h2>
               <div className={styles.fieldGrid}>
-                <label className={styles.fieldLabel}>
-                  Task prompt
-                  <textarea aria-label="Task prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} className={styles.textarea} />
-                </label>
+                <WalkthroughTarget id="ohc-help-input-area">
+                  <label className={styles.fieldLabel}>
+                    Task prompt
+                    <textarea aria-label="Task prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} className={styles.textarea} />
+                  </label>
+                </WalkthroughTarget>
                 <div className={styles.formGridThree}>
                   <label className={styles.fieldLabel}>
                     Workspace
