@@ -203,8 +203,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   {approval.context_payload?.description || "An order is waiting to be fulfilled."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'order')}>Fulfill Order</button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'order')}>Dismiss</button>
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'order')}>Fulfill Order</button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'order')}>Dismiss</button>
                 </div>
               </div>
             )}
@@ -219,8 +219,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   {approval.context_payload?.description || "You have an open customer conversation waiting for your reply."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'triage')}>Resolve Message</button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'triage')}>Dismiss</button>
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'triage')}>Resolve Message</button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'triage')}>Dismiss</button>
                 </div>
               </div>
             )}
@@ -235,8 +235,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   {approval.context_payload?.description || "You have a pending task."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'task')}>Complete Task</button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'task')}>Dismiss</button>
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'task')}>Complete Task</button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'task')}>Dismiss</button>
                 </div>
               </div>
             )}
@@ -785,7 +785,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <a
               href="/storefront-builder"
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Review Storefront"
               data-testid="review-storefront-btn"
             >
@@ -800,7 +800,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss"
               data-testid="dismiss-onboarding-welcome"
             >
@@ -830,14 +830,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     );
                     setEditingId(null);
                   }}
-                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                   data-testid="save-booking-draft"
                 >
                   Save & Approve
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                   data-testid="cancel-edit-booking-draft"
                 >
                   Cancel
@@ -871,7 +871,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+                className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                 aria-label="Approve Route & Send Confirmation"
                 data-testid="approve-booking-draft"
               >
@@ -886,7 +886,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                         ?.summary || "",
                     );
                   }}
-                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                   aria-label="Edit booking draft"
                   data-testid="edit-booking-draft"
                 >
@@ -901,7 +901,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       approval.event_source,
                     )
                   }
-                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                   aria-label="Reject booking draft"
                   data-testid="reject-booking-draft"
                 >
@@ -922,7 +922,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-red-600 text-white font-medium hover:bg-red-700 transition-all duration-200 shadow-md flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-red-600 text-white font-medium hover:bg-red-700 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Execute Plan"
               data-testid="approve-incident-resolution"
             >
@@ -937,7 +937,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss Plan"
               data-testid="dismiss-incident-resolution"
             >
@@ -956,7 +956,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="w-full sm:flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-blue-600 transition-all duration-200 shadow-sm flex items-center justify-center"
+              className="w-full sm:flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-blue-600 transition-all duration-200 shadow-sm flex items-center justify-center"
               aria-label="Generate & Send Email"
               data-testid="approve-subscription-replenishment"
             >
@@ -971,7 +971,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="w-full sm:w-auto min-h-[44px] min-w-[44px] px-6 rounded-[8px] bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center"
+              className="w-full sm:w-auto min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-6 rounded-[8px] bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss"
             >
               Dismiss
@@ -1001,7 +1001,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+              className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve & Send"
               data-testid="approve-supply-order"
             >
@@ -1016,7 +1016,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       .draft_message,
                   );
                 }}
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit message"
                 data-testid="edit-supply-order"
               >
@@ -1031,7 +1031,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Deny supply order"
                 data-testid="reject-supply-order"
               >
@@ -1051,7 +1051,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-md flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Approve & Send"
             >
               Approve & Send
@@ -1065,7 +1065,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Skip this week"
             >
               Skip this week
@@ -1083,7 +1083,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-all duration-200 shadow-md flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Schedule Posts"
               data-testid="approve-social-post"
             >
@@ -1098,7 +1098,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss proposal"
               data-testid="dismiss-social-post"
             >
@@ -1191,7 +1191,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Approve"
               data-testid="approve-stockout"
             >
@@ -1206,7 +1206,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss"
               data-testid="dismiss-stockout"
             >
@@ -1245,14 +1245,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     );
                     setEditingId(null);
                   }}
-                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                   data-testid="save-send-ambassador-reply"
                 >
                   Save & Send
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                   data-testid="cancel-edit-ambassador-reply"
                 >
                   Cancel
@@ -1270,7 +1270,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                 aria-label="Approve & Send Draft"
                 data-testid="approve-ambassador-reply"
               >
@@ -1287,7 +1287,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       "",
                   );
                 }}
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit Draft"
                 data-testid="edit-ambassador-reply"
               >
@@ -1302,7 +1302,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Dismiss Draft"
                 data-testid="dismiss-ambassador-reply"
               >
@@ -1353,14 +1353,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     );
                     setEditingId(null);
                   }}
-                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                   data-testid="modal-approve-btn"
                 >
                   Approve & Send
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
-                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                   data-testid="cancel-edit-quote"
                 >
                   Cancel
@@ -1378,7 +1378,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                 aria-label="Approve & Send"
                 data-testid="approve-quote-draft"
               >
@@ -1388,7 +1388,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 onClick={() => {
                   window.location.href = `/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`;
                 }}
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit Draft"
                 data-testid="edit-quote-draft"
               >
@@ -1408,7 +1408,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Approve & Run Sale"
               data-testid="approve-run-sale"
             >
@@ -1423,7 +1423,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss proposal"
               data-testid="dismiss-sale"
             >
@@ -1442,7 +1442,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Draft it"
               data-testid="approve-draft"
             >
@@ -1457,7 +1457,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss proposal"
               data-testid="dismiss-draft"
             >
@@ -1476,7 +1476,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all duration-200 shadow-md flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Approve Restock"
               data-testid="approve-restock"
             >
@@ -1491,7 +1491,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss restock"
               data-testid="dismiss-restock"
             >
@@ -1510,7 +1510,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+              className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve & Send"
               data-testid="approve-send-proposal"
             >
@@ -1519,7 +1519,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <a
                 href={`/quotes/${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit Draft"
                 data-testid="edit-proposal"
               >
@@ -1534,7 +1534,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Ask Agent to Adjust"
                 data-testid="reject-proposal"
               >
@@ -1563,14 +1563,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   );
                   setEditingId(null);
                 }}
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                 data-testid="save-proposal"
               >
                 Save & Approve
               </button>
               <button
                 onClick={() => setEditingId(null)}
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                 data-testid="cancel-edit-proposal"
               >
                 Cancel
@@ -1588,7 +1588,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+              className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve proposal"
               data-testid={`triage-approve-${approval.id}`}
             >
@@ -1609,7 +1609,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source;
                   setEditContent(textToEdit || "");
                 }}
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit proposal"
                 data-testid="edit-proposal"
               >
@@ -1624,7 +1624,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Reject proposal"
                 data-testid={`triage-dismiss-${approval.id}`}
               >
