@@ -450,8 +450,12 @@ export default function OnboardingWizard() {
 
       let combinedInput = bio;
       if (instantImageUrl) {
-        combinedInput += `\nImage provided: ${instantImageUrl}`;
+        combinedInput += `
+Image provided: ${instantImageUrl}`;
       }
+
+      // Navigate to the loading state immediately
+      updateState({ step: 4 }); syncStateToBackend({ step: 4 });
 
       const intakeRes = await fetchWithRetry(`${backendUrl}/api/onboarding/intake`, {
         method: 'POST',
@@ -480,14 +484,59 @@ export default function OnboardingWizard() {
          localStorage.setItem('onboarding_initial_products', JSON.stringify(intakeData.initial_products));
       }
 
-      updateState({ step: 3 }); syncStateToBackend({
-        step: 3,
-        firstProductName: intakeData.initial_products?.[0]?.name || 'First Product',
-        firstProductPrice: intakeData.initial_products?.[0]?.price || '0.00',
-        businessType: intakeData.business_type || 'Online Store',
-        businessName: intakeData.business_name || 'My Business',
-        categories: intakeData.categories || ['physical']
+      const defaultAdminEmail = `admin@${generateSubdomain(intakeData.business_name || 'my-business')}`;
+      const defaultAdminPassword = 'Password123!';
+
+      const startRes = await fetchWithRetry(`${backendUrl}/api/onboarding/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({
+          business_type: intakeData.business_type || 'Online Store',
+          company_name: intakeData.business_name || 'My Business',
+          company_description: bio,
+          selling_categories: intakeData.categories || ['physical'],
+          payment_pref: 'online',
+          admin_email: defaultAdminEmail,
+          admin_name: intakeData.business_name || 'Admin',
+          admin_password: defaultAdminPassword,
+          website_template: 'auto',
+          first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
+          first_product_price: intakeData.initial_products?.[0]?.price || '0.00',
+          domain_choice: 'subdomain',
+          price_type: 'fixed',
+          location: intakeData.location || 'Local',
+          target_audience: intakeData.target_audience || 'General',
+          ai_agents: [],
+          ai_auto_respond: true,
+          initial_products: intakeData.initial_products || []
+        })
       });
+
+      const result = await startRes.json().catch(() => ({}));
+      if (!startRes.ok) {
+        throw new Error(result.error || result.message || 'Failed to start onboarding');
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+      updateState({ startResult: result });
+      localStorage.setItem('has_onboarded', 'true');
+      if (result.organization_id) {
+        localStorage.setItem('tenant_id', result.organization_id);
+        localStorage.setItem('tenant', result.organization_id);
+      }
+
+      const launchRes = await fetchWithRetry(`${backendUrl}/api/onboarding/launch`, { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } });
+      if (!launchRes.ok) throw new Error('Launch failed');
+      updateState({ step: 5 }); syncStateToBackend({ step: 5 });
+
+      if (typeof window !== 'undefined' && window.location.href.includes('setup.html')) {
+           window.location.href = '/success.html';
+      }
+
     } catch (err: any) {
       console.error(err);
       updateState({ error: err.message || 'Failed to generate your business' });
@@ -803,11 +852,12 @@ export default function OnboardingWizard() {
 
                 <div className="mt-4">
                   <button
+                    id="generate-storefront-btn"
                     onClick={handleInstantBuild}
                     disabled={!bio.trim() || isLoading}
                     className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                   >
-                    Next
+                    Generate Storefront
                   </button>
                 </div>
               </div>
@@ -1436,7 +1486,7 @@ export default function OnboardingWizard() {
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
                </div>
-               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
+               <h2 id="loading-title" className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
                <div className="space-y-2">
                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
