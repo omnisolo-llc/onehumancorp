@@ -8,7 +8,7 @@
   <style>
     :root {
       --bg-color: #f9fafb;
-      --card-bg: #ffffff;
+      --card-bg: rgba(255, 255, 255, 0.65);
       --text-main: #111827;
       --text-muted: #6b7280;
       --accent: #4f46e5;
@@ -35,6 +35,8 @@
       max-width: 440px;
       width: 100%;
       background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
       border-radius: 16px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
       padding: 32px;

@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Glassmorphism UI Audit', () => {
 
   test('onboarding container matches OHC glassmorphism light mode spec', async ({ page }) => {
-    await page.goto('http://127.0.0.1:3000/onboarding');
-    const container = page.locator('#setup-screen');
+    await page.goto('http://127.0.0.1:18789/api/ui/setup.html');
+    const container = page.locator('.container');
     await expect(container).toBeVisible();
 
     await page.emulateMedia({ colorScheme: 'light' });
@@ -25,8 +25,8 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
   });
 
   test('onboarding container matches OHC glassmorphism dark mode spec', async ({ page }) => {
-    await page.goto('http://127.0.0.1:3000/onboarding');
-    const container = page.locator('#setup-screen');
+    await page.goto('http://127.0.0.1:18789/api/ui/setup.html');
+    const container = page.locator('.container');
     await expect(container).toBeVisible();
 
     await page.emulateMedia({ colorScheme: 'dark' });
@@ -45,20 +45,20 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
   });
 
   test('onboarding inputs and buttons use 8px border radius', async ({ page }) => {
-    await page.goto('http://127.0.0.1:3000/onboarding');
+    await page.goto('http://127.0.0.1:18789/api/ui/setup.html');
 
     // Start wizard to reach an input
     await page.getByText('Start My Business').click();
 
     // Check an input
-    const input = page.locator('#setup-screen input').first();
+    const input = page.locator('.container input').first();
     const borderRadiusInput = await input.evaluate((el) => window.getComputedStyle(el).borderRadius);
     expect(borderRadiusInput).toBe('8px');
 
     // Check back/forward buttons or action buttons
     // The very first button might be the `setup-nav-button` which intentionally has a 999px border-radius,
     // so we skip that one and check the general wizard continuation buttons.
-    const button = page.locator('#setup-screen button:not(.setup-nav-button)').first();
+    const button = page.locator('.container button:not(.setup-nav-button)').first();
     const borderRadiusButton = await button.evaluate((el) => window.getComputedStyle(el).borderRadius);
     expect(borderRadiusButton).toBe('8px');
   });

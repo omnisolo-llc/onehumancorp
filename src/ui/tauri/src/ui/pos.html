@@ -387,7 +387,7 @@
             <p style="color: #86868b; font-size: 14px; grid-column: span 2; text-align: center; padding: 16px 0;">Loading catalog...</p>
           </div>
 
-          <div class="amount-display" id="amount-display">$0.00</div>
+          <div class="amount-display" id="amount-display">-</div>
 
           <div class="numpad">
             <button class="num-btn" onclick="appendDigit(1)">1</button>
@@ -418,7 +418,7 @@
           <path d="M4 8.5C6 7.5 8 8 10 9.5M3 12.5C5.5 11 8.5 11.5 11 13M2 16.5C5 14.5 9 15 12 17" transform="translate(6, 0)"/>
         </svg>
         <div class="tap-title">Hold Card to Phone</div>
-        <div class="tap-subtitle" id="tap-amount-subtitle">$0.00</div>
+        <div class="tap-subtitle" id="tap-amount-subtitle">-</div>
 
         <!-- Hidden button to simulate the tap for E2E tests and web mode -->
         <button class="simulate-tap-btn" id="simulate-tap-btn">Simulate Customer Tap (Test)</button>
@@ -430,7 +430,7 @@
         <div class="success-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
         </div>
-        <div class="receipt-amount" id="receipt-amount">$0.00</div>
+        <div class="receipt-amount" id="receipt-amount">-</div>
         <div class="receipt-text">Payment Successful</div>
 
         <button class="btn-outline" style="background: rgba(0,0,0,0.05); border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 12px; width: 100%;">Email Receipt</button>
@@ -945,7 +945,7 @@
               return new Intl.NumberFormat(navigator.language || 'en-US', { style: 'currency', currency: tenantCurrency }).format(dollars);
           };
 
-          const renderCatalog = (products) => {
+          window.renderCatalog = (products) => {
               if (!productGrid) return;
               productGrid.innerHTML = '';
               if (products.length === 0) {
@@ -959,12 +959,15 @@
                   const title = p.title || p.name || 'Unnamed Product';
                   const priceCents = p.price_cents || 0;
                   const displayPrice = formatPrice(priceCents);
+                  const inventoryHtml = p.inventory_count !== undefined && p.inventory_count !== null
+                      ? `<span class="product-btn-inventory">${p.inventory_count} in stock</span>` : '';
 
                   btn.onclick = () => selectProduct(p.id, priceCents, title);
 
                   btn.innerHTML = `
                       <span class="product-btn-name">${title}</span>
                       <span class="product-btn-price">${displayPrice}</span>
+                      ${inventoryHtml}
                   `;
                   productGrid.appendChild(btn);
               });
@@ -974,7 +977,7 @@
           try {
               const cached = localStorage.getItem(cacheKey);
               if (cached) {
-                  renderCatalog(JSON.parse(cached));
+                  window.renderCatalog(JSON.parse(cached));
               }
           } catch(e) {
               console.warn("Could not read catalog from cache", e);
@@ -989,7 +992,7 @@
                   if (res.ok) {
                       const data = await res.json();
                       localStorage.setItem(cacheKey, JSON.stringify(data));
-                      renderCatalog(data);
+                      window.renderCatalog(data);
                   }
               } catch(e) {
                   console.warn("Network fetch failed, relying on cache.", e);
