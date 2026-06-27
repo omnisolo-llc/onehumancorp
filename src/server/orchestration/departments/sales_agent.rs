@@ -331,7 +331,7 @@ impl Department for SalesAgent {
                     .get_service_by_name_like(&event.tenant_id, &intent.service_name)
                     .await?;
 
-                let (service_name, mut price) = service.unwrap_or((intent.service_name, 75.0));
+                let (service_name, mut price, service_id) = service.unwrap_or((intent.service_name, 75.0, uuid::Uuid::new_v4().to_string()));
 
                 let mut context_summary = String::new();
                 for r in context_records {
@@ -395,6 +395,7 @@ impl Department for SalesAgent {
                     "suggested_time": suggested_time,
                     "generated_response": drafted_message,
                     "service": service_name.clone(),
+                    "service_id": service_id.clone(),
                     "price": price,
                     "preferred_start_time": intent.preferred_start_time,
                     "preferred_end_time": intent.preferred_end_time,
@@ -565,6 +566,8 @@ mod tests {
             intent: Some(QuoteIntent {
                 original_message: "The drain backed up after closing".to_string(),
                 service_name: "Drain Cleaning".to_string(),
+                preferred_start_time: None,
+                preferred_end_time: None,
             }),
         });
 

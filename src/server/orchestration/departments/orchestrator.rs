@@ -1890,11 +1890,11 @@ impl DepartmentOrchestrator {
         }
     }
 
-    pub async fn get_service_by_name_like(&self, tenant_id: &str, name: &str) -> Result<Option<(String, f64)>, String> {
+    pub async fn get_service_by_name_like(&self, tenant_id: &str, name: &str) -> Result<Option<(String, f64, String)>, String> {
         let pattern = format!("%{}%", name);
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                let row = sqlx::query("SELECT name, CAST(price AS DOUBLE PRECISION) as price_f64 FROM services WHERE tenant_id = $1 AND name ILIKE $2 LIMIT 1")
+                let row = sqlx::query("SELECT id, name, CAST(price AS DOUBLE PRECISION) as price_f64 FROM services WHERE tenant_id = $1 AND name ILIKE $2 LIMIT 1")
                     .bind(tenant_id)
                     .bind(&pattern)
                     .fetch_optional(&self.db.pool)
@@ -1902,15 +1902,16 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
+                    let id: String = r.get("id");
                     let n: String = r.get("name");
                     let p: f64 = r.get("price_f64");
-                    Ok(Some((n, p)))
+                    Ok(Some((n, p, id)))
                 } else {
                     Ok(None)
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT name, CAST(price AS REAL) as price_f64 FROM services WHERE tenant_id = ? AND name LIKE ? LIMIT 1")
+                let row = sqlx::query("SELECT id, name, CAST(price AS REAL) as price_f64 FROM services WHERE tenant_id = ? AND name LIKE ? LIMIT 1")
                     .bind(tenant_id)
                     .bind(&pattern)
                     .fetch_optional(pool)
@@ -1918,9 +1919,10 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
+                    let id: String = r.get("id");
                     let n: String = r.get("name");
                     let p: f64 = r.get("price_f64");
-                    Ok(Some((n, p)))
+                    Ok(Some((n, p, id)))
                 } else {
                     Ok(None)
                 }
