@@ -147,6 +147,7 @@ impl PromptCache {
                 heap.push((created_at, kv.key().clone()));
             } else {
                 // If it's full, compare with the max element (the newest of the oldest)
+                #[allow(clippy::collapsible_if)]
                 if let Some(max) = heap.peek() {
                     if created_at < max.0 {
                         // This element is older than the newest of our oldest.
