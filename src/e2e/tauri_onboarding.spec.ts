@@ -173,6 +173,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Step 5: Admin Setup
     await expect(page.getByRole('heading', { name: "Admin Credentials" })).toBeVisible();
+    await page.getByPlaceholder("Your Name (e.g. Maya)").fill("Test Admin");
     await page.getByPlaceholder("admin@mybusiness.com").fill("test@mybusiness.com");
     await page.getByPlaceholder("Password (min 8 chars)").fill("mypassword1");
     await page.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
@@ -264,6 +265,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Step 5: Admin Setup
     await expect(newPage.getByRole('heading', { name: "Admin Credentials" })).toBeVisible();
+    await newPage.getByPlaceholder("Your Name (e.g. Maya)").fill("Test Admin");
     await newPage.getByPlaceholder("admin@mybusiness.com").fill("test@mybusiness.com");
     await expect(newPage.getByPlaceholder("admin@mybusiness.com")).toHaveValue("test@mybusiness.com");
     await newPage.getByPlaceholder("Password (min 8 chars)").fill("mypassword1");

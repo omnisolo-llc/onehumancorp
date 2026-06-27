@@ -190,7 +190,7 @@
         }
       }
       .animate-shake {
-        animation: shake 0.2s ease-in-out 0s 2;
+        animation: shake 0.2s cubic-bezier(0.4, 0, 0.2, 1) 0s 2;
       }
 
       @keyframes spin {
@@ -208,7 +208,7 @@
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         border-top-color: #fff;
-        animation: spin 1s ease-in-out infinite;
+        animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         vertical-align: middle;
         margin-right: 8px;
       }
@@ -267,7 +267,7 @@
         right: 0;
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
-        transition: 0.3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 8px;
       }
       .slider:before {
@@ -278,7 +278,7 @@
         left: 2px;
         bottom: 2px;
         background-color: white;
-        transition: 0.3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 50%;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
@@ -388,7 +388,7 @@
         flex-direction: column;
         max-width: 85%;
         word-wrap: break-word;
-        animation: fadeIn 0.3s ease-in-out;
+        animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .chat-message.assistant {
         align-self: flex-start;
@@ -523,7 +523,7 @@
         right: 0;
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
-        transition: 0.3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 8px;
       }
       .slider:before {
@@ -534,7 +534,7 @@
         left: 2px;
         bottom: 2px;
         background-color: white;
-        transition: 0.3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 50%;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
@@ -858,7 +858,7 @@
         right: 0;
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
-        transition: 0.3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 8px;
       }
       .slider:before {
@@ -869,7 +869,7 @@
         left: 2px;
         bottom: 2px;
         background-color: white;
-        transition: 0.3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 50%;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
@@ -1166,7 +1166,7 @@
         right: 0;
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.1);
-        transition: 0.3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 8px;
       }
       .slider:before {
@@ -1177,7 +1177,7 @@
         left: 2px;
         bottom: 2px;
         background-color: white;
-        transition: 0.3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 50%;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
@@ -3517,7 +3517,7 @@
                 const btn = document.getElementById("approve-publish-btn-chat");
                 btn.disabled = true;
                 btn.innerHTML =
-                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
+                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
 
                 const approvePublishBtn = document.getElementById(
                   "approve-publish-btn",
@@ -4060,7 +4060,7 @@
             pointer-events: none;
             opacity: 0;
             transform: translateY(10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: center;
         }
         .ohc-tooltip.visible {
@@ -4122,7 +4122,7 @@
         right: 0;
         bottom: 0;
         background-color: rgba(0,0,0,0.1);
-        transition: .3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 8px;
       }
       .slider:before {
@@ -4133,7 +4133,7 @@
         left: 2px;
         bottom: 2px;
         background-color: white;
-        transition: .3s;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         border-radius: 50%;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       }
