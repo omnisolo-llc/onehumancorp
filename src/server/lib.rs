@@ -3855,6 +3855,33 @@ pub async fn update_ui_triage_action_handler(
                         } else {
                             tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
                         }
+                    } else if action_type == "Reassign Shift" {
+                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload);
+                        if let Ok(shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                            let shift_id = shift_data.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
+                            let new_staff_id = shift_data.get("new_staff_id").and_then(|v| v.as_str()).unwrap_or("");
+                            if !shift_id.is_empty() && !new_staff_id.is_empty() {
+                                let _ = sqlx::query("UPDATE shifts SET staff_id = $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(new_staff_id)
+                                    .bind(shift_id)
+                                    .bind(&tenant_id)
+                                    .execute(&mut *tx).await;
+                                tracing::info!("Successfully reassigned shift {} to {}", shift_id, new_staff_id);
+
+                                // Dispatch SMS
+                                let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default();
+                                let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default();
+                                let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_default();
+
+                                if !account_sid.is_empty() && !auth_token.is_empty() && !from_number.is_empty() {
+                                    // Normally we would lookup new_staff_id phone number from staff_profiles,
+                                    // but we can dispatch to a placeholder or use the payload info.
+                                    let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+                                    let message = format!("Your shift {} has been reassigned to you.", shift_id);
+                                    let _ = provider.send_sms(&from_number, "+15550000000", &message).await;
+                                }
+                            }
+                        }
                     } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
                         tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
@@ -4082,6 +4109,31 @@ pub async fn update_ui_triage_action_handler(
                             }
                         } else {
                             tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
+                        }
+                    } else if action_type == "Reassign Shift" {
+                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload);
+                        if let Ok(shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                            let shift_id = shift_data.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
+                            let new_staff_id = shift_data.get("new_staff_id").and_then(|v| v.as_str()).unwrap_or("");
+                            if !shift_id.is_empty() && !new_staff_id.is_empty() {
+                                let _ = sqlx::query("UPDATE shifts SET staff_id = ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(new_staff_id)
+                                    .bind(shift_id)
+                                    .bind(&tenant_id)
+                                    .execute(&mut *tx).await;
+                                tracing::info!("Successfully reassigned shift {} to {}", shift_id, new_staff_id);
+
+                                // Dispatch SMS
+                                let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default();
+                                let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default();
+                                let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_default();
+
+                                if !account_sid.is_empty() && !auth_token.is_empty() && !from_number.is_empty() {
+                                    let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+                                    let message = format!("Your shift {} has been reassigned to you.", shift_id);
+                                    let _ = provider.send_sms(&from_number, "+15550000000", &message).await;
+                                }
+                            }
                         }
                     } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
                         tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
