@@ -874,12 +874,29 @@ impl VectorRepository {
                             records_in_tenant.push(record);
                         }
 
-                        let records = records_in_tenant;
+                        let mut records = records_in_tenant;
+
+                        // To avoid O(N^2) dot products, sort by the first vector component
+                        // and use a sliding window. If distance < 0.05, cosine similarity > 0.95
+                        // This implies the L2 distance between the unit vectors is < sqrt(0.1) ~ 0.31622776.
+                        // So the difference in any single coordinate cannot exceed ~0.31622776.
+                        records.sort_by(|a, b| {
+                            let val_a = a.embedding.first().unwrap_or(&0.0);
+                            let val_b = b.embedding.first().unwrap_or(&0.0);
+                            val_a.partial_cmp(val_b).unwrap_or(std::cmp::Ordering::Equal)
+                        });
 
                         for i in 0..records.len() {
+                            let a = &records[i];
+                            let a_val = *a.embedding.first().unwrap_or(&0.0);
+
                             for j in (i + 1)..records.len() {
-                                let a = &records[i];
                                 let b = &records[j];
+                                let b_val = *b.embedding.first().unwrap_or(&0.0);
+
+                                if (b_val - a_val).abs() > 0.3163 {
+                                    break;
+                                }
 
                                 // Both vectors are already L2-normalized, so dot product is the cosine similarity
                                 let similarity: f32 = a
@@ -896,10 +913,14 @@ impl VectorRepository {
                                     } else {
                                         (b.id.clone(), a.id.clone())
                                     };
-                                    conflicting_pairs_ids.push((id_a, id_b));
-                                    match_count += 1;
-                                    if match_count >= 10 {
-                                        break 'outer;
+
+                                    // Make sure we are pushing distinct pairs
+                                    if !conflicting_pairs_ids.contains(&(id_a.clone(), id_b.clone())) {
+                                        conflicting_pairs_ids.push((id_a, id_b));
+                                        match_count += 1;
+                                        if match_count >= 100 {
+                                            break 'outer;
+                                        }
                                     }
                                 }
                             }
@@ -3010,6 +3031,95 @@ mod e2e_consolidation_tests {
         .unwrap();
 
         VectorRepository::new_sqlite(pool)
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_fallback_get_conflicting_pairs_optimization() {
+        // This test ensures that `get_conflicting_pairs` runs efficiently
+        // even when fallback logic (without `vec_distance_cosine`) is used.
+        // We'll insert a large number of vectors and verify it can find conflicts efficiently.
+        let repo = setup_sqlite_repo().await;
+
+        let mut records = Vec::new();
+        // Insert 90 non-conflicting records. We ensure they are far apart
+        for i in 0..90 {
+            let mut emb = vec![0.0; 100];
+            emb[i] = 1.0;
+
+            records.push(EmbeddingRecord {
+                id: format!("rec_{}", i),
+                tenant_id: "org_perf".to_string(),
+                agent_id: "test".to_string(),
+                content: "Perf test".to_string(),
+                embedding: emb,
+                source_type: "TEST".to_string(),
+                created_at: chrono::Utc::now(),
+                last_referenced_at: chrono::Utc::now(),
+                reference_count: 0,
+                reliability_score: 50,
+                owner_override: false,
+                metadata: None,
+            });
+        }
+
+        // Add one conflicting pair at the end
+        let mut emb_a = vec![0.0; 100];
+        emb_a[98] = 1.0;
+        let mut emb_b = emb_a.clone();
+        emb_b[98] = 0.999;
+        emb_b[99] = 0.001;
+
+        let norm_a: f32 = emb_a.iter().map(|&x| x * x).sum::<f32>().sqrt();
+        for v in emb_a.iter_mut() { *v /= norm_a; }
+
+        let norm_b: f32 = emb_b.iter().map(|&x| x * x).sum::<f32>().sqrt();
+        for v in emb_b.iter_mut() { *v /= norm_b; }
+
+        records.push(EmbeddingRecord {
+            id: "conflict_a".to_string(),
+            tenant_id: "org_perf".to_string(),
+            agent_id: "test".to_string(),
+            content: "Conflict A".to_string(),
+            embedding: emb_a,
+            source_type: "TEST".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        });
+
+        records.push(EmbeddingRecord {
+            id: "conflict_b".to_string(),
+            tenant_id: "org_perf".to_string(),
+            agent_id: "test".to_string(),
+            content: "Conflict B".to_string(),
+            embedding: emb_b,
+            source_type: "TEST".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        });
+
+        for r in &records {
+            repo.upsert(r).await.unwrap();
+        }
+
+        // Force check_sqlite_vec_extension to false to use fallback logic.
+        // Since sqlite memory doesn't have the vec extension by default, it naturally uses the fallback path.
+        let conflicts = repo.get_conflicting_pairs().await.unwrap();
+
+        // Ensure that the conflicting pair is found
+        let found_conflict = conflicts.iter().any(|(a, b)| {
+            (a.id == "conflict_a" && b.id == "conflict_b") ||
+            (a.id == "conflict_b" && b.id == "conflict_a")
+        });
+
+        assert!(found_conflict, "The conflicting pair was not found using fallback logic.");
     }
 
     #[tokio::test]

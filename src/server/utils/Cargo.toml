@@ -21,6 +21,7 @@ tracing = "0.1"
 [dev-dependencies]
 chrono = { workspace = true }
 reqwest = { workspace = true }
+tower = { version = "0.5.3", features = ["util"] }
 
 [lib]
 path = "mod.rs"

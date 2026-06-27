@@ -9070,6 +9070,7 @@ dependencies = [
  "server_config",
  "server_pricing",
  "tokio",
+ "tower 0.5.3",
  "tracing",
 ]
 
