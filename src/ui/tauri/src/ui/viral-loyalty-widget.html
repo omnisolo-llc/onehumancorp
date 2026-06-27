@@ -119,17 +119,31 @@
       transition: all 0.3s;
     }
 
+    @keyframes pop {
+      0% { transform: scale(0.8); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(0, 102, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 102, 255, 0); }
+    }
+
     .stamp.free {
       background-color: #f0f7ff;
       border-color: #0066FF;
       color: #0066FF;
       font-size: 14px;
+      animation: pulse 2s infinite;
     }
 
     .stamp.filled {
       background-color: #0066FF;
       border-color: #0066FF;
       color: white;
+      animation: pop 0.3s ease-out;
     }
 
     .loyalty-share-link:focus {
@@ -258,9 +272,8 @@
             }, i * 200);
         });
 
-        setTimeout(() => {
-           document.getElementById('result-area').style.display = 'block';
-        }, stamps.length * 200);
+        await new Promise(resolve => setTimeout(resolve, stamps.length * 200));
+        document.getElementById('result-area').style.display = 'block';
 
       } catch (err) {
         console.error("Error generating loyalty program:", err);
