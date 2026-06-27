@@ -12,6 +12,8 @@ pub struct GenerateQuoteArgs {
     pub total_amount_cents: i64,
     pub required_deposit_cents: i64,
     pub checkout_url: Option<String>,
+    pub proposed_slot_id: Option<String>,
+    pub service_id: Option<String>,
     pub line_items: Vec<QuoteLineItemArgs>,
 }
 
@@ -33,6 +35,8 @@ impl PydanticToolExecutor<GenerateQuoteArgs> for GenerateQuoteExecutor {
         let total_amount_cents = args.total_amount_cents;
         let required_deposit_cents = args.required_deposit_cents;
         let checkout_url = args.checkout_url;
+        let proposed_slot_id = args.proposed_slot_id;
+        let service_id = args.service_id;
 
         let quote_id = Uuid::new_v4();
 
@@ -46,7 +50,7 @@ impl PydanticToolExecutor<GenerateQuoteArgs> for GenerateQuoteExecutor {
             .map_err(|e| ToolError::LlmRecoverable(format!("Failed to begin transaction: {}", e)))?;
 
         sqlx::query(
-            "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
+            "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, proposed_slot_id, service_id, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, $7, $8, NOW(), NOW())"
         )
         .bind(quote_id)
         .bind(&tenant_id)
@@ -57,6 +61,8 @@ impl PydanticToolExecutor<GenerateQuoteArgs> for GenerateQuoteExecutor {
         .bind(total_amount_cents)
         .bind(required_deposit_cents)
         .bind(&checkout_url)
+        .bind(&proposed_slot_id)
+        .bind(&service_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| ToolError::LlmRecoverable(format!("DB insert quote failed: {}", e)))?;
@@ -101,6 +107,8 @@ pub fn generate_quote_tool() -> Tool {
                 "total_amount_cents": { "type": "integer" },
                 "required_deposit_cents": { "type": "integer" },
                 "checkout_url": { "type": "string" },
+                "proposed_slot_id": { "type": "string", "description": "Optional locked slot ID generated from booking_negotiate_time" },
+                "service_id": { "type": "string" },
                 "line_items": {
                     "type": "array",
                     "items": {

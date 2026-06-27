@@ -22,6 +22,18 @@ impl BookingStore {
 
 pub type SharedBookingStore = Arc<RwLock<BookingStore>>;
 
+use std::sync::OnceLock;
+static REDIS_CLIENT: OnceLock<redis::Client> = OnceLock::new();
+
+fn get_redis_client() -> Result<redis::Client, ToolError> {
+    let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+    // Only initialized once per process
+    let client = REDIS_CLIENT.get_or_init(|| {
+        redis::Client::open(url).unwrap_or_else(|_| redis::Client::open("redis://localhost:6379").unwrap())
+    });
+    Ok(client.clone())
+}
+
 #[derive(Deserialize)]
 pub struct BookingGetServicesArgs {
     pub tenant_id: String,
@@ -303,10 +315,35 @@ pub struct BookingNegotiateTimeExecutor {
 #[async_trait::async_trait]
 impl PydanticToolExecutor<BookingNegotiateTimeArgs> for BookingNegotiateTimeExecutor {
     async fn execute_typed(&self, args: BookingNegotiateTimeArgs) -> Result<String, ToolError> {
-        // Tentatively lock the time slot for a short period (e.g. 15 minutes) while negotiating.
-        // It's not a full booking, just a Redlock hold in Redis to avoid double booking during negotiation.
         let store = self.store.read().await;
         let pool = store.get_pool().await?;
+
+        // 1. Acquire Redis Redlock to prevent concurrent double-booking of the exact slot.
+        let redis_client = get_redis_client()?;
+        let mut redis_conn = redis_client.get_multiplexed_tokio_connection().await.map_err(|e| ToolError::Transient(e.to_string()))?;
+
+        let time_id = format!("{}_{}", args.service_id, args.start_time.timestamp());
+        let lock_key = format!("ohc:lock:{}:booking_slot:{}", args.tenant_id, time_id);
+        let lock_val = uuid::Uuid::new_v4().to_string();
+
+        // Lock for 15 minutes
+        let acquired: Option<String> = redis::cmd("SET")
+            .arg(&lock_key)
+            .arg(&lock_val)
+            .arg("NX")
+            .arg("EX")
+            .arg(900)
+            .query_async(&mut redis_conn)
+            .await
+            .map_err(|e| ToolError::Transient(format!("Redis lock failed: {}", e)))?;
+
+        if acquired.is_none() {
+            return Ok(json!({
+                "status": "error",
+                "message": "Time slot is currently locked by another negotiation. Please propose a different time."
+            }).to_string());
+        }
+
         let mut tx = pool.begin().await.map_err(|e| ToolError::Transient(e.to_string()))?;
         let _ = sqlx::query("SET app.current_tenant = $1")
             .bind(&args.tenant_id)
@@ -314,11 +351,11 @@ impl PydanticToolExecutor<BookingNegotiateTimeArgs> for BookingNegotiateTimeExec
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
-        // Assuming there is an external process or Redis lock logic that holds it, we simulate inserting a tentative state in ledger
-        let id = uuid::Uuid::new_v4().to_string();
+        // 2. Insert soft-locked record into booking_slots
+        let slot_id = uuid::Uuid::new_v4().to_string();
 
-        sqlx::query("INSERT INTO availability_ledger (id, tenant_id, product_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'TENTATIVE')")
-            .bind(&id)
+        sqlx::query("INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'soft_locked')")
+            .bind(&slot_id)
             .bind(&args.tenant_id)
             .bind(&args.service_id)
             .bind(args.start_time)
@@ -329,7 +366,11 @@ impl PydanticToolExecutor<BookingNegotiateTimeArgs> for BookingNegotiateTimeExec
 
         tx.commit().await.map_err(|e| ToolError::Transient(e.to_string()))?;
 
-        Ok(json!({ "status": "success", "message": "Time slot tentatively held for negotiation." }).to_string())
+        Ok(json!({
+            "status": "success",
+            "message": "Time slot tentatively held for negotiation.",
+            "proposed_slot_id": slot_id
+        }).to_string())
     }
 }
 

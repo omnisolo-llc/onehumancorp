@@ -624,3 +624,8 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('e2e-tenant', 'ohc_llm_cost_total_cents', 'gauge', 200000, '{"agent_id": "agent_test_high_usage"}', CURRENT_TIMESTAMP, 'PENDING');
+
+-- Seeding appointments for the field_ops test
+INSERT INTO appointments (id, tenant_id, customer_id, job_template_id, status, scheduled_start_time, scheduled_end_time, created_at, updated_at) VALUES
+('appt-e2e-1', 'e2e-tenant', '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', NULL, 'Quote Pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
