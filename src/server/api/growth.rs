@@ -1247,21 +1247,26 @@ async fn handle_affiliate_stats(
     let mut total_affiliates: i64 = 0;
     let mut total_commission_cents: i64 = 0;
 
-    let res_aff = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1")
-        .bind(&auth_info.org_id)
-        .fetch_one(&state.pool)
-        .await;
+    let (res_aff_join, res_comm_join) = tokio::join!(
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1")
+                .bind(&auth_info.org_id)
+                .fetch_one(&state.pool)
+                .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
+                .bind(&auth_info.org_id)
+                .fetch_one(&state.pool)
+                .await
+        }
+    );
 
-    if let Ok(count) = res_aff {
+    if let Ok(count) = res_aff_join {
         total_affiliates = count;
     }
 
-    let res_comm = sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
-        .bind(&auth_info.org_id)
-        .fetch_one(&state.pool)
-        .await;
-
-    if let Ok(sum) = res_comm {
+    if let Ok(sum) = res_comm_join {
         total_commission_cents = sum;
     }
 
@@ -3656,28 +3661,37 @@ async fn handle_reputation_stats(
 ) -> Result<Json<ReputationStatsResponse>, StatusCode> {
     let tenant_id = auth_info.org_id;
 
-    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+    let (rating_res, credits_res) = tokio::join!(
+        async {
+            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+            let res: (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+                .unwrap_or((0.0, 0));
+            tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            Ok::<_, StatusCode>(res)
+        },
+        async {
+            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+            let res: f64 = sqlx::query_scalar(
+                "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
+            )
+            .bind(&tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .unwrap_or(0.0);
+            tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            Ok::<_, StatusCode>(res)
+        }
+    );
 
-    let (average_rating, total_reviews): (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .unwrap_or((0.0, 0));
-
-    // Sum all ledger entries for this tenant where reason/direction indicates referral credit.
-    // Assuming credit adds to balance
-    let total_credits: f64 = sqlx::query_scalar(
-        "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
-    )
-    .bind(&tenant_id)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    .unwrap_or(0.0);
-
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let (average_rating, total_reviews) = rating_res?;
+    let total_credits = credits_res?;
 
     Ok(Json(ReputationStatsResponse {
         average_rating,
