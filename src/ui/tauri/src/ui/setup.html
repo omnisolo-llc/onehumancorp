@@ -1853,7 +1853,7 @@
           enterkeyhint="next"
         />
         <div id="name-error" class="error-msg" aria-live="polite">
-          Business Name must be at least 3 characters.
+          Business Name is required.
         </div>
 
         <input
@@ -2739,7 +2739,7 @@
 
       // Clear name error on typing if valid
       inputs.name.addEventListener("input", () => {
-        if (inputs.name.value.trim().length >= 3) {
+        if (inputs.name.value.trim().length > 0) {
           errors.name.style.display = "none";
           inputs.name.classList.remove("invalid-input");
         }
@@ -2998,7 +2998,7 @@
             state.categories = inputs.categories.value.trim();
           }
         } else if (stepId === "step-name") {
-          if (inputs.name.value.trim().length < 3) {
+          if (inputs.name.value.trim().length === 0) {
             errors.name.style.display = "block";
             inputs.name.classList.add("invalid-input");
             isValid = false;
