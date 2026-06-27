@@ -396,6 +396,7 @@ rust_library(
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:app_tonic",
+        "//src/proto:inventory_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:common_prost",
         "//src/proto:docs_prost",

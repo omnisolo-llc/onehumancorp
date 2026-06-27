@@ -135,6 +135,23 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("help-center-nav-btn".to_string(), "Open the Help Center for guides and support.".to_string());
     m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
 
+    m.insert("cart-recovery-tooltip".to_string(), "Recover abandoned carts with personalized AI follow-ups.".to_string());
+    m.insert("flash-sale-tooltip".to_string(), "Create high-converting flash sale countdown widgets.".to_string());
+    m.insert("pre-order-tooltip".to_string(), "Launch an omnichannel pre-order engine with tiered waitlist capabilities.".to_string());
+    m.insert("discount-code-tooltip".to_string(), "Create discount code widgets for your customers.".to_string());
+    m.insert("link-in-bio-tooltip".to_string(), "One link to rule them all. Drive social traffic to your store.".to_string());
+    m.insert("spin-to-win-tooltip".to_string(), "Create interactive discount wheels to capture emails.".to_string());
+    m.insert("trial-extension-tooltip".to_string(), "Share your setup on X to instantly unlock 7 extra days of Pro.".to_string());
+    m.insert("field-ops-tooltip".to_string(), "Offline-first mobile route management for field service workers.".to_string());
+    m.insert("my-plan-tooltip".to_string(), "Manage your subscription, usage, and billing.".to_string());
+    m.insert("proposal-draft-tooltip".to_string(), "Generate complex AI proposals instantly.".to_string());
+    m.insert("settings-widget-tooltip".to_string(), "Manage your account and preferences.".to_string());
+
+    m.insert("lead-capture-tooltip".to_string(), "Embed a smart lead capture form with a viral loop directly on your site.".to_string());
+    m.insert("quiz-generator-tooltip".to_string(), "Create AI-powered product recommendation quizzes to capture leads.".to_string());
+
+
+
     // Additional default tooltips for existing dashboard buttons
     m.insert("promoter-btn".to_string(), "Launch a new marketing campaign to grow your audience.".to_string());
     m.insert("share-savings-btn".to_string(), "Share your success to unlock 7 days of Pro.".to_string());
@@ -553,6 +570,9 @@ pub mod proto {
     }
     pub mod common {
         pub use ::server_ohc::common::*;
+    }
+    pub mod inventory {
+        pub use ::server_ohc::inventory::*;
     }
     pub mod app {
         pub use ::server_ohc::app::*;
@@ -7086,7 +7106,7 @@ async fn create_ui_bom_item_handler(
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
-        .add_service(::server_ohc::app::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
+        .add_service(::server_ohc::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))
 
         .serve(addr)
