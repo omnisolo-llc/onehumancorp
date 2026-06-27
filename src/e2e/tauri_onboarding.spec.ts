@@ -173,6 +173,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Step 5: Admin Setup
     await expect(page.getByRole('heading', { name: "Admin Credentials" })).toBeVisible();
+    await page.getByPlaceholder("Your Name (e.g. Maya)").fill("Test Admin");
     await page.getByPlaceholder("admin@mybusiness.com").fill("test@mybusiness.com");
     await page.getByPlaceholder("Password (min 8 chars)").fill("mypassword1");
     await page.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
@@ -264,6 +265,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Step 5: Admin Setup
     await expect(newPage.getByRole('heading', { name: "Admin Credentials" })).toBeVisible();
+    await newPage.getByPlaceholder("Your Name (e.g. Maya)").fill("Test Admin");
     await newPage.getByPlaceholder("admin@mybusiness.com").fill("test@mybusiness.com");
     await expect(newPage.getByPlaceholder("admin@mybusiness.com")).toHaveValue("test@mybusiness.com");
     await newPage.getByPlaceholder("Password (min 8 chars)").fill("mypassword1");
@@ -430,6 +432,11 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     await expect(container).toHaveCSS('backdrop-filter', 'blur(30px) saturate(2.1)');
     await expect(container).toHaveCSS('border-radius', '16px');
     await expect(container).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
+
+    // Check the Onboarding Welcome Card specifically
+    const welcomeCard = page.getByTestId('onboarding-welcome-card');
+    await expect(welcomeCard).toBeVisible();
+    await expect(welcomeCard).toHaveCSS('border-radius', '16px');
 
         // Check dark mode
     await page.emulateMedia({ colorScheme: 'dark' });
