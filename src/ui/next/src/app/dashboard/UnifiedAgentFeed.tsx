@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
 import { InstagramDMCard } from "./InstagramDMCard";
 import { AgentActionCard } from "../../components/feed/AgentActionCard";
+import { GroupedAgentActionCard } from "../../components/feed/GroupedAgentActionCard";
 
 type TriageItem = {
   id: string;
@@ -67,6 +68,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     "proposals",
   );
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
+
+  const groupedProposals = useMemo(() => {
+    const groups: Record<string, { groupKey: string; title: string; items: AgentFeedItem[] }> = {};
+    items.forEach(item => {
+      const featureType = item.proposed_action?.feature_type || item.context_payload?.feature_type || item.event_source || "unknown";
+      const actionType = item.proposed_action?.action_type || "default";
+      const key = `${featureType}-${actionType}`;
+      if (!groups[key]) {
+        groups[key] = {
+          groupKey: key,
+          title: featureType.replace(/_/g, " "),
+          items: []
+        };
+      }
+      groups[key].items.push(item);
+    });
+    return Object.values(groups);
+  }, [items]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
@@ -739,22 +758,45 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </div>
               </div>
             )}
-            {items.map((approval) => (
-              <AgentActionCard
-                key={approval.id}
-                approval={approval}
-                queuedActionIds={queuedActionIds}
-                editingId={editingId}
-                editContent={editContent}
-                editQuotePrice={editQuotePrice}
-                editQuoteScope={editQuoteScope}
-                setEditingId={setEditingId}
-                setEditContent={setEditContent}
-                setEditQuotePrice={setEditQuotePrice}
-                setEditQuoteScope={setEditQuoteScope}
-                handleDecision={handleDecision}
-              />
-            ))}
+            {groupedProposals.map((group) => {
+              if (group.items.length === 1) {
+                const approval = group.items[0];
+                return (
+                  <AgentActionCard
+                    key={approval.id}
+                    approval={approval}
+                    queuedActionIds={queuedActionIds}
+                    editingId={editingId}
+                    editContent={editContent}
+                    editQuotePrice={editQuotePrice}
+                    editQuoteScope={editQuoteScope}
+                    setEditingId={setEditingId}
+                    setEditContent={setEditContent}
+                    setEditQuotePrice={setEditQuotePrice}
+                    setEditQuoteScope={setEditQuoteScope}
+                    handleDecision={handleDecision}
+                  />
+                );
+              }
+              return (
+                <GroupedAgentActionCard
+                  key={group.groupKey}
+                  groupKey={group.groupKey}
+                  title={group.title}
+                  items={group.items}
+                  queuedActionIds={queuedActionIds}
+                  editingId={editingId}
+                  editContent={editContent}
+                  editQuotePrice={editQuotePrice}
+                  editQuoteScope={editQuoteScope}
+                  setEditingId={setEditingId}
+                  setEditContent={setEditContent}
+                  setEditQuotePrice={setEditQuotePrice}
+                  setEditQuoteScope={setEditQuoteScope}
+                  handleDecision={handleDecision}
+                />
+              );
+            })}
           </>
         )}
 
