@@ -1,5 +1,5 @@
-use ::server_ohc::app::inventory_sync_service_server::InventorySyncService;
-use ::server_ohc::app::{ReserveInventoryRequest, ReserveInventoryResponse, CommitInventoryRequest, CommitInventoryResponse};
+use ::server_ohc::inventory::inventory_sync_service_server::InventorySyncService;
+use ::server_ohc::inventory::{ReserveInventoryRequest, ReserveInventoryResponse, CommitInventoryRequest, CommitInventoryResponse};
 
 use tonic::{Request, Response, Status};
 
