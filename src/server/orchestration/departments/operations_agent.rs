@@ -23,6 +23,7 @@ impl Department for OperationsAgent {
             "tenant.order.created".to_string(),
             "tenant.order.updated".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
+            "tenant.booking.request_received".to_string(),
             "LowStockAlert".to_string(),
             "inventory.sync.conflict".to_string(),
             "tenant.inventory.updated".to_string(),
@@ -219,6 +220,46 @@ impl Department for OperationsAgent {
         };
 
         let action_description = match event.event_type.as_str() {
+            "tenant.booking.request_received" => {
+                let start_time = event.payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                let lock_key = format!("ohc:lock:{}:booking_slot:{}", event.tenant_id, start_time);
+
+                // Redlock the slot for 10 minutes to prevent double booking during quote generation
+                if let Some(redis_client) = crate::get_redis_client() {
+                    // Need to use async connection correctly but wait OperationsAgent handle_event is async!
+                    if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                        let acquired: bool = redis::cmd("SET")
+                            .arg(&lock_key)
+                            .arg("locked")
+                            .arg("NX")
+                            .arg("EX")
+                            .arg(600) // 10 minutes hold
+                            .query_async(&mut conn)
+                            .await
+                            .unwrap_or(false);
+
+                        if acquired {
+                            // We successfully locked it, let's dispatch the quote request to Sales
+                            let cs_event = DepartmentEvent {
+                                id: uuid::Uuid::new_v4().to_string(),
+                                tenant_id: event.tenant_id.clone(),
+                                event_type: "tenant.sales.quote_requested".to_string(),
+                                payload: event.payload.clone(),
+                            };
+                            let _ = self.orchestrator.dispatch_event(cs_event).await;
+                            return Ok(());
+                        } else {
+                            tracing::warn!("Failed to acquire lock for {}", lock_key);
+                            return Err("Double booking prevented".to_string());
+                        }
+                    } else {
+                        return Err("Failed to connect to Redis".to_string());
+                    }
+                } else {
+                    return Err("Redis not available".to_string());
+                }
+            },
+
             "tenant.order.created" => {
                 let notes = event.payload.get("notes").and_then(|v| v.as_str()).unwrap_or("");
                 if !notes.is_empty() {
