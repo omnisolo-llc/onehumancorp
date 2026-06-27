@@ -9,6 +9,7 @@ type AgentFeedItem = {
   tenant_id?: string;
   event_source: string;
   context_payload: any;
+  payload?: any;
   proposed_action: any;
   lifecycle_state: string;
   created_at: string;
@@ -64,7 +65,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
       data-testid={`triage-card-${approval.id}`}
     >
       <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#0066FF]/20 px-2 py-1 rounded-[8px]">
             Approval
           </span>
@@ -85,7 +86,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </span>
           )}
         </div>
-        <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1 tracking-wide">
+        <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1 tracking-wide break-words">
           {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" ?
             "Action Required: Approve Reply"
             : ((approval as any).description ||

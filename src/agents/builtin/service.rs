@@ -758,12 +758,12 @@ impl AgentServiceImpl {
             task_store,
             mailbox,
             working_dir,
-            memory_accessor,
+            memory_accessor.clone(),
             observation_store,
         );
 
         // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool());
+        tools.push(crate::tools::create_skill::create_skill_tool(memory_accessor));
 
         if !department.is_empty()
             && let Ok(dep) = Department::from_str(department)
