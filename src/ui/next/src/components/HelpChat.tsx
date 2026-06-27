@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
+import { WalkthroughTarget } from "./Walkthrough";
 
 type Message = {
   id: string;
@@ -171,19 +172,21 @@ export function HelpChat() {
       {/* Floating Button */}
       <div className="fixed bottom-24 right-6 z-[9999] pointer-events-auto">
         {!isOpen && (
-          <button
-            id="ai-chat-trigger"
-            onClick={() => setIsOpen(true)}
-            className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
-            aria-label="Open help chat"
-            aria-expanded={isOpen}
-            aria-controls="ai-chat-interface"
-          >
-            <span className="text-xl">✨</span>
-            <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">
-              Ask anything
-            </span>
-          </button>
+          <WalkthroughTarget id="ai-chat-trigger">
+            <button
+              id="ai-chat-trigger-btn"
+              onClick={() => setIsOpen(true)}
+              className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
+              aria-label="Open help chat"
+              aria-expanded={isOpen}
+              aria-controls="ai-chat-interface"
+            >
+              <span className="text-xl">✨</span>
+              <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">
+                Ask anything
+              </span>
+            </button>
+          </WalkthroughTarget>
         )}
       </div>
 
