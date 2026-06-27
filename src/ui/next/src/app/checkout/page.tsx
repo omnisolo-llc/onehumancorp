@@ -161,6 +161,11 @@ function CheckoutContent() {
       }
 
       const data = await response.json();
+      if (data.error_message && data.error_message.includes("sold out")) {
+        setCheckoutStatus("Oops! Item just sold out.");
+        setIsProcessing(false);
+        return;
+      }
       if (!response.ok || !data.checkout_url) {
         throw new Error(
           data.message || data.error || "Failed to create checkout session",

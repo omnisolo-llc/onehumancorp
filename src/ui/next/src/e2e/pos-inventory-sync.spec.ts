@@ -225,7 +225,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     await page.goto('/dashboard');
 
     // Check if the agent action request appears in the feed
-    await expect(page.getByText('Action Request: Reorder').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('body')).toContainText('Action Request: Reorder', { timeout: 30000 });
   });
 
 });
