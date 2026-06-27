@@ -212,14 +212,14 @@ SET title = EXCLUDED.title,
     metadata = EXCLUDED.metadata,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO orders (id, tenant_id, customer_id, total_amount, status)
+INSERT INTO orders (id, tenant_id, customer_id, total_amount_cents, status)
 VALUES
   ('e2e-order-1', 'e2e-tenant', 'e2e-customer-ava', 39.99, 'ready'),
   ('e2e-order-2', 'e2e-tenant', 'e2e-customer-ben', 75.00, 'pending'),
   ('e2e-order-abandoned-1', 'e2e-tenant', 'e2e-customer-ben', 100.00, 'abandoned')
 ON CONFLICT (id) DO UPDATE
 SET customer_id = EXCLUDED.customer_id,
-    total_amount = EXCLUDED.total_amount,
+    total_amount_cents = EXCLUDED.total_amount_cents,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
@@ -535,7 +535,7 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
-INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES
+INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES
 ('823e4567-e89b-12d3-a456-426614174000', 'e2e-tenant', '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', 'DRAFT', 15000, 5000, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 

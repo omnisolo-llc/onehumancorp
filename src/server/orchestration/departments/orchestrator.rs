@@ -1039,7 +1039,7 @@ pub async fn execute_action(
                         let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
                         if let DbStore::Postgres = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
@@ -1113,7 +1113,7 @@ pub async fn execute_action(
                                 }
                             }
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount_cents, required_deposit_cents, expires_at, stripe_payment_link) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
@@ -1942,7 +1942,7 @@ pub async fn execute_action(
     pub async fn get_order(&self, tenant_id: &str, order_id: &str) -> Result<Option<(String, f64)>, String> {
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                let row = sqlx::query("SELECT customer_id, total_amount FROM orders WHERE tenant_id = $1 AND id = $2")
+                let row = sqlx::query("SELECT customer_id, total_amount_cents FROM orders WHERE tenant_id = $1 AND id = $2")
                     .bind(tenant_id)
                     .bind(order_id)
                     .fetch_optional(&self.db.pool)
@@ -1950,13 +1950,13 @@ pub async fn execute_action(
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
-                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
+                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount_cents"))))
                 } else {
                     Ok(None)
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT customer_id, total_amount FROM orders WHERE tenant_id = ? AND id = ?")
+                let row = sqlx::query("SELECT customer_id, total_amount_cents FROM orders WHERE tenant_id = ? AND id = ?")
                     .bind(tenant_id)
                     .bind(order_id)
                     .fetch_optional(pool)
@@ -1964,7 +1964,7 @@ pub async fn execute_action(
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
-                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
+                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount_cents"))))
                 } else {
                     Ok(None)
                 }

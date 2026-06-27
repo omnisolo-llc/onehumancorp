@@ -1386,16 +1386,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
               <button
                 onClick={() => {
-                  setEditingId(approval.id);
-                  setEditQuotePrice(
-                    (
-                      approval.proposed_action || approval.context_payload
-                    )?.suggested_price?.toString() || "",
-                  );
-                  setEditQuoteScope(
-                    (approval.proposed_action || approval.context_payload)
-                      ?.scope || "",
-                  );
+                  window.location.href = `/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`;
                 }}
                 className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit Draft"
