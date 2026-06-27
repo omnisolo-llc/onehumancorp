@@ -28,11 +28,6 @@ export async function POST(req: Request, context: ConnectContext) {
 
     const targetId = id === 'whatsapp' ? 'twilio' : encodeURIComponent(id);
 
-    if (id === 'whatsapp_cloud_api') {
-      return NextResponse.json({ success: true, message: 'WhatsApp Cloud API connected' });
-    }
-
-    if (id === "whatsapp") { return NextResponse.json({ success: true, message: "Twilio WhatsApp connected successfully" }); }
     const res = await fetch(`${backendUrl}/api/integrations/${targetId}/connect`, {
       method: "POST",
       headers,
