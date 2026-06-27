@@ -66,10 +66,12 @@ mod tests {
     use std::env;
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_process_event() {
-        let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = PgPool::connect(&database_url).await.unwrap();
+        unsafe { std::env::set_var("OHC_DATABASE_URL", "sqlite::memory:"); }
+        let db = crate::db::DB::new().await.unwrap();
+        let pool = db.pool.clone();
+        unsafe { std::env::set_var("OHC_LLM_PROVIDER", "minimax"); }
         let service = AgentFeedService::new(pool);
 
         let payload = serde_json::json!({

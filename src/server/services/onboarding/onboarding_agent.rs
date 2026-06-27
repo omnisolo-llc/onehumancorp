@@ -2918,7 +2918,7 @@ mod tests {
     use ::server_ohc::orchestration::StartOnboardingRequest;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
-        let _ = std::env::var("OHC_DATABASE_URL").ok()?;
+        unsafe { std::env::set_var("OHC_DATABASE_URL", "sqlite::memory:"); }
         unsafe {
             std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
         }
@@ -2928,6 +2928,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_invalidation_on_save() {
+        std::env::set_var("OHC_MINIMAX_API_KEY", "dummy");
+        std::env::set_var("OHC_LLM_PROVIDER", "minimax");
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -2976,6 +2978,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_start_onboarding_online_store() {
+        std::env::set_var("OHC_MINIMAX_API_KEY", "dummy");
+        std::env::set_var("OHC_LLM_PROVIDER", "minimax");
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -3045,6 +3049,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_intake_and_variants() {
+        std::env::set_var("OHC_MINIMAX_API_KEY", "dummy");
+        std::env::set_var("OHC_LLM_PROVIDER", "minimax");
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -3137,6 +3143,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_intake() {
+        std::env::set_var("OHC_MINIMAX_API_KEY", "dummy");
+        std::env::set_var("OHC_LLM_PROVIDER", "minimax");
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -3195,6 +3203,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_start_onboarding_service_and_food_cart() {
+        std::env::set_var("OHC_MINIMAX_API_KEY", "dummy");
+        std::env::set_var("OHC_LLM_PROVIDER", "minimax");
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -3282,6 +3292,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_onboarding_state_caching() {
+        std::env::set_var("OHC_MINIMAX_API_KEY", "dummy");
+        std::env::set_var("OHC_LLM_PROVIDER", "minimax");
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,
@@ -3330,6 +3342,8 @@ mod tests {
     #[tokio::test]
     async fn test_generate_initial_products_personas() {
         use sqlx::Row;
+        std::env::set_var("OHC_MINIMAX_API_KEY", "dummy");
+        std::env::set_var("OHC_LLM_PROVIDER", "minimax");
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,

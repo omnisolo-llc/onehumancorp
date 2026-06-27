@@ -491,7 +491,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+
     async fn live_minimax_five_agent_workspace_collaborates() {
         let workspace = minimax_agent_workspace_from_env()
             .expect("MINIMAX_API_KEY must be set for the live Minimax workspace test")
