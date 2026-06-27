@@ -135,6 +135,23 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("help-center-nav-btn".to_string(), "Open the Help Center for guides and support.".to_string());
     m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
 
+    m.insert("cart-recovery-tooltip".to_string(), "Recover abandoned carts with personalized AI follow-ups.".to_string());
+    m.insert("flash-sale-tooltip".to_string(), "Create high-converting flash sale countdown widgets.".to_string());
+    m.insert("pre-order-tooltip".to_string(), "Launch an omnichannel pre-order engine with tiered waitlist capabilities.".to_string());
+    m.insert("discount-code-tooltip".to_string(), "Create discount code widgets for your customers.".to_string());
+    m.insert("link-in-bio-tooltip".to_string(), "One link to rule them all. Drive social traffic to your store.".to_string());
+    m.insert("spin-to-win-tooltip".to_string(), "Create interactive discount wheels to capture emails.".to_string());
+    m.insert("trial-extension-tooltip".to_string(), "Share your setup on X to instantly unlock 7 extra days of Pro.".to_string());
+    m.insert("field-ops-tooltip".to_string(), "Offline-first mobile route management for field service workers.".to_string());
+    m.insert("my-plan-tooltip".to_string(), "Manage your subscription, usage, and billing.".to_string());
+    m.insert("proposal-draft-tooltip".to_string(), "Generate complex AI proposals instantly.".to_string());
+    m.insert("settings-widget-tooltip".to_string(), "Manage your account and preferences.".to_string());
+
+    m.insert("lead-capture-tooltip".to_string(), "Embed a smart lead capture form with a viral loop directly on your site.".to_string());
+    m.insert("quiz-generator-tooltip".to_string(), "Create AI-powered product recommendation quizzes to capture leads.".to_string());
+
+
+
     // Additional default tooltips for existing dashboard buttons
     m.insert("promoter-btn".to_string(), "Launch a new marketing campaign to grow your audience.".to_string());
     m.insert("share-savings-btn".to_string(), "Share your success to unlock 7 days of Pro.".to_string());
