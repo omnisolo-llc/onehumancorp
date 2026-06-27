@@ -57,7 +57,7 @@ pub async fn handle_omnichannel_webhook(
 
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query(
+            let res = sqlx::query(
                 r#"
                 INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, customer_id, created_at)
                 VALUES ($1, $2, $3, $4, $5, 'unread', $6, $7, NOW())
@@ -71,10 +71,32 @@ pub async fn handle_omnichannel_webhook(
             .bind(&payload.sender_id)
             .bind(&customer_id)
             .execute(pool)
-            .await.map(|_| ())
+            .await;
+
+            if res.is_ok() {
+                if let Err(e) = sqlx::query(
+                    r#"
+                    INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, '', 'unread', $7, $8, NOW())
+                    "#
+                )
+                .bind(&id)
+                .bind(&payload.tenant_id)
+                .bind(&payload.source)
+                .bind(&payload.message)
+                .bind(&payload.message)
+                .bind(&_target_language)
+                .bind(&payload.sender_id)
+                .bind(&customer_id)
+                .execute(pool)
+                .await {
+                    tracing::error!("Failed to insert omni_inbox_messages: {}", e);
+                }
+            }
+            res.map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query(
+            let res = sqlx::query(
                 r#"
                 INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, customer_id, created_at)
                 VALUES (?, ?, ?, ?, ?, 'unread', ?, ?, CURRENT_TIMESTAMP)
@@ -88,7 +110,29 @@ pub async fn handle_omnichannel_webhook(
             .bind(&payload.sender_id)
             .bind(&customer_id)
             .execute(sqlite_pool)
-            .await.map(|_| ())
+            .await;
+
+            if res.is_ok() {
+                if let Err(e) = sqlx::query(
+                    r#"
+                    INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, '', 'unread', ?, ?, CURRENT_TIMESTAMP)
+                    "#
+                )
+                .bind(&id)
+                .bind(&payload.tenant_id)
+                .bind(&payload.source)
+                .bind(&payload.message)
+                .bind(&payload.message)
+                .bind(&_target_language)
+                .bind(&payload.sender_id)
+                .bind(&customer_id)
+                .execute(sqlite_pool)
+                .await {
+                    tracing::error!("Failed to insert omni_inbox_messages (SQLite): {}", e);
+                }
+            }
+            res.map(|_| ())
         }
     };
 
