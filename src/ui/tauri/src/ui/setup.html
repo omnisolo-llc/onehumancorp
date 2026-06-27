@@ -3622,13 +3622,13 @@
                 catalogEl.querySelector(".loading-dot").style.background =
                   "#0066FF";
               }
-              await new Promise((r) => setTimeout(r, 1000));
+
               if (storefrontEl) {
                 storefrontEl.style.opacity = "1";
                 storefrontEl.querySelector(".loading-dot").style.background =
                   "#0066FF";
               }
-              await new Promise((r) => setTimeout(r, 1000));
+
 
               if (startData && startData.organization_id) {
                 localStorage.setItem("tenant_id", startData.organization_id);
