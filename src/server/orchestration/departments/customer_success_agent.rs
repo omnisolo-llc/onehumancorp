@@ -36,6 +36,7 @@ impl Department for CustomerSuccessAgent {
             "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
             "tenant.subscription.check_predictive_restock".to_string(),
+            "tenant.subscription.action.requested".to_string(),
         ]
     }
 
@@ -54,6 +55,34 @@ impl Department for CustomerSuccessAgent {
         if event.event_type == "agent:customer_success:approved" {
             let payload = &event.payload;
             let original = payload.get("original_payload");
+
+            if let Some(orig) = original {
+                if orig.get("action_type").and_then(|v| v.as_str()) == Some("Execute Subscription Update") {
+                    let customer_id = orig.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                    let action = orig.get("action").and_then(|v| v.as_str()).unwrap_or("");
+                    tracing::info!("EXECUTING APPROVED DRAFT: Modifying subscription {} for customer: {}", action, customer_id);
+
+                    // The actual state mutation would happen here via API call to subscription.rs logic
+                    // or direct db mutation if we had a direct service dependency. We mock it for now
+                    // as part of the agent's side effect.
+                    let pool = crate::db::get_pool();
+                    let update = match action {
+                        "pause" => sqlx::query("UPDATE subscriptions SET status = 'paused' WHERE customer_id = $1 AND tenant_id = $2 AND status = 'active'").bind(customer_id).bind(&event.tenant_id).execute(&pool).await,
+                        "cancel" => sqlx::query("UPDATE subscriptions SET status = 'canceled' WHERE customer_id = $1 AND tenant_id = $2 AND status != 'canceled'").bind(customer_id).bind(&event.tenant_id).execute(&pool).await,
+                        "skip" => sqlx::query("UPDATE subscriptions SET current_period_end = current_period_end + interval '1 month' WHERE customer_id = $1 AND tenant_id = $2").bind(customer_id).bind(&event.tenant_id).execute(&pool).await,
+                        _ => Ok(sqlx::postgres::PgQueryResult::default()),
+                    };
+
+                    if update.is_ok() {
+                        tracing::info!("Successfully updated subscription for customer {}", customer_id);
+                    } else {
+                        tracing::error!("Failed to update subscription for customer {}", customer_id);
+                    }
+
+                    return Ok(());
+                }
+            }
+
             let message = if let Some(orig) = original {
                 orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response")
             } else {
@@ -234,11 +263,62 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
+        if event.event_type == "tenant.subscription.action.requested" {
+            let action = event.payload.get("action").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            tracing::info!("Ambassador agent received subscription action: {} for customer: {}", action, customer_id);
+
+            // Mock updating subscription action
+            let proposed_action = serde_json::json!({
+                "action_type": "Execute Subscription Update",
+                "customer_id": customer_id,
+                "action": action
+            });
+
+            self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                "Execute Subscription Update".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                proposed_action,
+            ).await.map_err(|e| e.to_string())?;
+
+            return Ok(());
+        }
+
         if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let message = event.payload.get("original_message")
                 .or_else(|| event.payload.get("message"))
                 .or_else(|| event.payload.get("content"))
                 .and_then(|v| v.as_str()).unwrap_or("");
+
+            // Check for subscription modification intents
+            let msg_lower = message.to_lowercase();
+            if msg_lower.contains("skip") || msg_lower.contains("pause") || msg_lower.contains("cancel") {
+                if msg_lower.contains("subscription") || msg_lower.contains("delivery") {
+                    let action = if msg_lower.contains("skip") { "skip" } else if msg_lower.contains("pause") { "pause" } else { "cancel" };
+                    tracing::info!("Ambassador parsed subscription intent: {} from message: {}", action, message);
+                    let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                    let proposed_action = serde_json::json!({
+                        "action_type": "Execute Subscription Update",
+                        "customer_id": customer_id,
+                        "action": action
+                    });
+
+                    let risk_level = if action == "cancel" { ActionRisk::DraftForReview } else { ActionRisk::AutoExecute };
+
+                    self.orchestrator.execute_action(
+                        DepartmentType::CustomerSuccess,
+                        "Execute Subscription Update".to_string(),
+                        event.tenant_id.clone(),
+                        risk_level,
+                        proposed_action,
+                    ).await.map_err(|e| e.to_string())?;
+
+                    return Ok(());
+                }
+            }
             let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
             let payload_customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");

@@ -9,6 +9,7 @@ type AgentFeedItem = {
   tenant_id?: string;
   event_source: string;
   context_payload: any;
+  payload?: any;
   proposed_action: any;
   lifecycle_state: string;
   created_at: string;

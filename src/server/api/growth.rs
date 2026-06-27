@@ -1247,21 +1247,26 @@ async fn handle_affiliate_stats(
     let mut total_affiliates: i64 = 0;
     let mut total_commission_cents: i64 = 0;
 
-    let res_aff = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1")
-        .bind(&auth_info.org_id)
-        .fetch_one(&state.pool)
-        .await;
+    let (res_aff_join, res_comm_join) = tokio::join!(
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1")
+                .bind(&auth_info.org_id)
+                .fetch_one(&state.pool)
+                .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
+                .bind(&auth_info.org_id)
+                .fetch_one(&state.pool)
+                .await
+        }
+    );
 
-    if let Ok(count) = res_aff {
+    if let Ok(count) = res_aff_join {
         total_affiliates = count;
     }
 
-    let res_comm = sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
-        .bind(&auth_info.org_id)
-        .fetch_one(&state.pool)
-        .await;
-
-    if let Ok(sum) = res_comm {
+    if let Ok(sum) = res_comm_join {
         total_commission_cents = sum;
     }
 
@@ -1909,10 +1914,28 @@ async fn handle_check_milestones(
             reached: reached_types.contains(&"revenue_1k".to_string()),
         },
         Milestone {
+            id: "50th_order".to_string(),
+            title: "🔥 50th Order!".to_string(),
+            description: "You've successfully processed your 50th order on OHC.".to_string(),
+            reached: reached_types.contains(&"50th_order".to_string()),
+        },
+        Milestone {
             id: "100_orders".to_string(),
             title: "📦 Century of Orders".to_string(),
             description: "You've successfully fulfilled 100 orders on OHC!".to_string(),
             reached: reached_types.contains(&"100_orders".to_string()),
+        },
+        Milestone {
+            id: "1000_orders".to_string(),
+            title: "👑 1,000 Orders!".to_string(),
+            description: "A monumental achievement! 1,000 orders fulfilled on OHC!".to_string(),
+            reached: reached_types.contains(&"1000_orders".to_string()),
+        },
+        Milestone {
+            id: "revenue_10k".to_string(),
+            title: "💎 Five-Figure Club".to_string(),
+            description: "Your business has surpassed $10,000 in total revenue!".to_string(),
+            reached: reached_types.contains(&"revenue_10k".to_string()),
         },
     ];
     Json(MilestonesResponse { milestones })
@@ -1955,8 +1978,14 @@ async fn handle_get_milestone(
 
         if types.contains(&"revenue_100k".to_string()) {
             best_milestone_id = "revenue_100k".to_string();
+        } else if types.contains(&"1000_orders".to_string()) {
+            best_milestone_id = "1000_orders".to_string();
+        } else if types.contains(&"revenue_10k".to_string()) {
+            best_milestone_id = "revenue_10k".to_string();
         } else if types.contains(&"100_orders".to_string()) {
             best_milestone_id = "100_orders".to_string();
+        } else if types.contains(&"50th_order".to_string()) {
+            best_milestone_id = "50th_order".to_string();
         } else if types.contains(&"revenue_1k".to_string()) {
             best_milestone_id = "revenue_1k".to_string();
         } else if types.contains(&"10th_order".to_string()) {
@@ -1977,11 +2006,29 @@ async fn handle_get_milestone(
             "I just hit $100k in revenue running my business on OHC! 🚀",
             "$500 Credit"
         ),
+        "1000_orders" => (
+            "1,000th Order Delivered! 👑",
+            "An incredible milestone! Share your success to unlock $100 in credits.",
+            "I just hit my 1,000th order using OHC to run my business! 🚀",
+            "$100 Credit"
+        ),
+        "revenue_10k" => (
+            "Five-Figure Club! 💎",
+            "You crossed $10k in revenue. Share to unlock $75 in credits.",
+            "I just hit $10k in revenue running my business on OHC! 🚀",
+            "$75 Credit"
+        ),
         "100_orders" => (
             "100th Order Delivered! 🎉",
             "You're growing fast. Share your success to unlock $50 in OHC credits.",
             "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
             "$50 Credit"
+        ),
+        "50th_order" => (
+            "50th Order! 🔥",
+            "You're halfway to 100! Share your success to unlock $30 in OHC credits.",
+            "I just hit my 50th order using OHC! 🚀",
+            "$30 Credit"
         ),
         "revenue_1k" => (
             "Four-Figure Club! 💰",
@@ -2067,10 +2114,13 @@ async fn handle_get_milestone_card(
     let (title, sub, icon, grad_start, grad_end) = match milestone_id {
         "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
         "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
+        "50th_order" => ("50th Order!", "Halfway to 100", "🔥", "#ff9a9e", "#fecfef"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
         "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
         "revenue_1k" => ("Four-Figure Club", "Crossed $1k in Revenue!", "💰", "#f43f5e", "#fb923c"),
+        "revenue_10k" => ("Five-Figure Club", "Crossed $10k in Revenue!", "💎", "#a18cd1", "#fbc2eb"),
         "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
+        "1000_orders" => ("1,000 Orders!", "A monumental achievement", "👑", "#f6d365", "#fda085"),
         _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
@@ -3611,28 +3661,37 @@ async fn handle_reputation_stats(
 ) -> Result<Json<ReputationStatsResponse>, StatusCode> {
     let tenant_id = auth_info.org_id;
 
-    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+    let (rating_res, credits_res) = tokio::join!(
+        async {
+            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+            let res: (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+                .unwrap_or((0.0, 0));
+            tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            Ok::<_, StatusCode>(res)
+        },
+        async {
+            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+            let res: f64 = sqlx::query_scalar(
+                "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
+            )
+            .bind(&tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .unwrap_or(0.0);
+            tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            Ok::<_, StatusCode>(res)
+        }
+    );
 
-    let (average_rating, total_reviews): (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .unwrap_or((0.0, 0));
-
-    // Sum all ledger entries for this tenant where reason/direction indicates referral credit.
-    // Assuming credit adds to balance
-    let total_credits: f64 = sqlx::query_scalar(
-        "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
-    )
-    .bind(&tenant_id)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    .unwrap_or(0.0);
-
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let (average_rating, total_reviews) = rating_res?;
+    let total_credits = credits_res?;
 
     Ok(Json(ReputationStatsResponse {
         average_rating,
