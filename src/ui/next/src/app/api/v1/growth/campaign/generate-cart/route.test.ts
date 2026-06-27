@@ -98,10 +98,7 @@ describe('POST /api/v1/growth/campaign/generate-cart', () => {
         const response = await POST(req);
         const data = await response.json();
 
-        expect(response.status).toBe(200); // We return 200 with fallback data
-        expect(data.draft).toContain('Subject: We saved your cart!');
-        expect(data.draft).toContain('My Store');
-        expect(data.draft).toContain('⚡ Powered by OHC');
+        expect(response.status).toBe(502);
     });
 
     it('falls back gracefully if fetch throws an exception (network error)', async () => {
@@ -116,8 +113,6 @@ describe('POST /api/v1/growth/campaign/generate-cart', () => {
         const response = await POST(req);
         const data = await response.json();
 
-        expect(response.status).toBe(200); // We return 200 with fallback data
-        expect(data.draft).toContain('Subject: We saved your cart!');
-        expect(data.draft).toContain('⚡ Powered by OHC');
+        expect(response.status).toBe(502);
     });
 });

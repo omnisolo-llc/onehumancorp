@@ -31,13 +31,5 @@ export async function POST(request: Request) {
   } catch (error) {
     if (process.env.NODE_ENV !== "test") console.error("Error generating affiliate link:", error);
 
-    // Fallback for tests
-    return NextResponse.json(
-        {
-          affiliate_link: `https://ohc.store/ref/fallback`,
-          affiliate_code: 'fallback'
-        },
-        { status: 200 }
-    );
-  }
+    return NextResponse.json({ error: "Network error" }, { status: 502 }); }
 }

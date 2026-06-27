@@ -34,29 +34,10 @@ export async function POST(request: Request) {
       })
     });
 
-    if (!backendRes.ok) {
-      if (process.env.NODE_ENV !== "test") console.warn(`Backend API warn: ${backendRes.status} ${backendRes.statusText}`);
-      // Fallback for demo purposes if backend is not available
-      return NextResponse.json({
-        success: true,
-        position: 42,
-        referral_link: `https://ohc.app/waitlist?ref=${safeTenantId}`
-      });
-    }
+    if (!backendRes.ok) { return NextResponse.json({ error: "Backend error" }, { status: 502 }); }
 
     const data = await backendRes.json();
     return NextResponse.json(data);
 
-  } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.warn("Warn submitting waitlist:", error);
-    // Fallback for demo purposes if network error
-    return NextResponse.json(
-        {
-          success: true,
-          position: 42,
-          referral_link: `https://ohc.app/waitlist?ref=demo-fallback`
-        },
-        { status: 200 } // Returning 200 with fallback so UI doesn't break during tests without backend
-    );
-  }
+  } catch (error) { return NextResponse.json({ error: "Network error" }, { status: 502 }); }
 }

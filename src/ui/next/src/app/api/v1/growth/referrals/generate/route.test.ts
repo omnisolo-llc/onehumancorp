@@ -91,9 +91,7 @@ describe('POST /api/v1/growth/referrals/generate', () => {
         const response = await POST(req);
         const data = await response.json();
 
-        expect(response.status).toBe(200); // Should still return 200 to UI with fallback data
-        expect(data.referral_link).toBe('https://ohc.app/invite?ref=my-store');
-        expect(data.message).toContain('https://ohc.app/invite?ref=my-store');
+        expect(response.status).toBe(502);
     });
 
     it('falls back gracefully if fetch throws an exception (network error)', async () => {
@@ -109,7 +107,6 @@ describe('POST /api/v1/growth/referrals/generate', () => {
         const response = await POST(req);
         const data = await response.json();
 
-        expect(response.status).toBe(200);
-        expect(data.referral_link).toBe('https://ohc.app/invite?ref=demo-fallback');
+        expect(response.status).toBe(502);
     });
 });
