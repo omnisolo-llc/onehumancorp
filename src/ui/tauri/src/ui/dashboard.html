@@ -650,6 +650,14 @@
       </div>
       <div class="subtitle" style="margin-top: 5px;" id="welcome-message">Welcome back.</div>
 
+      <!-- Pending Assistant Work Section -->
+      <div id="pending-assistant-work-container" style="display: none; width: 100%; margin-bottom: 24px;">
+        <h2 style="font-size: 16px; margin-bottom: 12px; text-align: left; padding-left: 8px;">Pending Assistant Work</h2>
+        <div id="pending-assistant-work-list" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Items will be populated here by JS -->
+        </div>
+      </div>
+
       <div class="subtitle" style="margin-top: 5px;">Your agents are working on your behalf.</div>
 
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;">
@@ -1379,6 +1387,150 @@
             }
           });
         }
+
+        let isFetchingPendingJobs = false;
+        async function fetchPendingAssistantWork() {
+          if (isFetchingPendingJobs) return;
+          isFetchingPendingJobs = true;
+          try {
+            let url = '/api/v1/jobs';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/v1/jobs';
+            }
+            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
+            const response = await fetch(url, {
+              headers: {
+                'authorization': `Bearer ${localStorage.getItem('ohc_token')}`,
+                'x-spiffe-id': `spiffe://ohc/org/${tenantId}/agent/ui`,
+                'x-tenant-id': tenantId
+              }
+            });
+
+            if (!response.ok) {
+              console.error('Failed to fetch pending assistant work');
+              return;
+            }
+
+            const data = await response.json();
+            const jobs = data.jobs || [];
+
+            const container = document.getElementById("pending-assistant-work-container");
+            const list = document.getElementById("pending-assistant-work-list");
+
+            list.innerHTML = "";
+
+            if (jobs.length > 0) {
+              container.style.display = "block";
+
+              jobs.forEach(job => {
+                const card = document.createElement("div");
+                card.className = "app-card";
+                card.style.padding = "16px";
+                card.style.display = "flex";
+                card.style.flexDirection = "column";
+                card.style.gap = "8px";
+                card.style.textAlign = "left";
+                card.style.position = "relative";
+                card.style.overflow = "hidden";
+                card.style.background = "rgba(255, 255, 255, 0.65)";
+                card.style.backdropFilter = "blur(30px) saturate(210%)";
+                card.style.border = "1px solid rgba(255, 255, 255, 0.4)";
+                card.style.borderRadius = "16px";
+
+                const titleRow = document.createElement("div");
+                titleRow.style.display = "flex";
+                titleRow.style.justifyContent = "space-between";
+                titleRow.style.alignItems = "center";
+
+                const title = document.createElement("span");
+                title.style.fontWeight = "600";
+                title.style.fontSize = "14px";
+
+                // Format the job title based on job_type
+                let displayTitle = job.job_type;
+                if (displayTitle === "message_triage") displayTitle = "Drafting reply...";
+                else if (displayTitle.includes("sync")) displayTitle = "Syncing inventory...";
+                else if (displayTitle === "analysis") displayTitle = "Analysis in progress...";
+                title.innerText = displayTitle;
+
+                const statusBadge = document.createElement("span");
+                statusBadge.style.fontSize = "10px";
+                statusBadge.style.padding = "2px 6px";
+                statusBadge.style.borderRadius = "4px";
+                statusBadge.style.fontWeight = "bold";
+                statusBadge.innerText = job.status;
+
+                if (job.status === 'PENDING' || job.status === 'PROCESSING') {
+                  statusBadge.style.backgroundColor = "#fffbeb";
+                  statusBadge.style.color = "#b45309";
+                } else if (job.status === 'COMPLETED') {
+                  statusBadge.style.backgroundColor = "#f0fdf4";
+                  statusBadge.style.color = "#15803d";
+                } else {
+                  statusBadge.style.backgroundColor = "#fef2f2";
+                  statusBadge.style.color = "#b91c1c";
+                }
+
+                titleRow.appendChild(title);
+                titleRow.appendChild(statusBadge);
+
+                // Add a simple animated progress bar for pending/processing jobs
+                const progressContainer = document.createElement("div");
+                progressContainer.style.width = "100%";
+                progressContainer.style.height = "4px";
+                progressContainer.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
+                progressContainer.style.borderRadius = "2px";
+                progressContainer.style.overflow = "hidden";
+                progressContainer.style.marginTop = "4px";
+
+                if (job.status === 'PENDING' || job.status === 'PROCESSING') {
+                  const progressBar = document.createElement("div");
+                  progressBar.style.width = "30%";
+                  progressBar.style.height = "100%";
+                  progressBar.style.backgroundColor = "#0066FF";
+                  progressBar.style.borderRadius = "2px";
+                  progressBar.style.animation = "indeterminateProgress 1.5s infinite linear";
+
+                  // Add keyframes inline for simplicity
+                  if (!document.getElementById("progress-keyframes")) {
+                    const style = document.createElement("style");
+                    style.id = "progress-keyframes";
+                    style.innerHTML = `
+                      @keyframes indeterminateProgress {
+                        0% { transform: translateX(-100%); width: 30%; }
+                        50% { width: 50%; }
+                        100% { transform: translateX(350%); width: 30%; }
+                      }
+                    `;
+                    document.head.appendChild(style);
+                  }
+
+                  progressContainer.appendChild(progressBar);
+                } else if (job.status === 'COMPLETED') {
+                  const progressBar = document.createElement("div");
+                  progressBar.style.width = "100%";
+                  progressBar.style.height = "100%";
+                  progressBar.style.backgroundColor = "#15803d";
+                  progressContainer.appendChild(progressBar);
+                }
+
+                card.appendChild(titleRow);
+                card.appendChild(progressContainer);
+
+                list.appendChild(card);
+              });
+            } else {
+              container.style.display = "none";
+            }
+          } catch (e) {
+            console.error('Error fetching pending assistant work:', e);
+          } finally {
+            isFetchingPendingJobs = false;
+          }
+        }
+
+        fetchPendingAssistantWork();
+        setInterval(fetchPendingAssistantWork, 5000);
       });
       const name = localStorage.getItem('businessName');
       if (name) {

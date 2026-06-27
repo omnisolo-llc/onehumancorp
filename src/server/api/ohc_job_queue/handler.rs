@@ -1,16 +1,14 @@
-use axum::{extract::State, routing::get, Json, Router};
-use std::sync::Arc;
+use axum::{routing::get, Json, Router};
 use serde_json::json;
 
 use crate::db;
 
-pub fn router() -> Router<Arc<crate::AppState>> {
+pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new().route("/", get(list_jobs))
 }
 
 async fn list_jobs(
-    State(state): State<Arc<crate::AppState>>,
-    crate::auth::extractors::TenantAuth(auth): crate::auth::extractors::TenantAuth,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
     let pool = db::get_pool();
 
@@ -22,7 +20,7 @@ async fn list_jobs(
         ORDER BY created_at DESC
         LIMIT 50
         "#,
-        auth.tenant_id
+        auth_info.tenant_id
     )
     .fetch_all(&pool)
     .await {
