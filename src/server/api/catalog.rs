@@ -62,6 +62,7 @@ pub struct Product {
     pub description: Option<String>,
     pub item_type: Option<String>,
     pub price_cents: Option<i64>,
+    pub inventory_count: Option<i32>,
 }
 
 async fn handle_get_products(
@@ -85,7 +86,7 @@ async fn handle_get_products(
     };
 
     let rows = sqlx::query(
-        "SELECT id, title, description, type as item_type, price_cents FROM products WHERE tenant_id = $1"
+        "SELECT id, title, description, type as item_type, price_cents, inventory_count FROM products WHERE tenant_id = $1"
     )
     .bind(&tenant_id)
     .fetch_all(&mut *conn)
@@ -101,6 +102,7 @@ async fn handle_get_products(
                     description: row.try_get("description").ok(),
                     item_type: row.try_get("item_type").ok(),
                     price_cents: row.try_get("price_cents").ok(),
+                    inventory_count: row.try_get("inventory_count").ok(),
                 });
             }
             (StatusCode::OK, Json(products)).into_response()

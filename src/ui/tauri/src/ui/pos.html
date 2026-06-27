@@ -945,7 +945,7 @@
               return new Intl.NumberFormat(navigator.language || 'en-US', { style: 'currency', currency: tenantCurrency }).format(dollars);
           };
 
-          const renderCatalog = (products) => {
+          window.renderCatalog = (products) => {
               if (!productGrid) return;
               productGrid.innerHTML = '';
               if (products.length === 0) {
@@ -959,12 +959,15 @@
                   const title = p.title || p.name || 'Unnamed Product';
                   const priceCents = p.price_cents || 0;
                   const displayPrice = formatPrice(priceCents);
+                  const inventoryHtml = p.inventory_count !== undefined && p.inventory_count !== null
+                      ? `<span class="product-btn-inventory">${p.inventory_count} in stock</span>` : '';
 
                   btn.onclick = () => selectProduct(p.id, priceCents, title);
 
                   btn.innerHTML = `
                       <span class="product-btn-name">${title}</span>
                       <span class="product-btn-price">${displayPrice}</span>
+                      ${inventoryHtml}
                   `;
                   productGrid.appendChild(btn);
               });
@@ -974,7 +977,7 @@
           try {
               const cached = localStorage.getItem(cacheKey);
               if (cached) {
-                  renderCatalog(JSON.parse(cached));
+                  window.renderCatalog(JSON.parse(cached));
               }
           } catch(e) {
               console.warn("Could not read catalog from cache", e);
@@ -989,7 +992,7 @@
                   if (res.ok) {
                       const data = await res.json();
                       localStorage.setItem(cacheKey, JSON.stringify(data));
-                      renderCatalog(data);
+                      window.renderCatalog(data);
                   }
               } catch(e) {
                   console.warn("Network fetch failed, relying on cache.", e);
