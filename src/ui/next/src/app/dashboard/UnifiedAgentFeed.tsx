@@ -613,6 +613,57 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     }
   };
 
+  const handleApproveAll = async () => {
+    if (!items || items.length === 0) return;
+
+    const itemsToApprove = [...items];
+    // Optimistically clear items
+    setItems([]);
+
+    if (isOffline) {
+      itemsToApprove.forEach((item) => {
+        enqueueAction({
+          id: item.id,
+          type: "APPROVE_FEED_ITEM",
+          payload: {
+            id: item.id,
+            approved: true,
+            event_source: item.event_source,
+          },
+        });
+      });
+      const current = await getActions();
+      setOfflineActionsCount(current.length);
+      return;
+    }
+
+    try {
+      for (const item of itemsToApprove) {
+        const res = await fetch(`/api/agent-feed/${item.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-id": tenantId(),
+            "x-user-id": "default",
+          },
+          body: JSON.stringify({
+            state: "APPROVED",
+          }),
+        });
+        if (!res.ok) {
+          setItems((prev) => [...prev, item]); // Restore failed item
+          console.error(`Failed to approve item ${item.id}`);
+        }
+      }
+    } catch (err) {
+      console.error("Bulk approve failed", err);
+      setItems((prev) => {
+        const existingIds = new Set(prev.map(p => p.id));
+        return [...prev, ...itemsToApprove.filter(item => !existingIds.has(item.id))];
+      }); // Restore all on major error
+    }
+  };
+
   const handleDecision = async (
     id: string,
     approved: boolean,
@@ -737,6 +788,18 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 <div className="w-full max-w-md text-left">
                   <GrowthReferralWidget />
                 </div>
+              </div>
+            )}
+            {items.length > 1 && (
+              <div className="flex justify-end mb-4 w-full" style={{ zIndex: 10, position: "relative" }}>
+                <button
+                  onClick={handleApproveAll}
+                  className="min-h-[44px] px-6 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                  aria-label="Approve All"
+                  data-testid="approve-all-btn"
+                >
+                  Approve All
+                </button>
               </div>
             )}
             {items.map((approval) => (
