@@ -433,6 +433,7 @@ pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
+    pub mod intake;
     pub mod dashboard;
     pub mod wizard;
     pub mod billing;
@@ -5970,7 +5971,7 @@ async fn create_ui_bom_item_handler(
             dynamic_workflow_state_dir,
         ),
     );
-    let app = axum::Router::new()
+    let app = axum::Router::new().nest("/api/v1", crate::api::intake::router(db.pool.clone().into()))
         .nest("/oauth", crate::api::oauth::proxy::router())
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone()))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
