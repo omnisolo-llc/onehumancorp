@@ -116,12 +116,6 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
                         let _ = ::server_telemetry::record_outbound_api_cost(&pool, &tenant_id, &api_string, cost_usd).await;
-                        let cost_cents = (cost_usd * 100.0).round() as i64;
-                        let labels_cents = serde_json::json!({
-                            "tenant_id": tenant_id.clone(),
-                            "api": api_string.clone()
-                        });
-                        let _ = ::server_telemetry::buffer_metric_i64(&pool, "ohc_llm_cost_total_cents", "counter", cost_cents, labels_cents).await;
                     });
                 }
             }

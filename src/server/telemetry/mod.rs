@@ -560,11 +560,12 @@ pub async fn record_llm_call_cost(
     model: &str,
     cost_usd: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    let cost_cents = (cost_usd * 100.0).round() as i64;
+    buffer_metric_i64(
         pool,
         "ohc_llm_call_cost",
         "counter",
-        cost_usd as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
             "model": model,
@@ -579,11 +580,12 @@ pub async fn record_outbound_api_cost(
     api_name: &str,
     cost_usd: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    let cost_cents = (cost_usd * 100.0).round() as i64;
+    buffer_metric_i64(
         pool,
         "ohc_outbound_api_cost",
         "counter",
-        cost_usd as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
             "api_name": api_name,
@@ -949,11 +951,12 @@ pub async fn record_agent_cost(
     entity: &str,
     cost: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    let cost_cents = (cost * 100.0).round() as i64;
+    buffer_metric_i64(
         pool,
         "ohc_agent_cost",
         "counter",
-        cost as f32,
+        cost_cents,
         serde_json::json!({
             "agent_id": agent_id,
             "organization_id": organization_id,
@@ -971,11 +974,12 @@ pub async fn record_api_call_cost(
     entity: &str,
     cost: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    let cost_cents = (cost * 100.0).round() as i64;
+    buffer_metric_i64(
         pool,
         "ohc_api_call_cost",
         "counter",
-        cost as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
             "entity": entity,
@@ -1329,7 +1333,6 @@ pub async fn record_storage_rw_cost(
         serde_json::json!({
             "organization_id": organization_id,
             "operation": operation,
-            "cost_cents": cost_cents,
         }),
     )
     .await
@@ -1348,7 +1351,6 @@ pub async fn record_email_send_cost(
         cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
-            "cost_cents": cost_cents,
         }),
     )
     .await

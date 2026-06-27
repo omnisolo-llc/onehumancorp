@@ -189,7 +189,7 @@ mod tests {
         use sqlx::Row;
         let _ = pool;
         let value: f64 = row.get("value");
-        assert_eq!(value, 1.5);
+        assert_eq!(value, 150.0);
 
         let labels_json: String = row.get("labels_json");
         let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
@@ -217,7 +217,7 @@ mod tests {
         use sqlx::Row;
         let _ = pool;
         let value: f64 = row.get("value");
-        assert_eq!(value, 0.5);
+        assert_eq!(value, 50.0);
 
         let labels_json: String = row.get("labels_json");
         let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();

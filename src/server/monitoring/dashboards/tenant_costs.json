@@ -307,7 +307,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (organization_id, entity) (increase(ohc_api_call_cost[24h]))",
+          "expr": "sum by (organization_id, entity) (increase(ohc_api_call_cost[24h])) / 100",
           "instant": false,
           "legendFormat": "{{organization_id}} - {{entity}}",
           "range": true,

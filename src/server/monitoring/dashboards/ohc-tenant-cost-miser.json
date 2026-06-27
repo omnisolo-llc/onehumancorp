@@ -53,7 +53,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_llm_call_cost[5m])) by (organization_id)",
+          "expr": "sum(rate(ohc_llm_call_cost[5m])) by (organization_id) / 100",
           "refId": "A"
         }
       ],
@@ -91,11 +91,11 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_outbound_api_cost[5m])) by (organization_id)",
+          "expr": "sum(rate(ohc_outbound_api_cost[5m])) by (organization_id) / 100",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(ohc_api_call_cost[5m])) by (organization_id)",
+          "expr": "sum(rate(ohc_api_call_cost[5m])) by (organization_id) / 100",
           "refId": "B"
         }
       ],
