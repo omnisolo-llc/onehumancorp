@@ -36,12 +36,13 @@ test.describe('Autonomous Booking Quote & Scheduling Flow', () => {
 
         // 3. Login
         await page.goto('/login');
-        await page.fill('input[type="email"]', 'auto_quote@example.com');
-        await page.fill('input[type="password"]', 'password123');
-        await page.click('button[type="submit"]');
+
+        await page.getByPlaceholder('Email or Username').fill('auto_quote@example.com');
+        await page.getByPlaceholder('Password').fill('password123');
+        await page.getByRole('button', { name: 'Log In' }).click();
 
         // Wait for feed to load
-        await page.waitForURL('/dashboard');
+        await page.waitForURL('**/dashboard**');
 
         // Ensure feed is populated with the simulated quote
         const approvalCard = page.locator('text=Draft quote and propose schedule for Emergency Handyman Service').first();

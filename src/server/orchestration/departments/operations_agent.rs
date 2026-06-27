@@ -27,6 +27,7 @@ impl Department for OperationsAgent {
             "inventory.sync.conflict".to_string(),
             "tenant.inventory.updated".to_string(),
             "pos_sales".to_string(),
+            "tenant.quote.requires_scheduling".to_string(),
 
             "tenant.pricing.updated".to_string(),]
     }
@@ -54,6 +55,28 @@ impl Department for OperationsAgent {
                     }
                 });
             }
+        }
+
+        if event.event_type == "tenant.quote.requires_scheduling" {
+            let preferred_time = event.payload.get("preferred_time").and_then(|v| v.as_str()).unwrap_or("");
+            let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
+            let price = event.payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            // In a real implementation this would check capacity using DB/Redis,
+            // For this task we acquire a tentative lock representing the held slot.
+            if let Ok(true) = self.orchestrator.mesh().acquire_lock(&format!("ohc:lock:booking_slot:{}", preferred_time), "operations_agent", 600).await {
+                tracing::info!("Operations Agent: Locked slot {} for {}", preferred_time, service_name);
+                let action_description = format!("Tentatively locked slot {} for quote on {}", preferred_time, service_name);
+                let _ = self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    action_description,
+                    event.tenant_id.clone(),
+                    ActionRisk::AutoExecute,
+                    event.payload.clone(),
+                ).await;
+            } else {
+                tracing::warn!("Operations Agent: Failed to lock slot {} for {}. It might be taken.", preferred_time, service_name);
+            }
+            return Ok(());
         }
 
         if event.event_type == "POS_SALE_COMPLETED" {
