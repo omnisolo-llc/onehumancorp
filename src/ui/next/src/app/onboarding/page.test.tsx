@@ -1037,7 +1037,7 @@ describe('OnboardingWizard', () => {
 
     // Wait for the chat to render
     await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Skip setup/i })).toBeInTheDocument();
     });
 
 
