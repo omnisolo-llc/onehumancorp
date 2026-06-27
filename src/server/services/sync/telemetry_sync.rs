@@ -96,7 +96,7 @@ impl TelemetrySyncDaemon {
                             "metric_name": metric_name,
                             "metric_type": metric_type,
                             "value": value,
-                            "labels": serde_json::from_str::<Value>(&labels_json).unwrap_or(Value::Null),
+                            "labels": server_telemetry::redact_interface_pii(serde_json::from_str::<Value>(&labels_json).unwrap_or(Value::Null)),
                             "timestamp": timestamp,
                         });
                         chunk_res.push((id, json));
@@ -128,7 +128,7 @@ impl TelemetrySyncDaemon {
                     "metric_name": metric_name,
                     "metric_type": metric_type,
                     "value": value,
-                    "labels": serde_json::from_str::<Value>(&labels_json).unwrap_or(Value::Null),
+                    "labels": server_telemetry::redact_interface_pii(serde_json::from_str::<Value>(&labels_json).unwrap_or(Value::Null)),
                     "timestamp": timestamp,
                 }));
                 ids.push(id);
