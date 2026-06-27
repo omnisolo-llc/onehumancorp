@@ -82,10 +82,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
             }
         }
     });
-    page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
 
-    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-    page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
 
     // Go to the onboarding setup
     await page.goto('http://mock/setup.html');
