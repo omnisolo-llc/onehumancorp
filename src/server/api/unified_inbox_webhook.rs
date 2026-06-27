@@ -1,15 +1,15 @@
+use crate::db::DB;
 use axum::{
-    extract::{State, Json, Query},
+    extract::{Json, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{post, get},
+    routing::{get, post},
     Router,
 };
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
-use sqlx::Row;
-use crate::db::DB;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -31,7 +31,7 @@ pub struct DraftedResponse {
     pub draft_reply: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedThread {
     pub id: String,
     pub tenant_id: String,
@@ -42,7 +42,7 @@ pub struct UnifiedThread {
     pub updated_at: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedMessage {
     pub id: String,
     pub tenant_id: String,
@@ -52,7 +52,7 @@ pub struct UnifiedMessage {
     pub created_at: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedTriageAction {
     pub id: String,
     pub tenant_id: String,
@@ -64,7 +64,7 @@ pub struct UnifiedTriageAction {
     pub updated_at: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedFeedItem {
     pub thread: UnifiedThread,
     pub messages: Vec<UnifiedMessage>,
@@ -78,13 +78,20 @@ pub struct LocalUiTenantQuery {
 }
 
 fn get_ui_tenant_id(query: &LocalUiTenantQuery) -> String {
-    query.tenant_id.clone().or(query.tenant.clone()).unwrap_or_else(|| "default".to_string())
+    query
+        .tenant_id
+        .clone()
+        .or(query.tenant.clone())
+        .unwrap_or_else(|| "default".to_string())
 }
 
 pub fn router(db: Arc<DB>) -> Router {
     let state = AppState { db };
     Router::new()
-        .route("/api/v1/webhooks/unified_inbox", post(handle_unified_webhook))
+        .route(
+            "/api/v1/webhooks/unified_inbox",
+            post(handle_unified_webhook),
+        )
         .route("/api/ui/unified_inbox_feed", get(get_unified_feed))
         .with_state(state)
 }
@@ -97,7 +104,10 @@ pub async fn handle_unified_webhook(
 
     if let Some(redis_client) = crate::get_redis_client() {
         if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
-            let lock_key = format!("ohc:lock:unified_inbox:{}:{}", tenant_id, payload.identifier);
+            let lock_key = format!(
+                "ohc:lock:unified_inbox:{}:{}",
+                tenant_id, payload.identifier
+            );
             let locked: redis::RedisResult<Option<String>> = redis::cmd("SET")
                 .arg(&lock_key)
                 .arg("1")
@@ -108,7 +118,11 @@ pub async fn handle_unified_webhook(
                 .await;
 
             if locked.is_err() || locked.unwrap().is_none() {
-                tracing::warn!("Failed to acquire lock for tenant {} identifier {}", tenant_id, payload.identifier);
+                tracing::warn!(
+                    "Failed to acquire lock for tenant {} identifier {}",
+                    tenant_id,
+                    payload.identifier
+                );
             }
         }
     }
@@ -134,12 +148,16 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(&state.db.pool).await;
 
-            let draft_reply = format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message);
+            let draft_reply = format!(
+                "Hi there! Thanks for your message: '{}'. How can we help?",
+                payload.message
+            );
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary: "Customer inquiry received.".to_string(),
                 draft_reply,
-            }).unwrap();
+            })
+            .unwrap();
 
             let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'DRAFT_REPLY', $4, 'pending')")
                 .bind(&action_id)
@@ -147,7 +165,7 @@ pub async fn handle_unified_webhook(
                 .bind(&thread_id)
                 .bind(&action_payload)
                 .execute(&state.db.pool).await;
-        },
+        }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let _ = sqlx::query("INSERT OR IGNORE INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES (?, ?, ?, ?, 'open')")
                 .bind(&thread_id)
@@ -163,12 +181,16 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(sqlite_pool).await;
 
-            let draft_reply = format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message);
+            let draft_reply = format!(
+                "Hi there! Thanks for your message: '{}'. How can we help?",
+                payload.message
+            );
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary: "Customer inquiry received.".to_string(),
                 draft_reply,
-            }).unwrap();
+            })
+            .unwrap();
 
             let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, 'DRAFT_REPLY', ?, 'pending')")
                 .bind(&action_id)
@@ -179,8 +201,16 @@ pub async fn handle_unified_webhook(
         }
     }
 
-    (StatusCode::OK, axum::Json(serde_json::json!({"success": true, "thread_id": thread_id}))).into_response()
+    (
+        StatusCode::OK,
+        axum::Json(serde_json::json!({"success": true, "thread_id": thread_id})),
+    )
+        .into_response()
 }
+
+static UI_WEBHOOK_FEED_CACHE: std::sync::OnceLock<
+    ::server_utils::cache::HybridCache<Vec<UnifiedFeedItem>>,
+> = std::sync::OnceLock::new();
 
 pub async fn get_unified_feed(
     State(state): State<AppState>,
@@ -188,6 +218,52 @@ pub async fn get_unified_feed(
 ) -> impl IntoResponse {
     let tenant_id = get_ui_tenant_id(&query);
 
+    let cache_key = format!("ui_webhook_feed:{}", tenant_id);
+    let cache = UI_WEBHOOK_FEED_CACHE.get_or_init(|| {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_client = match redis::Client::open(redis_url) {
+            Ok(client) => Some(client),
+            Err(e) => {
+                tracing::warn!("Failed to initialize Redis client for UI_WEBHOOK_FEED_CACHE: {}. Falling back to in-memory cache.", e);
+                None
+            }
+        };
+        ::server_utils::cache::HybridCache::new(redis_client)
+    });
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (StatusCode::OK, axum::Json(cached)).into_response();
+        }
+
+        let state_bg = state.clone();
+        let tenant_id_bg = tenant_id.clone();
+        let cache_bg = cache.clone();
+        let cache_key_bg = cache_key.clone();
+
+        tokio::spawn(async move {
+            let items = fetch_unified_feed_items(&state_bg, &tenant_id_bg).await;
+            cache_bg
+                .set(&cache_key_bg, items, std::time::Duration::from_secs(30))
+                .await;
+        });
+
+        return (StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
+    let feed_items = fetch_unified_feed_items(&state, &tenant_id).await;
+    cache
+        .set(
+            &cache_key,
+            feed_items.clone(),
+            std::time::Duration::from_secs(30),
+        )
+        .await;
+
+    (StatusCode::OK, axum::Json(feed_items)).into_response()
+}
+
+async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str) -> Vec<UnifiedFeedItem> {
     let mut feed_items: Vec<UnifiedFeedItem> = vec![];
 
     let threads_res_mapped: Result<Vec<UnifiedThread>, sqlx::Error>;
@@ -197,8 +273,8 @@ pub async fn get_unified_feed(
                 .bind(&tenant_id)
                 .fetch_all(&state.db.pool).await;
             threads_res_mapped = res.map(|rows| {
-                rows.into_iter().map(|row| {
-                    UnifiedThread {
+                rows.into_iter()
+                    .map(|row| UnifiedThread {
                         id: row.get("id"),
                         tenant_id: row.get("tenant_id"),
                         customer_id: row.try_get("customer_id").ok(),
@@ -206,17 +282,17 @@ pub async fn get_unified_feed(
                         status: row.get("status"),
                         created_at: row.try_get("created_at").unwrap_or_default(),
                         updated_at: row.try_get("updated_at").unwrap_or_default(),
-                    }
-                }).collect()
+                    })
+                    .collect()
             });
-        },
+        }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let res = sqlx::query("SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_threads WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                 .bind(&tenant_id)
                 .fetch_all(sqlite_pool).await;
             threads_res_mapped = res.map(|rows| {
-                rows.into_iter().map(|row| {
-                    UnifiedThread {
+                rows.into_iter()
+                    .map(|row| UnifiedThread {
                         id: row.get("id"),
                         tenant_id: row.get("tenant_id"),
                         customer_id: row.try_get("customer_id").ok(),
@@ -224,8 +300,8 @@ pub async fn get_unified_feed(
                         status: row.get("status"),
                         created_at: row.try_get("created_at").unwrap_or_default(),
                         updated_at: row.try_get("updated_at").unwrap_or_default(),
-                    }
-                }).collect()
+                    })
+                    .collect()
             });
         }
     }
@@ -297,5 +373,5 @@ pub async fn get_unified_feed(
         }
     }
 
-    (StatusCode::OK, axum::Json(feed_items)).into_response()
+    feed_items
 }

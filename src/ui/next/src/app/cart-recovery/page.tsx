@@ -14,6 +14,7 @@ export default function CartRecoveryPage() {
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [trialStatus, setTrialStatus] = useState('');
+  const [isAutoEnabled, setIsAutoEnabled] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -74,6 +75,15 @@ export default function CartRecoveryPage() {
     setShowSoftPaywall(false);
     setTrialStatus('Your 7-day Pro trial has been activated.');
     generateDraft();
+    setIsAutoEnabled(true);
+  };
+
+  const toggleAutoRecovery = () => {
+    if (!hasPro) {
+      setShowSoftPaywall(true);
+      return;
+    }
+    setIsAutoEnabled(!isAutoEnabled);
   };
 
   const handleSend = async () => {
@@ -117,6 +127,24 @@ export default function CartRecoveryPage() {
              Generate highly-converting, personalized follow-up emails using AI for users who left items in their cart.
            </p>
         </div>
+
+        {/* Auto Recovery Banner */}
+        <section className="w-full p-6 shadow-md flex items-center justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+          <div>
+            <h3 className="text-lg font-semibold font-outfit m-0 mb-1" style={{ color: '#1D1D1F' }}>Automate with Agent Nova</h3>
+            <p className="text-gray-600 text-sm m-0">Automatically generate and send recovery emails 4 hours after a cart is abandoned.</p>
+          </div>
+          <div className="flex items-center gap-3">
+             {isAutoEnabled && <span className="text-sm font-bold text-green-600">Auto-Recovery Enabled</span>}
+             <button
+               id="auto-recovery-toggle"
+               onClick={toggleAutoRecovery}
+               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isAutoEnabled ? 'bg-orange-500' : 'bg-gray-200'}`}
+             >
+               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAutoEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+             </button>
+          </div>
+        </section>
 
         <div className="flex flex-col md:flex-row gap-8">
           {/* Campaign Settings */}
