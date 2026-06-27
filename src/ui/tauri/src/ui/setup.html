@@ -159,8 +159,8 @@
       }
 
       .invalid-input {
+        background: rgba(255, 59, 48, 0.1) !important;
         border-color: #ff3b30 !important;
-        background-color: rgba(255, 59, 48, 0.05) !important;
       }
 
       .text-\[\#FF3B30\] {
@@ -372,6 +372,17 @@
         z-index: 1;
         transform: translateY(-50%);
       }
+      .stepper-progress {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        height: 2px;
+        background: #0066ff;
+        z-index: 1;
+        transform: translateY(-50%);
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 0%;
+      }
       .step-indicator {
         width: 12px;
         height: 12px;
@@ -466,8 +477,8 @@
         box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
       }
       .step-indicator.completed {
-        background: #0066ff;
-        border-color: #0071e3;
+        background: #34c759;
+        border-color: #34c759;
       }
 
       .capability-toggles {
@@ -575,6 +586,17 @@
         }
         .stepper::before {
           background: rgba(22, 22, 26, 0.7);
+        }
+        .stepper-progress {
+          position: absolute;
+          top: 50%;
+          left: 0;
+          height: 2px;
+          background: #0066ff;
+          z-index: 1;
+          transform: translateY(-50%);
+          transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          width: 0%;
         }
         .step-indicator {
           background: rgba(22, 22, 26, 0.7);
@@ -1684,6 +1706,7 @@
         aria-valuemin="0"
         aria-valuemax="8"
       >
+        <div class="stepper-progress" id="stepper-progress"></div>
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
@@ -1853,7 +1876,7 @@
           enterkeyhint="next"
         />
         <div id="name-error" class="error-msg" aria-live="polite">
-          Business Name must be at least 3 characters.
+          Business Name is required.
         </div>
 
         <input
@@ -2715,7 +2738,7 @@
         populateForm();
 
         if (state.step === undefined || state.step === 0) {
-          goToStep("step-initial");
+          goToStep("step-initial", false);
         } else {
           const steps = [
             "step-initial",
@@ -2731,7 +2754,7 @@
             "step-chat",
           ];
           if (state.step < steps.length) {
-            goToStep(steps[state.step]);
+            goToStep(steps[state.step], false);
           }
         }
       }
@@ -2739,7 +2762,7 @@
 
       // Clear name error on typing if valid
       inputs.name.addEventListener("input", () => {
-        if (inputs.name.value.trim().length >= 3) {
+        if (inputs.name.value.trim().length > 0) {
           errors.name.style.display = "none";
           inputs.name.classList.remove("invalid-input");
         }
@@ -2906,10 +2929,9 @@
 
         // Increment step if we are moving forward
 
-        let stepNumber = 0;
         const activeStep = document.querySelector(".step.active");
         if (activeStep) {
-          stepNumber = [
+          const stepIndex = [
             "step-initial",
             "step-context",
             "step-categories",
@@ -2922,9 +2944,10 @@
             "step-instant",
             "step-chat",
           ].indexOf(activeStep.id);
-          if (stepNumber === -1) stepNumber = 0;
+          if (stepIndex !== -1) {
+            state.step = stepIndex;
+          }
         }
-        state.step = stepNumber;
 
         // Always set localStorage directly
         localStorage.setItem("onboardingState", JSON.stringify(state));
@@ -2998,7 +3021,7 @@
             state.categories = inputs.categories.value.trim();
           }
         } else if (stepId === "step-name") {
-          if (inputs.name.value.trim().length < 3) {
+          if (inputs.name.value.trim().length === 0) {
             errors.name.style.display = "block";
             inputs.name.classList.add("invalid-input");
             isValid = false;
@@ -3160,6 +3183,11 @@
         if (stepperIndicator)
           stepperIndicator.setAttribute("aria-valuenow", currentIndex + 1);
 
+        const stepperProgress = document.getElementById("stepper-progress");
+        if (stepperProgress) {
+          stepperProgress.style.width = (currentIndex / 7) * 100 + "%";
+        }
+
         document
           .querySelectorAll(".step-indicator")
           .forEach((indicator, index) => {
@@ -3237,10 +3265,7 @@
         }
       }
 
-      function goToStep(stepId) {
-        saveCurrentState();
-        localStorage.setItem("onboardingState", JSON.stringify(state));
-
+      function goToStep(stepId, shouldSave = true) {
         if (stepId === "step-instant") {
           const instantBioInputEl = document.getElementById("instant-bio");
           const generateStorefrontBtn = document.getElementById("generate-storefront-btn");
@@ -3261,6 +3286,11 @@
         document.getElementById(stepId).classList.add("active");
         document.getElementById(stepId).style.display = "block";
         updateStepper(stepId);
+
+        if (shouldSave) {
+          saveCurrentState();
+          localStorage.setItem("onboardingState", JSON.stringify(state));
+        }
       }
 
       document.querySelectorAll(".next-step-btn").forEach((btn) => {
