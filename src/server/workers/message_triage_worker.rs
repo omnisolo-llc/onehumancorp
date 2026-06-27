@@ -340,7 +340,7 @@ Output JSON format:
                     }
                 }
             } else if action_type == "Reassign Shift" {
-                if let Ok(shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                if let Ok(_shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                     let draft_shift_id = Uuid::new_v4();
                     booking_id_opt = Some(draft_shift_id.to_string());
                 }
