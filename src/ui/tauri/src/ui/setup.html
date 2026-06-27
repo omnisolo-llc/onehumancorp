@@ -2738,7 +2738,7 @@
         populateForm();
 
         if (state.step === undefined || state.step === 0) {
-          goToStep("step-initial");
+          goToStep("step-initial", false);
         } else {
           const steps = [
             "step-initial",
@@ -2754,7 +2754,7 @@
             "step-chat",
           ];
           if (state.step < steps.length) {
-            goToStep(steps[state.step]);
+            goToStep(steps[state.step], false);
           }
         }
       }
@@ -2929,10 +2929,9 @@
 
         // Increment step if we are moving forward
 
-        let stepNumber = 0;
         const activeStep = document.querySelector(".step.active");
         if (activeStep) {
-          stepNumber = [
+          const stepIndex = [
             "step-initial",
             "step-context",
             "step-categories",
@@ -2945,9 +2944,10 @@
             "step-instant",
             "step-chat",
           ].indexOf(activeStep.id);
-          if (stepNumber === -1) stepNumber = 0;
+          if (stepIndex !== -1) {
+            state.step = stepIndex;
+          }
         }
-        state.step = stepNumber;
 
         // Always set localStorage directly
         localStorage.setItem("onboardingState", JSON.stringify(state));
@@ -3265,10 +3265,7 @@
         }
       }
 
-      function goToStep(stepId) {
-        saveCurrentState();
-        localStorage.setItem("onboardingState", JSON.stringify(state));
-
+      function goToStep(stepId, shouldSave = true) {
         if (stepId === "step-instant") {
           const instantBioInputEl = document.getElementById("instant-bio");
           const generateStorefrontBtn = document.getElementById("generate-storefront-btn");
@@ -3289,6 +3286,11 @@
         document.getElementById(stepId).classList.add("active");
         document.getElementById(stepId).style.display = "block";
         updateStepper(stepId);
+
+        if (shouldSave) {
+          saveCurrentState();
+          localStorage.setItem("onboardingState", JSON.stringify(state));
+        }
       }
 
       document.querySelectorAll(".next-step-btn").forEach((btn) => {
