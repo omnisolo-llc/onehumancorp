@@ -196,9 +196,11 @@ export default function FieldOpsJobsPage() {
 
     if (job.notes) {
       SyncManager.getInstance().enqueue({
-        id: `mutation-${Date.now()}`,
-        type: "draft_quote",
-        notes: `Follow up quote requested by field op for job ${jobId}. Notes: ${job.notes}`,
+        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+        type: "JobCompleted",
+        job_id: jobId,
+        notes: job.notes,
+        timestamp: Date.now()
       });
     }
   };

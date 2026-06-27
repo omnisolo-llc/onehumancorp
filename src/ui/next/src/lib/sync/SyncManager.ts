@@ -102,7 +102,19 @@ export class SyncManager {
       });
 
       const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale').map(m => {
-        if (m.type === 'inventory_toggle') {
+        if (m.type === 'JobCompleted') {
+          return {
+             type: 'mutation_queue',
+             id: m.id,
+             action_type: m.type,
+             payload: {
+               job_id: m.job_id,
+               notes: m.notes
+             },
+             status: 'pending',
+             timestamp: m.timestamp || Date.now()
+          };
+        } else if (m.type === 'inventory_toggle') {
            return {
               timestamp: new Date(m.timestamp || Date.now()).toISOString(),
               transaction_id: m.id,
@@ -158,6 +170,37 @@ export class SyncManager {
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
       let allOk = true;
+
+      const powerSyncMutations = generalMutations.filter(m => m.type === 'mutation_queue');
+      if (powerSyncMutations.length > 0) {
+        const mutationsToPush = powerSyncMutations.map(m => ({
+          table: "mutation_queue",
+          id: m.id,
+          action_type: m.action_type,
+          payload: JSON.stringify(m.payload),
+          status: m.status,
+          tenant_id: tenantId
+        }));
+
+        try {
+          const resPowerSync = await fetch('/api/v1/sync/power_sync_push', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
+            },
+            body: JSON.stringify({ payload: mutationsToPush })
+          });
+
+          if (!resPowerSync.ok) {
+            allOk = false;
+            console.error(`PowerSync push failed with status ${resPowerSync.status}`);
+          }
+        } catch (e) {
+          allOk = false;
+          console.error("PowerSync push error:", e);
+        }
+      }
 
       // Sync CRDT Deltas
       if (crdtDeltas.length > 0) {
@@ -232,7 +275,7 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'mutation_queue');
       if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',

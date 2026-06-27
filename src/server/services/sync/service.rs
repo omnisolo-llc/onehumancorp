@@ -103,7 +103,59 @@ impl SyncService for MySyncService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for item in items {
-            if item["table"].as_str() == Some("agent_missions") {
+            if item["table"].as_str() == Some("mutation_queue") {
+                let id = item["id"].as_str().unwrap_or("");
+                let action_type = item["action_type"].as_str().unwrap_or("");
+                let status = item["status"].as_str().unwrap_or("pending");
+                let payload_str = item["payload"].as_str().unwrap_or("");
+
+                if id.is_empty() {
+                    continue;
+                }
+
+                let query = "
+                    INSERT INTO mutation_queue (id, tenant_id, action_type, payload, status)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT(id) DO UPDATE SET
+                        status = excluded.status,
+                        payload = excluded.payload
+                ";
+
+                if let Err(e) = sqlx::query(query)
+                    .bind(id)
+                    .bind(&tenant_id)
+                    .bind(action_type)
+                    .bind(payload_str)
+                    .bind(status)
+                    .execute(&mut *tx)
+                    .await
+                {
+                    tracing::error!("failed to upsert mutation_queue via PowerSync: {}", e);
+                }
+
+                if action_type == "JobCompleted" {
+                    let payload_json: serde_json::Value = serde_json::from_str(payload_str).unwrap_or(serde_json::json!({}));
+                    if let Some(notes) = payload_json.get("notes").and_then(|n| n.as_str()) {
+                        let proposed_action = format!("Draft an invoice based on these offline job notes: {}", notes);
+                        let feed_id = uuid::Uuid::new_v4().to_string();
+
+                        let query = "
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                            VALUES ($1, $2, 'offline_sync', $3, $4, 'pending')
+                        ";
+                        if let Err(e) = sqlx::query(query)
+                            .bind(feed_id)
+                            .bind(&tenant_id)
+                            .bind(payload_str)
+                            .bind(proposed_action)
+                            .execute(&mut *tx)
+                            .await
+                        {
+                            tracing::error!("failed to insert agent feed item for JobCompleted: {}", e);
+                        }
+                    }
+                }
+            } else if item["table"].as_str() == Some("agent_missions") {
                 let id = item["id"].as_str().unwrap_or("");
                 let status = item["status"].as_str().unwrap_or("PENDING");
                 let payload = item["payload"].as_str().unwrap_or("");
