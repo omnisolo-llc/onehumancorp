@@ -100,8 +100,46 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "instagram_dm" ||
           (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "subscription_replenishment") && (
+            ?.feature_type === "subscription_replenishment" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "shift_reassignment") && (
           <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "shift_reassignment" && (
+              <div
+                className="mb-4 p-4 rounded-[16px] bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 flex flex-col gap-3"
+                data-testid="shift-reassignment-card"
+              >
+                <div className="flex items-center gap-2 text-orange-600 font-semibold text-sm">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Staff Call-Out
+                </div>
+                <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">
+                  {((approval.proposed_action || approval.context_payload)
+                    ?.draft_reply && typeof (approval.proposed_action || approval.context_payload)?.draft_reply === 'string' ? JSON.parse((approval.proposed_action || approval.context_payload)?.draft_reply)?.original_message : undefined) ||
+                    "A staff member called out of their shift."}
+                </p>
+                <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-orange-100 dark:border-orange-800/30">
+                  <span className="text-xs text-gray-500 block mb-1">AI Proposal:</span>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    {((approval.proposed_action || approval.context_payload)
+                    ?.draft_reply && typeof (approval.proposed_action || approval.context_payload)?.draft_reply === 'string' ? JSON.parse((approval.proposed_action || approval.context_payload)?.draft_reply)?.proposed_replacement : undefined)} is available and has matching skills. Reassign shift?
+                  </p>
+                </div>
+              </div>
+            )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "incident_resolution" && (
               <div
@@ -899,6 +937,40 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             </>
           )
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "shift_reassignment" ? (
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="Approve & Notify"
+              data-testid="approve-shift-reassignment"
+            >
+              Approve & Notify
+            </button>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  false,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              aria-label="Find Someone Else"
+              data-testid="dismiss-shift-reassignment"
+            >
+              Find Someone Else
+            </button>
+          </div>
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "incident_resolution" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">

@@ -119,7 +119,7 @@ Source: {}
 
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
-If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
+If you decide action_type is 'Shift Reassignment', the action_payload MUST be a JSON string with 'staff_id' (optional string), 'proposed_replacement' (optional string) and 'original_message' (string).\nIf you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
@@ -258,7 +258,8 @@ Output JSON format:
 
             let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
             let action_payload_str = omni_result.final_draft;
-            let action_payload = action_payload_str.as_str();
+            let action_payload = action_payload_str.clone();
+            let action_payload_ptr = action_payload.as_str();
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
             let mut event_source = source.to_string();
@@ -274,7 +275,7 @@ Output JSON format:
             let mut booking_id_opt: Option<String> = None;
 
             if action_type == "Draft Booking" {
-                if let Ok(booking_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                if let Ok(booking_data) = serde_json::from_str::<serde_json::Value>(action_payload_ptr) {
                     let draft_booking_id = Uuid::new_v4();
                     booking_id_opt = Some(draft_booking_id.to_string());
                     let service_id = booking_data.get("service_id").and_then(|v| v.as_str()).unwrap_or("unknown_service");
@@ -336,7 +337,7 @@ Output JSON format:
                     }
                 }
             } else if action_type == "Draft Quote" {
-                if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
+                if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(action_payload_ptr) {
                     let draft_quote_id = Uuid::new_v4();
                     quote_id_opt = Some(draft_quote_id.to_string());
                     let total_amount_cents = quote_data.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
@@ -504,7 +505,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if action_type == "Shift Reassignment" { "shift_reassignment" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
@@ -632,7 +633,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if action_type == "Shift Reassignment" { "shift_reassignment" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
                     }).to_string())
                     .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
