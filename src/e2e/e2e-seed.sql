@@ -561,6 +561,10 @@ VALUES
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALUES
 ('ms_e2e_revenue_1k', 'e2e-tenant', 'revenue_1k', CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
+
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALUES
+('ms_e2e_revenue_10k', 'e2e-milestone-tenant', 'revenue_10k', CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
 UPDATE tenants SET plan_tier = 'Starter' WHERE id = 'e2e-tenant';
 INSERT INTO tenants (id, name, industry, plan_tier, has_claimed_trial_extension)
 VALUES

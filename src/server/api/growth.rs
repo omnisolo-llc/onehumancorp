@@ -1909,10 +1909,28 @@ async fn handle_check_milestones(
             reached: reached_types.contains(&"revenue_1k".to_string()),
         },
         Milestone {
+            id: "50th_order".to_string(),
+            title: "🔥 50th Order!".to_string(),
+            description: "You've successfully processed your 50th order on OHC.".to_string(),
+            reached: reached_types.contains(&"50th_order".to_string()),
+        },
+        Milestone {
             id: "100_orders".to_string(),
             title: "📦 Century of Orders".to_string(),
             description: "You've successfully fulfilled 100 orders on OHC!".to_string(),
             reached: reached_types.contains(&"100_orders".to_string()),
+        },
+        Milestone {
+            id: "1000_orders".to_string(),
+            title: "👑 1,000 Orders!".to_string(),
+            description: "A monumental achievement! 1,000 orders fulfilled on OHC!".to_string(),
+            reached: reached_types.contains(&"1000_orders".to_string()),
+        },
+        Milestone {
+            id: "revenue_10k".to_string(),
+            title: "💎 Five-Figure Club".to_string(),
+            description: "Your business has surpassed $10,000 in total revenue!".to_string(),
+            reached: reached_types.contains(&"revenue_10k".to_string()),
         },
     ];
     Json(MilestonesResponse { milestones })
@@ -1955,8 +1973,14 @@ async fn handle_get_milestone(
 
         if types.contains(&"revenue_100k".to_string()) {
             best_milestone_id = "revenue_100k".to_string();
+        } else if types.contains(&"1000_orders".to_string()) {
+            best_milestone_id = "1000_orders".to_string();
+        } else if types.contains(&"revenue_10k".to_string()) {
+            best_milestone_id = "revenue_10k".to_string();
         } else if types.contains(&"100_orders".to_string()) {
             best_milestone_id = "100_orders".to_string();
+        } else if types.contains(&"50th_order".to_string()) {
+            best_milestone_id = "50th_order".to_string();
         } else if types.contains(&"revenue_1k".to_string()) {
             best_milestone_id = "revenue_1k".to_string();
         } else if types.contains(&"10th_order".to_string()) {
@@ -1977,11 +2001,29 @@ async fn handle_get_milestone(
             "I just hit $100k in revenue running my business on OHC! 🚀",
             "$500 Credit"
         ),
+        "1000_orders" => (
+            "1,000th Order Delivered! 👑",
+            "An incredible milestone! Share your success to unlock $100 in credits.",
+            "I just hit my 1,000th order using OHC to run my business! 🚀",
+            "$100 Credit"
+        ),
+        "revenue_10k" => (
+            "Five-Figure Club! 💎",
+            "You crossed $10k in revenue. Share to unlock $75 in credits.",
+            "I just hit $10k in revenue running my business on OHC! 🚀",
+            "$75 Credit"
+        ),
         "100_orders" => (
             "100th Order Delivered! 🎉",
             "You're growing fast. Share your success to unlock $50 in OHC credits.",
             "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
             "$50 Credit"
+        ),
+        "50th_order" => (
+            "50th Order! 🔥",
+            "You're halfway to 100! Share your success to unlock $30 in OHC credits.",
+            "I just hit my 50th order using OHC! 🚀",
+            "$30 Credit"
         ),
         "revenue_1k" => (
             "Four-Figure Club! 💰",
@@ -2067,10 +2109,13 @@ async fn handle_get_milestone_card(
     let (title, sub, icon, grad_start, grad_end) = match milestone_id {
         "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
         "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
+        "50th_order" => ("50th Order!", "Halfway to 100", "🔥", "#ff9a9e", "#fecfef"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
         "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
         "revenue_1k" => ("Four-Figure Club", "Crossed $1k in Revenue!", "💰", "#f43f5e", "#fb923c"),
+        "revenue_10k" => ("Five-Figure Club", "Crossed $10k in Revenue!", "💎", "#a18cd1", "#fbc2eb"),
         "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
+        "1000_orders" => ("1,000 Orders!", "A monumental achievement", "👑", "#f6d365", "#fda085"),
         _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
