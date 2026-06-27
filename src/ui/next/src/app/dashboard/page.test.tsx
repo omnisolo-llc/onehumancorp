@@ -95,7 +95,7 @@ test('renders dashboard with actionable feed', async () => {
   });
 
   expect(screen.getByText("Operations Map")).toBeDefined();
-  expect(screen.getByText("Unified Agent Feed")).toBeDefined();
+  expect(screen.getByText("Action Required")).toBeDefined();
   expect(screen.getByText("Recent Orders")).toBeDefined();
   expect(screen.queryByText(/\/api\/ui\/dashboard\/unified-feed/)).toBeNull();
   expect(screen.getByText("Inbox Activity")).toBeDefined();
