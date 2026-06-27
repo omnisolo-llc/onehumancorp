@@ -14,6 +14,12 @@ type TooltipContextType = {
 
 const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
 
+declare global {
+  interface Window {
+    OHC_TOOLTIPS?: Record<string, string>;
+  }
+}
+
 export function TooltipProvider({ children }: { children: ReactNode }) {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
@@ -33,7 +39,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
             Object.entries(data).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
           );
           setTooltips(safeTooltips);
-          (window as any).OHC_TOOLTIPS = safeTooltips;
+          window.OHC_TOOLTIPS = safeTooltips;
         }
       })
       .catch(() => {});
