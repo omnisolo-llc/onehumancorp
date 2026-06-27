@@ -24,6 +24,15 @@ export default function ZeroClickBuilderPage() {
 
   const handleChatComplete = (data: any) => {
     setGeneratedStore(data);
+    if (data.organization_id) {
+      localStorage.setItem('tenant_id', data.organization_id);
+      localStorage.setItem('tenant', data.organization_id);
+    }
+    if (data.user_id) {
+      localStorage.setItem('user_id', data.user_id);
+    }
+    localStorage.setItem('has_onboarded', 'true');
+    router.push('/dashboard');
   };
 
   return (
@@ -41,60 +50,7 @@ export default function ZeroClickBuilderPage() {
           </p>
         </div>
 
-        {!generatedStore ? (
-          <OnboardingChatAgent onComplete={handleChatComplete} />
-        ) : (
-          <div className="glassmorphism p-8 mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-full mb-4">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                Your business is live!
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                We've configured everything you need to start selling.
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <div className="w-full h-[500px] rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden relative bg-white dark:bg-gray-800">
-                <iframe
-                  src={`/builder?tenant=${generatedStore.organization_id}&preview=true`}
-                  className="w-full h-full border-none"
-                  title="Live Storefront Preview"
-                />
-              </div>
-
-              <div className="flex flex-col gap-4 pt-4">
-                <button
-                  onClick={() => {
-                    if (generatedStore.organization_id) {
-                      localStorage.setItem('tenant_id', generatedStore.organization_id);
-                      localStorage.setItem('tenant', generatedStore.organization_id);
-                    }
-                    if (generatedStore.user_id) {
-                      localStorage.setItem('user_id', generatedStore.user_id);
-                    }
-                    router.push('/dashboard');
-                  }}
-                  className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#005bb5] text-white px-6 py-4 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
-                >
-                  🚀 Launch My Store
-                </button>
-
-                <button
-                  onClick={handleShare}
-                  className="w-full flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a91da] text-white px-6 py-4 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
-                >
-                  🐦 Share on X (Twitter)
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <OnboardingChatAgent onComplete={handleChatComplete} />
 
         <div className="text-center mt-8">
           <p className="text-sm font-semibold text-gray-500 flex items-center justify-center gap-1">

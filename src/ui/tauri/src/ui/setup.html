@@ -3506,73 +3506,12 @@
             };
 
             window.pendingOnboardingReq = req;
-            let productsHtml = "";
-            if (req.initial_products && req.initial_products.length > 0) {
-              productsHtml = req.initial_products
-                .map((p) => `<li>${p.name} - ${p.price}</li>`)
-                .join("");
-            } else {
-              productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
-            }
 
-            const summaryCard = document.createElement("div");
-            summaryCard.className = "glassmorphism";
-            summaryCard.style.cssText =
-              "position: absolute; bottom: 0; left: 0; right: 0; padding: 24px; border-radius: 16px 16px 0 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(210%); box-shadow: 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; border-top: 1px solid rgba(255, 255, 255, 0.6);";
-
-            if (
-              window.matchMedia &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches
-            ) {
-              summaryCard.style.background = "rgba(22, 22, 26, 0.85)";
-              summaryCard.style.borderTop =
-                "1px solid rgba(255, 255, 255, 0.1)";
-              summaryCard.style.color = "#F5F5F7";
-            }
-
-            summaryCard.innerHTML = `
-                      <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h2>
-                      <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
-                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
-                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
-                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
-                      </div>
-                      <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
-                  `;
-
-            document.getElementById("step-chat").style.position = "relative";
-            document.getElementById("step-chat").style.overflow = "hidden";
-            document.getElementById("step-chat").appendChild(summaryCard);
-
-            // Trigger slide up
-            requestAnimationFrame(() => {
-              summaryCard.style.transform = "translateY(0)";
-            });
-
-            document
-              .getElementById("approve-publish-btn-chat")
-              .addEventListener("click", async () => {
-                const btn = document.getElementById("approve-publish-btn-chat");
-                btn.disabled = true;
-                btn.innerHTML =
-                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
-
-                const approvePublishBtn = document.getElementById(
-                  "approve-publish-btn",
-                );
-                if (approvePublishBtn) {
-                  approvePublishBtn.click();
-                }
-              });
-            // Scroll to bottom
-            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-
-            // Zero-click onboarding
-            const approvePublishBtnChat = document.getElementById(
-              "approve-publish-btn-chat",
+            const approvePublishBtn = document.getElementById(
+              "approve-publish-btn",
             );
-            if (approvePublishBtnChat) {
-              approvePublishBtnChat.click();
+            if (approvePublishBtn) {
+              approvePublishBtn.click();
             }
           }
         } catch (e) {
