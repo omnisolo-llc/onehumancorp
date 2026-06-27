@@ -21,7 +21,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approv
         </svg>
         Customer Inquiry
       </div>
-      <div className="bg-white/50 dark:bg-black/20 p-3 rounded-[8px] text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic shadow-sm">
+      <div className="bg-white/50 dark:bg-black/20 p-3 rounded-[8px] text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic shadow-sm break-words">
         "{approval.payload?.original_message || (approval.proposed_action || approval.context_payload)?.original_message || (approval.proposed_action || approval.context_payload)?.original_payload?.original_message || approval.payload?.original_payload?.original_message || "Customer message"}"
       </div>
       <div className="text-[#0066FF] font-semibold text-sm mt-2 flex items-center gap-2">
