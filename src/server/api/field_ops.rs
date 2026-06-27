@@ -11,6 +11,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct FieldOpsState {
     pub pool: PgPool,
+    pub mesh: std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -69,8 +70,9 @@ pub async fn get_appointments(
         FROM appointments a
         LEFT JOIN customers c ON a.customer_id = c.id
         LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+        LEFT JOIN job_locations jl ON a.id = jl.appointment_id
         WHERE a.tenant_id = $1
-        ORDER BY a.scheduled_start_time ASC
+        ORDER BY COALESCE(jl.sequence_order, 9999), a.scheduled_start_time ASC
 "#
     } else {
         r#"
@@ -90,8 +92,9 @@ pub async fn get_appointments(
         FROM appointments a
         LEFT JOIN customers c ON a.customer_id = c.id
         LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+        LEFT JOIN job_locations jl ON a.id = jl.appointment_id
         WHERE a.tenant_id = $1
-        ORDER BY a.scheduled_start_time ASC
+        ORDER BY COALESCE(jl.sequence_order, 9999), a.scheduled_start_time ASC
 "#
     };
 
@@ -129,7 +132,7 @@ pub async fn get_appointments(
     Ok(Json(GetAppointmentsResponse { appointments }))
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct UpdateAppointmentRequest {
     pub id: String,
     pub status: String,
@@ -177,6 +180,15 @@ pub async fn update_appointment(
         )
     })?;
 
+    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        agent_id: "system".into(),
+        action: "job:status_changed".into(),
+        status: "ok".into(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+        payload: serde_json::to_vec(&payload).unwrap_or_default(),
+    };
+    let _ = state.mesh.publish("job:status_changed", event).await;
+
     Ok(Json(UpdateAppointmentResponse {
         success: true,
         id: payload.id,
@@ -190,6 +202,8 @@ pub async fn update_appointment(
 
 #[derive(Deserialize)]
 pub struct OptimizeRouteRequest {
+    #[serde(rename = "tenantId")]
+    pub tenant_id: Option<String>,
     pub appointments: Vec<Appointment>,
     #[serde(rename = "currentLocationLat")]
     pub current_location_lat: Option<f64>,
@@ -218,6 +232,7 @@ fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
 }
 
 pub async fn optimize_route(
+    State(state): State<Arc<FieldOpsState>>,
     Json(payload): Json<OptimizeRouteRequest>,
 ) -> Result<Json<OptimizeRouteResponse>, (axum::http::StatusCode, String)> {
     let mut completed = Vec::new();
@@ -269,6 +284,44 @@ pub async fn optimize_route(
 
     let mut optimized = completed;
     optimized.extend(optimized_pending);
+
+    if let Some(tenant_id) = payload.tenant_id {
+        let route_id = uuid::Uuid::new_v4().to_string();
+
+        let staff_profile_id = match sqlx::query("SELECT id FROM staff_profiles WHERE tenant_id = $1 LIMIT 1")
+            .bind(&tenant_id)
+            .fetch_optional(&state.pool)
+            .await {
+                Ok(Some(row)) => row.try_get::<String, _>("id").unwrap_or_else(|_| "default-staff".to_string()),
+                _ => "default-staff".to_string(),
+        };
+
+        let route_date = chrono::Utc::now().date_naive();
+
+        let _ = sqlx::query(
+            "INSERT INTO service_routes (id, tenant_id, staff_profile_id, route_date, status) VALUES ($1, $2, $3, $4, 'active') ON CONFLICT DO NOTHING"
+        )
+        .bind(&route_id)
+        .bind(&tenant_id)
+        .bind(&staff_profile_id)
+        .bind(&route_date)
+        .execute(&state.pool)
+        .await;
+
+        for (i, appt) in optimized.iter().enumerate() {
+            let loc_id = uuid::Uuid::new_v4().to_string();
+            let _ = sqlx::query(
+                "INSERT INTO job_locations (id, tenant_id, service_route_id, appointment_id, sequence_order, status) VALUES ($1, $2, $3, $4, $5, 'pending') ON CONFLICT (service_route_id, sequence_order) DO NOTHING"
+            )
+            .bind(&loc_id)
+            .bind(&tenant_id)
+            .bind(&route_id)
+            .bind(&appt.id)
+            .bind(i as i32)
+            .execute(&state.pool)
+            .await;
+        }
+    }
 
     let agent_suggestion = if optimized.iter().any(|a| a.status == "Completed") {
         Some("You finished early! Should I text the next client to see if we can arrive early?".to_string())
@@ -350,8 +403,11 @@ pub async fn running_late(
     }))
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> Router<S> {
-    let state = Arc::new(FieldOpsState { pool });
+pub fn router<S: Clone + Send + Sync + 'static>(
+    pool: PgPool,
+    mesh: std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>,
+) -> Router<S> {
+    let state = Arc::new(FieldOpsState { pool, mesh });
     Router::new()
         .route("/appointments", get(get_appointments).post(update_appointment))
         .route("/optimize-route", axum::routing::post(optimize_route))
@@ -369,7 +425,8 @@ mod tests {
     async fn test_get_appointments_empty() {
         // Use connect_lazy so it doesn't fail immediately, then it hits the query and fails
         let pool = sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
-        let app = router(pool);
+        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let app = router(pool, mesh);
         let req = Request::builder()
             .uri("/appointments?tenant_id=t1")
             .body(Body::empty())
