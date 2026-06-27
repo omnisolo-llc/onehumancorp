@@ -25,8 +25,6 @@ pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/whatsapp_cloud_api/connect", post(whatsapp_cloud_api_handler))
         .route("/whatsapp/connect", post(whatsapp_handler))
-        .route("/whatsapp_cloud_api", post(whatsapp_cloud_api_handler))
-        .route("/whatsapp", post(whatsapp_handler))
 }
 
 async fn whatsapp_cloud_api_handler(Json(_payload): Json<ConnectWhatsAppCloudRequest>) -> impl IntoResponse {

@@ -53,6 +53,8 @@ exports_files(
         "invoice.rs",
     "quotes.rs",
         "settings_integrations.rs",
+
+
     ],
     visibility = ["//visibility:public"],
 )
@@ -108,6 +110,8 @@ rust_library(
         "invoice.rs",
     "quotes.rs",
         "settings_integrations.rs",
+
+
         "sync_gateway.rs",
         "//src/server/api/inbox:srcs",
         "//src/server/api/agents:approvals.rs",

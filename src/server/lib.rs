@@ -2972,6 +2972,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .nest("/api/v1/settings/integrations", api::settings_integrations::router())
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
@@ -5935,7 +5936,8 @@ async fn create_ui_bom_item_handler(
     let app = axum::Router::new()
         .nest("/oauth", crate::api::oauth::proxy::router())
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone()))
-        .nest("/api/v1/settings/integrations", api::settings_integrations::router())
+
+
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
