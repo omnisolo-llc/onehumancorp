@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use std::sync::Arc;
 
 /// Perplexity Archetype Implementation
@@ -45,7 +45,7 @@ impl PerplexityAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+        use ohc_builtin_agent_core::types::Usage;
 
     struct MockPerplexityLlm {
         response: String,

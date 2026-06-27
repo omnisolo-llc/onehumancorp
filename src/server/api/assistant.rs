@@ -2052,7 +2052,7 @@ mod real_feature_state_tests {
 
         // 1. Create a task via POST /tasks
         let task_id = "test-task-1".to_string();
-        let (status, created) = request_json(db.clone(), "POST", "/tasks", json!({
+        let (status, _created) = request_json(db.clone(), "POST", "/tasks", json!({
             "id": task_id,
             "workspace_id": "test-ws",
             "title": "Test Task",

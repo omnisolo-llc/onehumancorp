@@ -158,7 +158,8 @@ pub async fn create_billing_portal_session_handler(
         }
     } else {
         // Fallback if Stripe config is missing
-        Ok(Json(CreateBillingPortalSessionResponse { url: "https://example.com/pricing".to_string() }))
+        let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string());
+        Ok(Json(CreateBillingPortalSessionResponse { url: format!("{}/pricing.html", base_url) }))
     }
 }
 
