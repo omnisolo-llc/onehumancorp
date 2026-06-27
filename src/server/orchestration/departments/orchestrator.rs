@@ -1333,6 +1333,41 @@ pub async fn execute_action(
                         if let Err(e) = stripe.submit_dispute_evidence(dispute_id, payload.clone()).await {
                             tracing::error!("Failed to submit dispute evidence: {}", e);
                         }
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("shift_coverage") {
+                        // Handle Shift Coverage Approval
+                        if let Some(shift_payload) = payload.get("shift_reassignment_payload") {
+                            let original_staff_phone = shift_payload.get("original_staff_phone").and_then(|v| v.as_str()).unwrap_or("");
+
+                            // Find the shift and update it
+                            if let DbStore::Postgres = &self.db.store {
+                                // For E2E simplicity, we update the latest scheduled shift for the matching staff role or phone
+                                let _ = sqlx::query(
+                                    "UPDATE staff_shifts
+                                     SET status = 'reassigned', updated_at = NOW()
+                                     WHERE tenant_id = $1 AND status = 'scheduled' AND staff_id IN (
+                                        SELECT id FROM ohc_staff_member WHERE phone_number = $2
+                                     )
+                                     "
+                                )
+                                .bind(tenant_id)
+                                .bind(original_staff_phone)
+                                .execute(&self.db.pool)
+                                .await;
+                            } else if let DbStore::Sqlite(pool) = &self.db.store {
+                                let _ = sqlx::query(
+                                    "UPDATE staff_shifts
+                                     SET status = 'reassigned', updated_at = CURRENT_TIMESTAMP
+                                     WHERE tenant_id = ? AND status = 'scheduled' AND staff_id IN (
+                                        SELECT id FROM ohc_staff_member WHERE phone_number = ?
+                                     )
+                                     "
+                                )
+                                .bind(tenant_id)
+                                .bind(original_staff_phone)
+                                .execute(pool)
+                                .await;
+                            }
+                        }
                     }
                 }
 

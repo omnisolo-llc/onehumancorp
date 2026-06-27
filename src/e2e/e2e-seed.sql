@@ -641,3 +641,11 @@ ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE IF EXISTS job_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS service_routes ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS staff_shifts DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO staff_shifts (id, tenant_id, staff_id, start_time, end_time, role, status)
+VALUES ('e2e-shift-1', 'e2e-tenant', 'staff_1', CURRENT_TIMESTAMP + interval '1 day', CURRENT_TIMESTAMP + interval '1 day 8 hours', 'Barista', 'scheduled')
+ON CONFLICT DO NOTHING;
+
+ALTER TABLE IF EXISTS staff_shifts ENABLE ROW LEVEL SECURITY;

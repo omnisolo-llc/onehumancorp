@@ -113,20 +113,22 @@ impl MessageTriageWorker {
             // Extract intent & context using LLM
             let prompt = format!(
                 "You are an AI order and task triage assistant for a business.
-Analyze the following incoming customer message.
+Analyze the following incoming customer or staff message.
 Message from {}: '{}'
 Source: {}
 
-Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
+Please extract the context, priority, and decide if the request needs a Quote, a Booking, a General Reply, or if it is a Shift Call-Out. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
 If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
+If you decide action_type is 'Shift Coverage', the action_payload MUST be a JSON string with 'original_staff_phone' (string), 'reason' (string), 'reassignment_prompt' (string).
+
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
-    \"feature_type\": \"instagram_dm\" or \"general\",
+    \"feature_type\": \"instagram_dm\" or \"general\" or \"shift_callout\",
     \"context_summary\": \"A short one sentence summary of the request.\",
-    \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
-    \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string.\"
+    \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\" or \"Shift Coverage\",
+    \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string, or shift coverage JSON string.\"
 }}",
                 sender_id, customer_message, source
             );
@@ -257,13 +259,14 @@ Output JSON format:
             });
 
             let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
-            let action_payload_str = omni_result.final_draft;
-            let action_payload = action_payload_str.as_str();
+            let mut action_payload_str = omni_result.final_draft;
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
             let mut event_source = source.to_string();
             if feature_type == "instagram_dm" || source.to_lowercase().contains("instagram") {
                 event_source = "instagram_dm".to_string();
+            } else if feature_type == "shift_callout" {
+                event_source = "shift_coverage".to_string();
             }
 
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
@@ -272,8 +275,20 @@ Output JSON format:
             let mut _quote_total_amount_cents: Option<i64> = None;
 
             let mut booking_id_opt: Option<String> = None;
+            let mut shift_reassignment_payload: Option<serde_json::Value> = None;
 
-            if action_type == "Draft Booking" {
+            let mut action_payload = action_payload_str.as_str();
+
+            if action_type == "Shift Coverage" {
+                // If it is a Shift Coverage action, use the raw JSON string provided by the LLM
+                if let Some(raw_payload) = extracted.get("action_payload").and_then(|v| v.as_str()) {
+                    action_payload_str = raw_payload.to_string();
+                    action_payload = action_payload_str.as_str();
+                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(raw_payload) {
+                        shift_reassignment_payload = Some(parsed);
+                    }
+                }
+            } else if action_type == "Draft Booking" {
                 if let Ok(booking_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                     let draft_booking_id = Uuid::new_v4();
                     booking_id_opt = Some(draft_booking_id.to_string());
@@ -504,7 +519,8 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
+                        "shift_reassignment_payload": shift_reassignment_payload.clone(),
+                        "feature_type": if action_type == "Shift Coverage" { "shift_coverage" } else if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
@@ -632,7 +648,8 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
+                        "shift_reassignment_payload": shift_reassignment_payload.clone(),
+                        "feature_type": if action_type == "Shift Coverage" { "shift_coverage" } else if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
                     }).to_string())
                     .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
