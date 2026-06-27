@@ -635,7 +635,7 @@
 
       <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
         <div class="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] px-4 py-1.5 rounded-full shadow border border-white/40 dark:border-white/10 flex items-center gap-2 pointer-events-auto">
-          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-orange-500"></div>
+          <div id="network-status-dot" class="w-2 h-2 rounded-full bg-[#FF9500]"></div>
           <span id="network-status-text" class="text-sm font-semibold text-gray-800">Working Offline</span>
         </div>
       </div>
@@ -889,6 +889,7 @@
 
         <a href="reputation-engine.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
 <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
+        <a href="viral-newsletter-generator.html" id="newsletter-generator-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Newsletter Generator ✉️</a>
         <a href="viral-waitlist-generator.html" id="viral-waitlist-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Waitlist Generator ⏳</a>
         <a href="viral-goal-tracker.html" id="viral-goal-tracker-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Goal Tracker Builder 🎯</a>
         <a href="viral-loyalty-widget.html" id="loyalty-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Loyalty Engine 💳</a>
@@ -906,6 +907,7 @@
         <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Work-Intake Widget 📋</a>
         <a href="lead-gen.html" id="lead-gen-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Hyperlocal Lead Gen 📍</a>
         <a href="tip-jar-generator.html" id="tip-jar-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Tip Jar Generator ☕</a>
+        <a href="share-and-save-widget.html" id="share-and-save-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share & Save Widget 💸</a>
         <a href="conversational-manager.html" id="conversational-manager-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Conversational AI Store Manager 🤖</a>
         <a href="flash-sale-generator.html" id="flash-sale-generator-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-top: 10px;">Flash Sale Generator ⚡</a>
       </div>
@@ -921,7 +923,7 @@
             <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')" style="flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Activity</button>
           </div>
           <div id="triage-queue">
-            <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
+            <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                 <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                     <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
                     Welcome to OHC!
@@ -929,7 +931,7 @@
                 <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                     Your business is ready. Check out your generated storefront and see what's next.
                 </p>
-                <a href="storefront.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: flex; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; align-items: center; justify-content: center;">Review Storefront</a>
+                <a href="storefront.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: flex; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; align-items: center; justify-content: center;">Review Storefront</a>
             </div>
           </div>
         </div>
@@ -1336,13 +1338,13 @@
             aiSavingsTitle.innerText = `You saved ${data.hours_saved} hours this week`;
             aiSavingsDesc.innerText = `Your AI agents handled ${data.inquiries_handled} customer inquiries, scheduled ${data.appointments_scheduled} appointments, and recovered ${data.carts_recovered} abandoned carts.`;
           } else {
-            aiSavingsTitle.innerText = "You saved 0 hours this week";
-            aiSavingsDesc.innerText = "No tasks processed this week.";
+            document.getElementById("ai-savings-widget").parentElement.style.display = "none";
+
           }
         } catch (error) {
           console.error("Error fetching time savings data:", error);
-          aiSavingsTitle.innerText = "You saved 0 hours this week";
-          aiSavingsDesc.innerText = "No tasks processed this week.";
+          document.getElementById("ai-savings-widget").parentElement.style.display = "none";
+
         }
 
         if (shareSavingsBtn) {
@@ -1720,7 +1722,7 @@
           if (agentFeedItems.length === 0) { agentFeedItems = (Array.isArray(data) ? data : (data.items || [])); }
           if (agentFeedItems.length === 0) {
             triageQueue.innerHTML = `
-              <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
+              <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                   <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                       <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
                       Welcome to OHC!
@@ -1728,7 +1730,7 @@
                   <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                       Your business is ready. Check out your generated storefront and see what's next.
                   </p>
-                  <a href="storefront.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
+                  <a href="storefront.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
               </div>
             `;
           } else {
@@ -1739,7 +1741,7 @@
           console.error("Unified Feed load error:", err);
           // Show fallback onboarding welcome card for the "Day One" experience if API fails
           triageQueue.innerHTML = `
-            <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
+            <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                 <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                     <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
                     Welcome to OHC!
@@ -1747,7 +1749,7 @@
                 <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                     Your business is ready. Check out your generated storefront and see what's next.
                 </p>
-                <a href="storefront.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
+                <a href="storefront.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
             </div>
           `;
         }
@@ -1852,7 +1854,7 @@
 
             if (item.feature_type === 'onboarding_welcome' || item.context_payload?.feature_type === 'onboarding_welcome') {
                 return `
-                <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 20px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
+                <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                   <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 16px; font-weight: 800; letter-spacing: 0.5px;">Welcome</div>
                     <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: #0066FF;">Action Required</div>
@@ -3417,12 +3419,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!navigator.onLine) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-orange-500";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-[#FF9500]";
             if (text) text.innerText = "Working Offline";
         } else if (queue.length > 0) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-blue-500 animate-pulse";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-[#0066FF] animate-pulse";
             if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
         } else {
             networkIndicator.style.display = "none";
@@ -3587,10 +3589,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (generalMutations.length > 0) {
             try {
-                const res = await fetch("/api/v1/sync/offline", {
+                const deltas = generalMutations.map(m => ({ id: m.id || crypto.randomUUID(), entity_id: (m.payload && m.payload.entity_id) ? m.payload.entity_id : (m.product_id || m.transaction_id || "general"), data: JSON.stringify(m), updated_at: new Date().toISOString() })); const res = await fetch("/api/v1/sync/mcp-deltas", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-spiffe-id": spiffeId },
-                    body: JSON.stringify({ mutations: generalMutations })
+                    body: JSON.stringify({ tenant_id: tenantId, deltas: deltas })
                 });
                 if (!res.ok) {
                     allOk = false;
@@ -3630,7 +3632,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener("ohc_queue_updated", updateOfflineStatus);
     updateOfflineStatus();
 </script>
-    <script src="help-widget.mjs"></script>
 <div class="mobile-nav" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border-top: 1px solid rgba(0,0,0,0.1); padding: 12px 24px; z-index: 1000; justify-content: space-around; align-items: center;">
       <a href="triage.html" style="text-decoration: none; color: #0066FF; display: flex; flex-direction: column; align-items: center; gap: 4px;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>

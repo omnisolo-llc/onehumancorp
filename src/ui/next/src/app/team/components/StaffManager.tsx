@@ -102,7 +102,7 @@ export default function StaffManager() {
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm outline-none focus:border-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm outline-none focus:border-[#0066FF]"
                   required
                 />
               </div>
@@ -113,7 +113,7 @@ export default function StaffManager() {
                   type="tel"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm outline-none focus:border-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm outline-none focus:border-[#0066FF]"
                   required
                 />
               </div>
@@ -123,7 +123,7 @@ export default function StaffManager() {
                 <select
                   value={role}
                   onChange={e => setRole(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm outline-none focus:border-blue-500"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 text-sm outline-none focus:border-[#0066FF]"
                 >
                   <option value="Cashier">Cashier</option>
                   <option value="Manager">Manager</option>
@@ -144,7 +144,7 @@ export default function StaffManager() {
                <button
                  type="submit"
                  disabled={isSubmitting}
-                 className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+                 className="flex-1 py-2 bg-[#0071E3] text-white rounded-lg text-sm font-semibold disabled:opacity-50"
                >
                  {isSubmitting ? 'Adding...' : 'Add Staff'}
                </button>
@@ -153,7 +153,7 @@ export default function StaffManager() {
        ) : (
          <button
            onClick={() => setShowAddForm(true)}
-           className="mt-4 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 text-sm font-semibold hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
+           className="mt-4 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 text-sm font-semibold hover:border-[#0066FF] hover:text-[#0071E3] transition-colors flex items-center justify-center gap-2"
          >
            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
            Add Staff Member

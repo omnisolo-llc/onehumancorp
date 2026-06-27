@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Glassmorphism UI Audit', () => {
 
   test('onboarding container matches OHC glassmorphism light mode spec', async ({ page }) => {
-    await page.goto('/onboarding');
+    await page.goto('http://127.0.0.1:3000/onboarding');
     const container = page.locator('#setup-screen');
     await expect(container).toBeVisible();
 
@@ -25,7 +25,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
   });
 
   test('onboarding container matches OHC glassmorphism dark mode spec', async ({ page }) => {
-    await page.goto('/onboarding');
+    await page.goto('http://127.0.0.1:3000/onboarding');
     const container = page.locator('#setup-screen');
     await expect(container).toBeVisible();
 
@@ -45,7 +45,10 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
   });
 
   test('onboarding inputs and buttons use 8px border radius', async ({ page }) => {
-    await page.goto('/onboarding');
+    await page.goto('http://127.0.0.1:3000/onboarding');
+
+    // Start wizard to reach an input
+    await page.getByText('Start My Business').click();
 
     // Check an input
     const input = page.locator('#setup-screen input').first();
@@ -53,7 +56,9 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
     expect(borderRadiusInput).toBe('8px');
 
     // Check back/forward buttons or action buttons
-    const button = page.locator('#setup-screen button').first();
+    // The very first button might be the `setup-nav-button` which intentionally has a 999px border-radius,
+    // so we skip that one and check the general wizard continuation buttons.
+    const button = page.locator('#setup-screen button:not(.setup-nav-button)').first();
     const borderRadiusButton = await button.evaluate((el) => window.getComputedStyle(el).borderRadius);
     expect(borderRadiusButton).toBe('8px');
   });

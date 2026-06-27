@@ -109,6 +109,7 @@ export default function FieldOpsJobsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          tenantId: "default",
           appointments: updatedJobs,
           currentLocationLat: 0,
           currentLocationLng: 0,
@@ -278,7 +279,7 @@ export default function FieldOpsJobsPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setAgentSuggestion(null)}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg"
+                  className="px-3 py-1.5 bg-[#0071E3] text-white text-xs font-semibold rounded-lg"
                 >
                   Yes, text them
                 </button>
@@ -298,7 +299,7 @@ export default function FieldOpsJobsPage() {
         {jobs.map((job) => (
           <div
             key={job.id}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+            className="bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] rounded-[16px] shadow-sm border border-white/40 overflow-hidden"
           >
             <div className="p-5 border-b border-gray-100 bg-gray-50/50">
               <div className="flex justify-between items-start mb-2">
@@ -345,23 +346,23 @@ export default function FieldOpsJobsPage() {
                   Service Notes & Potential Follow-ups
                 </label>
                 <textarea
-                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow min-h-[80px]"
+                  className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#0066FF] focus:border-transparent outline-none transition-shadow min-h-[80px]"
                   placeholder="E.g., Needs a replacement quote."
                   value={job.notes}
                   onChange={(e) => handleNotesChange(job.id, e.target.value)}
                 />
 
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3 flex-wrap">
                   {job.status === "Requested" || job.status === "Scheduled" ? (
-                    <div className="flex w-full gap-2 flex-col sm:flex-row">
+                    <div className="flex w-full gap-2 flex-col sm:flex-row flex-wrap">
                       <button
-                        className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
                         onClick={() => handleStatusChange(job.id, "En-Route")}
                       >
                         Heading to Job
                       </button>
                       <button
-                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
                         onClick={() => handleRunningLate(job.id)}
                         disabled={delayingJobId === job.id}
                       >
@@ -371,9 +372,9 @@ export default function FieldOpsJobsPage() {
                       </button>
                     </div>
                   ) : job.status === "En-Route" ? (
-                    <div className="flex w-full gap-2 flex-col sm:flex-row">
+                    <div className="flex w-full gap-2 flex-col sm:flex-row flex-wrap">
                       <button
-                        className="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
                         onClick={() =>
                           handleStatusChange(job.id, "In-Progress")
                         }
@@ -381,7 +382,7 @@ export default function FieldOpsJobsPage() {
                         Start Work
                       </button>
                       <button
-                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
                         onClick={() => handleRunningLate(job.id)}
                         disabled={delayingJobId === job.id}
                       >
@@ -391,15 +392,15 @@ export default function FieldOpsJobsPage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="flex w-full gap-2 flex-col sm:flex-row">
+                    <div className="flex w-full gap-2 flex-col sm:flex-row flex-wrap">
                       <button
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-[#0071E3] hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
                         onClick={() => handleComplete(job.id)}
                       >
                         Job Done
                       </button>
                       <button
-                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px]"
+                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
                         onClick={() => handleRunningLate(job.id)}
                         disabled={delayingJobId === job.id}
                       >
@@ -418,7 +419,7 @@ export default function FieldOpsJobsPage() {
                   Saved Notes:
                 </p>
                 <p className="text-sm text-gray-600 italic">"{job.notes}"</p>
-                <p className="text-xs text-blue-600 font-semibold mt-2">
+                <p className="text-xs text-[#0071E3] font-semibold mt-2">
                   ✨ Sales Agent will draft an estimate based on these notes
                   once online.
                 </p>

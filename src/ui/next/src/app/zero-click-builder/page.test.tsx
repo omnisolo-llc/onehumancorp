@@ -25,7 +25,7 @@ describe('ZeroClickBuilderPage', () => {
   it('renders the initial form', () => {
     render(<ZeroClickBuilderPage />);
     expect(screen.getByText('Zero-Click Business Generator')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Type your message/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i)).toBeInTheDocument();
     const buttons = screen.getAllByRole('button');
     const submitBtn = buttons[buttons.length - 1];
     expect(submitBtn).toBeDisabled();
@@ -33,7 +33,7 @@ describe('ZeroClickBuilderPage', () => {
 
   it('enables the button when prompt is entered', () => {
     render(<ZeroClickBuilderPage />);
-    const input = screen.getByPlaceholderText(/Type your message/i);
+    const input = screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i);
     fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
 
     const buttons = screen.getAllByRole('button');
@@ -68,7 +68,7 @@ describe('ZeroClickBuilderPage', () => {
 
     render(<ZeroClickBuilderPage />);
 
-    const input = screen.getByPlaceholderText(/Type your message/i);
+    const input = screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i);
     fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
 
     const buttons = screen.getAllByRole('button');

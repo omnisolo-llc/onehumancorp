@@ -84,7 +84,7 @@ export function SuccessMilestoneWidget() {
             onClick={handleShare}
             className={`flex-1 min-h-[44px] min-w-[44px] py-3 px-4 rounded-xl font-bold font-outfit text-sm transition-all flex items-center justify-center gap-2 ${
               isShared
-                ? "bg-green-500 text-white shadow-md shadow-green-200"
+                ? "bg-[#34C759] text-white shadow-md shadow-green-200"
                 : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200"
             }`}
           >

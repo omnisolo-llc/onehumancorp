@@ -759,7 +759,7 @@ async fn http_login_handler(
     let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] failed to start login transaction");
+            ::server_telemetry::record_error_signal("[bug] failed to start login transaction");
             tracing::error!("failed to start login transaction: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -770,7 +770,7 @@ async fn http_login_handler(
     };
 
     if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-        ::server_telemetry::record_error_signal("[INFRA] failed to set tenant context for login");
+        ::server_telemetry::record_error_signal("[bug] failed to set tenant context for login");
         tracing::error!("failed to set tenant context for login: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -794,7 +794,7 @@ async fn http_login_handler(
     {
         Ok(row) => row,
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] failed to query login user");
+            ::server_telemetry::record_error_signal("[bug] failed to query login user");
             tracing::error!("failed to query login user: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -820,7 +820,7 @@ async fn http_login_handler(
         match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
             Ok(res) => res,
             Err(e) => {
-                ::server_telemetry::record_error_signal("[BUG] spawn_blocking failed for bcrypt");
+                ::server_telemetry::record_error_signal("[bug] spawn_blocking failed for bcrypt");
                 tracing::error!("spawn_blocking failed for bcrypt: {}", e);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -841,7 +841,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("[SECURITY] failed to verify auth credential");
+            ::server_telemetry::record_error_signal("[security] failed to verify auth credential");
             tracing::error!("failed to verify auth credential: {}", e); // pii-safe
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -873,7 +873,7 @@ async fn http_login_handler(
     let token = match store.issue_token(&user) {
         Ok(t) => t,
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] failed to issue login token");
+            ::server_telemetry::record_error_signal("[bug] failed to issue login token");
             tracing::error!("failed to issue login token: {}", e); // pii-safe
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -1054,7 +1054,7 @@ pub async fn advisory_insights_handler(
             (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("[AI] MiniMax advisory insights failed");
+            ::server_telemetry::record_error_signal("[bug] MiniMax advisory insights failed");
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -1135,7 +1135,7 @@ async fn draft_reply_handler(
     match client.reason(&compressed_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("[AI] MiniMax draft reply failed");
+            ::server_telemetry::record_error_signal("[bug] MiniMax draft reply failed");
             tracing::error!("MiniMax draft reply failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -2553,6 +2553,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, Some(cb))); let _ = consolidation_worker.clone().spawn_background_task();
     let _ = consolidation_worker.clone().spawn_background_task();
 
+    let replenishment_job = crate::workers::subscription_replenishment_job::SubscriptionReplenishmentJob::new(db.clone());
+    replenishment_job.start();
+    // Start Subscription Replenishment Worker
+    let replenishment_worker = std::sync::Arc::new(crate::workers::subscription_replenishment_worker::SubscriptionReplenishmentWorker::new(db.clone()));
+    replenishment_worker.start();
+
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
@@ -2603,7 +2609,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         loop {
             if let Err(e) = agent_memory_pipeline_clone.run().await {
-                ::server_telemetry::record_error_signal("[BUG] Agent Memory Pipeline error");
+                ::server_telemetry::record_error_signal("[bug] Agent Memory Pipeline error");
                 tracing::error!("Agent Memory Pipeline error: {}", e);
             }
             tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
@@ -2744,7 +2750,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let payload = match serde_json::to_string(&task) {
             Ok(p) => p,
             Err(e) => {
-                ::server_telemetry::record_error_signal("[BUG] Failed to serialize task");
+                ::server_telemetry::record_error_signal("[bug] Failed to serialize task");
                 tracing::error!("Failed to serialize task: {}", e);
                 return;
             }
@@ -2768,7 +2774,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         is_cloud
     );
     if let Err(e) = handoff_manager.start_listener().await {
-        ::server_telemetry::record_error_signal("[INFRA] Failed to start handoff listener");
+        ::server_telemetry::record_error_signal("[bug] Failed to start handoff listener");
         tracing::trace!("Failed to start handoff listener: {}", e);
     }
 
@@ -2806,7 +2812,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&heartbeat_agent_id, "online", 60)
                         .await
                     {
-                        ::server_telemetry::record_error_signal("[INFRA] Failed to register builtin agent presence");
+                        ::server_telemetry::record_error_signal("[bug] Failed to register builtin agent presence");
                         tracing::error!("Failed to register builtin agent presence: {}", e);
                     }
                 }
@@ -2862,7 +2868,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&agent_id_clone, "active", 30)
                         .await
                     {
-                        ::server_telemetry::record_error_signal("[INFRA] Failed to register presence");
+                        ::server_telemetry::record_error_signal("[bug] Failed to register presence");
                         tracing::error!("Failed to register presence: {}", e);
                     }
                     tokio::time::sleep(std::time::Duration::from_secs(15)).await;
@@ -2989,7 +2995,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] Failed to begin transaction");
+            ::server_telemetry::record_error_signal("[bug] Failed to begin transaction");
             tracing::error!("Failed to begin transaction: {}", e);
             return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
         }
@@ -2997,7 +3003,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let org_id = user.organization_id.unwrap_or_default();
     if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
-        ::server_telemetry::record_error_signal("[INFRA] Failed to set org context");
+        ::server_telemetry::record_error_signal("[bug] Failed to set org context");
         tracing::error!("Failed to set org context: {}", e);
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
@@ -3033,7 +3039,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] Failed to fetch inbox messages");
+            ::server_telemetry::record_error_signal("[bug] Failed to fetch inbox messages");
             tracing::error!("Failed to fetch inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -4177,80 +4183,51 @@ pub(crate) struct UiDashboardMetrics {
 pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
-    mobile_optimized: bool,
+    _mobile_optimized: bool,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
     let t_id = tenant_id.to_string();
 
-    let (active_customers_res, orders_metrics_res, campaigns_res, auto_replied_res) = if mobile_optimized {
-        tokio::join!(
-            async {
-                match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id).fetch_one(pool).await,
-                }
-            },
-            async {
-                match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id).fetch_one(pool).await,
-                }
-            },
-            async {
-                match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(&db.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(pool).await,
-                }
-            },
-            async {
-                match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id).fetch_one(&db.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id).fetch_one(pool).await,
-                }
-            }
-        )
-    } else {
-        tokio::join!(
-            async {
-                match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id).fetch_one(pool).await,
-                }
-            },
-            async {
-                match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id).fetch_one(pool).await,
-                }
-            },
-            async {
-                match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(&db.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(pool).await,
-                }
-            },
-            async {
-                match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id).fetch_one(&db.pool).await,
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id).fetch_one(pool).await,
-                }
-            }
-        )
+    let row = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query_as::<_, (i64, Option<i64>, Option<f64>, i64, i64)>(
+                "SELECT
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) as active_customers,
+                    (SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT) FROM orders WHERE tenant_id = $1) as pending_orders,
+                    (SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1) as total_sales,
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') as campaigns_sent,
+                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied') as auto_replied
+                "
+            )
+            .bind(&t_id)
+            .fetch_one(&db.pool)
+            .await?
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query_as::<_, (i64, Option<i64>, Option<f64>, i64, i64)>(
+                "SELECT
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) as active_customers,
+                    (SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER) FROM orders WHERE tenant_id = ?) as pending_orders,
+                    (SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?) as total_sales,
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') as campaigns_sent,
+                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied') as auto_replied
+                "
+            )
+            .bind(&t_id)
+            .bind(&t_id)
+            .bind(&t_id)
+            .bind(&t_id)
+            .bind(&t_id)
+            .fetch_one(pool)
+            .await?
+        }
     };
-
-    let active_customers = active_customers_res.unwrap_or(0);
-    let (pending_orders, total_sales) = match orders_metrics_res {
-        Ok((p, s)) => (p.unwrap_or(0), s.unwrap_or(0.0)),
-        _ => (0, 0.0)
-    };
-    let total_campaigns_sent = campaigns_res.unwrap_or(0);
-    let auto_replied = auto_replied_res.unwrap_or(0);
 
     Ok(UiDashboardMetrics {
-        active_customers,
-        pending_orders,
-        total_sales,
-        total_campaigns_sent,
-        auto_replied,
+        active_customers: row.0,
+        pending_orders: row.1.unwrap_or(0),
+        total_sales: row.2.unwrap_or(0.0),
+        total_campaigns_sent: row.3,
+        auto_replied: row.4,
     })
 }
 
@@ -4979,42 +4956,72 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             let mut daily_work_rows_json = Vec::new();
             match &db4.store {
                 crate::db::DbStore::Postgres => {
-                    if let Ok(rows) = sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50")
-                        .bind(&t_id4).fetch_all(&db4.pool).await {
+                    let query_str = if mobile_optimized {
+                        "SELECT id, signal_id, intent, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                    } else {
+                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS text) AS created_at FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                    };
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id4).fetch_all(&db4.pool).await {
                         for row in rows {
                             use sqlx::Row;
-                            let customer_info: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("customer_info").ok().map(|j| j.0);
-                            let suggested_actions: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("suggested_actions").ok().map(|j| j.0);
-                            daily_work_rows_json.push(serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "tenant_id": t_id4,
-                                "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
-                                "intent": row.get::<String, _>("intent"),
-                                "customer_info": customer_info,
-                                "suggested_actions": suggested_actions,
-                                "status": row.get::<String, _>("status"),
-                                "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                            }));
+                            if mobile_optimized {
+                                daily_work_rows_json.push(serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": t_id4,
+                                    "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                    "intent": row.get::<String, _>("intent"),
+                                    "status": row.get::<String, _>("status"),
+                                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                                }));
+                            } else {
+                                let customer_info: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("customer_info").ok().map(|j| j.0);
+                                let suggested_actions: Option<serde_json::Value> = row.try_get::<sqlx::types::Json<serde_json::Value>, _>("suggested_actions").ok().map(|j| j.0);
+                                daily_work_rows_json.push(serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": t_id4,
+                                    "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                    "intent": row.get::<String, _>("intent"),
+                                    "customer_info": customer_info,
+                                    "suggested_actions": suggested_actions,
+                                    "status": row.get::<String, _>("status"),
+                                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                                }));
+                            }
                         }
                     }
                 }
                 crate::db::DbStore::Sqlite(pool) => {
-                    if let Ok(rows) = sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS TEXT) AS created_at FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50")
-                        .bind(&t_id4).fetch_all(pool).await {
+                    let query_str = if mobile_optimized {
+                        "SELECT id, signal_id, intent, status, CAST(created_at AS TEXT) AS created_at FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                    } else {
+                        "SELECT id, signal_id, intent, customer_info, suggested_actions, status, CAST(created_at AS TEXT) AS created_at FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC LIMIT 50"
+                    };
+                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id4).fetch_all(pool).await {
                         for row in rows {
                             use sqlx::Row;
-                            let customer_info: Option<serde_json::Value> = row.try_get::<String, _>("customer_info").ok().and_then(|s| serde_json::from_str(&s).ok());
-                            let suggested_actions: Option<serde_json::Value> = row.try_get::<String, _>("suggested_actions").ok().and_then(|s| serde_json::from_str(&s).ok());
-                            daily_work_rows_json.push(serde_json::json!({
-                                "id": row.get::<String, _>("id"),
-                                "tenant_id": t_id4,
-                                "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
-                                "intent": row.get::<String, _>("intent"),
-                                "customer_info": customer_info,
-                                "suggested_actions": suggested_actions,
-                                "status": row.get::<String, _>("status"),
-                                "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                            }));
+                            if mobile_optimized {
+                                daily_work_rows_json.push(serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": t_id4,
+                                    "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                    "intent": row.get::<String, _>("intent"),
+                                    "status": row.get::<String, _>("status"),
+                                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                                }));
+                            } else {
+                                let customer_info: Option<serde_json::Value> = row.try_get::<String, _>("customer_info").ok().and_then(|s| serde_json::from_str(&s).ok());
+                                let suggested_actions: Option<serde_json::Value> = row.try_get::<String, _>("suggested_actions").ok().and_then(|s| serde_json::from_str(&s).ok());
+                                daily_work_rows_json.push(serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": t_id4,
+                                    "signal_id": row.try_get::<String, _>("signal_id").unwrap_or_default(),
+                                    "intent": row.get::<String, _>("intent"),
+                                    "customer_info": customer_info,
+                                    "suggested_actions": suggested_actions,
+                                    "status": row.get::<String, _>("status"),
+                                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                                }));
+                            }
                         }
                     }
                 }
@@ -5251,40 +5258,56 @@ async fn ui_dashboard_unified_feed_handler(
             let t_key = format!("ui_triage:{}:mobile:{}", t_bg, mobile_optimized);
             let p_key = format!("ui_priority_tasks:{}:mobile:{}", t_bg, mobile_optimized);
 
-            let (metrics_val, orders, inbox, triage, priority_tasks, approvals, agent_feed) = tokio::join!(
-                async {
+            let db_bg_1 = db_bg.clone(); let t_bg_1 = t_bg.clone(); let m_key_1 = m_key.clone();
+            let db_bg_2 = db_bg.clone(); let t_bg_2 = t_bg.clone(); let o_key_2 = o_key.clone();
+            let db_bg_3 = db_bg.clone(); let t_bg_3 = t_bg.clone(); let i_key_3 = i_key.clone();
+            let db_bg_4 = db_bg.clone(); let t_bg_4 = t_bg.clone(); let t_key_4 = t_key.clone();
+            let db_bg_5 = db_bg.clone(); let t_bg_5 = t_bg.clone(); let p_key_5 = p_key.clone();
+            let db_bg_6 = db_bg.clone(); let t_bg_6 = t_bg.clone();
+            let db_bg_7 = db_bg.clone(); let t_bg_7 = t_bg.clone();
+
+            let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res) = tokio::join!(
+                tokio::spawn(async move {
                     if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&m_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&m_key_1).await { return v; }
                     }
-                    load_ui_dashboard_metrics(&db_bg, &t_bg, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
-                },
-                async {
+                    load_ui_dashboard_metrics(&db_bg_1, &t_bg_1, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
+                }),
+                tokio::spawn(async move {
                     if let Some(c) = UI_ORDERS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&o_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&o_key_2).await { return v; }
                     }
-                    load_ui_orders_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
-                },
-                async {
+                    load_ui_orders_from_db(&db_bg_2, &t_bg_2, mobile_optimized).await.unwrap_or_default()
+                }),
+                tokio::spawn(async move {
                     if let Some(c) = UI_INBOX_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&i_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&i_key_3).await { return v; }
                     }
-                    load_ui_inbox_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
-                },
-                async {
+                    load_ui_inbox_from_db(&db_bg_3, &t_bg_3, mobile_optimized).await.unwrap_or_default()
+                }),
+                tokio::spawn(async move {
                     if let Some(c) = UI_TRIAGE_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&t_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&t_key_4).await { return v; }
                     }
-                    load_ui_triage_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
-                },
-                async {
+                    load_ui_triage_from_db(&db_bg_4, &t_bg_4, mobile_optimized).await.unwrap_or_default()
+                }),
+                tokio::spawn(async move {
                     if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&p_key).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&p_key_5).await { return v; }
                     }
-                    load_ui_priority_tasks_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
-                },
-                async { load_ui_agent_approvals_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default() },
-                async { load_ui_agent_feed_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default() }
+                    load_ui_priority_tasks_from_db(&db_bg_5, &t_bg_5, mobile_optimized).await.unwrap_or_default()
+                }),
+                tokio::spawn(async move { load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default() }),
+                tokio::spawn(async move { load_ui_agent_feed_from_db(&db_bg_7, &t_bg_7, mobile_optimized).await.unwrap_or_default() })
             );
+
+            let metrics_val = metrics_res.unwrap_or_default();
+            let orders = orders_res.unwrap_or_default();
+            let inbox = inbox_res.unwrap_or_default();
+            let triage = triage_res.unwrap_or_default();
+            let priority_tasks = priority_tasks_res.unwrap_or_default();
+            let approvals = approvals_res.unwrap_or_default();
+            let agent_feed = agent_feed_res.unwrap_or_default();
 
             let result = serde_json::json!({
                 "metrics": metrics_val,
@@ -5316,59 +5339,86 @@ async fn ui_dashboard_unified_feed_handler(
     let t_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
     let p_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
 
-    let (metrics_val, orders, inbox, triage, priority_tasks, approvals, agent_feed, supply_res) = tokio::join!(
-        async {
+    let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res, supply_res) = tokio::join!(
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&m_key).await { return v; }
+            let m_key_clone = m_key.clone();
+            async move {
+                if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&m_key_clone).await { return v; }
+                }
+                load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
             }
-            load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_ORDERS_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&o_key).await { return v; }
+            let o_key_clone = o_key.clone();
+            async move {
+                if let Some(c) = UI_ORDERS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&o_key_clone).await { return v; }
+                }
+                load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
             }
-            load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_INBOX_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&i_key).await { return v; }
+            let i_key_clone = i_key.clone();
+            async move {
+                if let Some(c) = UI_INBOX_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&i_key_clone).await { return v; }
+                }
+                load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
             }
-            load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_TRIAGE_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&t_key).await { return v; }
+            let t_key_clone = t_key.clone();
+            async move {
+                if let Some(c) = UI_TRIAGE_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&t_key_clone).await { return v; }
+                }
+                load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
             }
-            load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                if let Some((v, _)) = c.get_with_swr(&p_key).await { return v; }
+            let p_key_clone = p_key.clone();
+            async move {
+                if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&p_key_clone).await { return v; }
+                }
+                load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
             }
-            load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
-        async {
+            async move {
+                load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            }
+        }),
+        tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-        },
+            async move {
+                load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            }
+        }),
         supply_future
     );
+
+    let metrics_val = metrics_res.unwrap_or_default();
+    let orders = orders_res.unwrap_or_default();
+    let inbox = inbox_res.unwrap_or_default();
+    let triage = triage_res.unwrap_or_default();
+    let priority_tasks = priority_tasks_res.unwrap_or_default();
+    let approvals = approvals_res.unwrap_or_default();
+    let agent_feed = agent_feed_res.unwrap_or_default();
 
     let supply_val = supply_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
 
@@ -5539,7 +5589,7 @@ async fn list_ui_orders_handler(
             (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
         },
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] Failed to fetch UI orders");
+            ::server_telemetry::record_error_signal("[bug] Failed to fetch UI orders");
             tracing::error!("Failed to fetch UI orders: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -5712,7 +5762,7 @@ async fn list_ui_inbox_handler(
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         },
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] Failed to fetch UI inbox messages");
+            ::server_telemetry::record_error_signal("[bug] Failed to fetch UI inbox messages");
             tracing::error!("Failed to fetch UI inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -5757,7 +5807,7 @@ async fn ui_dashboard_metrics_handler(
             (axum::http::StatusCode::OK, axum::Json(res)).into_response()
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] Failed to fetch UI dashboard metrics");
+            ::server_telemetry::record_error_signal("[bug] Failed to fetch UI dashboard metrics");
             tracing::error!("Failed to fetch UI dashboard metrics: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
                 "active_customers": 0,
@@ -5829,7 +5879,7 @@ async fn create_ui_supply_vendor_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "contact_info": contact_info}))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] Failed to create UI supply vendor");
+            ::server_telemetry::record_error_signal("[bug] Failed to create UI supply vendor");
             tracing::error!("Failed to create UI supply vendor: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -5857,7 +5907,7 @@ async fn create_ui_raw_material_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "current_quantity": current_quantity, "reorder_threshold": reorder_threshold}))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] Failed to create UI raw material");
+            ::server_telemetry::record_error_signal("[bug] Failed to create UI raw material");
             tracing::error!("Failed to create UI raw material: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -5885,7 +5935,7 @@ async fn create_ui_bom_item_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "finished_good_id": finished_good_id, "raw_material_id": raw_material_id, "quantity_required": quantity_required}))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("[BUG] Failed to create UI BOM item");
+            ::server_telemetry::record_error_signal("[bug] Failed to create UI BOM item");
             tracing::error!("Failed to create UI BOM item: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -5936,7 +5986,7 @@ async fn create_ui_bom_item_handler(
     );
     let app = axum::Router::new()
         .nest("/oauth", crate::api::oauth::proxy::router())
-        .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone()))
+        .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -6031,7 +6081,7 @@ async fn create_ui_bom_item_handler(
                 let new_order = req.get("new_order").and_then(|v| v.as_bool()).unwrap_or(false);
 
                 if let Err(e) = settings_store.set_sms_preferences(phone, urgent_booking, failed_payment, new_order) {
-                    ::server_telemetry::record_error_signal("[BUG] Failed to save SMS preferences");
+                    ::server_telemetry::record_error_signal("[bug] Failed to save SMS preferences");
                     tracing::error!("Failed to save SMS preferences: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -6057,7 +6107,7 @@ async fn create_ui_bom_item_handler(
                 let fee = req.get("delivery_fee").and_then(|v| v.as_f64());
 
                 if let Err(e) = settings_store.set_delivery_settings(enabled, radius, fee) {
-                    ::server_telemetry::record_error_signal("[BUG] Failed to save delivery settings");
+                    ::server_telemetry::record_error_signal("[bug] Failed to save delivery settings");
                     tracing::error!("Failed to save delivery settings: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -6101,7 +6151,7 @@ async fn create_ui_bom_item_handler(
                 };
 
                 if let Err(e) = settings_store.set_voice_settings(enabled, number, persona, instructions) {
-                    ::server_telemetry::record_error_signal("[BUG] Failed to save voice settings");
+                    ::server_telemetry::record_error_signal("[bug] Failed to save voice settings");
                     tracing::error!("Failed to save voice settings: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -6124,7 +6174,7 @@ async fn create_ui_bom_item_handler(
                     settings.voice_receptionist_persona,
                     settings.voice_receptionist_instructions,
                 ) {
-                    ::server_telemetry::record_error_signal("[INFRA] Failed to provision voice number");
+                    ::server_telemetry::record_error_signal("[bug] Failed to provision voice number");
                     tracing::error!("Failed to provision voice number: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false, "error": "Internal error" }));
                 }
@@ -6445,7 +6495,7 @@ async fn create_ui_bom_item_handler(
                         }).await;
 
                         if let Err(e) = result {
-                            ::server_telemetry::record_error_signal("[BUG] Failed to seed data");
+                            ::server_telemetry::record_error_signal("[bug] Failed to seed data");
                             tracing::error!("Failed to seed data: {}", e);
                             return axum::Json(serde_json::json!({ "ok": false, "error": e }));
                         }
@@ -6607,6 +6657,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/sync", api::sync_gateway::router())
+        .nest("/api/ohc_job_queue", api::ohc_job_queue::handler::router())
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
@@ -6640,9 +6691,6 @@ async fn create_ui_bom_item_handler(
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
         .route("/api/ui/help.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
-        }))
-        .route("/api/ui/help-widget.mjs", axum::routing::get(|| async {
-            ([(axum::http::header::CONTENT_TYPE, "application/javascript")], include_str!("../ui/tauri/src/ui/help-widget.mjs"))
         }))
         .route("/api/ui/help_article.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help_article.html"))
@@ -6714,7 +6762,7 @@ async fn create_ui_bom_item_handler(
             if query.contains("getting started") {
                 reply = format!("Based on our help center: {}", help_articles[0].1);
                 link_url = "/help/getting-started-1";
-            } else if query.contains("store") {
+            } else if query.contains("store") || query.contains("product") {
                 reply = format!("Based on our help center: {}", help_articles[1].1);
                 link_url = "/help/add-products";
             } else if query.contains("payment") {
@@ -6769,7 +6817,7 @@ async fn create_ui_bom_item_handler(
     tokio::spawn(async move {
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
-            ::server_telemetry::record_error_signal("[INFRA] Mesh server error");
+            ::server_telemetry::record_error_signal("[bug] Mesh server error");
             tracing::trace!("Mesh server error: {}", e);
         }
     });
@@ -6814,11 +6862,11 @@ async fn create_ui_bom_item_handler(
             loop {
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
-                    ::server_telemetry::record_error_signal("[INFRA] failed to push pending missions");
+                    ::server_telemetry::record_error_signal("[bug] failed to push pending missions");
                     tracing::trace!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
-                    ::server_telemetry::record_error_signal("[INFRA] failed to pull mission updates");
+                    ::server_telemetry::record_error_signal("[bug] failed to pull mission updates");
                     tracing::trace!("failed to pull mission updates: {}", e);
                 }
             }
@@ -6860,11 +6908,11 @@ async fn create_ui_bom_item_handler(
                 _ = prune_interval.tick() => {
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
-                        ::server_telemetry::record_error_signal("[MAINTENANCE] failed to prune stale missions");
+                        ::server_telemetry::record_error_signal("[cleanup] failed to prune stale missions");
                         tracing::trace!("failed to prune stale missions: {}", e);
                     }
                     if let Err(e) = sip_db.cleanup_stagnant_missions(chrono::Duration::minutes(5)).await {
-                        ::server_telemetry::record_error_signal("[MAINTENANCE] failed to cleanup stagnant missions");
+                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stagnant missions");
                         tracing::trace!("failed to cleanup stagnant missions: {}", e);
                     }
                     let job_queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
@@ -6882,7 +6930,7 @@ async fn create_ui_bom_item_handler(
 
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
-                            ::server_telemetry::record_error_signal("[BUG] failed to mark task as running");
+                            ::server_telemetry::record_error_signal("[bug] failed to mark task as running");
                             tracing::trace!("failed to mark task as running: {}", e);
                             continue;
                         }
@@ -6903,7 +6951,7 @@ async fn create_ui_bom_item_handler(
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                             }
                             Err(e) => {
-                                ::server_telemetry::record_error_signal("[INFRA] failed to publish scheduled task message");
+                                ::server_telemetry::record_error_signal("[bug] failed to publish scheduled task message");
                                 tracing::trace!("failed to publish scheduled task message: {}", e);
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                             }

@@ -632,3 +632,105 @@ mod tests {
 
         assert!(has_restock_draft, "Predictive restock check should result in a pending draft");
     }
+
+    #[tokio::test]
+    async fn test_redlock_prevents_double_booking_during_quote() {
+        use std::sync::Arc;
+        use uuid::Uuid;
+        use crate::db::DbStore;
+        use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+        use crate::orchestration::departments::types::{DepartmentEvent};
+        use crate::orchestration::mesh::CentrifugeNode;
+        use ohc_builtin_agent::mesh::transport::InProcessTransport;
+
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return; // Skip if no DB config
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh.clone()));
+
+        use crate::orchestration::departments::sales_agent::SalesAgent;
+
+        let sales_agent = Arc::new(tokio::sync::RwLock::new(SalesAgent::new(orchestrator.clone())));
+        orchestrator.register_department(sales_agent.clone()).await;
+
+        let tenant_id = Uuid::new_v4().to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1, 'Redlock Test', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+
+                let _ = sqlx::query("INSERT INTO services (id, tenant_id, title, description, price_cents) VALUES ($1, $2, 'Handyman Fix', 'Fix things', 7500) ON CONFLICT (id) DO NOTHING")
+                    .bind("service-handyman-1")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES (?, 'Redlock Test', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+
+                let _ = sqlx::query("INSERT INTO services (id, tenant_id, title, description, price_cents) VALUES (?, ?, 'Handyman Fix', 'Fix things', 7500) ON CONFLICT (id) DO NOTHING")
+                    .bind("service-handyman-1")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event1 = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.work_intake.received".to_string(),
+            payload: serde_json::json!({
+                "message": "I need a Handyman Fix tomorrow at 2 PM."
+            }),
+        };
+
+        let event2 = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.work_intake.received".to_string(),
+            payload: serde_json::json!({
+                "message": "Can I get a Handyman Fix tomorrow at 2 PM?"
+            }),
+        };
+
+        let (res1, res2) = tokio::join!(
+            orchestrator.dispatch_event(event1),
+            orchestrator.dispatch_event(event2)
+        );
+
+        assert!(res1.is_ok());
+        assert!(res2.is_ok());
+
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+
+        let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+
+        let mut soft_locked_count = 0;
+        let mut failed_to_lock_count = 0;
+
+        for req in pending {
+            if req.description.contains("Draft quote for Handyman Fix") {
+                if let Some(payload) = req.payload {
+                    if payload.get("proposed_slot_id").and_then(|v| v.as_str()).is_some() {
+                        soft_locked_count += 1;
+                    } else {
+                        failed_to_lock_count += 1;
+                    }
+                }
+            }
+        }
+
+        assert_eq!(soft_locked_count, 1, "Exactly one request should successfully acquire the soft lock.");
+        assert_eq!(failed_to_lock_count, 1, "The second request should fail to acquire the lock and have None for proposed_slot_id.");
+    }

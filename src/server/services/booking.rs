@@ -379,6 +379,7 @@ use ::server_ohc::app::{
 };
 
 const TIMESLOT_LOCK_TTL: Duration = Duration::from_secs(60);
+#[allow(dead_code)]
 const INVENTORY_LOCK_TTL: Duration = Duration::from_secs(15 * 60);
 const INVENTORY_CAPACITY_LOCK_TTL: Duration = Duration::from_secs(10);
 
@@ -499,6 +500,7 @@ impl BookingSoftLockStore {
         self.key_exists(&key).await
     }
 
+    #[allow(dead_code)]
     async fn acquire_inventory_lock(
         &self,
         tenant_id: &str,
@@ -588,6 +590,7 @@ impl BookingSoftLockStore {
         Ok(self.local.exists(key).await)
     }
 
+    #[allow(dead_code)]
     async fn active_inventory_lock_count(
         &self,
         tenant_id: &str,
@@ -617,14 +620,17 @@ fn capacity_lock_key(
     )
 }
 
+#[allow(dead_code)]
 fn inventory_capacity_lock_key(tenant_id: &str, product_id: &str) -> String {
     format!("ohc:lock:{}:inventory_capacity:{}", tenant_id, product_id)
 }
 
+#[allow(dead_code)]
 fn inventory_lock_prefix(tenant_id: &str, product_id: &str) -> String {
     format!("ohc:lock:{}:inventory:{}:", tenant_id, product_id)
 }
 
+#[allow(dead_code)]
 fn inventory_lock_key(tenant_id: &str, product_id: &str, session_id: &str) -> String {
     format!("{}{}", inventory_lock_prefix(tenant_id, product_id), session_id)
 }
@@ -689,6 +695,7 @@ async fn redis_release_if_owner(
     Ok(released == 1)
 }
 
+#[allow(dead_code)]
 async fn redis_scan_count(client: &redis::Client, pattern: &str) -> Result<usize, String> {
     let mut conn = redis_connection(client).await?;
     let mut cursor = 0_u64;
@@ -1437,48 +1444,20 @@ impl BookingEngineService for NativeBookingService {
         let session_id = Uuid::new_v4().to_string();
         let expires_at = Utc::now() + chrono::Duration::minutes(15);
 
-        let inventory_capacity =
+        let _inventory_capacity =
             Self::product_inventory_capacity(&req.tenant_id, &req.product_id).await?;
 
-        // If capacity is 1, check if there's an active POS transaction locking this item.
-        if inventory_capacity <= 1 {
-            let pos_lock_key = format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id);
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let acquired: bool = redis::cmd("SET")
-                        .arg(&pos_lock_key)
-                        .arg(&session_id)
-                        .arg("EX")
-                        .arg(300) // 5 minutes lock for online checkout
-                        .arg("NX")
-                        .query_async(&mut conn)
-                        .await
-                        .unwrap_or(false);
-                    if !acquired {
-                        return Err(Status::resource_exhausted("Item is currently being checked out by another customer"));
-                    }
-                }
-            }
-        }
-        let soft_locks = self.soft_lock_store();
-        let inventory_lock = soft_locks
-            .acquire_inventory_lock(
-                &req.tenant_id,
-                &req.product_id,
-                &session_id,
-                inventory_capacity,
-                INVENTORY_LOCK_TTL,
-            )
+        let inventory_service = crate::services::inventory::InventoryService::new(self.redis_client.clone());
+        let reserve_result = inventory_service
+            .reserve_inventory(&req.tenant_id, &req.product_id, 1, 300)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::resource_exhausted("Product inventory is currently fully held"))?;
+            .map_err(|e| Status::internal(e))?;
 
-        let inventory_lock_id = if inventory_capacity <= 1 {
-            // For single-capacity items, the true lock is the Redis lock we acquired
-            format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id)
-        } else {
-            inventory_lock.key
-        };
+        if !reserve_result.success {
+            return Err(Status::resource_exhausted(reserve_result.error_message));
+        }
+
+        let inventory_lock_id = reserve_result.lock_id;
 
         let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));
 
@@ -1520,14 +1499,68 @@ impl BookingEngineService for NativeBookingService {
 
         crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
+        let _capacity_lock = if let (Some(service_id), Some(slot_id)) = (req.service_id.as_deref(), req.proposed_slot_id.as_deref()) {
+            let soft_locks = self.soft_lock_store();
+            // Assuming proposed_slot_id implies a start and end time that we should know or look up.
+            // For now, if we don't have the explicit time block in the request, we look it up from the slot,
+            // or just use the proposed_slot_id itself as a stand-in if the slot exists.
+            // Given the signature `acquire_capacity_lock(&self, tenant_id, product_id, start_time, end_time, owner, ttl)`,
+            // we will query the slot first.
+
+            let slot_row = sqlx::query("SELECT start_time, end_time FROM booking_slots WHERE id = $1 AND tenant_id = $2")
+                .bind(slot_id)
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            if let Some(row) = slot_row {
+                let start_time: DateTime<Utc> = row.try_get("start_time").unwrap();
+                let end_time: DateTime<Utc> = row.try_get("end_time").unwrap();
+
+                let lock = soft_locks
+                    .acquire_capacity_lock(
+                        &tenant_id,
+                        service_id,
+                        start_time,
+                        end_time,
+                        &quote_id,
+                        TIMESLOT_LOCK_TTL,
+                    )
+                    .await
+                    .map_err(Status::internal)?;
+
+                if lock.is_none() {
+                    let _ = tx.rollback().await;
+                    return Err(Status::already_exists("Proposed time slot is currently being held or is unavailable"));
+                }
+
+                // Update the booking slot status to soft_locked
+                sqlx::query("UPDATE booking_slots SET status = 'soft_locked', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+                    .bind(slot_id)
+                    .bind(&tenant_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                lock
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         sqlx::query(
-            "INSERT INTO quotes (id, tenant_id, customer_id, status, required_deposit) VALUES ($1, $2, $3, $4, $5)"
+            "INSERT INTO quotes (id, tenant_id, customer_id, status, required_deposit, service_id, proposed_slot_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
         )
         .bind(&quote_id)
         .bind(&tenant_id)
         .bind(uuid::Uuid::parse_str(&req.customer_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
         .bind("DRAFT")
         .bind(req.required_deposit)
+        .bind(&req.service_id)
+        .bind(&req.proposed_slot_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -1565,6 +1598,8 @@ impl BookingEngineService for NativeBookingService {
             total_amount_cents,
             required_deposit: req.required_deposit,
             line_items: req.line_items,
+            service_id: req.service_id,
+            proposed_slot_id: req.proposed_slot_id,
         }))
     }
 
@@ -1623,6 +1658,8 @@ impl BookingEngineService for NativeBookingService {
                 total_amount_cents: row.try_get("total_amount").unwrap_or_default(),
                 required_deposit: row.try_get("required_deposit").unwrap_or_default(),
                 line_items,
+                service_id: row.try_get("service_id").ok(),
+                proposed_slot_id: row.try_get("proposed_slot_id").ok(),
             }))
         } else {
             Err(Status::not_found("Quote not found"))

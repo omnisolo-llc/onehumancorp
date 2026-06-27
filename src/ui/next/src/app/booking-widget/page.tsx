@@ -66,14 +66,14 @@ export default function BookingWidgetBuilder() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -109,7 +109,7 @@ export default function BookingWidgetBuilder() {
                             type="checkbox"
                             checked={removeBranding}
                             onChange={(e) => setRemoveBranding(e.target.checked)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-[#0066FF]"
+                            className="w-4 h-4 text-[#0071E3] border-gray-300 rounded focus:ring-[#0066FF]"
                         />
                         <span className="text-sm font-medium text-gray-700">Remove "Powered by OHC" Badge (Pro)</span>
                     </label>
@@ -117,7 +117,7 @@ export default function BookingWidgetBuilder() {
 
                 <button
                     onClick={() => setShowModal(true)}
-                    className="w-full py-3 bg-blue-600 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] hover:bg-blue-700 transition-colors shadow-sm"
+                    className="w-full py-3 bg-[#0071E3] text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] hover:bg-blue-700 transition-colors shadow-sm"
                 >
                     Get Widget
                 </button>
@@ -156,12 +156,12 @@ export default function BookingWidgetBuilder() {
                                 setPreviewStatus('Preview redirected to booking flow.');
                                 router.push('/booking');
                             }}
-                            className="w-full mt-auto py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+                            className="w-full mt-auto py-2.5 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                             Request a Service
                         </button>
-                        {previewStatus && <p className="mt-2 text-xs font-semibold text-blue-600" role="status">{previewStatus}</p>}
+                        {previewStatus && <p className="mt-2 text-xs font-semibold text-[#0071E3]" role="status">{previewStatus}</p>}
                     </div>
                 </div>
                 {!removeBranding && (
@@ -196,12 +196,12 @@ export default function BookingWidgetBuilder() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-blue-500 transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
                             onClick={handleCopy}
-                            className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-blue-600 transition-colors"
+                            className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-[#0071E3] transition-colors"
                             title="Copy to clipboard"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
@@ -212,7 +212,7 @@ export default function BookingWidgetBuilder() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>

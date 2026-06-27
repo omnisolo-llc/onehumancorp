@@ -18,6 +18,8 @@ pub struct IntakeData {
     pub initial_tasks: Option<Vec<String>>,
     pub sample_customer_name: Option<String>,
     pub sample_customer_email: Option<String>,
+    pub deposit_percentage: Option<i32>,
+    pub lead_time_days: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -72,14 +74,6 @@ impl OnboardingAgent {
             Some(m) => m,
             None => {
                 // E2E Test / Local adapter mock fallback when no LLM is configured
-                if user_messages.len() <= 1 {
-                    return Ok(ChatResponse {
-                        is_complete: false,
-                        reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
-                        intake_data: None,
-                    });
-                }
-
                 let combined_input = user_messages.iter().map(|m| {
                     let mut text = m.content.clone();
                     if let Some(url) = &m.image_url {
@@ -108,16 +102,17 @@ impl OnboardingAgent {
         }
 
         let prompt = format!(
-            "You are the OHC Onboarding Expert assistant. Your goal is to gather enough information from the user to set up their business.
-You need to know at least:
+            "You are the OHC Onboarding Expert assistant. Your goal is to synthesize a fully-operational, mobile-first workspace from a single user prompt.
+Extract the business taxonomy, default any missing fields to sensible industry defaults, and generate the configuration. Do NOT ask follow-up questions unless the input is completely empty or nonsensical.
+You need to synthesize at least:
 1. What they sell or what service they provide.
 2. A rough idea of their business type (e.g. bakery, handyman, tutor).
 
 Review the following conversation history:
 {}
 
-If you DO NOT have enough information to confidently create a business profile (including name, type, categories, and initial products), reply with a natural, conversational question asking for the missing information.
-If you DO have enough information, reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have enough information.
+If the input is completely empty or nonsensical, reply with a natural, conversational question asking for clarification.
+Otherwise, since you must complete the setup in a single prompt, reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have enough information.
 
 Your response:",
             conversation_history
@@ -203,6 +198,8 @@ Your response:",
                     initial_tasks: Some(vec!["Follow up with new leads".to_string()]),
                     sample_customer_name: Some("Sample Customer".to_string()),
                     sample_customer_email: Some("sample@example.com".to_string()),
+                    deposit_percentage: Some(50),
+                    lead_time_days: Some(3),
                 });
             }
         };
@@ -230,6 +227,8 @@ Your response:",
             - initial_tasks (array of strings, e.g., ['Follow up with new leads'])
             - sample_customer_name (string)
             - sample_customer_email (string)
+            - deposit_percentage (integer, e.g., 50 if they ask for 50% deposits)
+            - lead_time_days (integer, e.g., 3 if they ask for 3 days notice)
 
             Description: \"{}\"
 
@@ -249,7 +248,9 @@ Your response:",
               ],
               \"initial_tasks\": [\"Follow up with new leads\", \"Setup delivery calendar\"],
               \"sample_customer_name\": \"Jane Doe\",
-              \"sample_customer_email\": \"jane.doe@example.com\"
+              \"sample_customer_email\": \"jane.doe@example.com\",
+              \"deposit_percentage\": 50,
+              \"lead_time_days\": 3
             }}",
             input
         );
@@ -423,6 +424,9 @@ Your response:",
         let org_id_clone2 = org_id.clone();
         let business_type_clone = business_type.clone();
 
+        let req_deposit_percentage = req.deposit_percentage;
+        let req_lead_time_days = req.lead_time_days;
+
         let agent_clone_product = self.clone();
         let req_initial_products = req.initial_products.clone();
 
@@ -445,6 +449,8 @@ Your response:",
                         "business_type": business_type_clone,
                         "description": product.description,
                         "variants": variants_converted,
+                        "deposit_percentage": req_deposit_percentage,
+                        "lead_time_days": req_lead_time_days,
                     });
 
                     let job_id = uuid::Uuid::new_v4().to_string();
@@ -464,7 +470,7 @@ Your response:",
                 }
                 Ok(())
             } else if !req_first_product_name.is_empty() {
-                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone, None, None).await
+                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone, None, None, req_deposit_percentage, req_lead_time_days).await
             } else {
                 agent_clone_product.generate_initial_products(&org_id_clone1, &business_type_clone).await
             }
@@ -667,12 +673,22 @@ Your response:",
         })
     }
 
-    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, price_type: &str, business_type: &str, description: Option<&str>, variants: Option<&Vec<IntakeProductVariant>>) -> Result<(), String> {
+    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, price_type: &str, business_type: &str, description: Option<&str>, variants: Option<&Vec<IntakeProductVariant>>, deposit_percentage: Option<i32>, lead_time_days: Option<i32>) -> Result<(), String> {
         let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
         let strategy = match business_type {
             "Service Business" => "booking",
             _ => "physical",
         };
+
+        let mut meta = json!({"price_type": price_type});
+        if let Some(m) = meta.as_object_mut() {
+            if let Some(dp) = deposit_percentage {
+                m.insert("deposit_percentage".to_string(), json!(dp));
+            }
+            if let Some(lt) = lead_time_days {
+                m.insert("lead_time_days".to_string(), json!(lt));
+            }
+        }
 
         let id = format!("prod-{}", uuid::Uuid::new_v4());
         sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, type, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
@@ -682,7 +698,7 @@ Your response:",
             .bind(description.unwrap_or("Added during onboarding"))
             .bind(price_cents)
             .bind(strategy)
-            .bind(json!({"price_type": price_type}))
+            .bind(meta)
             .execute(&self.db.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -2986,7 +3002,7 @@ mod tests {
             target_audience: "Anyone".to_string(),
             initial_products: vec![],
             ai_agents: vec![],
-            ai_auto_respond: false,
+            ai_auto_respond: false, deposit_percentage: None, lead_time_days: None,
         };
 
         let req_categories = req.selling_categories.clone();
@@ -3080,7 +3096,7 @@ mod tests {
                 }
             }).collect(),
             ai_agents: vec![],
-            ai_auto_respond: false,
+            ai_auto_respond: false, deposit_percentage: None, lead_time_days: None,
         };
 
         let start_res = agent.start_onboarding(req).await;
@@ -3160,7 +3176,7 @@ mod tests {
             target_audience: "Anyone".to_string(),
             initial_products: vec![],
             ai_agents: vec![],
-            ai_auto_respond: false,
+            ai_auto_respond: false, deposit_percentage: None, lead_time_days: None,
         };
 
 
@@ -3206,7 +3222,7 @@ mod tests {
             target_audience: "Anyone".to_string(),
             initial_products: vec![],
             ai_agents: vec![],
-            ai_auto_respond: false,
+            ai_auto_respond: false, deposit_percentage: None, lead_time_days: None,
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -3248,7 +3264,7 @@ mod tests {
             target_audience: "Anyone".to_string(),
             initial_products: vec![],
             ai_agents: vec![],
-            ai_auto_respond: false,
+            ai_auto_respond: false, deposit_percentage: None, lead_time_days: None,
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();

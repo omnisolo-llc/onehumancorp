@@ -139,6 +139,10 @@ impl DepartmentOrchestrator {
         self.db.clone()
     }
 
+    pub fn mesh(&self) -> Arc<dyn TeammateMesh> {
+        self.mesh.clone()
+    }
+
     pub fn new(db: Arc<crate::db::DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
         let memory_repo = match &db.store {
             DbStore::Postgres => Arc::new(VectorRepository::new(db.pool.clone())),
@@ -300,7 +304,85 @@ impl DepartmentOrchestrator {
 
     }
 
-    pub async fn execute_action(
+
+    pub async fn soft_lock_booking_slot(&self, tenant_id: &str, service_id: &str, _suggested_time_str: &str, ttl: std::time::Duration) -> Result<Option<String>, String> {
+        // Attempt to parse time or default to next day if natural language (simplified for now)
+        let start_time = if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(_suggested_time_str) {
+            parsed.with_timezone(&chrono::Utc)
+        } else {
+            // Fallback for demo parsing: Assume next day at 2PM UTC
+            let now = chrono::Utc::now();
+            now.date_naive().and_hms_opt(14, 0, 0).unwrap().and_utc() + chrono::Duration::days(1)
+        };
+        let end_time = start_time + chrono::Duration::hours(1);
+
+        let time_id = format!("{}_{}", start_time.timestamp(), service_id);
+
+        let lock_acquired = self.mesh.acquire_lock(&time_id, "sales_agent", ttl.as_secs()).await.unwrap_or(false);
+
+        if lock_acquired {
+            let slot_id = uuid::Uuid::new_v4().to_string();
+            match &self.db.store {
+                crate::db::DbStore::Postgres => {
+                    let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+                    sqlx::query(
+                        "INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'soft_locked')"
+                    )
+                    .bind(&slot_id)
+                    .bind(tenant_id)
+                    .bind(service_id)
+                    .bind(start_time)
+                    .bind(end_time)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query(
+                        "INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'soft_locked')"
+                    )
+                    .bind(&slot_id)
+                    .bind(tenant_id)
+                    .bind(service_id)
+                    .bind(start_time)
+                    .bind(end_time)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+            }
+            Ok(Some(slot_id))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub async fn confirm_booking_slot(&self, tenant_id: &str, slot_id: &str) -> Result<(), String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+                sqlx::query("UPDATE booking_slots SET status = 'booked' WHERE id = $1")
+                    .bind(slot_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("UPDATE booking_slots SET status = 'booked' WHERE id = ? AND tenant_id = ?")
+                    .bind(slot_id)
+                    .bind(tenant_id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+pub async fn execute_action(
         &self,
         department: DepartmentType,
         description: String,
@@ -957,7 +1039,7 @@ impl DepartmentOrchestrator {
                         let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
                         if let DbStore::Postgres = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
@@ -1031,7 +1113,7 @@ impl DepartmentOrchestrator {
                                 }
                             }
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount_cents, required_deposit_cents, expires_at, stripe_payment_link) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
@@ -1860,7 +1942,7 @@ impl DepartmentOrchestrator {
     pub async fn get_order(&self, tenant_id: &str, order_id: &str) -> Result<Option<(String, f64)>, String> {
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                let row = sqlx::query("SELECT customer_id, total_amount FROM orders WHERE tenant_id = $1 AND id = $2")
+                let row = sqlx::query("SELECT customer_id, total_amount_cents FROM orders WHERE tenant_id = $1 AND id = $2")
                     .bind(tenant_id)
                     .bind(order_id)
                     .fetch_optional(&self.db.pool)
@@ -1868,13 +1950,13 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
-                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
+                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount_cents"))))
                 } else {
                     Ok(None)
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT customer_id, total_amount FROM orders WHERE tenant_id = ? AND id = ?")
+                let row = sqlx::query("SELECT customer_id, total_amount_cents FROM orders WHERE tenant_id = ? AND id = ?")
                     .bind(tenant_id)
                     .bind(order_id)
                     .fetch_optional(pool)
@@ -1882,7 +1964,7 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
-                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
+                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount_cents"))))
                 } else {
                     Ok(None)
                 }

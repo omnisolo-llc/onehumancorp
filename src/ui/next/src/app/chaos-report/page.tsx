@@ -53,7 +53,7 @@ export default function ChaosReportPage() {
             <h2 className="text-xl font-bold mb-4 tracking-tight">Chaos Resilience Metrics</h2>
             <div className="space-y-3 font-mono text-sm opacity-90">
                 <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span className="w-2 h-2 rounded-full bg-[#0066FF]"></span>
                     <span>API Latency (P99) under 100 Cloud Users: <span className="font-bold">{data?.latencyP99Cloud || 'Loading...'}</span></span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -61,7 +61,7 @@ export default function ChaosReportPage() {
                     <span>API Latency (P99) under 10 Standalone Users: <span className="font-bold">{data?.latencyP99Standalone || 'Loading...'}</span></span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span className="w-2 h-2 rounded-full bg-[#34C759]"></span>
                     <span>Error Rate during LLM Outage: <span className="font-bold">{data?.errorRateLlmOutage || 'Loading...'}</span></span>
                 </div>
             </div>
@@ -91,10 +91,10 @@ export default function ChaosReportPage() {
             {data?.latencyHistograms?.map((val: number, i: number) => (
               <div key={i} className="flex-1 flex flex-col items-center justify-end group">
                 <div
-                  className={`w-full rounded-t-md transition-all duration-500 ${isDarkMode ? 'bg-blue-500/80' : 'bg-blue-500/60'} group-hover:bg-blue-400 relative`}
+                  className={`w-full rounded-t-md transition-all duration-500 ${isDarkMode ? 'bg-[#0066FF]/80' : 'bg-[#0066FF]/60'} group-hover:bg-blue-400 relative`}
                   style={{ height: `${Math.max(5, Math.min(100, val / 10))}%` }}
                 >
-                  <div className={`absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white shadow text-gray-900'}`}>
+                  <div className={`absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm text-gray-900'}`}>
                     {val}ms
                   </div>
                 </div>

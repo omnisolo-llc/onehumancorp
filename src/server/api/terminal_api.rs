@@ -931,7 +931,7 @@ pub async fn capture_payment_intent_handler(
                                             .bind(None::<String>)
                                             .bind(total_amount)
                                             .execute(&mut *tx).await;
-                                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, unit_price) VALUES ($1, $2, $3, $4, $5, $6)")
+                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
                                             .bind(uuid::Uuid::new_v4().to_string())
                                             .bind(&tenant_id)
                                             .bind(&order_id)

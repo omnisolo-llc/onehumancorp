@@ -51,16 +51,10 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
 
                 // Track cost dynamically
                 if true {
-                    let cost_per_1k = match model {
-                        "claude-3-opus" => 15.0,
-                        "claude-3-sonnet" => 3.0,
-                        "claude-3-haiku" => 0.25,
-                        "gpt-4" => 30.0,
-                        "gpt-4o" => 5.0,
-                        "gpt-3.5-turbo" => 0.5,
-                        _ => 1.0,
-                    };
-                    let cost_usd = (count as f64 / 1000.0) * cost_per_1k;
+                    let input_tokens = if t_type == "input" { count } else { 0 };
+                    let output_tokens = if t_type == "output" { count } else { 0 };
+
+                    let cost_usd = ::server_pricing::calculator::calculate_cost(model, input_tokens, output_tokens, 0);
 
                     let model_string = model.to_string();
                     let tenant_id = item
@@ -70,6 +64,8 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .and_then(Value::as_str)
                         .unwrap_or("unknown_tenant")
                         .to_string();
+                    let count_clone = count;
+                    let model_clone = model_string.clone();
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
                         let _ = ::server_telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
@@ -79,6 +75,13 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                             "model": model_string.clone()
                         });
                         let _ = ::server_telemetry::buffer_metric_i64(&pool, "ohc_llm_cost_total_cents", "counter", cost_cents, labels_cents).await;
+
+                        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+                            if let Ok(client) = redis::Client::open(redis_url) {
+                                let limiter = ::server_pricing::rate_limit::RedisRateLimiter::new(client);
+                                let _ = limiter.record_token_usage(&tenant_id, &model_clone, count_clone).await;
+                            }
+                        }
                     });
                 }
             }

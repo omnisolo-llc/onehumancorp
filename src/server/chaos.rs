@@ -1054,15 +1054,18 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn test_ml_resilience_60s_timeout_rule() {
-    let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        let timeout_duration = std::time::Duration::from_millis(50);
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+
+        let timeout_duration = ohc_builtin_agent::agent::agent_task_timeout();
+        assert_eq!(timeout_duration.as_secs(), 60, "Agent tasks must have a strictly enforced 60s timeout");
 
         let result = tokio::time::timeout(timeout_duration, async {
-            std::future::pending::<()>().await;
+            // Simulate a long-running hung AI operation that exceeds 60s
+            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
             Ok::<(), String>(())
         }).await;
 
-        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
+        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience 60s timeout rule to prevent cascading failure");
     }
 }
     #[tokio::test(start_paused = true)]
@@ -1175,66 +1178,64 @@ mod tests {
     #[tokio::test]
     async fn test_ml_resilience_api_error_circuit_breaker() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        // Simulate an external LLM API generating repeated timeout/exhaustion errors
-        // and verify that the circuit breaker opens and prevents cascading failures.
-        use std::sync::Arc;
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        let consecutive_failures = Arc::new(AtomicUsize::new(0));
-        let cf_clone = consecutive_failures.clone();
 
-        let api_call = move || -> Result<(), String> {
-            let current = cf_clone.fetch_add(1, Ordering::SeqCst) + 1;
-            if current <= 3 {
-                Err("API Rate Limit Exceeded".to_string())
-            } else {
-                Ok(())
-            }
-        };
+        // Create a local LLM client which uses circuit breaker
+        // LocalLLMClient uses get_circuit_breaker() inside internal_reason()
+        let client = crate::minimax::LocalLLMClient::new();
 
-        let mut last_result = Err("Initial".to_string());
-        for _ in 0..5 {
-            if consecutive_failures.load(Ordering::SeqCst) > 2 {
-                last_result = Err("Circuit Breaker Open: Failing Fast".to_string());
-            } else {
-                last_result = api_call();
-            }
+        // We will make 3 failing requests to trip the circuit breaker
+        // Since we are not running a real local LLM in tests, this will fail with connection refused
+        for i in 0..4 { // Need 4 because retries might consume some, but wait, internal_reason retries internally 3 times!
+            // Each call does 3 retries, so 1 call will record 1 failure at the circuit breaker.
+            let _ = client.reason(&format!("prompt{}", i)).await;
         }
 
-        // At the end, the circuit breaker should have triggered and failed fast
-        assert_eq!(last_result, Err("Circuit Breaker Open: Failing Fast".to_string()), "System must engage circuit breaker after repeated API errors");
+        // The next request should immediately fail with "circuit breaker open"
+        let result = client.reason("prompt_should_trip_cb").await;
+
+        assert_eq!(result, Err("circuit breaker open".to_string()), "System must engage circuit breaker after repeated API errors");
     }
 
     #[tokio::test]
     async fn test_ml_resilience_api_unavailable_paused_state() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        // Simulate a scenario where the LLM API is completely unavailable.
-        // We expect the system to enter a PAUSED state and notify the owner instead of endlessly retrying.
-        let is_api_available = false;
+        use sqlx::sqlite::SqlitePoolOptions;
 
-        let mut status = "PENDING".to_string();
-        let mut owner_notified = false;
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let pool = SqlitePoolOptions::new().max_connections(5).connect(&uri).await.unwrap();
 
-        // Simulate agent processing task
-        let mut retries = 0;
-        while retries < 3 {
-            if !is_api_available {
-                retries += 1;
-                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-            } else {
-                status = "COMPLETED".to_string();
-                break;
-            }
-        }
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS department_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, event_type TEXT, payload TEXT, status TEXT, locked_until TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&pool).await;
 
-        // If the API is totally unavailable after retries, we expect graceful degradation to PAUSED state
-        if !is_api_available {
-            status = "PAUSED".to_string();
-            // In the real system, it would also write a task/mission log "System is paused. Please manually ..."
-            owner_notified = true;
-        }
+        sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('tenant-pause', 'Store', 'Retail')").execute(&pool).await.unwrap();
 
+        let task_payload = serde_json::json!({
+            "message": "Where is my order?"
+        });
+        sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ('task-pause', 'tenant-pause', 'customer_success', 'CustomerMessageReceived', ?, 'PENDING')")
+            .bind(task_payload.to_string())
+            .execute(&pool).await.unwrap();
+
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        });
+
+        // Run the worker. It will use a fake LLM that times out/fails and should set the task to PAUSED.
+        let processed = crate::workers::department_workers::CustomerSuccessWorker::poll(&db).await.unwrap();
+        assert!(processed, "Worker should process the pending task");
+
+        // Verify that the task status is PAUSED
+        let status: String = sqlx::query_scalar("SELECT status FROM department_tasks WHERE id = 'task-pause'")
+            .fetch_one(&pool).await.unwrap();
         assert_eq!(status, "PAUSED", "When API is totally unavailable, the agent state must fallback to PAUSED");
-        assert!(owner_notified, "Owner must be notified when system enters PAUSED state");
+
+        // Check if fallback notification (shared_task) was created
+        let shared_task_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE tenant_id = 'tenant-pause'")
+            .fetch_one(&pool).await.unwrap();
+        assert!(shared_task_count > 0, "Owner must be notified (shared task created) when system enters PAUSED state");
     }
 
     #[tokio::test]

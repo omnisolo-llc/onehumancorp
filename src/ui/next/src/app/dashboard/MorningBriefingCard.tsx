@@ -132,7 +132,7 @@ try {
                 <div>
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300">Suggested Action</span>
-                    <span className="text-[10px] font-bold uppercase text-white bg-orange-500 px-2 py-0.5 rounded-full">New</span>
+                    <span className="text-[10px] font-bold uppercase text-white bg-[#FF9500] px-2 py-0.5 rounded-full">New</span>
                   </div>
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-3">{item.context}</p>
                 </div>

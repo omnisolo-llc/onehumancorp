@@ -368,13 +368,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
+                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
                       onClick={() => { setBusinessType('Online Store'); setWizardStep(2); }}
                     >
                       Online Store
                     </button>
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
+                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
                       onClick={() => { setBusinessType('Restaurant'); setWizardStep(2); }}
                     >
                       Restaurant
@@ -389,14 +389,14 @@ export default function WebsiteBuilderPage() {
                   <div id="step-3" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]  rounded-[8px]"
                       placeholder="What is your business called?"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                     />
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]  rounded-[8px]"
                       placeholder="e.g. Maya's Cakes"
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
@@ -416,7 +416,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
                   <div id="step-4" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
-                    <label className="flex items-center gap-3 p-4 glassmorphism rounded-[8px] cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <label className="flex items-center gap-3 p-4 glassmorphism rounded-[8px] cursor-pointer hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0066FF]"
@@ -425,7 +425,7 @@ export default function WebsiteBuilderPage() {
                       />
                       <span className="font-semibold text-gray-800">Physical Products</span>
                     </label>
-                    <label className="flex items-center gap-3 p-4 glassmorphism rounded-[8px] cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <label className="flex items-center gap-3 p-4 glassmorphism rounded-[8px] cursor-pointer hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0066FF]"
@@ -450,14 +450,14 @@ export default function WebsiteBuilderPage() {
                   <div id="step-5" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]  rounded-[8px]"
                       placeholder="What is the name of this product?"
                       value={productName}
                       onChange={(e) => setProductName(e.target.value)}
                     />
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]  rounded-[8px]"
                       placeholder="0.00"
                       value={productPrice}
                       onChange={(e) => setProductPrice(e.target.value)}
@@ -478,13 +478,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
                   <div className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
+                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
                       onClick={() => { setPaymentMethod('Online'); setWizardStep(6); }}
                     >
                       Online
                     </button>
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
+                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
                       onClick={() => { setPaymentMethod('In Person'); setWizardStep(6); }}
                     >
                       In Person
@@ -499,21 +499,21 @@ export default function WebsiteBuilderPage() {
                   <div id="step-7" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]  rounded-[8px]"
                       placeholder="e.g. Maya Smith"
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
                     />
                     <input
                       type="email"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]  rounded-[8px]"
                       placeholder="you@email.com"
                       value={userEmail}
                       onChange={(e) => setUserEmail(e.target.value)}
                     />
                     <input
                       type="password"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]  rounded-[8px]"
                       placeholder="Password"
                       value={userPassword}
                       onChange={(e) => setUserPassword(e.target.value)}
@@ -536,13 +536,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
                   <div id="step-8" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
+                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
                       onClick={() => { setTemplate('Modern'); setWizardStep('7.5'); }}
                     >
                       Modern
                     </button>
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
+                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
                       onClick={() => { setTemplate('Bold'); setWizardStep('7.5'); }}
                     >
                       Bold
@@ -656,7 +656,7 @@ export default function WebsiteBuilderPage() {
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] resize-none text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] resize-none text-[#1D1D1F] dark:text-[#F5F5F7] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-inner border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]  rounded-[8px]"
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
@@ -768,7 +768,7 @@ export default function WebsiteBuilderPage() {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden justify-center items-center glassmorphism">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0066FF] mb-4"></div>
             <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
         </div>
       </div>
@@ -788,7 +788,7 @@ export default function WebsiteBuilderPage() {
 
           <div className="w-full glassmorphism p-3 rounded-[8px] mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
-            <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
+            <button className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
           <button

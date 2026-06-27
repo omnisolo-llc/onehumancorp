@@ -19,7 +19,7 @@ export default function AgentActivityPage() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const res = await fetch('/api/agents/jobs');
+        const res = await fetch('/api/ohc_job_queue');
         if (res.ok) {
           const data = await res.json();
           setJobs(data.jobs || []);
@@ -91,11 +91,11 @@ export default function AgentActivityPage() {
                         jobs.map((job) => (
                             <div key={job.id} className={`glassmorphism rounded-[16px] p-4 border ${job.status === 'PROCESSING' ? 'border-blue-200 dark:border-blue-800' : 'border-white/40 dark:border-white/10'} shadow-md flex flex-col sm:flex-row gap-4 items-start sm:items-center relative overflow-hidden transition-shadow`}>
                                 {job.status === 'PROCESSING' && (
-                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-[16px]"></div>
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#0066FF] rounded-l-[16px]"></div>
                                 )}
-                                <div className={`w-16 flex flex-col items-center justify-center shrink-0 ${job.status === 'COMPLETED' ? 'text-green-500' : job.status === 'FAILED' ? 'text-[#FF3B30]' : ''}`}>
+                                <div className={`w-16 flex flex-col items-center justify-center shrink-0 ${job.status === 'COMPLETED' ? 'text-[#34C759]' : job.status === 'FAILED' ? 'text-[#FF3B30]' : ''}`}>
                                     {job.status === 'PROCESSING' ? (
-                                        <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                                        <div className="animate-spin h-6 w-6 border-2 border-[#0066FF] border-t-transparent rounded-full"></div>
                                     ) : job.status === 'COMPLETED' ? (
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

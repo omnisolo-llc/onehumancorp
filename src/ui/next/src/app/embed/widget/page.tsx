@@ -43,7 +43,7 @@ function WidgetContent() {
                 inputBg: 'bg-gray-800',
                 inputBorder: 'border-gray-700',
                 inputText: 'text-white',
-                btnBg: 'bg-blue-600',
+                btnBg: 'bg-[#0071E3]',
                 btnHover: 'hover:bg-blue-700',
                 btnText: 'text-white',
             };
@@ -55,7 +55,7 @@ function WidgetContent() {
             inputBg: 'bg-gray-50',
             inputBorder: 'border-gray-200',
             inputText: 'text-gray-900',
-            btnBg: 'bg-blue-600',
+            btnBg: 'bg-[#0071E3]',
             btnHover: 'hover:bg-blue-700',
             btnText: 'text-white',
         };
@@ -98,7 +98,7 @@ function WidgetContent() {
                         name="name"
                         type="text"
                         placeholder="Your full name"
-                        className={`w-full px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${t.inputBg} ${t.inputBorder} ${t.inputText}`}
+                        className={`w-full px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-colors ${t.inputBg} ${t.inputBorder} ${t.inputText}`}
                     />
                 </div>
 
@@ -109,7 +109,7 @@ function WidgetContent() {
                         name="email"
                         type="email"
                         placeholder="you@example.com"
-                        className={`w-full px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${t.inputBg} ${t.inputBorder} ${t.inputText}`}
+                        className={`w-full px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-colors ${t.inputBg} ${t.inputBorder} ${t.inputText}`}
                     />
                 </div>
 
@@ -120,7 +120,7 @@ function WidgetContent() {
                             required
                             name="date"
                             type="date"
-                            className={`w-full px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${t.inputBg} ${t.inputBorder} ${t.inputText}`}
+                            className={`w-full px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-colors ${t.inputBg} ${t.inputBorder} ${t.inputText}`}
                         />
                     </div>
                 )}
@@ -136,7 +136,7 @@ function WidgetContent() {
                         name="details"
                         rows={type === 'booking' ? 2 : 4}
                         placeholder={type === 'quote' ? 'Describe your project...' : 'Provide more details...'}
-                        className={`w-full px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none transition-colors ${t.inputBg} ${t.inputBorder} ${t.inputText}`}
+                        className={`w-full px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-[#0066FF] resize-none transition-colors ${t.inputBg} ${t.inputBorder} ${t.inputText}`}
                     />
                 </div>
 

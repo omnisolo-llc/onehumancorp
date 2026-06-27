@@ -23,14 +23,20 @@ export default function HelpCenterPage() {
     fetch(url)
       .then(res => res.json())
       .then(data => setArticles(Array.isArray(data) ? data : []))
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        setArticles([]);
+      });
   }, [debouncedSearchQuery]);
 
   useEffect(() => {
     fetch('/api/videos')
       .then(res => res.json())
       .then(data => setVideos(Array.isArray(data) ? data : []))
-      .catch(console.error);
+      .catch((err) => {
+        console.error(err);
+        setVideos([]);
+      });
   }, []);
 
   const filteredArticles = articles.filter(a => a.category !== "Advanced");
@@ -54,7 +60,7 @@ export default function HelpCenterPage() {
                 placeholder="Search for help articles and videos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xl text-gray-900 bg-white/80 dark:bg-black/50 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
+                className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xl text-gray-900 bg-white/80 dark:bg-black/50 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
               />
             </WithTooltip>
           </div>

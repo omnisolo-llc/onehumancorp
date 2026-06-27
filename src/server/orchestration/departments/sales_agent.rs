@@ -275,11 +275,40 @@ impl Department for SalesAgent {
                                 tracing::error!("Failed to create checkout session for quote deposit: {}", e);
                             }
                         }
+
+                        if let Some(slot_id) = payload.get("proposed_slot_id").and_then(|v| v.as_str()) {
+                            let _ = self.orchestrator.confirm_booking_slot(&event.tenant_id, slot_id).await;
+                        }
                     }
                 }
             }
             return Ok(());
         }
+        if event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            if source == "booking_form" || source == "sms" {
+                let preferred_time = event.payload.get("timestamp").and_then(|v| v.as_str()).unwrap_or("");
+                let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+                let service_name = "Field Service Repair";
+                let price = 150.0;
+
+                let sched_event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_type: "tenant.quote.requires_scheduling".to_string(),
+                    payload: serde_json::json!({
+                        "source": source,
+                        "message": message,
+                        "service_name": service_name,
+                        "price": price,
+                        "preferred_time": preferred_time,
+                        "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+                    }),
+                };
+                let _ = self.orchestrator.dispatch_event(sched_event).await;
+            }
+        }
+
 
                 if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
             let planned_intent = match self
@@ -362,6 +391,16 @@ impl Department for SalesAgent {
                     "quote_generated_from_message",
                 );
 
+                let mut proposed_slot_id = None;
+                if !suggested_time.is_empty() {
+                    proposed_slot_id = self.orchestrator.soft_lock_booking_slot(
+                        &event.tenant_id,
+                        &service_name,
+                        &suggested_time,
+                        std::time::Duration::from_secs(600) // 10 mins
+                    ).await.ok().flatten();
+                }
+
                 let action_payload = serde_json::json!({
                     "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
                     "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
@@ -370,6 +409,7 @@ impl Department for SalesAgent {
                     "suggested_price": price,
                     "scope": scope,
                     "suggested_time": suggested_time,
+                    "proposed_slot_id": proposed_slot_id,
                     "generated_response": drafted_message,
                     "service": service_name.clone(),
                     "price": price,

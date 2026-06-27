@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Checkout Flow with Subscribe & Save', () => {
   test('completes subscription checkout successfully', async ({ page }) => {

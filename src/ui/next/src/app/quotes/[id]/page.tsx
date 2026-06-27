@@ -153,8 +153,8 @@ export default function QuoteReviewPage() {
 
           {quote.stripe_payment_link && (
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 mb-1 uppercase">Stripe Payment Link</p>
-              <a href={quote.stripe_payment_link} target="_blank" className="text-sm text-blue-500 underline break-all">
+              <p className="text-[11px] font-bold text-[#0071E3] dark:text-blue-400 mb-1 uppercase">Stripe Payment Link</p>
+              <a href={quote.stripe_payment_link} target="_blank" className="text-sm text-[#0066FF] underline break-all">
                 {quote.stripe_payment_link}
               </a>
             </div>

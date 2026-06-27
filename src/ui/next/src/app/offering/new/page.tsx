@@ -48,7 +48,7 @@ export default function NewOfferingPage() {
   return (
     <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col font-inter">
       <div className="flex items-center mb-6 border-b border-gray-200 pb-4">
-        <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
+        <Link href="/dashboard" className="text-[#0066FF] font-semibold mr-4">&lt; Back</Link>
         <h1 className="text-xl font-bold font-outfit text-gray-900">Add Offering</h1>
       </div>
 
@@ -60,13 +60,13 @@ export default function NewOfferingPage() {
               value={intent}
               onChange={(e) => setIntent(e.target.value)}
               placeholder="e.g. Guitar lessons for beginners, 1 hour"
-              className="w-full border-2 border-gray-300 rounded-xl p-4 text-gray-900 focus:outline-none focus:border-blue-500 min-h-[120px]"
+              className="w-full border-2 border-gray-300 rounded-xl p-4 text-gray-900 focus:outline-none focus:border-[#0066FF] min-h-[120px]"
             />
           </div>
           <button
             onClick={handleIntentSubmit}
             disabled={!intent.trim()}
-            className="w-full py-3.5 bg-blue-600 disabled:bg-blue-300 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 transition-colors"
+            className="w-full py-3.5 bg-[#0071E3] disabled:bg-blue-300 text-white font-bold rounded-xl shadow-md hover:bg-blue-700 transition-colors"
           >
             Generate Details
           </button>
@@ -75,8 +75,8 @@ export default function NewOfferingPage() {
 
       {loading && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm font-semibold text-blue-600 animate-pulse text-center">AI is preparing your offering...</p>
+          <div className="w-16 h-16 border-4 border-[#0066FF] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm font-semibold text-[#0071E3] animate-pulse text-center">AI is preparing your offering...</p>
         </div>
       )}
 
@@ -98,7 +98,7 @@ export default function NewOfferingPage() {
                     type="text"
                     value={offeringData.title}
                     onChange={(e) => setOfferingData({...offeringData, title: e.target.value})}
-                    className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                   />
               </div>
 
@@ -108,7 +108,7 @@ export default function NewOfferingPage() {
                     value={offeringData.description}
                     onChange={(e) => setOfferingData({...offeringData, description: e.target.value})}
                     rows={4}
-                    className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                   />
               </div>
 
@@ -119,7 +119,7 @@ export default function NewOfferingPage() {
                         type="text"
                         value={offeringData.type}
                         onChange={(e) => setOfferingData({...offeringData, type: e.target.value})}
-                        className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                       />
                   </div>
                   <div className="flex-1">
@@ -130,7 +130,7 @@ export default function NewOfferingPage() {
                             type="text"
                             value={offeringData.price}
                             onChange={(e) => setOfferingData({...offeringData, price: e.target.value})}
-                            className="w-full bg-white/50 border border-white/60 rounded-[16px] pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            className="w-full bg-white/50 border border-white/60 rounded-[16px] pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                           />
                       </div>
                   </div>
@@ -139,7 +139,7 @@ export default function NewOfferingPage() {
 
            <button
              onClick={handlePublish}
-             className="w-full py-3.5 bg-[#0066FF] text-white font-bold rounded-[16px] shadow-md hover:bg-blue-600 transition-colors text-lg"
+             className="w-full py-3.5 bg-[#0066FF] text-white font-bold rounded-[16px] shadow-md hover:bg-[#0071E3] transition-colors text-lg"
            >
              Publish Offering
            </button>

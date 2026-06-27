@@ -35,7 +35,7 @@ export default function ChangelogPage() {
         <div className="space-y-8">
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div>
             </div>
           ) : sections.length === 0 ? (
             <p className="text-center text-gray-500 font-medium py-8 bg-white/80 dark:bg-black/50 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 shadow-xl rounded-3xl">
@@ -45,9 +45,9 @@ export default function ChangelogPage() {
             sections.map((section, idx) => (
               <div
                 key={idx}
-                className="bg-white/80 dark:bg-black/50 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 p-6 sm:p-8 rounded-3xl shadow-xl transition-all hover:shadow-2xl"
+                className="bg-white/80 dark:bg-black/50 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 p-6 sm:p-8 rounded-3xl shadow-xl transition-all hover:-translate-y-1 hover:shadow-2xl hover:border-blue-300 dark:hover:border-blue-700"
               >
-                <h2 className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 mb-4 font-outfit">
+                <h2 className="text-xl sm:text-2xl font-bold text-[#0071E3] dark:text-blue-400 mb-4 font-outfit">
                   {section.version}
                 </h2>
                 <div className="space-y-3">
@@ -64,7 +64,7 @@ export default function ChangelogPage() {
                     }
                     if (line.startsWith("- ")) {
                       return (
-                        <li key={lidx} className="text-gray-600 dark:text-gray-300 ml-5 list-disc pl-1 marker:text-blue-500">
+                        <li key={lidx} className="text-gray-600 dark:text-gray-300 ml-5 list-disc pl-1 marker:text-[#0066FF]">
                           {line.replace("- ", "")}
                         </li>
                       );
@@ -80,6 +80,7 @@ export default function ChangelogPage() {
                   <img
                     src={section.screenshot_url}
                     alt={`${section.version} Screenshot`}
+                    loading="lazy"
                     className="rounded-2xl mt-6 w-full shadow-lg border border-gray-200/50 dark:border-gray-700/50 object-cover"
                   />
                 )}
@@ -92,7 +93,7 @@ export default function ChangelogPage() {
               href="https://onehumancorp.com/changelog"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50/80 dark:bg-blue-900/20 px-8 py-4 rounded-full border border-blue-100 dark:border-blue-800/50 inline-block shadow-sm backdrop-blur-xl saturate-[210%] transition-all hover:shadow-md hover:-translate-y-0.5"
+              className="text-[#0071E3] dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50/80 dark:bg-blue-900/20 px-8 py-4 rounded-full border border-blue-100 dark:border-blue-800/50 inline-block shadow-sm backdrop-blur-xl saturate-[210%] transition-all hover:shadow-md hover:-translate-y-0.5"
             >
               Read the full technical changelog on our website →
             </a>

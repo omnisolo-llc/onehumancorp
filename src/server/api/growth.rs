@@ -1072,6 +1072,8 @@ async fn handle_send_receipt(
 #[derive(Debug, serde::Deserialize)]
 pub struct ZeroClickGenerateRequest {
     pub prompt: String,
+    #[serde(default)]
+    pub image_url: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -1853,13 +1855,13 @@ async fn handle_check_milestones(
         },
         Milestone {
             id: "5_referrals".to_string(),
-            title: "🤝 High Connector!".to_string(),
+            title: "High Connector!".to_string(),
             description: "You've successfully referred 5 other businesses to OHC.".to_string(),
             reached: reached_types.contains(&"5_referrals".to_string()),
         },
         Milestone {
             id: "revenue_1k".to_string(),
-            title: "💰 Four-Figure Club".to_string(),
+            title: "Four-Figure Club".to_string(),
             description: "Your business has surpassed $1,000 in total revenue!".to_string(),
             reached: reached_types.contains(&"revenue_1k".to_string()),
         },
@@ -2491,6 +2493,7 @@ mod tests {
 
         let req = ZeroClickGenerateRequest {
             prompt: "I sell coffee".to_string(),
+            image_url: None,
         };
 
         // Note: the actual OnboardingAgent requires external API calls, but we can verify
@@ -2727,6 +2730,7 @@ mod tests {
 
         let req = ZeroClickGenerateRequest {
             prompt: "I am a home baker selling cakes.".to_string(),
+            image_url: None,
         };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
@@ -3225,6 +3229,7 @@ mod cloud_bridge_tests {
 #[derive(Deserialize, Debug)]
 pub struct EmbedWidgetQuery {
     pub tenant_id: Option<String>,
+    pub tenant: Option<String>,
     pub r#type: Option<String>,
     pub theme: Option<String>,
 }
@@ -3258,7 +3263,12 @@ pub async fn handle_zero_click_generate(
         state.hub.clone()
     );
 
-    let intake_data = agent.process_intake(&req.prompt).await.map_err(|e| {
+    let mut combined_prompt = req.prompt.clone();
+    if let Some(image_url) = &req.image_url {
+        combined_prompt.push_str(&format!("\nImage provided: {}", image_url));
+    }
+
+    let intake_data = agent.process_intake(&combined_prompt).await.map_err(|e| {
         tracing::error!("Intake error: {}", e);
         axum::http::StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -3268,10 +3278,10 @@ pub async fn handle_zero_click_generate(
     let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
 
     let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
-        business_type: intake_data.business_type,
-        company_name: intake_data.business_name.clone(),
+        business_type: if intake_data.business_type.is_empty() { "Other".to_string() } else { intake_data.business_type },
+        company_name: if intake_data.business_name.is_empty() { "My Store".to_string() } else { intake_data.business_name.clone() },
         company_description: req.prompt.clone(),
-        selling_categories: intake_data.categories,
+        selling_categories: if intake_data.categories.is_empty() { vec!["Other".to_string()] } else { intake_data.categories },
         payment_pref: "online".to_string(),
         admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
         admin_name: "Owner".to_string(),
@@ -3297,7 +3307,7 @@ pub async fn handle_zero_click_generate(
             }
         }).collect(),
         ai_agents: vec![],
-        ai_auto_respond: false,
+        ai_auto_respond: false, deposit_percentage: intake_data.deposit_percentage, lead_time_days: intake_data.lead_time_days,
     };
 
     let _start_res = agent.start_onboarding(start_req).await.map_err(|e| {
@@ -3360,10 +3370,10 @@ pub async fn handle_zero_click_generate(
 }
 
 pub async fn handle_embed_widget(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<EmbedWidgetQuery>
 ) -> axum::response::Html<String> {
-    let tenant = query.tenant_id.unwrap_or_else(|| "default-tenant".to_string());
+    let tenant = query.tenant_id.or(query.tenant).unwrap_or_else(|| "default-tenant".to_string());
     let w_type = query.r#type.unwrap_or_else(|| "booking".to_string());
     let theme = query.theme.unwrap_or_else(|| "light".to_string());
 
@@ -3372,6 +3382,86 @@ pub async fn handle_embed_widget(
 
     let escaped_type = escape_html(&w_type);
     let escaped_tenant = escape_html(&tenant);
+
+    if w_type == "leaderboard" {
+        let rows = sqlx::query("SELECT user_id, conversions FROM referrals WHERE tenant_id = $1 ORDER BY conversions DESC LIMIT 5")
+            .bind(&tenant)
+            .fetch_all(&state.pool)
+            .await;
+
+        let mut leaderboard_html = String::new();
+        let mut has_data = false;
+
+        if let Ok(results) = rows {
+            use sqlx::Row;
+            let mut rank = 1;
+            for row in results {
+                let user_id: String = row.get(0);
+                let conversions: i32 = row.get(1);
+
+                let _rank_class = if rank <= 3 { format!("rank-{}", rank) } else { "".to_string() };
+                let display_name = if user_id.len() > 8 { format!("User {}", &user_id[..4]) } else { user_id.clone() };
+                let rank_color = match rank {
+                    1 => "#FFD700",
+                    2 => "#C0C0C0",
+                    3 => "#CD7F32",
+                    _ => "#64748b"
+                };
+                let rank_size = match rank {
+                    1 => "20px",
+                    2 => "19px",
+                    3 => "18px",
+                    _ => "18px"
+                };
+
+                leaderboard_html.push_str(&format!(
+                    r#"
+                    <div style="display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+                        <div style="font-weight: 700; font-size: {rank_size}; color: {rank_color}; width: 30px;">#{rank}</div>
+                        <div style="flex: 1;">
+                            <p style="font-weight: 600; font-size: 16px; margin: 0; color: {text_color};">{display_name}</p>
+                        </div>
+                        <div style="font-weight: 700; color: #0066FF; font-size: 16px;">{conversions} referrals</div>
+                    </div>
+                    "#
+                ));
+                rank += 1;
+                has_data = true;
+            }
+        }
+
+        if !has_data {
+            leaderboard_html = format!(
+                r#"
+                <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+                  <p style="margin: 0 0 16px 0;">No referrals yet. Be the first!</p>
+                </div>
+                "#
+            );
+        }
+
+        let html = format!(
+            r#"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: {bg_color}; color: {text_color}; margin: 0; padding: 20px; box-sizing: border-box; }}
+  </style>
+</head>
+<body>
+  <div style="background: {bg_color}; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+      <h3 style="margin:0 0 16px 0; font-size:16px;">Top Referrers</h3>
+      {leaderboard_html}
+      <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
+        <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={escaped_tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+      </div>
+  </div>
+</body>
+</html>"#
+        );
+        return axum::response::Html(html);
+    }
 
     let html = format!(
         r#"<!DOCTYPE html>

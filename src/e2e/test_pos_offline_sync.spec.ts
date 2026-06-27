@@ -385,3 +385,90 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await memberPage.locator('button', { hasText: 'Decide Later' }).click();
     await expect(memberPage.locator('text=Inventory Conflict Detected')).not.toBeVisible();
   });
+
+  test('Concurrent POS and Online Cart checkout prevents double-booking via DistributedLock', async ({ memberPage, request }) => {
+    // Navigate to the POS Terminal page
+    await memberPage.goto('/pos.html');
+
+    // Enter PIN
+    await memberPage.getByRole('button', { name: '1' }).click();
+    await memberPage.getByRole('button', { name: '2' }).click();
+    await memberPage.getByRole('button', { name: '3' }).click();
+    await memberPage.getByRole('button', { name: '4' }).click();
+
+    // Verify successful login
+    await memberPage.waitForTimeout(500);
+    await memberPage.locator('button:has-text("Clock In")').click({ force: true, timeout: 5000 }).catch(() => {});
+    await memberPage.waitForTimeout(500);
+
+    // Wait for product catalog to load
+    await memberPage.waitForSelector('text=Product Catalog', { timeout: 10000 });
+
+    // Hook network to grab the product ID being reserved
+    const reservePromise = memberPage.waitForRequest(
+      (req) => req.url().includes('/api/v1/payments/terminal/reserve') && req.method() === 'POST'
+    );
+
+    // Click the first product
+    const productButton = memberPage.locator('button').filter({ hasText: 'Stock: ' }).first();
+    await expect(productButton).toBeVisible();
+    await productButton.click();
+
+    // Verify "Tap to Pay via Terminal" UI is visible
+    await expect(memberPage.locator('text=Tap to Pay via Terminal')).toBeVisible();
+
+    // Get the intercepted request to extract the product ID
+    const req = await reservePromise;
+    const postData = req.postDataJSON();
+    const productId = postData.product_id;
+
+    expect(productId).toBeDefined();
+
+    // The lock is now held by the POS for this item.
+    // Try to add the same item to an online cart via the backend API.
+    // First, create a cart
+    const createCartRes = await request.post('/api/v1/cart', {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: {
+        channel: 'online',
+        currency: 'usd'
+      }
+    });
+
+    // We expect unauthorized if not passing correct headers, so let's get access token
+    const token = await memberPage.evaluate(() => localStorage.getItem('access_token'));
+
+    const cartRes = await request.post('/api/v1/cart', {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      data: {
+        channel: 'online',
+        currency: 'usd'
+      }
+    });
+    expect(cartRes.ok()).toBeTruthy();
+    const cart = await cartRes.json();
+
+    // Now try to add the locked item to the cart
+    const addItemRes = await request.post(`/api/v1/cart/${cart.id}/items`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      data: {
+        product_id: productId,
+        quantity: 1,
+        unit_price_cents: 1000
+      }
+    });
+
+    // The backend should return BAD_REQUEST or a specific error message about being locked
+    expect(addItemRes.ok()).toBeFalsy();
+    const errorJson = await addItemRes.json();
+    expect(errorJson.error).toContain('checked out');
+  });
+});

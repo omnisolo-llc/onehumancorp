@@ -57,13 +57,13 @@ export default function PydanticValidationPage() {
         Test how the system validates tool payloads and generates recoverable errors.
       </p>
 
-      <div className="space-y-6 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+      <div className="space-y-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] p-6 rounded-[16px] shadow-sm border border-white/40 border border-gray-200">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Tool Name
           </label>
           <select
-            className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-all"
             value={toolName}
             onChange={(e) => setToolName(e.target.value)}
           >
@@ -80,7 +80,7 @@ export default function PydanticValidationPage() {
             JSON Payload
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono text-sm bg-gray-50"
+            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-all font-mono text-sm bg-gray-50"
             rows={8}
             value={payload}
             onChange={(e) => setPayload(e.target.value)}
@@ -91,7 +91,7 @@ export default function PydanticValidationPage() {
         <button
           onClick={handleValidate}
           disabled={loading || !toolName || !payload.trim()}
-          className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors shadow-sm"
+          className="w-full py-3 bg-[#0071E3] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors shadow-sm"
         >
           {loading ? 'Validating schema...' : 'Validate Tool Payload'}
         </button>
