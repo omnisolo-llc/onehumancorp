@@ -226,24 +226,51 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             if (unifiedData.triage && Array.isArray(unifiedData.triage)) {
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.triage.map((ti: any) => ({
-                  id: ti.id,
-                  tenant_id: ti.tenant_id || "default",
-                  event_source: "triage",
-                  context_payload: {
-                    description: ti.context || "Message requires attention",
-                    feature_type: "triage"
-                  },
-                  proposed_action: {
-                    message: ti.action_payload || "Triage item",
-                    action_type: ti.action_type || "resolve",
-                    feature_type: "triage"
-                  },
-                  lifecycle_state:
-                    ti.status === "RESOLVED" ? "DISMISSED" : "PENDING_APPROVAL",
-                  created_at: ti.created_at || new Date().toISOString(),
-                  updated_at: ti.created_at || new Date().toISOString(),
-                })),
+                ...unifiedData.triage.map((ti: any) => {
+                  let featureType = "triage";
+
+                  if (ti.source?.toLowerCase() === "instagram dm") {
+                    featureType = "instagram_dm";
+                  }
+
+                  let draftReply = ti.action_payload || "Triage item";
+                  try {
+                      if (ti.action_payload && typeof ti.action_payload === "string" && ti.action_payload.startsWith("{")) {
+                          const parsed = JSON.parse(ti.action_payload);
+                          if (parsed.feature_type) {
+                              featureType = parsed.feature_type;
+                          }
+                          if (parsed.draft_reply) {
+                              draftReply = parsed.draft_reply;
+                          } else if (parsed.action_payload) {
+                              draftReply = parsed.action_payload;
+                          }
+                      }
+                  } catch (e) {
+                      // ignore parse errors
+                  }
+
+                  return {
+                    id: ti.id,
+                    tenant_id: ti.tenant_id || "default",
+                    event_source: "triage",
+                    context_payload: {
+                      description: ti.context || "Message requires attention",
+                      customer_message: ti.context || "",
+                      feature_type: featureType
+                    },
+                    proposed_action: {
+                      message: ti.action_payload || "Triage item",
+                      draft_reply: draftReply,
+                      action_type: ti.action_type || "resolve",
+                      feature_type: featureType
+                    },
+                    lifecycle_state:
+                      ti.status === "RESOLVED" || ti.status === "resolved" ? "DISMISSED" : "PENDING_APPROVAL",
+                    created_at: ti.created_at || new Date().toISOString(),
+                    updated_at: ti.created_at || new Date().toISOString(),
+                  };
+                }),
               ];
             }
 
