@@ -318,17 +318,43 @@ impl AppServer {
             };
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
-            let response_obj = JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                id: req.id.clone(),
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32601,
-                    message: "am_publish_agent is not supported in the new marketplace yet.".to_string(),
-                }),
-                meta: None,
+            let marketplace = crate::tools::marketplace::MarketplaceClient::new(Box::new(crate::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string()))));
+            let name = req.params.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let description = req.params.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let role = req.params.get("role").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let system_prompt = req.params.get("system_prompt").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+            let agent = crate::tools::marketplace::MarketplaceAgent {
+                id: format!("agent-{}", uuid::Uuid::new_v4()),
+                name,
+                description,
+                role,
+                system_prompt,
+                author: "AutoGPT".to_string(),
+                version: "1.0.0".to_string(),
+                endpoint: "https://marketplace.example.com/agents/new".to_string(),
             };
-            return serde_json::to_string(&response_obj).unwrap_or_default();
+
+            let resp = match marketplace.publish_agent(agent).await {
+                Ok(_) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id.clone(),
+                    result: Some(serde_json::json!({"status": "success"})),
+                    error: None,
+                    meta: None,
+                },
+                Err(e) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id.clone(),
+                    result: None,
+                    error: Some(JsonRpcError {
+                        code: -32602,
+                        message: e,
+                    }),
+                    meta: None,
+                },
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "ap_execute_step" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let task_id = req
@@ -1260,7 +1286,11 @@ mod tests {
         let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "role": "Tester", "system_prompt": "Test"}}"#;
         let resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
         let resp_am_publish: JsonRpcResponse = serde_json::from_str(&resp_json_am_publish).unwrap();
-        assert!(resp_am_publish.error.is_some());
+        // Since we are mocking network calls with real HTTP structs without valid URL,
+        // it may return a marketplace API error or DNS error. We just ensure it's not a MethodNotFound (-32601)
+        if let Some(err) = resp_am_publish.error {
+            assert_ne!(err.code, -32601);
+        }
 
         // Test Agent Protocol ap_execute_step method
         let req_json_ap_execute = format!(

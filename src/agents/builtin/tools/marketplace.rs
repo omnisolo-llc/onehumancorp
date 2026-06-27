@@ -9,6 +9,8 @@ pub struct MarketplaceAgent {
     pub id: String,
     pub name: String,
     pub description: String,
+    pub role: String,
+    pub system_prompt: String,
     pub author: String,
     pub version: String,
     pub endpoint: String, // Where to fetch the agent payload/definition
@@ -18,6 +20,7 @@ pub struct MarketplaceAgent {
 pub trait MarketplaceProvider: Send + Sync {
     async fn search(&self, query: &str) -> Result<Vec<MarketplaceAgent>, String>;
     async fn fetch_agent(&self, agent_id: &str) -> Result<MarketplaceAgent, String>;
+    async fn publish_agent(&self, agent: MarketplaceAgent) -> Result<(), String>;
 }
 
 pub struct HttpMarketplaceProvider {
@@ -70,6 +73,21 @@ impl MarketplaceProvider for HttpMarketplaceProvider {
 
         Ok(agent)
     }
+
+    async fn publish_agent(&self, agent: MarketplaceAgent) -> Result<(), String> {
+        let url = format!("{}/publish", self.registry_url);
+        let response = self.http_client.post(&url)
+            .json(&agent)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to publish agent: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Marketplace returned status: {}", response.status()));
+        }
+
+        Ok(())
+    }
 }
 
 pub struct MarketplaceClient {
@@ -106,6 +124,11 @@ impl MarketplaceClient {
         }
         Ok(agent)
     }
+
+    /// Publish a new agent to the marketplace
+    pub async fn publish_agent(&self, agent: MarketplaceAgent) -> Result<(), String> {
+        self.provider.publish_agent(agent).await
+    }
 }
 
 #[cfg(test)]
@@ -124,6 +147,8 @@ pub mod test_utils {
                 id: "agent-1".to_string(),
                 name: "Data Analyst".to_string(),
                 description: "Analyzes CSV files and generates charts.".to_string(),
+                role: "Analyst".to_string(),
+                system_prompt: "You analyze data".to_string(),
                 author: "AutoGPT".to_string(),
                 version: "1.0.0".to_string(),
                 endpoint: "https://marketplace.example.com/agents/agent-1".to_string(),
@@ -136,6 +161,8 @@ pub mod test_utils {
                     id: "agent-1".to_string(),
                     name: "Data Analyst".to_string(),
                     description: "Analyzes CSV files and generates charts.".to_string(),
+                    role: "Analyst".to_string(),
+                    system_prompt: "You analyze data".to_string(),
                     author: "AutoGPT".to_string(),
                     version: "1.0.0".to_string(),
                     endpoint: "https://marketplace.example.com/agents/agent-1".to_string(),
@@ -143,6 +170,10 @@ pub mod test_utils {
             } else {
                 Err("Not found".to_string())
             }
+        }
+
+        async fn publish_agent(&self, _agent: MarketplaceAgent) -> Result<(), String> {
+            Ok(())
         }
     }
 }
