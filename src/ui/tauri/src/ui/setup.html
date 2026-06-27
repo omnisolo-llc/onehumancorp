@@ -122,7 +122,10 @@
         box-sizing: border-box;
       }
       .glassmorphism {
-        border-radius: 16px;
+        border-radius: 16px !important;
+      }
+      textarea.glassmorphism, input.glassmorphism {
+        border-radius: 16px !important;
       }
       button {
         min-width: 44px;
@@ -1898,25 +1901,35 @@
       <!-- Step 4: Assistant Setup -->
       <div class="step" id="step-assistant">
         <h1>Set up your Assistant</h1>
-        <p>Give your AI assistant a name and tone.</p>
+        <p>Choose an AI agent team and set their tone.</p>
 
         <div class="chat-bubble" id="assistant-intro">
-          "Hi! I'll be your partner in growing this business. What should I call
-          myself, and how should we talk?"
+          "Hi! I'll be your partner in growing this business. What kind of team do you need, and how should we talk?"
         </div>
 
-        <input
-          type="text"
-          id="assistant-name"
-          data-testid="assistant-name"
-          class="glassmorphism"
-          placeholder="e.g. Jarvis"
-          inputmode="text"
-          autocomplete="off"
-          enterkeyhint="done"
-        />
+        <div class="work-context-cards" id="assistant-team-cards">
+          <label class="context-card" data-testid="team-support">
+            <input type="radio" name="assistant-team" value="Customer Support" onchange="updateAssistantTeam()" />
+            <div class="context-icon">🎧</div>
+            <div class="context-title">Customer Support</div>
+            <div class="context-desc">Handles inquiries and drafts replies.</div>
+          </label>
+          <label class="context-card" data-testid="team-operations">
+            <input type="radio" name="assistant-team" value="Operations Manager" onchange="updateAssistantTeam()" />
+            <div class="context-icon">⚙️</div>
+            <div class="context-title">Operations Manager</div>
+            <div class="context-desc">Coordinates calendar and inventory.</div>
+          </label>
+          <label class="context-card" data-testid="team-marketing">
+            <input type="radio" name="assistant-team" value="Marketing Specialist" onchange="updateAssistantTeam()" />
+            <div class="context-icon">🚀</div>
+            <div class="context-title">Marketing Specialist</div>
+            <div class="context-desc">Creates offers and promos.</div>
+          </label>
+        </div>
+        <input type="hidden" id="assistant-name" data-testid="assistant-name" value="" />
         <div id="assistant-name-error" class="error-msg" aria-live="polite">
-          Please enter a name for your assistant.
+          Please select an AI agent team.
         </div>
 
         <select
@@ -3677,8 +3690,15 @@
           instantErrorEl.style.borderColor = "";
           instantBioInputEl.classList.remove("invalid-input");
           generateStorefrontBtn.disabled = true;
-          generateStorefrontBtn.innerHTML =
-            '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>Building Your Business...';
+          const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
+          let loadingTextIdx = 0;
+          generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
+          const loadingInterval = setInterval(() => {
+            loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
+            generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
+          }, 3000);
+
+          generateStorefrontBtn.dataset.loadingInterval = loadingInterval;
           goToStep("step-loading");
 
           try {
@@ -3725,6 +3745,11 @@
             localStorage.removeItem("onboardingState");
             localStorage.setItem("has_onboarded", "true");
 
+            if (generateStorefrontBtn.dataset.loadingInterval) {
+                clearInterval(generateStorefrontBtn.dataset.loadingInterval);
+                delete generateStorefrontBtn.dataset.loadingInterval;
+            }
+
             setTimeout(() => {
               window.location.href = "success.html";
             }, 1500);
@@ -3739,6 +3764,10 @@
             instantBioInputEl.classList.add("invalid-input");
             generateStorefrontBtn.disabled = false;
             delete generateStorefrontBtn.dataset.submitting;
+            if (generateStorefrontBtn.dataset.loadingInterval) {
+                clearInterval(generateStorefrontBtn.dataset.loadingInterval);
+                delete generateStorefrontBtn.dataset.loadingInterval;
+            }
             generateStorefrontBtn.innerHTML = "Next";
           }
         });

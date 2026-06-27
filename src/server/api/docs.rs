@@ -21,6 +21,12 @@ pub struct VideoTutorial {
 #[derive(Deserialize)]
 pub struct SearchQuery {
     pub q: String,
+    pub mobile_optimized: Option<bool>,
+}
+
+#[derive(Deserialize)]
+pub struct DocsQuery {
+    pub mobile_optimized: Option<bool>,
 }
 
 #[derive(Serialize, Clone)]
@@ -122,45 +128,106 @@ macro_rules! with_cache_fallback {
         let cache_key_str = $cache_key.to_string();
         if let Some((cached, is_stale)) = $cache.get_with_swr(&cache_key_str).await {
             if !is_stale {
-                return Json(cached);
+                // Ignore the early return since we map manually afterwards
+                // The macro shouldn't return Json directly since we change the types
+            } else {
+                let cache_key_bg = cache_key_str.clone();
+                tokio::spawn(async move {
+                    let items = $fetch_fn();
+                    let _ = $cache.set(&cache_key_bg, items, std::time::Duration::from_secs(3600)).await;
+                });
             }
-            let cache_key_bg = cache_key_str.clone();
-            tokio::spawn(async move {
-                let items = $fetch_fn();
-                let _ = $cache.set(&cache_key_bg, items, std::time::Duration::from_secs(3600)).await;
-            });
-            return Json(cached);
+            (cached, true)
+        } else {
+            let items = $fetch_fn();
+            let _ = $cache.set(&cache_key_str, items.clone(), std::time::Duration::from_secs(3600)).await;
+            (items, false)
         }
-
-        let items = $fetch_fn();
-        let _ = $cache.set(&cache_key_str, items.clone(), std::time::Duration::from_secs(3600)).await;
-        Json(items)
     }};
 }
 
 static DOCS_ARTICLES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<HelpArticle>>> = std::sync::OnceLock::new();
 static DOCS_VIDEOS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<VideoTutorial>>> = std::sync::OnceLock::new();
 
-pub async fn list_articles() -> Json<Vec<HelpArticle>> {
+pub async fn list_articles(Query(query): Query<DocsQuery>) -> Json<Vec<serde_json::Value>> {
     let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
-    with_cache_fallback!(cache, "docs:articles:all", || get_articles())
+    let articles = with_cache_fallback!(cache, "docs:articles:all", || get_articles()).0;
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+
+    let json_articles = articles.into_iter().map(|a| {
+        if mobile_optimized {
+            serde_json::json!({
+                "category": a.category,
+                "title": a.title,
+                "link": a.link
+            })
+        } else {
+            serde_json::json!({
+                "category": a.category,
+                "title": a.title,
+                "desc": a.desc,
+                "link": a.link
+            })
+        }
+    }).collect();
+    Json(json_articles)
 }
 
-pub async fn search_articles(Query(query): Query<SearchQuery>) -> Json<Vec<HelpArticle>> {
+pub async fn search_articles(Query(query): Query<SearchQuery>) -> Json<Vec<serde_json::Value>> {
     let q = query.q.to_lowercase();
     let cache_key = format!("docs:articles:search:{}", q);
     let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
 
-    with_cache_fallback!(cache, cache_key, || {
+    let articles = with_cache_fallback!(cache, cache_key, || {
         get_articles().into_iter().filter(|a| {
             a.category.to_lowercase().contains(&q) || a.title.to_lowercase().contains(&q) || a.desc.to_lowercase().contains(&q)
         }).collect::<Vec<HelpArticle>>()
-    })
+    }).0;
+
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+
+    let json_articles = articles.into_iter().map(|a| {
+        if mobile_optimized {
+            serde_json::json!({
+                "category": a.category,
+                "title": a.title,
+                "link": a.link
+            })
+        } else {
+            serde_json::json!({
+                "category": a.category,
+                "title": a.title,
+                "desc": a.desc,
+                "link": a.link
+            })
+        }
+    }).collect();
+    Json(json_articles)
 }
 
-pub async fn list_videos() -> Json<Vec<VideoTutorial>> {
+pub async fn list_videos(Query(query): Query<DocsQuery>) -> Json<Vec<serde_json::Value>> {
     let cache = DOCS_VIDEOS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
-    with_cache_fallback!(cache, "docs:videos:all", || get_videos())
+    let videos = with_cache_fallback!(cache, "docs:videos:all", || get_videos()).0;
+
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+
+    let json_videos = videos.into_iter().map(|v| {
+        if mobile_optimized {
+            serde_json::json!({
+                "id": v.id,
+                "title": v.title,
+                "video_url": v.video_url
+            })
+        } else {
+            serde_json::json!({
+                "id": v.id,
+                "title": v.title,
+                "duration": v.duration,
+                "video_url": v.video_url
+            })
+        }
+    }).collect();
+    Json(json_videos)
 }
 
 
@@ -843,25 +910,25 @@ mod tests {
 
     #[tokio::test]
     async fn test_list_articles() {
-        let res = list_articles().await;
+        let res = list_articles(axum::extract::Query(DocsQuery { mobile_optimized: None })).await;
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_found() {
-        let res = search_articles(axum::extract::Query(SearchQuery { q: "getting".to_string() })).await;
+        let res = search_articles(axum::extract::Query(SearchQuery { q: "getting".to_string(), mobile_optimized: None })).await;
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_not_found() {
-        let res = search_articles(axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string() })).await;
+        let res = search_articles(axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string(), mobile_optimized: None })).await;
         assert!(res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_list_videos() {
-        let res = list_videos().await;
+        let res = list_videos(axum::extract::Query(DocsQuery { mobile_optimized: None })).await;
         assert!(!res.0.is_empty());
     }
 

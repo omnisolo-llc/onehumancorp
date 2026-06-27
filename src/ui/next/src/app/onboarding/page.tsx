@@ -122,6 +122,12 @@ export default function OnboardingWizard() {
     };
 
     try {
+<<<<<<< HEAD
+      await fetchWithRetry('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ wizardState })
+=======
       await fetch("/api/onboarding/state", {
         method: "POST",
         headers: {
@@ -130,6 +136,7 @@ export default function OnboardingWizard() {
           "X-User-ID": userId,
         },
         body: JSON.stringify({ wizardState }),
+>>>>>>> fbdbf79f (style: optimize ui according to ohc design standards)
       });
     } catch (err) {
       console.error("Failed to sync onboarding state", err);
@@ -231,6 +238,14 @@ export default function OnboardingWizard() {
         : "test-user";
 
     Promise.all([
+<<<<<<< HEAD
+      fetchWithRetry('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null),
+      fetchWithRetry('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null)
+=======
       fetch("/api/onboarding/draft", {
         headers: { "X-Tenant-ID": tenantId, "X-User-ID": userId },
       })
@@ -241,6 +256,7 @@ export default function OnboardingWizard() {
       })
         .then((res) => (res.ok ? res.json() : null))
         .catch(() => null),
+>>>>>>> fbdbf79f (style: optimize ui according to ohc design standards)
     ])
       .then(([draftData, stateData]) => {
         const isValid = (d: any) => d && Object.keys(d).length > 0;
@@ -348,6 +364,13 @@ export default function OnboardingWizard() {
     };
 
     const timer = setTimeout(() => {
+<<<<<<< HEAD
+      fetchWithRetry('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ step, ...wizardState })
+      }).catch(err => console.error('Failed to sync onboarding state', err));
+=======
       fetch("/api/onboarding/state", {
         method: "POST",
         headers: {
@@ -357,6 +380,7 @@ export default function OnboardingWizard() {
         },
         body: JSON.stringify({ step, ...wizardState }),
       }).catch((err) => console.error("Failed to sync onboarding state", err));
+>>>>>>> fbdbf79f (style: optimize ui according to ohc design standards)
     }, 1000); // debounce 1s
 
     return () => clearTimeout(timer);
@@ -403,8 +427,13 @@ export default function OnboardingWizard() {
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
       updateState({ bio: combinedDescription });
 
+<<<<<<< HEAD
+      const intakeRes = await fetchWithRetry('/api/onboarding/intake', {
+        method: 'POST',
+=======
       const intakeRes = await fetch("/api/onboarding/intake", {
         method: "POST",
+>>>>>>> fbdbf79f (style: optimize ui according to ohc design standards)
         headers: {
           "Content-Type": "application/json",
           "X-Tenant-ID": tenantId,
@@ -509,10 +538,17 @@ export default function OnboardingWizard() {
           ? "http://127.0.0.1:18789"
           : "";
 
+<<<<<<< HEAD
+      const res = await fetchWithRetry(`${backendUrl}/api/onboarding/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newHistory })
+=======
       const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: newHistory }),
+>>>>>>> fbdbf79f (style: optimize ui according to ohc design standards)
       });
 
       if (!res.ok) throw new Error("Chat request failed");
