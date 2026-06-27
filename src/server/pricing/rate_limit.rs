@@ -201,7 +201,12 @@ impl RedisRateLimiter {
         let mut conn = self.get_connection().await?;
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
         let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
-        Ok(used.unwrap_or(0))
+        let mut used_bytes = used.unwrap_or(0);
+        if used_bytes < 0 {
+            used_bytes = 0;
+            let _ : () = conn.set(&storage_key, 0).await.unwrap_or(());
+        }
+        Ok(used_bytes)
     }
 
     pub async fn set_tenant_tier(&self, tenant_id: &str, tier: PlanTier) -> Result<(), String> {
@@ -417,12 +422,17 @@ impl RedisRateLimiter {
 
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
-        let total_storage: i64 = if delta_bytes == 0 {
+        let mut total_storage: i64 = if delta_bytes == 0 {
             let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
             used.unwrap_or(0)
         } else {
             conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?
         };
+
+        if total_storage < 0 {
+            let _ : () = conn.set(&storage_key, 0).await.unwrap_or(());
+            total_storage = 0;
+        }
 
         if let Some(store) = &self.telemetry_store
             && delta_bytes > 0 {

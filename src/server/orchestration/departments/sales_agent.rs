@@ -258,10 +258,35 @@ impl Department for SalesAgent {
             "tenant.work_intake.received".to_string(),
             "agent:sales:approved".to_string(),
             "pos_sales".to_string(),
+            "tenant.order.created".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.order.created" {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
+            tracing::info!("Sales Agent received order created for customer: {}, order: {}", customer_id, order_id);
+
+            // Promoter Logic: Draft an upsell/subscription reply.
+            let proposed_action = serde_json::json!({
+                "action_type": "Draft Reply",
+                "customer_id": customer_id,
+                "draft_reply": format!("Hi! Thanks for your order {}. Would you like to set up a subscription for 10% off your next deliveries? Reply YES to subscribe.", order_id),
+                "order_id": order_id
+            });
+
+            self.orchestrator.execute_action(
+                DepartmentType::Sales,
+                "Promote Subscription".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                proposed_action,
+            ).await.map_err(|e| e.to_string())?;
+
+            return Ok(());
+        }
+
         if event.event_type == "POS_SALE_COMPLETED" {
             let amount = event.payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
             let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Unknown");
