@@ -639,7 +639,7 @@ mod tests {
         use uuid::Uuid;
         use crate::db::DbStore;
         use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-        use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent};
+        use crate::orchestration::departments::types::{DepartmentEvent};
         use crate::orchestration::mesh::CentrifugeNode;
         use ohc_builtin_agent::mesh::transport::InProcessTransport;
 
