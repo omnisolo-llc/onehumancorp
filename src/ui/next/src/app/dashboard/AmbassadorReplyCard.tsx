@@ -2,9 +2,11 @@ import React from 'react';
 
 type AmbassadorReplyCardProps = {
   approval: any;
+  onApprove?: () => void;
+  onDismiss?: () => void;
 };
 
-export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approval }) => {
+export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approval, onApprove, onDismiss }) => {
   return (
     <div className="mb-4 p-4 rounded-[16px] bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="ambassador-reply-card">
       <div className="text-gray-900 font-bold mb-2">1 New Message from {(approval.payload?.source || (approval.proposed_action || approval.context_payload)?.source || (approval.proposed_action || approval.context_payload)?.original_payload?.source || approval.payload?.original_payload?.source || "unknown").replace("_", " ")}</div>
@@ -34,6 +36,28 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approv
       <div className="bg-[#0066FF] p-3 rounded-[8px] text-xs text-white shadow-inner">
         {approval.payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || approval.payload?.original_payload?.generated_response || "Ready to send."}
       </div>
+      {(onApprove || onDismiss) && (
+        <div className="flex gap-2 w-full mt-2">
+          {onApprove && (
+            <button
+              onClick={onApprove}
+              className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+              data-testid="approve-ambassador-reply-inner"
+            >
+              Send Draft
+            </button>
+          )}
+          {onDismiss && (
+            <button
+              onClick={onDismiss}
+              className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              data-testid="dismiss-ambassador-reply-inner"
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

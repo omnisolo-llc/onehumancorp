@@ -262,7 +262,7 @@ Output JSON format:
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
             let mut event_source = source.to_string();
-            if feature_type == "instagram_dm" || source.to_lowercase().contains("instagram") {
+            if feature_type == "instagram_dm" || source.to_lowercase().contains("instagram") || source.to_lowercase().contains("whatsapp") {
                 event_source = "instagram_dm".to_string();
             }
 
