@@ -7,12 +7,22 @@ use axum::{
 };
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use server_auth::orchestration::AuthInfo;
 
 pub async fn edge_caching_middleware(
     req: Request,
     next: Next,
 ) -> Result<impl IntoResponse, axum::http::StatusCode> {
-    let response = next.run(req).await;
+    // Extract tenant info early if available to automatically add tenant tag
+    let tenant_id = req.extensions().get::<AuthInfo>().map(|c| c.org_id.clone());
+
+    let mut response = next.run(req).await.into_response();
+
+    if let Some(tid) = tenant_id {
+        if let Ok(val) = format!("tenant-id:{}", tid).parse() {
+            response.headers_mut().append("Cache-Tag", val);
+        }
+    }
 
     let (mut parts, body) = response.into_parts();
 

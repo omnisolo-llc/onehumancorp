@@ -16,6 +16,7 @@ rust_library(
         "tier_middleware.rs",
         "edge_caching_middleware.rs",
         "tenant_middleware.rs",
+        "edge_cache_provider.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -38,6 +39,9 @@ rust_library(
         "@crates//:tokio",
         "@crates//:dashmap",
         "@crates//:tracing",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
     ],
 )
 
