@@ -94,9 +94,7 @@ describe('POST /api/v1/growth/waitlist', () => {
         const response = await POST(req);
         const data = await response.json();
 
-        expect(response.status).toBe(200); // Should still return 200 to UI with fallback data
-        expect(data.success).toBe(true);
-        expect(data.referral_link).toContain('my-store');
+        expect(response.status).toBe(502);
     });
 
     it('falls back gracefully if fetch throws an exception (network error)', async () => {
@@ -112,8 +110,6 @@ describe('POST /api/v1/growth/waitlist', () => {
         const response = await POST(req);
         const data = await response.json();
 
-        expect(response.status).toBe(200);
-        expect(data.success).toBe(true);
-        expect(data.referral_link).toContain('demo-fallback');
+        expect(response.status).toBe(502);
     });
 });

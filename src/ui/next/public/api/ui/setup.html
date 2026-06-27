@@ -596,11 +596,11 @@
       }
 
       function goToStep(stepId) {
-          if (stepId === 'step-instant' && document.getElementById('instant-bio')) {
-              document.getElementById('instant-bio').value = '';
+          if (stepId === 'step-instant') {
+              const instantBioInputEl = document.getElementById('instant-bio');
               const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
-              if (generateStorefrontBtn) {
-                  generateStorefrontBtn.disabled = true;
+              if (instantBioInputEl && generateStorefrontBtn) {
+                  generateStorefrontBtn.disabled = instantBioInputEl.value.trim().length === 0;
               }
           }
           document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));

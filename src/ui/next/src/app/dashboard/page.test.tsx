@@ -66,15 +66,15 @@ test('renders dashboard with actionable feed', async () => {
         ok: true,
         json: () => Promise.resolve([
           {
-            targetId: "sales-card-target",
-            title: "Business Analytics",
-            content: "This panel shows your current sales and customer counts.",
+            targetId: "dashboard-title",
+            title: "Welcome",
+            content: "Welcome to your dashboard! This is your control center.",
             position: "bottom"
           },
           {
-            targetId: "operations-map-target",
-            title: "Operations Map",
-            content: "Use this area to see the live state of your orders, messages, and inventory.",
+            targetId: "wrapped-summary",
+            title: "AI Savings",
+            content: "Here you can see the time and effort your agents have saved you.",
             position: "bottom"
           }
         ])
