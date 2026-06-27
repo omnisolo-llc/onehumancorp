@@ -57,3 +57,25 @@ test('shows error when onSave fails', async () => {
     expect(screen.getByTestId('builder-error')).toHaveTextContent('API Down');
   });
 });
+
+test('disables save button when workflow name is empty', async () => {
+  const mockOnSave = vi.fn();
+  render(<AgentWorkflowBuilder onSave={mockOnSave} />);
+
+  // Leave name empty, but add a block
+  fireEvent.click(screen.getByTestId('palette-block-trigger_message'));
+
+  const saveBtn = screen.getByText('Create & Run Workflow');
+  expect(saveBtn).toBeDisabled();
+});
+
+test('disables save button when workflow blocks are empty', async () => {
+  const mockOnSave = vi.fn();
+  render(<AgentWorkflowBuilder onSave={mockOnSave} />);
+
+  // Add name, but no blocks
+  fireEvent.change(screen.getByPlaceholderText('e.g., Auto-reply to VIPs'), { target: { value: 'My Workflow' } });
+
+  const saveBtn = screen.getByText('Create & Run Workflow');
+  expect(saveBtn).toBeDisabled();
+});

@@ -224,28 +224,35 @@ impl JetBrainsObservationMasker {
                                 }
 
                                 if !modification_successful {
-                                    let preview_chars = std::cmp::max(10, self.size_limit / 4);
-                                    let char_count = tr.content.chars().count();
-                                    let raw_msg = if char_count > preview_chars * 2 {
-                                        let start_preview: String =
-                                            tr.content.chars().take(preview_chars).collect();
-                                        let end_preview: String = tr
-                                            .content
-                                            .chars()
-                                            .skip(char_count - preview_chars)
-                                            .collect();
-                                        format!(
-                                            "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
-                                            bytes, start_preview, end_preview, tr.tool_call_id
-                                        )
-                                    } else {
-                                        format!(
-                                            "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
+                                    if bytes > self.size_limit * 10 {
+                                        tr.content = format!(
+                                            "[Observation Masked: {} bytes omitted for context preservation. Use 'RecallObservation' with ID '{}' to retrieve full output.]",
                                             bytes, tr.tool_call_id
-                                        )
-                                    };
-                                    // For plain text, we preserve it as a plain string rather than forcing a JSON wrapper, unless we explicitly parsed it as JSON previously.
-                                    tr.content = raw_msg;
+                                        );
+                                    } else {
+                                        let preview_chars = std::cmp::max(10, self.size_limit / 4);
+                                        let char_count = tr.content.chars().count();
+                                        let raw_msg = if char_count > preview_chars * 2 {
+                                            let start_preview: String =
+                                                tr.content.chars().take(preview_chars).collect();
+                                            let end_preview: String = tr
+                                                .content
+                                                .chars()
+                                                .skip(char_count - preview_chars)
+                                                .collect();
+                                            format!(
+                                                "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
+                                                bytes, start_preview, end_preview, tr.tool_call_id
+                                            )
+                                        } else {
+                                            format!(
+                                                "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
+                                                bytes, tr.tool_call_id
+                                            )
+                                        };
+                                        // For plain text, we preserve it as a plain string rather than forcing a JSON wrapper, unless we explicitly parsed it as JSON previously.
+                                        tr.content = raw_msg;
+                                    }
                                 }
                             }
                         }
@@ -630,5 +637,37 @@ mod additional_tests {
             masked_content.contains("[Masked array: 1 elements truncated due to depth limit]")
                 || masked_content.contains("[Observation Masked")
         );
+    }
+
+    #[test]
+    fn test_mask_significantly_exceeds_size_limit() {
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_8".to_string(),
+                    content: "A".repeat(100_000), // very large content
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Thinking".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let masker = JetBrainsObservationMasker::new(0, 1000, 20);
+        masker.apply_masking(&mut messages);
+
+        let masked_content = &messages[0].tool_results[0].content;
+        assert!(masked_content.contains("[Observation Masked: 100000 bytes omitted for context preservation. Use 'RecallObservation'"));
     }
 }
