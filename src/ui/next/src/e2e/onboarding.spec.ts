@@ -154,7 +154,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
 
     // Check for glassmorphism classes
-    await expect(page.locator('#setup-screen')).toHaveClass(/bg-white\/65/);
+    await expect(page.locator('#setup-screen')).toHaveClass(/.*glassmorphism.*/);
 
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
