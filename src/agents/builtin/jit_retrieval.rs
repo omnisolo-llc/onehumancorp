@@ -204,8 +204,6 @@ mod tests {
                 Ok(vec![
                     "User previously encountered a compiler error in main.rs".to_string(),
                 ])
-            } else if query.contains("unrelated") {
-                Ok(vec![])
             } else {
                 Ok(vec![])
             }
