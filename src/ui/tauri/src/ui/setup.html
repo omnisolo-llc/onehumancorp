@@ -2932,11 +2932,11 @@
         const userId = localStorage.getItem("user_id") || "e2e-admin-user";
 
         clearTimeout(saveStateTimer);
-        saveStateTimer = setTimeout(() => {
+        saveStateTimer = setTimeout(async () => {
           if (window.__TAURI__ && window.__TAURI__.core) {
             window.__TAURI__.core
               .invoke("save_onboarding_state", { state, tenantId, userId })
-              .catch(console.error);
+              .catch((err) => console.warn("Tauri save_onboarding_state failed, using offline fallback:", err));
           } else {
             localStorage.setItem("onboardingState", JSON.stringify(state));
             const backendUrl =
@@ -2944,15 +2944,22 @@
               ["1420", "3000", "8081"].includes(window.location.port)
                 ? "http://127.0.0.1:18789"
                 : "";
-            fetch(`${backendUrl}/api/onboarding/draft`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Tenant-ID": tenantId,
-                "X-User-ID": userId,
-              },
-              body: JSON.stringify(state),
-            }).catch(console.error);
+            try {
+              const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Tenant-ID": tenantId,
+                  "X-User-ID": userId,
+                },
+                body: JSON.stringify(state),
+              });
+              if (!res.ok) {
+                console.warn("Failed to sync onboarding state with backend", res.status);
+              }
+            } catch (err) {
+              console.warn("Network error syncing onboarding state, offline fallback active", err);
+            }
           }
         }, 1000);
       }
