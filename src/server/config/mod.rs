@@ -110,6 +110,7 @@ pub fn get_safe_user_dir() -> std::path::PathBuf {
 
         #[allow(clippy::collapsible_if)]
         if let Ok(sym_meta) = std::fs::symlink_metadata(&dir) {
+            #[allow(clippy::collapsible_if)]
             if sym_meta.file_type().is_symlink() {
                 tracing::error!("CRITICAL SECURITY ERROR: OHC user directory is a symlink. Aborting to prevent TOCTOU vulnerability.");
                 std::process::exit(1);

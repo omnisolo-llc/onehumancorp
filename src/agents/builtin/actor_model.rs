@@ -941,7 +941,7 @@ mod tests {
                 mut rx: mpsc::Receiver<ActorMessage>,
                 _sys: Arc<ActorSystem>,
             ) -> tokio::task::JoinHandle<()> {
-                tokio::spawn(async move { while let Some(_) = rx.recv().await {} })
+                tokio::spawn(async move { while rx.recv().await.is_some() {} })
             }
         }
 
