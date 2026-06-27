@@ -339,6 +339,7 @@ exports_files([
     "sandbox/mod.rs",
     "sandbox/manager.rs",
     "sandbox/session.rs",
+        "sandbox/multi_backend.rs",
 ])
 
 rust_test(
