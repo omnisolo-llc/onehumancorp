@@ -4027,6 +4027,23 @@
         });
     </script>
     <script>
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Hybrid Setup Health Check
+        fetch("/api/onboarding/setup-health?mode=standalone")
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.status === "error") {
+              const errorDiv = document.createElement("div");
+              errorDiv.id = "setup-health-error";
+              errorDiv.style.cssText = "background: #FF3B30; color: white; padding: 12px; text-align: center; font-weight: 600; width: 100%; position: absolute; top: 0; left: 0; z-index: 9999;";
+              errorDiv.textContent = "Hybrid Setup Health Check Failed: " + (data.message || "Environment unprovisioned.");
+              document.body.prepend(errorDiv);
+            }
+          })
+          .catch((err) => console.error("Health check failed", err));
+      });
+
       document.addEventListener("DOMContentLoaded", () => {
         // Global Enter key support for all inputs within active step
         document.addEventListener("keydown", (e) => {
