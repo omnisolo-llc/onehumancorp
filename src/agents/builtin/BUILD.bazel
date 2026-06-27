@@ -99,6 +99,7 @@ rust_library(
         "registry.rs",
         "ruflo.rs",
         "openhands.rs",
+        "openhands_runner.rs",
         "goose/mod.rs",
         "guardrails/mod.rs",
         "guardrails/anthropic_hooks.rs",

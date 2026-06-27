@@ -45,6 +45,7 @@ pub mod memory;
 pub mod memory_exhaustive_tests;
 pub mod memory_store;
 pub mod openhands;
+pub mod openhands_runner;
 pub mod prompt_construction;
 pub mod ralph_loop;
 pub mod ruflo;
