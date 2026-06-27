@@ -486,6 +486,41 @@ pub async fn stripe_webhook_handler(
                     .and_then(|m| m.get("product_id"))
                     .and_then(|id| id.as_str());
 
+                let conversational_intake_opt = obj.get("metadata")
+                    .and_then(|m| m.get("conversational_intake_id"))
+                    .and_then(|id| id.as_str());
+
+                if let Some(intake_id) = conversational_intake_opt {
+                    let _ = sqlx::query("UPDATE conversational_intake_queue SET status = 'BOOKED', updated_at = NOW() WHERE id = $1")
+                        .bind(intake_id)
+                        .execute(&webhook_state.db.pool)
+                        .await;
+
+                    if let Ok(Some(row)) = sqlx::query("SELECT proposed_slot_id, tenant_id FROM conversational_intake_queue WHERE id = $1")
+                        .bind(intake_id)
+                        .fetch_optional(&webhook_state.db.pool)
+                        .await
+                    {
+                        use sqlx::Row;
+                        let proposed_slot_id: Option<String> = row.try_get("proposed_slot_id").ok();
+                        let tenant_id: String = row.get("tenant_id");
+
+                        if let Some(slot_id) = proposed_slot_id {
+                            let _ = sqlx::query("UPDATE booking_slots SET status = 'booked', updated_at = NOW() WHERE id = $1")
+                                .bind(&slot_id)
+                                .execute(&webhook_state.db.pool)
+                                .await;
+                        }
+
+                        let feed_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query(r#"INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'omnichannel', '{"feature_type": "autonomous_quote_confirmed"}', '{}', 'APPROVED', NOW(), NOW())"#)
+                            .bind(feed_id)
+                            .bind(tenant_id)
+                            .execute(&webhook_state.db.pool)
+                            .await;
+                    }
+                }
+
                 if let (Some(tenant_id), Some(product_id)) = (tenant_id_opt, product_id_opt) {
                     let quantity = obj.get("metadata")
                         .and_then(|m| m.get("quantity"))
