@@ -379,7 +379,9 @@ use ::server_ohc::app::{
 };
 
 const TIMESLOT_LOCK_TTL: Duration = Duration::from_secs(60);
+#[allow(dead_code)]
 const INVENTORY_LOCK_TTL: Duration = Duration::from_secs(15 * 60);
+#[allow(dead_code)]
 const INVENTORY_CAPACITY_LOCK_TTL: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -438,6 +440,7 @@ impl LocalBookingSoftLockStore {
         locks.contains_key(key)
     }
 
+    #[allow(dead_code)]
     async fn count_prefix(&self, prefix: &str) -> usize {
         let mut locks = self.locks.lock().await;
         Self::prune_expired(&mut locks);
@@ -499,6 +502,7 @@ impl BookingSoftLockStore {
         self.key_exists(&key).await
     }
 
+    #[allow(dead_code)]
     async fn acquire_inventory_lock(
         &self,
         tenant_id: &str,
@@ -588,6 +592,7 @@ impl BookingSoftLockStore {
         Ok(self.local.exists(key).await)
     }
 
+    #[allow(dead_code)]
     async fn active_inventory_lock_count(
         &self,
         tenant_id: &str,
@@ -617,14 +622,17 @@ fn capacity_lock_key(
     )
 }
 
+#[allow(dead_code)]
 fn inventory_capacity_lock_key(tenant_id: &str, product_id: &str) -> String {
     format!("ohc:lock:{}:inventory_capacity:{}", tenant_id, product_id)
 }
 
+#[allow(dead_code)]
 fn inventory_lock_prefix(tenant_id: &str, product_id: &str) -> String {
     format!("ohc:lock:{}:inventory:{}:", tenant_id, product_id)
 }
 
+#[allow(dead_code)]
 fn inventory_lock_key(tenant_id: &str, product_id: &str, session_id: &str) -> String {
     format!("{}{}", inventory_lock_prefix(tenant_id, product_id), session_id)
 }
@@ -689,6 +697,7 @@ async fn redis_release_if_owner(
     Ok(released == 1)
 }
 
+#[allow(dead_code)]
 async fn redis_scan_count(client: &redis::Client, pattern: &str) -> Result<usize, String> {
     let mut conn = redis_connection(client).await?;
     let mut cursor = 0_u64;
