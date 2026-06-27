@@ -171,6 +171,25 @@ pub async fn sync_events_handler(
                         .execute(&mut *tx)
                         .await;
 
+                    if event.entity_type == "voice_note" {
+                        let task_id = uuid::Uuid::new_v4().to_string();
+                        let ai_payload = serde_json::json!({
+                            "sync_event_id": event.id,
+                            "entity_type": event.entity_type,
+                            "action_type": event.action_type,
+                            "audio_data": event.payload.get("audio_data").cloned().unwrap_or_default(),
+                        });
+                        let _ = sqlx::query(
+                            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                             VALUES ($1, $2, 'operations', 'voice_command', $3::jsonb, 'PENDING')"
+                        )
+                        .bind(&task_id)
+                        .bind(&tenant_id)
+                        .bind(&ai_payload)
+                        .execute(&mut *tx)
+                        .await;
+                    }
+
                     applied_count += 1;
                 }
             }
@@ -192,6 +211,25 @@ pub async fn sync_events_handler(
                     .bind(&tenant_id)
                     .execute(&mut *tx)
                     .await;
+
+                if event.entity_type == "voice_note" {
+                    let task_id = uuid::Uuid::new_v4().to_string();
+                    let ai_payload = serde_json::json!({
+                        "sync_event_id": event.id,
+                        "entity_type": event.entity_type,
+                        "action_type": event.action_type,
+                        "audio_data": event.payload.get("audio_data").cloned().unwrap_or_default(),
+                    });
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'voice_command', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(&task_id)
+                    .bind(&tenant_id)
+                    .bind(&ai_payload)
+                    .execute(&mut *tx)
+                    .await;
+                }
 
                 applied_count += 1;
             }

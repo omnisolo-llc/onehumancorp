@@ -162,6 +162,30 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               newSet.delete(action.payload.id);
               return newSet;
             });
+          } else if (action.type === "voice_note_sync") {
+            await fetch("/api/v1/sync/events", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                events: [
+                  {
+                    id: action.id,
+                    entity_type: "voice_note",
+                    entity_id: action.id,
+                    action_type: "ProcessAudio",
+                    payload: { audio_data: action.payload.audio_data },
+                    base_version: 0,
+                  },
+                ],
+              }),
+            });
+            await removeAction(action.id);
+            setOfflineActionsCount((prev) => Math.max(0, prev - 1));
+            setQueuedActionIds((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(action.id);
+              return newSet;
+            });
           }
         }
       } catch (err) {
