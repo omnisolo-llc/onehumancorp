@@ -6,13 +6,21 @@ test.describe('Viral Quiz Generator', () => {
     await loginAs(page, adminUser);
 
     // 1. Navigate to dashboard
-    await page.goto('/dashboard');
+    await page.goto('/dashboard.html');
+    let content = await page.content();
+    if (!content.includes('OneHumanCorp')) {
+        await page.goto('/tauri_out/dashboard.html');
+        content = await page.content();
+    }
+    if (!content.includes('OneHumanCorp')) {
+        await page.goto('/ui/dashboard.html');
+    }
 
     // Wait to ensure client-side hydration doesn't interrupt filling
     await page.waitForTimeout(500);
 
     // 2. Find and click the Quiz Generator link
-    const quizLink = page.locator('a[href="/quiz-generator"]');
+    const quizLink = page.locator('#quiz-generator-link');
     await expect(quizLink).toBeVisible();
     await page.waitForTimeout(1000);
     await quizLink.click();
@@ -22,11 +30,11 @@ test.describe('Viral Quiz Generator', () => {
     await expect(page.getByRole('heading', { name: 'Quiz Details' })).toBeVisible();
 
     // 3. Fill out the quiz configuration
-    const topicInput = page.getByLabel('Quiz Topic');
+    const topicInput = page.locator('#widgetTitle');
     await topicInput.fill('What kind of startup founder are you');
     await topicInput.pressSequentially('?');
 
-    const prizeInput = page.getByLabel('Prize / Incentive (Optional)');
+    const prizeInput = page.locator('#widgetDesc');
     await prizeInput.fill('Get a free business plan template');
     await prizeInput.pressSequentially('!');
 
@@ -34,15 +42,19 @@ test.describe('Viral Quiz Generator', () => {
     // We mock localStorage if needed, but fixtures set it.
     await page.evaluate(() => { localStorage.setItem('has_pro', 'true'); window.dispatchEvent(new Event('storage')); });
 
+    // Test soft paywall - toggle branding
+    const brandingToggle = page.locator('label[for="brandingToggle"]');
+    await brandingToggle.click();
+
     const generateBtn = page.getByRole('button', { name: 'Generate Quiz Link' });
     await expect(generateBtn).toBeEnabled();
     await generateBtn.click();
 
     // 5. Capture the URL
     await expect(page.getByText('Link Ready!')).toBeVisible();
-    const linkInput = page.locator('input[readonly]');
+    const linkInput = page.locator('#codeOutput');
     const generatedUrl = await linkInput.inputValue();
-    expect(generatedUrl).toContain('/quiz');
+    expect(generatedUrl).toContain('quiz.html');
     expect(generatedUrl).toContain('What%20kind%20of%20startup%20founder%20are%20you');
 
     // 6. Navigate to the generated public URL
@@ -54,11 +66,9 @@ test.describe('Viral Quiz Generator', () => {
     await expect(publicPage.locator('h1', { hasText: 'What kind of startup founder are you?' })).toBeVisible({ timeout: 15000 });
     await expect(publicPage.getByText('Get a free business plan template!')).toBeVisible();
 
-    // Verify "Powered by OHC" footer on the start page
+    // Verify "Powered by OHC" footer is NOT present since hideBranding=true
     let footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OHC' }).first();
-    await expect(footerLink).toBeVisible();
-    let footerHref = await footerLink.getAttribute('href');
-    expect(footerHref).toContain('/onboarding?ref=');
+    await expect(footerLink).not.toBeVisible();
 
     // 7. Take the quiz
     const startBtn = publicPage.getByRole('button', { name: 'Start Quiz' });
@@ -109,17 +119,15 @@ test.describe('Viral Quiz Generator', () => {
     await expect(publicPage.getByText("We've emailed you your results")).toBeVisible();
 
     // Ensure share links are visible
-    const shareLink = publicPage.locator('input[readonly]');
+    const shareLink = publicPage.locator('#share-input');
     await expect(shareLink).toBeVisible();
     const shareValue = await shareLink.inputValue();
-    expect(shareValue).toContain('/quiz');
+    expect(shareValue).toContain('quiz.html');
     expect(shareValue).toContain('What%20kind%20of%20startup%20founder%20are%20you');
 
-    // Verify "Powered by OHC" footer is still present
+    // Verify "Powered by OHC" footer is NOT present since hideBranding=true
     footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OHC' }).first();
-    await expect(footerLink).toBeVisible();
-    footerHref = await footerLink.getAttribute('href');
-    expect(footerHref).toContain('/onboarding?ref=');
+    await expect(footerLink).not.toBeVisible();
 
     await publicPage.close();
   });

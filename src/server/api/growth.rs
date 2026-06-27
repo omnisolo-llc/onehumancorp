@@ -370,6 +370,7 @@ where
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
+        .route("/quiz/generate", post(handle_generate_viral_quiz))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
@@ -3967,6 +3968,36 @@ async fn handle_generate_viral_waitlist(
     state.hub.append_recent_event(msg);
 
     Ok(Json(WaitlistGenerateResponse {
+        success: true,
+    }))
+}
+
+
+#[derive(Debug, serde::Deserialize)]
+pub struct QuizGenerateRequest {
+    pub topic: String,
+    pub prize: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct QuizGenerateResponse {
+    pub success: bool,
+}
+
+async fn handle_generate_viral_quiz(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<QuizGenerateRequest>,
+) -> Result<Json<QuizGenerateResponse>, StatusCode> {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.quiz_generated",
+        "tenant_id": auth_info.org_id,
+        "topic": req.topic,
+        "prize": req.prize
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(QuizGenerateResponse {
         success: true,
     }))
 }
