@@ -166,7 +166,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "ambassador_reply" && (
-              <AmbassadorReplyCard approval={approval} />
+              <AmbassadorReplyCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} onDismiss={() => handleDecision(approval.id, false, undefined, approval.event_source)} />
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "review" && (
