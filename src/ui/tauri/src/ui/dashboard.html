@@ -1303,6 +1303,7 @@
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
+                  'authorization': 'Bearer ' + localStorage.getItem('ohc_token')
                 }
               });
 
@@ -1366,6 +1367,7 @@
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
+                  'authorization': 'Bearer ' + localStorage.getItem('ohc_token')
                 }
               });
 
