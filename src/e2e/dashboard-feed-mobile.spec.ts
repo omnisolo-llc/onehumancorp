@@ -51,4 +51,24 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
       await expect(page.getByTestId(testId as string)).toHaveCount(0);
     }
   });
+
+  test('renders feed sections correctly on mobile', async ({ page }) => {
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
+
+    // Check tabs touch targets
+    const proposalsTab = page.locator('button:has-text("Proposals")');
+    await expect(proposalsTab).toBeVisible();
+    const proposalsTabBox = await proposalsTab.boundingBox();
+    expect(proposalsTabBox?.width).toBeGreaterThanOrEqual(44);
+    expect(proposalsTabBox?.height).toBeGreaterThanOrEqual(44);
+
+    const activityTab = page.locator('button:has-text("Activity Feed")');
+    await expect(activityTab).toBeVisible();
+    const activityTabBox = await activityTab.boundingBox();
+    expect(activityTabBox?.width).toBeGreaterThanOrEqual(44);
+    expect(activityTabBox?.height).toBeGreaterThanOrEqual(44);
+  });
 });
