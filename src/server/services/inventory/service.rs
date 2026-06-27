@@ -96,7 +96,7 @@ impl InventoryService {
                     "reason": "Lock contention on limited item"
                 }).to_string();
 
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'inventory_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)
@@ -133,7 +133,7 @@ impl InventoryService {
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
-                    error_message: "Oops! Item just sold out.".to_string(),
+                    error_message: "Oops! Item just sold out. (Locked by another customer)".to_string(),
                 });
             }
 
@@ -512,7 +512,7 @@ impl InventoryService {
                     "remaining_stock": new_stock,
                     "suggested_action": "Restock Item"
                 }).to_string();
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'inventory_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)
@@ -706,7 +706,7 @@ mod tests {
         if std::env::var("OHC_REDIS_URL").is_ok() {
             assert_eq!(success_count, 1, "Only one concurrent request should acquire the lock");
             let failed_res = if res1.success { res2 } else { res1 };
-            assert_eq!(failed_res.error_message, "Oops! Item just sold out.");
+            assert_eq!(failed_res.error_message, "Oops! Item just sold out. (Locked by another customer)");
         }
     }
 }

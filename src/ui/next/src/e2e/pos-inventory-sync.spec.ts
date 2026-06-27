@@ -6,7 +6,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     const productId = 'e2e-product-cake-pos';
 
     // Simulate POS (User B) acquiring lock
-    const reserveRes = await page.request.post('/api/pos/terminal/reserve', {
+    const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -25,7 +25,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     expect(lockData.success).toBe(true);
 
     // Simulate Online User (User A) attempting checkout for the same item
-    const reserveRes2 = await page.request.post('/api/pos/terminal/reserve', {
+    const reserveRes2 = await page.request.post('/api/v1/payments/terminal/reserve', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -44,7 +44,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     expect(lockData2.error_message).toContain('another customer');
 
     // POS (User B) completes checkout
-    const commitRes = await page.request.post('/api/pos/terminal/commit', {
+    const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -72,7 +72,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     }, tenantId);
 
     // Simulate POS (User B) acquiring lock
-    const reserveRes = await page.request.post('/api/pos/terminal/reserve', {
+    const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -101,7 +101,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
 
     // Cleanup: Release lock so it doesn't affect other tests if they run concurrently
     // (Actually the lock will expire in 15 seconds, but let's release it cleanly)
-    await page.request.post('/api/pos/terminal/commit', {
+    await page.request.post('/api/v1/payments/terminal/commit', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -118,7 +118,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     const tenantId = 'e2e-tenant-pos-additional';
     const productId = 'e2e-product-cake-pos-additional';
 
-    const reserveRes = await page.request.post('/api/pos/terminal/reserve', {
+    const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -135,7 +135,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     const lockData = await reserveRes.json();
     expect(lockData.success).toBe(true);
 
-    const commitRes = await page.request.post('/api/pos/terminal/commit', {
+    const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -186,7 +186,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     expect(createProductRes.ok()).toBeTruthy();
 
     // Simulate POS (User B) acquiring lock
-    const reserveRes = await page.request.post('/api/pos/terminal/reserve', {
+    const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
@@ -204,7 +204,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     expect(lockData.success).toBe(true);
 
     // POS (User B) completes checkout
-    const commitRes = await page.request.post('/api/pos/terminal/commit', {
+    const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
         data: {
             tenant_id: tenantId,
             product_id: productId,
