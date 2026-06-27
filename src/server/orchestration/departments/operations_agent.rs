@@ -62,7 +62,7 @@ impl Department for OperationsAgent {
         if event.event_type == "tenant.quote.requires_scheduling" {
             let preferred_time = event.payload.get("preferred_time").and_then(|v| v.as_str()).unwrap_or("");
             let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
-            let price = event.payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let _price = event.payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
             // In a real implementation this would check capacity using DB/Redis,
             // For this task we acquire a tentative lock representing the held slot.
             if let Ok(true) = self.orchestrator.mesh().acquire_lock(&format!("ohc:lock:booking_slot:{}", preferred_time), "operations_agent", 600).await {
