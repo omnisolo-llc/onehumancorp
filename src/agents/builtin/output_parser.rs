@@ -738,7 +738,7 @@ mod tests {
 #[cfg(test)]
 mod retry_tests {
     use super::*;
-    use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, Message, ToolError, Usage};
     use serde::Deserialize;
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -932,7 +932,7 @@ mod exponential_backoff_tests {
 #[cfg(test)]
 mod tests_clamped {
     use super::*;
-    use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, ToolError};
     use serde::Deserialize;
     use std::sync::Arc;
     use tokio::sync::Mutex;
