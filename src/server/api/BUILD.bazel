@@ -1,12 +1,14 @@
 
 exports_files([
-        "work_triage.rs","chaos.rs", "sync_gateway.rs"])
+        "work_triage.rs",
+        "perplexity.rs","chaos.rs", "sync_gateway.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 
 exports_files(
     [
         "work_triage.rs",
+        "perplexity.rs",
         "assistant.rs",
         "autodream.rs",
         "terminal_api.rs",
@@ -62,6 +64,7 @@ rust_library(
     name = "server_api",
     srcs = [
         "work_triage.rs",
+        "perplexity.rs",
         "assistant.rs",
         "terminal_api.rs",
         "payment_ledger.rs",
