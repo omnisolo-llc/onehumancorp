@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Hybrid Setup Health Check Endpoint', () => {
   test('returns ready for provisioned standalone mode', async ({ request }) => {
