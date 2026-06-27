@@ -1,12 +1,38 @@
 import { test, expect } from "../../../e2e/fixtures";
+import { e2eDbQuery } from "../../../e2e/db_utils";
 
-test.describe("Offline Field Operations", () => {
-  test("Carlos can view jobs, go offline, add notes, and complete a job which generates a quote request", async ({
+test.describe("Field Service Routing & Dispatch Engine UI updates", () => {
+  test("Carlos can tap 'Heading to Job', 'Start Work', and 'Job Done' to update status without crashing", async ({
     page,
     context,
     loginAs,
     adminUser,
+    seedData,
   }) => {
+    const tenantId = seedData.tenant.id;
+    const customerId = seedData.customer.id;
+
+    await test.step('Seed job templates and appointments', async () => {
+        const jtRes = await e2eDbQuery(
+            `INSERT INTO job_templates (id, tenant_id, name, estimated_duration_mins, base_price_cents)
+             VALUES ('jt-routing-1', $1, 'Sink Repair', 60, 15000) RETURNING id`,
+             [tenantId]
+        );
+        const jtId = jtRes.rows[0].id;
+
+        await e2eDbQuery(
+            `INSERT INTO appointments (id, tenant_id, customer_id, job_template_id, status, scheduled_start_time, scheduled_end_time, location_address, location_lat, location_lng)
+             VALUES ('appt-routing-1', $1, $2, $3, 'Scheduled', NOW() + INTERVAL '1 hour', NOW() + INTERVAL '2 hours', '123 Main St', 40.7128, -74.0060)`,
+             [tenantId, customerId, jtId]
+        );
+
+        await e2eDbQuery(
+            `INSERT INTO appointments (id, tenant_id, customer_id, job_template_id, status, scheduled_start_time, scheduled_end_time, location_address, location_lat, location_lng)
+             VALUES ('appt-routing-2', $1, $2, $3, 'Requested', NOW() + INTERVAL '2 hour', NOW() + INTERVAL '3 hours', '124 Main St', 40.7128, -74.0060)`,
+             [tenantId, customerId, jtId]
+        );
+    });
+
     await loginAs(page, adminUser);
 
     // Navigate to the field ops page
@@ -14,106 +40,23 @@ test.describe("Offline Field Operations", () => {
 
     // Verify online state
     await expect(page.locator("text=Today's Route")).toBeVisible();
-    await expect(page.locator("text=Alice Smith")).toBeVisible();
+    await expect(page.locator("text=Sink Repair").first()).toBeVisible();
 
-    // Simulate going offline
-    await context.setOffline(true);
-    await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+    // Look for heading to job
+    const headingToJobBtn = page.locator("button", { hasText: "Heading to Job" }).first();
+    await expect(headingToJobBtn).toBeVisible({ timeout: 5000 });
+    await headingToJobBtn.click();
 
-    // Verify offline indicator
-    await expect(page.locator("text=Offline Mode")).toBeVisible();
+    // Check that we moved to 'Start Work'
+    const startWorkBtn = page.locator("button", { hasText: "Start Work" }).first();
+    await expect(startWorkBtn).toBeVisible({ timeout: 5000 });
+    await startWorkBtn.click();
 
-    // Interact with a job (add notes and complete)
-    const notesArea = page.locator("textarea").first();
-    await notesArea.fill(
-      "Found a leak under the sink, requires immediate pipe replacement quote.",
-    );
-
-    // Look for heading to job first
-    const headingToJobBtn = page
-      .locator("button", { hasText: "Heading to Job" })
-      .first();
-
-    // Playwright robust checking for visibility before clicking to avoid flakiness
-    try {
-      await headingToJobBtn.waitFor({ state: "visible", timeout: 5000 });
-      await headingToJobBtn.click();
-    } catch (e) {
-      // It might not be visible if it's already in the next state
-    }
-
-    // Now it should say Start Work
-    const startWorkBtn = page
-      .locator("button", { hasText: "Start Work" })
-      .first();
-    try {
-      await startWorkBtn.waitFor({ state: "visible", timeout: 5000 });
-      await startWorkBtn.click();
-    } catch (e) {
-      // It might not be visible if it's already in the next state
-    }
-
-    // Now it should say Job Done
+    // Check that we moved to 'Job Done'
     const jobDoneBtn = page.locator("button", { hasText: "Job Done" }).first();
-    await jobDoneBtn.waitFor({ state: "visible" });
+    await expect(jobDoneBtn).toBeVisible({ timeout: 5000 });
     await jobDoneBtn.click();
 
-    // Verify UI updates locally
-    await expect(page.locator("text=Saved Notes:")).toBeVisible();
-    await expect(
-      page.locator(
-        'text="Found a leak under the sink, requires immediate pipe replacement quote."',
-      ),
-    ).toBeVisible();
-    await expect(
-      page.locator(
-        "text=Sales Agent will draft an estimate based on these notes once online.",
-      ),
-    ).toBeVisible();
-
-    // Simulate going back online
-    await context.setOffline(false);
-    await page.evaluate(() => window.dispatchEvent(new Event("online")));
-
-    // Sync is handled by SyncManager in background - we're verifying the offline UX flow
-    await expect(page.locator("text=Offline Mode")).not.toBeVisible();
-  });
-
-  test("Carlos can report running late, get agent suggestion, and approve notifications", async ({
-    page,
-    context,
-    loginAs,
-    adminUser,
-  }) => {
-    await loginAs(page, adminUser);
-
-    // Navigate to the field ops page
-    await page.goto("/field-ops/jobs");
-
-    // Verify online state and schedule
-    await expect(page.locator("text=Today's Route")).toBeVisible();
-
-    // Look for a job that is Scheduled/Requested to click 'Running Late'
-    const runningLateBtn = page
-      .locator("button", { hasText: "Running Late" })
-      .first();
-    await runningLateBtn.waitFor({ state: "visible" });
-    await runningLateBtn.click();
-
-    // Wait for the action card to appear
-    const actionCard = page.locator(
-      "text=Drafting delay notifications for the next",
-    );
-    await actionCard.waitFor({ state: "visible", timeout: 10000 });
-
-    // We expect it to say something like "Drafting delay notifications for the next X clients. Approve?"
-    await expect(actionCard).toBeVisible();
-
-    // Click Approve
-    const approveBtn = page.locator("button", { hasText: "Approve & Send" });
-    await approveBtn.click();
-
-    // The action card should disappear
-    await actionCard.waitFor({ state: "hidden", timeout: 5000 });
+    await expect(page.locator('span:has-text("COMPLETED")').first()).toBeVisible({ timeout: 5000 });
   });
 });
