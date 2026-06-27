@@ -29,6 +29,29 @@ pub async fn simulate_inbound_signal_handler(
     let tenant_id = ui_tenant_id(&query);
     let signal_id = format!("sig-{}", Uuid::new_v4());
     let work_item_id = format!("wi-{}", Uuid::new_v4());
+    // UCAL Tentative Lock Integration
+    if intent == "inquiry" {
+        let repo = crate::domain::repository::ucal_repo::UcalRepository::new(db.clone());
+        // In a real scenario, we would resolve the correct resource_id from the inquiry context.
+        // For this simulation, we check for an existing resource or skip if none exists.
+        let tenant_id_clone = tenant_id.clone();
+        let work_item_id_clone = work_item_id.clone();
+        tokio::spawn(async move {
+            if let Ok(resources) = repo.get_resources(let work_item_id = format!("wi-{}", Uuid::new_v4());tenant_id_clone).await {
+                if let Some(res) = resources.first() {
+                    let _ = repo.check_and_lock_capacity(
+                        &tenant_id_clone,
+                        res.id,
+                        Utc::now() + chrono::Duration::hours(24), // Tomorrow
+                        Utc::now() + chrono::Duration::hours(25),
+                        1,
+                        "TENTATIVE",
+                        Some(&work_item_id_clone),
+                    ).await;
+                }
+            }
+        });
+    }
 
     // Basic LLM simulation
     let intent = "inquiry".to_string();

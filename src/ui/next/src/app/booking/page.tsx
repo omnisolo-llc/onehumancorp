@@ -2,6 +2,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { OneTapReferral } from "../components/OneTapReferral";
+import { BufferSlider } from "./BufferSlider";
 
 function BookingForm() {
   const searchParams = useSearchParams();
@@ -15,25 +16,22 @@ function BookingForm() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [availableSlots, setAvailableSlots] = useState<{start_time: string, end_time: string}[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
-
   const [submitted, setSubmitted] = useState(false);
-  const [checkoutUrl, setCheckoutUrl] = useState("");
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [travelBuffer, setTravelBuffer] = useState(30);
 
   useEffect(() => {
-    if (!selectedDate) {
-      setAvailableSlots([]);
-      return;
-    }
+    if (!selectedDate) return;
 
     async function fetchSlots() {
       setIsLoadingSlots(true);
       try {
-        const res = await fetch("/api/v1/booking/engine/availability", {
+        const res = await fetch("/api/v1/booking/request/available_slots", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             tenant_id: tenant,
-            product_id: serviceId,
+            service_id: serviceId,
             date: selectedDate
           })
         });
@@ -70,12 +68,13 @@ function BookingForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tenant_id: tenant,
-          customer_id: customerEmail || "anon-customer", // Mock ID mapping
+          customer_id: customerEmail || "anon-customer",
           product_id: serviceId,
           start_time: slot.start_time,
           end_time: slot.end_time,
-          requires_deposit: true, // Demo always requires deposit
-          timezone: "UTC"
+          requires_deposit: true,
+          timezone: "UTC",
+          travel_buffer_minutes: travelBuffer
         })
       });
 
@@ -205,6 +204,12 @@ function BookingForm() {
               </div>
             )}
 
+            <BufferSlider
+              label="Travel Buffer (UCAL)"
+              value={travelBuffer}
+              onChange={setTravelBuffer}
+            />
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Job Details</label>
               <textarea
@@ -260,7 +265,6 @@ function BookingForm() {
     </div>
   );
 }
-
 
 export default function Booking() {
   return (

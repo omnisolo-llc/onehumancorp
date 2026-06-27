@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { OverloadAlert } from "./OverloadAlert";
 import { DailyWorkCard, DailyWorkItem } from "./DailyWorkCard";
 
 export default function DailyWorkFeed() {
@@ -69,6 +70,7 @@ export default function DailyWorkFeed() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
+            <OverloadAlert percentage={120} timeSlot="12:00 PM - 1:00 PM" onMitigate={() => console.log("Mitigating...")} />
             {items.map((item) => (
               <DailyWorkCard
                 key={item.id}

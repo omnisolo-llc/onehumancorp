@@ -426,3 +426,40 @@ pub struct DepositRequirement {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct UcalResource {
+    pub id: uuid::Uuid,
+    pub tenant_id: String,
+    pub name: String,
+    pub resource_type: String,
+    pub base_capacity: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct UcalLedger {
+    pub id: uuid::Uuid,
+    pub tenant_id: String,
+    pub resource_id: uuid::Uuid,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub consumed_units: i32,
+    pub total_units_at_time: Option<i32>,
+    pub status: String,
+    pub reference_id: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct UcalDynamicBuffer {
+    pub id: uuid::Uuid,
+    pub tenant_id: String,
+    pub ledger_id: uuid::Uuid,
+    pub buffer_type: String,
+    pub duration_minutes: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}

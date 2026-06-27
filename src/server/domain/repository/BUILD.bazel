@@ -7,6 +7,8 @@ exports_files(
         "campaign_repo.rs",
         "task_repo.rs",
         "agent_feed_repo.rs",
+        "ucal_repo.rs",
+        "ucal_repo_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -20,6 +22,8 @@ rust_library(
         "campaign_repo.rs",
         "task_repo.rs",
         "agent_feed_repo.rs",
+        "ucal_repo.rs",
+        "ucal_repo_test.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

@@ -3,6 +3,7 @@ import { AIPaywallWidget } from "../components/AIPaywallWidget";
 import { FloatingActionButton } from "./FAB";
 import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
+import { CapacityHeatmap } from "./CapacityHeatmap";
 import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
 
@@ -379,6 +380,7 @@ export default function Dashboard() {
       <VoiceAssistantFAB />
 
       <MorningBriefingCard tenant={tenantId()} />
+      <CapacityHeatmap tenant={tenantId()} />
       <AIFeaturePaywallWidget />
 
       <InteractiveWalkthrough
