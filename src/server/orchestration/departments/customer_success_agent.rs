@@ -1,5 +1,9 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::orchestration::departments::orchestrator::{
+    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
+};
+use crate::orchestration::departments::types::{
+    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
+};
 use std::collections::HashMap;
 
 pub struct CustomerSuccessAgent {
@@ -36,10 +40,50 @@ impl Department for CustomerSuccessAgent {
             "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
             "tenant.subscription.check_predictive_restock".to_string(),
+            "tenant.quote.approved".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.quote.approved" {
+            let checkout_url = event
+                .payload
+                .get("checkout_url")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let customer_id = event
+                .payload
+                .get("customer_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let service = event
+                .payload
+                .get("service")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+
+            if !checkout_url.is_empty() {
+                tracing::info!(
+                    "Customer Success Agent: Sending quote deposit link to customer {}: {}",
+                    customer_id,
+                    checkout_url
+                );
+
+                let _ = self
+                    .orchestrator
+                    .execute_action(
+                        DepartmentType::CustomerSuccess,
+                        format!("Send quote deposit link for {}", service),
+                        event.tenant_id.clone(),
+                        ActionRisk::AutoExecute,
+                        event.payload.clone(),
+                    )
+                    .await;
+            }
+
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = &config {
             if cfg.auto_approve_limits > 0.0 {
@@ -55,7 +99,9 @@ impl Department for CustomerSuccessAgent {
             let payload = &event.payload;
             let original = payload.get("original_payload");
             let message = if let Some(orig) = original {
-                orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("Unknown response")
+                orig.get("generated_response")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown response")
             } else {
                 "Unknown response"
             };
@@ -63,15 +109,42 @@ impl Department for CustomerSuccessAgent {
 
             let content = format!("Sent response to customer: {}", message);
 
-            let source = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("").to_string();
-            let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
+            let source = original
+                .and_then(|orig| orig.get("source").and_then(|v| v.as_str()))
+                .unwrap_or("")
+                .to_string();
+            let sender_id = original
+                .and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str()))
+                .unwrap_or("")
+                .to_string();
 
-            let target_language = original.and_then(|orig| orig.get("translated_from_language").and_then(|v| v.as_str())).unwrap_or("").to_string();
-            let text = if !target_language.is_empty() && target_language.to_lowercase() != "en" && target_language.to_lowercase() != "english" && target_language.to_lowercase() != "unknown" {
-                match crate::api::agents::translation::translate_inbox_message_with_llm(&event.tenant_id, &source, message, &target_language).await {
+            let target_language = original
+                .and_then(|orig| {
+                    orig.get("translated_from_language")
+                        .and_then(|v| v.as_str())
+                })
+                .unwrap_or("")
+                .to_string();
+            let text = if !target_language.is_empty()
+                && target_language.to_lowercase() != "en"
+                && target_language.to_lowercase() != "english"
+                && target_language.to_lowercase() != "unknown"
+            {
+                match crate::api::agents::translation::translate_inbox_message_with_llm(
+                    &event.tenant_id,
+                    &source,
+                    message,
+                    &target_language,
+                )
+                .await
+                {
                     Ok(t) => t.translated_content,
                     Err(e) => {
-                        tracing::error!("Failed to translate outgoing message back to {}: {}", target_language, e);
+                        tracing::error!(
+                            "Failed to translate outgoing message back to {}: {}",
+                            target_language,
+                            e
+                        );
                         message.to_string()
                     }
                 }
@@ -100,11 +173,23 @@ impl Department for CustomerSuccessAgent {
                                 return;
                             }
                             let twilio_from = from_phone;
-                            let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                            if let Err(e) = provider.send_whatsapp(&twilio_to, &twilio_from, &text).await {
-                                tracing::error!("Failed to send whatsapp message via Twilio integration: {}", e);
+                            let twilio_to = if sender_id.starts_with("whatsapp:") {
+                                sender_id.clone()
                             } else {
-                                tracing::info!("Successfully sent whatsapp message via Twilio integration");
+                                format!("whatsapp:{}", sender_id)
+                            };
+                            if let Err(e) = provider
+                                .send_whatsapp(&twilio_to, &twilio_from, &text)
+                                .await
+                            {
+                                tracing::error!(
+                                    "Failed to send whatsapp message via Twilio integration: {}",
+                                    e
+                                );
+                            } else {
+                                tracing::info!(
+                                    "Successfully sent whatsapp message via Twilio integration"
+                                );
                             }
                             return;
                         }
@@ -124,49 +209,107 @@ impl Department for CustomerSuccessAgent {
                         .await;
 
                     match row {
-                        Ok((found_id, api_token,)) => {
-                            let registry = crate::integrations::registry::IntegrationsRegistry::new();
-                            let integration_id = if source == "whatsapp" { found_id.as_str() } else { "meta" };
+                        Ok((found_id, api_token)) => {
+                            let registry =
+                                crate::integrations::registry::IntegrationsRegistry::new();
+                            let integration_id = if source == "whatsapp" {
+                                found_id.as_str()
+                            } else {
+                                "meta"
+                            };
 
-                            let twilio_creds = ::server_ohc::orchestration::ConnectIntegrationRequest { bot_token: api_token.clone(), chat_id: "".to_string(), webhook_url: "".to_string(), api_token: api_token.clone(), from_phone: "".to_string(), ..Default::default() };
-                            if let Err(e) = registry.connect(integration_id, &tenant_id_for_meta, twilio_creds.clone()) {
-                                tracing::warn!("Failed to connect {} integration: {}", integration_id, e);
+                            let twilio_creds =
+                                ::server_ohc::orchestration::ConnectIntegrationRequest {
+                                    bot_token: api_token.clone(),
+                                    chat_id: "".to_string(),
+                                    webhook_url: "".to_string(),
+                                    api_token: api_token.clone(),
+                                    from_phone: "".to_string(),
+                                    ..Default::default()
+                                };
+                            if let Err(e) = registry.connect(
+                                integration_id,
+                                &tenant_id_for_meta,
+                                twilio_creds.clone(),
+                            ) {
+                                tracing::warn!(
+                                    "Failed to connect {} integration: {}",
+                                    integration_id,
+                                    e
+                                );
                             }
 
-                            let res = registry.send_message(integration_id, &source, &sender_id, &text).await;
-                            if res.is_err() && (integration_id == "whatsapp" || integration_id == "twilio") {
-                                let twilio_creds2 = ::server_ohc::orchestration::ConnectIntegrationRequest { bot_token: api_token.clone(), chat_id: "".to_string(), webhook_url: "".to_string(), api_token: api_token.clone(), from_phone: "".to_string(), ..Default::default() };
-                                if let Err(e) = registry.connect("twilio", &tenant_id_for_meta, twilio_creds2) {
-                                    tracing::warn!("Failed to connect twilio integration fallback: {}", e);
+                            let res = registry
+                                .send_message(integration_id, &source, &sender_id, &text)
+                                .await;
+                            if res.is_err()
+                                && (integration_id == "whatsapp" || integration_id == "twilio")
+                            {
+                                let twilio_creds2 =
+                                    ::server_ohc::orchestration::ConnectIntegrationRequest {
+                                        bot_token: api_token.clone(),
+                                        chat_id: "".to_string(),
+                                        webhook_url: "".to_string(),
+                                        api_token: api_token.clone(),
+                                        from_phone: "".to_string(),
+                                        ..Default::default()
+                                    };
+                                if let Err(e) =
+                                    registry.connect("twilio", &tenant_id_for_meta, twilio_creds2)
+                                {
+                                    tracing::warn!(
+                                        "Failed to connect twilio integration fallback: {}",
+                                        e
+                                    );
                                 }
 
                                 let from_phone_query = "SELECT sms_critical_phone FROM settings WHERE tenant_id = $1 LIMIT 1";
-                                let from_phone_row: Result<(String,), sqlx::Error> = sqlx::query_as(from_phone_query).bind(&tenant_id_for_meta).fetch_one(&pool).await;
-                                let from_phone = from_phone_row.map(|(p,)| p).unwrap_or_else(|_| "".to_string());
+                                let from_phone_row: Result<(String,), sqlx::Error> =
+                                    sqlx::query_as(from_phone_query)
+                                        .bind(&tenant_id_for_meta)
+                                        .fetch_one(&pool)
+                                        .await;
+                                let from_phone = from_phone_row
+                                    .map(|(p,)| p)
+                                    .unwrap_or_else(|_| "".to_string());
 
                                 match registry.send_sms("twilio", &format!("whatsapp:{}", sender_id.replace("whatsapp:", "")), &format!("whatsapp:{}", from_phone), &text).await {
                                     Ok(_) => tracing::info!("Successfully sent {} message via Twilio integration fallback", source),
                                     Err(e) => tracing::error!("Failed to send {} message via Twilio fallback integration: {}", source, e),
                                 }
                             } else if let Err(e) = res {
-                                tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
+                                tracing::error!(
+                                    "Failed to send {} message via Meta integration: {}",
+                                    source,
+                                    e
+                                );
                             } else {
-                                tracing::info!("Successfully sent {} message via Meta integration", source);
+                                tracing::info!(
+                                    "Successfully sent {} message via Meta integration",
+                                    source
+                                );
                             }
                         }
                         Err(e) => {
-                            tracing::error!("Failed to fetch Meta integration credentials from DB: {}", e); // pii-safe
+                            tracing::error!(
+                                "Failed to fetch Meta integration credentials from DB: {}",
+                                e
+                            ); // pii-safe
                         }
                     }
                 }
             });
 
-            if let Some(inbox_id) = original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str())) {
+            if let Some(inbox_id) =
+                original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str()))
+            {
                 let orchestrator_clone = self.orchestrator.clone();
                 let id_clone = inbox_id.to_string();
                 let tenant_id_clone = event.tenant_id.clone();
                 tokio::spawn(async move {
-                    let _ = orchestrator_clone.update_inbox_message_status(&id_clone, &tenant_id_clone, "sent").await;
+                    let _ = orchestrator_clone
+                        .update_inbox_message_status(&id_clone, &tenant_id_clone, "sent")
+                        .await;
                 });
             }
 
@@ -187,18 +330,29 @@ impl Department for CustomerSuccessAgent {
                 owner_override: false,
                 metadata: None,
             };
-            self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
+            self.orchestrator
+                .write_long_term_memory(record)
+                .await
+                .map_err(|e| e.to_string())?;
 
             return Ok(());
         }
 
         if event.event_type == "tenant.subscription.check_predictive_restock" {
-            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_id = event
+                .payload
+                .get("customer_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             if customer_id.is_empty() {
                 return Err("customer_id is required".to_string());
             }
 
-            if let Ok(Some(predicted_date)) = self.orchestrator.predict_replenishment(&event.tenant_id, customer_id).await {
+            if let Ok(Some(predicted_date)) = self
+                .orchestrator
+                .predict_replenishment(&event.tenant_id, customer_id)
+                .await
+            {
                 let prompt = format!(
                     "Draft a concise, warm restock message for the customer based on their predicted replenishment date of {}. Mention they might be running low and ask if they want a refill processed.",
                     predicted_date
@@ -207,12 +361,23 @@ impl Department for CustomerSuccessAgent {
 
                 let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
                     Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                        crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
+                        let api_key = std::env::var("MINIMAX_API_KEY")
+                            .unwrap_or_else(|_| "fake-key".to_string());
+                        crate::minimax::MinimaxClient::new(api_key)
+                            .reason(&compressed_prompt)
+                            .await
+                            .unwrap_or_else(|_| {
+                                "Hi, looks like you might be running low! Reply Yes to restock."
+                                    .to_string()
+                            })
                     }
-                    _ => {
-                        crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi, looks like you might be running low! Reply Yes to restock.".to_string())
-                    }
+                    _ => crate::minimax::LocalLLMClient::new()
+                        .reason(&compressed_prompt)
+                        .await
+                        .unwrap_or_else(|_| {
+                            "Hi, looks like you might be running low! Reply Yes to restock."
+                                .to_string()
+                        }),
                 };
 
                 let action_payload = serde_json::json!({
@@ -222,26 +387,46 @@ impl Department for CustomerSuccessAgent {
                     "predicted_date": predicted_date,
                 });
 
-                let _ = self.orchestrator.execute_action(
-                    DepartmentType::CustomerSuccess,
-                    "Predictive Restock Draft".to_string(),
-                    event.tenant_id.clone(),
-                    ActionRisk::DraftForReview,
-                    action_payload,
-                ).await;
+                let _ = self
+                    .orchestrator
+                    .execute_action(
+                        DepartmentType::CustomerSuccess,
+                        "Predictive Restock Draft".to_string(),
+                        event.tenant_id.clone(),
+                        ActionRisk::DraftForReview,
+                        action_payload,
+                    )
+                    .await;
             }
 
             return Ok(());
         }
 
-        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
-            let message = event.payload.get("original_message")
+        if event.event_type == "tenant.message.received"
+            || event.event_type == "tenant.omnichannel.message.received"
+        {
+            let message = event
+                .payload
+                .get("original_message")
                 .or_else(|| event.payload.get("message"))
                 .or_else(|| event.payload.get("content"))
-                .and_then(|v| v.as_str()).unwrap_or("");
-            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
-            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
-            let payload_customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let source = event
+                .payload
+                .get("source")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let sender_id = event
+                .payload
+                .get("sender_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let payload_customer_id = event
+                .payload
+                .get("customer_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
             // Identity Resolution: Look up customer by phone, email, or name
             let mut customer_id = "".to_string();
@@ -264,11 +449,13 @@ impl Department for CustomerSuccessAgent {
 
             if !customer_id.is_empty() {
                 // Fetch past orders context
-                let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
-                    .bind(&event.tenant_id)
-                    .bind(&customer_id)
-                    .fetch_all(&pool)
-                    .await;
+                let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as(
+                    "SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2",
+                )
+                .bind(&event.tenant_id)
+                .bind(&customer_id)
+                .fetch_all(&pool)
+                .await;
                 if let Ok(orders) = orders {
                     if !orders.is_empty() {
                         past_orders = format!("Returning Customer ({} past orders).", orders.len());
@@ -281,15 +468,24 @@ impl Department for CustomerSuccessAgent {
                 .as_deref()
             {
                 Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key).generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
+                    let api_key =
+                        std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                    crate::minimax::MinimaxClient::new(api_key)
+                        .generate_embedding(message)
+                        .await
+                        .unwrap_or_else(|_| vec![0.0; 1536])
                 }
-                _ => {
-                    crate::minimax::LocalLLMClient::new().generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
-                }
+                _ => crate::minimax::LocalLLMClient::new()
+                    .generate_embedding(message)
+                    .await
+                    .unwrap_or_else(|_| vec![0.0; 1536]),
             };
 
-            let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
+            let memories = self
+                .orchestrator
+                .query_long_term_memory(&event.tenant_id, &query_embedding, 5)
+                .await
+                .unwrap_or_default();
 
             let mut context_summary = if !memories.is_empty() {
                 memories.join("\n")
@@ -302,7 +498,11 @@ impl Department for CustomerSuccessAgent {
                 context_summary.push_str(&past_orders);
             }
 
-            if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
+            if let Ok(inventory_summary) = self
+                .orchestrator
+                .get_inventory_summary(&event.tenant_id)
+                .await
+            {
                 context_summary.push_str("\n\n");
                 context_summary.push_str(&inventory_summary);
             }
@@ -318,27 +518,49 @@ impl Department for CustomerSuccessAgent {
                 .as_deref()
             {
                 Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
+                    let api_key =
+                        std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                    crate::minimax::MinimaxClient::new(api_key)
+                        .reason(&compressed_prompt)
+                        .await
+                        .unwrap_or_else(|_| {
+                            "Thank you for your message. We will get back to you shortly."
+                                .to_string()
+                        })
                 }
-                _ => {
-                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
-                }
+                _ => crate::minimax::LocalLLMClient::new()
+                    .reason(&compressed_prompt)
+                    .await
+                    .unwrap_or_else(|_| {
+                        "Thank you for your message. We will get back to you shortly.".to_string()
+                    }),
             };
 
             let description = if risk == ActionRisk::AutoExecute {
-                format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
+                format!(
+                    "Auto-replied to message: '{}' with '{}'",
+                    message, generated_response
+                )
             } else {
                 "Customer Inquiry Reply Draft".to_string()
             };
 
-            let inbox_id = event.payload.get("inbox_message_id")
+            let inbox_id = event
+                .payload
+                .get("inbox_message_id")
                 .or_else(|| event.payload.get("message_id"))
-                .and_then(|v| v.as_str()).unwrap_or("");
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             if !inbox_id.is_empty() {
-                let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
+                let _ = self
+                    .orchestrator
+                    .update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response)
+                    .await;
                 if risk == ActionRisk::AutoExecute {
-                    let _ = self.orchestrator.update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied").await;
+                    let _ = self
+                        .orchestrator
+                        .update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied")
+                        .await;
                 }
             }
 
@@ -355,13 +577,17 @@ impl Department for CustomerSuccessAgent {
                 "past_orders": past_orders,
             });
 
-            let approval_req = self.orchestrator.execute_action(
-                DepartmentType::CustomerSuccess,
-                description,
-                event.tenant_id.clone(),
-                risk.clone(),
-                action_payload.clone(),
-            ).await.map_err(|e| e.to_string())?;
+            let approval_req = self
+                .orchestrator
+                .execute_action(
+                    DepartmentType::CustomerSuccess,
+                    description,
+                    event.tenant_id.clone(),
+                    risk.clone(),
+                    action_payload.clone(),
+                )
+                .await
+                .map_err(|e| e.to_string())?;
 
             if risk == ActionRisk::AutoExecute {
                 let approved_event = DepartmentEvent {
@@ -383,13 +609,17 @@ impl Department for CustomerSuccessAgent {
             let description = "Customer Inquiry Reply Draft".to_string();
             let action_payload = event.payload.clone();
 
-            let approval_req = self.orchestrator.execute_action(
-                DepartmentType::CustomerSuccess,
-                description,
-                event.tenant_id.clone(),
-                risk.clone(),
-                action_payload.clone(),
-            ).await.map_err(|e| e.to_string())?;
+            let approval_req = self
+                .orchestrator
+                .execute_action(
+                    DepartmentType::CustomerSuccess,
+                    description,
+                    event.tenant_id.clone(),
+                    risk.clone(),
+                    action_payload.clone(),
+                )
+                .await
+                .map_err(|e| e.to_string())?;
 
             if risk == ActionRisk::AutoExecute {
                 let approved_event = DepartmentEvent {
@@ -407,13 +637,16 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        self.orchestrator.execute_action(
-            DepartmentType::CustomerSuccess,
-            "Send personalized thank you & shipping ETA".to_string(),
-            event.tenant_id.clone(),
-            risk,
-            event.payload.clone(),
-        ).await.map(|_| ())
+        self.orchestrator
+            .execute_action(
+                DepartmentType::CustomerSuccess,
+                "Send personalized thank you & shipping ETA".to_string(),
+                event.tenant_id.clone(),
+                risk,
+                event.payload.clone(),
+            )
+            .await
+            .map(|_| ())
     }
 
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {
@@ -428,8 +661,21 @@ impl Department for CustomerSuccessAgent {
         Ok(vec![])
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    async fn request_approval(
+        &self,
+        description: String,
+        tenant_id: String,
+        risk: ActionRisk,
+    ) -> Result<ApprovalRequest, String> {
+        self.orchestrator
+            .execute_action(
+                self.department_type(),
+                description.clone(),
+                tenant_id.clone(),
+                risk,
+                serde_json::json!({}),
+            )
+            .await
     }
 }
 
@@ -442,15 +688,14 @@ impl BaseAgent for CustomerSuccessAgent {
     fn trigger_type(&self) -> AgentTriggerType {
         AgentTriggerType::EventDriven
     }
-
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use crate::orchestration::mesh::CentrifugeNode;
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_customer_success_agent_subscribed_events() {

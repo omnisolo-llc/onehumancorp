@@ -96,9 +96,11 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
                     .reason(&crate::pricing::compression::reduce_tokens(&prompt))
                     .await
             }
-            SalesIntentBackend::Local => crate::minimax::LocalLLMClient::new()
-                .reason(&crate::pricing::compression::reduce_tokens(&prompt))
-                .await,
+            SalesIntentBackend::Local => {
+                crate::minimax::LocalLLMClient::new()
+                    .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                    .await
+            }
         }?;
 
         parse_quote_intent_plan(&raw, original_message)
@@ -113,11 +115,15 @@ impl SalesAgent {
         {
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                crate::minimax::MinimaxClient::new(api_key).generate_embedding(text).await.unwrap_or_else(|_| vec![0.0; 1536])
+                crate::minimax::MinimaxClient::new(api_key)
+                    .generate_embedding(text)
+                    .await
+                    .unwrap_or_else(|_| vec![0.0; 1536])
             }
-            _ => {
-                crate::minimax::LocalLLMClient::new().generate_embedding(text).await.unwrap_or_else(|_| vec![0.0; 1536])
-            }
+            _ => crate::minimax::LocalLLMClient::new()
+                .generate_embedding(text)
+                .await
+                .unwrap_or_else(|_| vec![0.0; 1536]),
         }
     }
     pub fn new(orchestrator: Arc<DepartmentOrchestrator>) -> Self {
@@ -147,8 +153,14 @@ pub fn extract_quote_intent(payload: &serde_json::Value) -> Option<QuoteIntent> 
         .trim();
 
     if let Some(llm_intent) = payload.get("llm_intent") {
-        let intent = llm_intent.get("intent").and_then(|v| v.as_str()).unwrap_or("");
-        let confidence = llm_intent.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let intent = llm_intent
+            .get("intent")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let confidence = llm_intent
+            .get("confidence")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
         if intent.eq_ignore_ascii_case("quote") && confidence >= 0.7 {
             let service_name = llm_intent
                 .get("service_name")
@@ -184,7 +196,10 @@ pub fn parse_quote_intent_plan(
     };
 
     let intent = value.get("intent").and_then(|v| v.as_str()).unwrap_or("");
-    let confidence = value.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let confidence = value
+        .get("confidence")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.0);
     if !intent.eq_ignore_ascii_case("quote") || confidence < 0.7 {
         return Ok(None);
     }
@@ -235,14 +250,61 @@ impl Department for SalesAgent {
             "tenant.work_intake.received".to_string(),
             "agent:sales:approved".to_string(),
             "pos_sales".to_string(),
+            "tenant.quote.ready_for_review".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.quote.ready_for_review" {
+            let suggested_price = event
+                .payload
+                .get("suggested_price")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let risk =
+                risk_for_service_price(self.get_config(&event.tenant_id).as_ref(), suggested_price);
+            let service_name = event
+                .payload
+                .get("service")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string();
+
+            ::server_telemetry::record_business_event(
+                &event.tenant_id,
+                ::server_telemetry::get_deployment_mode(),
+                "quote_generated_from_message",
+            );
+
+            self.orchestrator
+                .execute_action(
+                    DepartmentType::Sales,
+                    format!("Draft quote for {}", service_name),
+                    event.tenant_id.clone(),
+                    risk,
+                    event.payload.clone(),
+                )
+                .await
+                .map(|_| ())?;
+            return Ok(());
+        }
+
         if event.event_type == "POS_SALE_COMPLETED" {
-            let amount = event.payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Unknown");
-            tracing::info!("Sales Agent: Recorded POS sale of ${} for customer {}", amount, customer_id);
+            let amount = event
+                .payload
+                .get("amount")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let customer_id = event
+                .payload
+                .get("customer_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown");
+            tracing::info!(
+                "Sales Agent: Recorded POS sale of ${} for customer {}",
+                amount,
+                customer_id
+            );
             return Ok(());
         }
 
@@ -250,8 +312,14 @@ impl Department for SalesAgent {
             if let Some(payload) = event.payload.get("original_payload") {
                 if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
                     if feature_type == "quote_draft" {
-                        let suggested_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                        let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");
+                        let suggested_price = payload
+                            .get("suggested_price")
+                            .and_then(|v| v.as_f64())
+                            .unwrap_or(0.0);
+                        let customer_inquiry = payload
+                            .get("customer_inquiry")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Unknown");
                         let deposit_amount = suggested_price * 0.20; // 20% deposit
 
                         tracing::info!(
@@ -263,16 +331,29 @@ impl Department for SalesAgent {
 
                         // Simulate creating a Stripe checkout session for the deposit
                         let stripe_client = crate::integrations::stripe::client::StripeClient::new(
-                            std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
+                            std::env::var("STRIPE_API_KEY")
+                                .unwrap_or_else(|_| "sk_test_123".to_string()),
                         );
 
-                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, None, None).await {
+                        match stripe_client
+                            .create_checkout_session(
+                                "price_dummy",
+                                "cus_dummy",
+                                deposit_amount,
+                                None,
+                                None,
+                            )
+                            .await
+                        {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
                                 // Optional: Update timeline or send a message
                             }
                             Err(e) => {
-                                tracing::error!("Failed to create checkout session for quote deposit: {}", e);
+                                tracing::error!(
+                                    "Failed to create checkout session for quote deposit: {}",
+                                    e
+                                );
                             }
                         }
                     }
@@ -281,7 +362,7 @@ impl Department for SalesAgent {
             return Ok(());
         }
 
-                if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
+        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
             let planned_intent = match self
                 .quote_intent_planner
                 .plan_quote_intent(&event.tenant_id, &event.payload)
@@ -301,7 +382,8 @@ impl Department for SalesAgent {
                 let context_records = self
                     .orchestrator
                     .query_long_term_memory(&event.tenant_id, &query_embedding, 3)
-                    .await.unwrap_or_default();
+                    .await
+                    .unwrap_or_default();
 
                 let service = self
                     .orchestrator
@@ -327,11 +409,15 @@ impl Department for SalesAgent {
                 {
                     Ok("minimax") => {
                         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                        crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                        crate::minimax::MinimaxClient::new(api_key)
+                            .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                            .await
+                            .unwrap_or_default()
                     }
-                    _ => {
-                        crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
-                    }
+                    _ => crate::minimax::LocalLLMClient::new()
+                        .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                        .await
+                        .unwrap_or_default(),
                 };
 
                 let mut scope = format!("{} including labor and standard materials.", service_name);
@@ -392,7 +478,11 @@ impl Department for SalesAgent {
         }
 
         // Query memory context
-        let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+        let message = event
+            .payload
+            .get("message")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
         let query_embedding = self.generate_embedding(message).await;
 
         let _context = self
@@ -461,7 +551,6 @@ impl BaseAgent for SalesAgent {
     fn trigger_type(&self) -> AgentTriggerType {
         AgentTriggerType::EventDriven
     }
-
 }
 
 #[cfg(test)]
@@ -520,7 +609,10 @@ mod tests {
         .expect("high confidence quote intent should be returned");
 
         assert_eq!(intent.service_name, "Emergency Plumbing");
-        assert_eq!(intent.original_message, "Water is coming through the ceiling");
+        assert_eq!(
+            intent.original_message,
+            "Water is coming through the ceiling"
+        );
     }
 
     #[test]

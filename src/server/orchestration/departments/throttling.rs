@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use crate::db::{DB, DbStore};
+use crate::db::{DbStore, DB};
 use chrono::Utc;
+use std::sync::Arc;
 
 pub struct ThrottlingManager {
     db: Arc<DB>,
@@ -11,25 +11,31 @@ impl ThrottlingManager {
         Self { db }
     }
 
-    pub async fn check_and_consume_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
+    pub async fn check_and_consume_budget(
+        &self,
+        tenant_id: &str,
+        points: i32,
+    ) -> Result<bool, String> {
         let now = Utc::now();
         let year_month = now.format("%Y-%m").to_string();
 
         let plan_tier: String = match &self.db.store {
             DbStore::Postgres => {
-                let row: Option<(String,)> = sqlx::query_as("SELECT plan_tier FROM tenants WHERE id = $1")
-                    .bind(tenant_id)
-                    .fetch_optional(&self.db.pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let row: Option<(String,)> =
+                    sqlx::query_as("SELECT plan_tier FROM tenants WHERE id = $1")
+                        .bind(tenant_id)
+                        .fetch_optional(&self.db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
                 row.map(|(t,)| t).unwrap_or_else(|| "free".to_string())
             }
             DbStore::Sqlite(pool) => {
-                let row: Option<(String,)> = sqlx::query_as("SELECT plan_tier FROM tenants WHERE id = ?")
-                    .bind(tenant_id)
-                    .fetch_optional(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let row: Option<(String,)> =
+                    sqlx::query_as("SELECT plan_tier FROM tenants WHERE id = ?")
+                        .bind(tenant_id)
+                        .fetch_optional(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
                 row.map(|(t,)| t).unwrap_or_else(|| "free".to_string())
             }
         };
@@ -50,7 +56,7 @@ impl ThrottlingManager {
                 let _ = sqlx::query(
                     "INSERT INTO tenants (id, name, plan_tier)
                      VALUES ($1, $2, 'free')
-                     ON CONFLICT (id) DO NOTHING"
+                     ON CONFLICT (id) DO NOTHING",
                 )
                 .bind(tenant_id)
                 .bind("E2E Tenant")
@@ -64,7 +70,7 @@ impl ThrottlingManager {
                      SET actions_used = tenant_ai_budgets.actions_used + $3,
                          updated_at = CURRENT_TIMESTAMP
                      WHERE tenant_ai_budgets.actions_used + $3 <= $4
-                     RETURNING actions_used"
+                     RETURNING actions_used",
                 )
                 .bind(tenant_id)
                 .bind(&year_month)
@@ -91,7 +97,7 @@ impl ThrottlingManager {
                      SET actions_used = tenant_ai_budgets.actions_used + ?,
                          updated_at = CURRENT_TIMESTAMP
                      WHERE tenant_ai_budgets.actions_used + ? <= ?
-                     RETURNING actions_used"
+                     RETURNING actions_used",
                 )
                 .bind(tenant_id)
                 .bind(&year_month)

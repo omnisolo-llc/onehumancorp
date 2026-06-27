@@ -1,5 +1,9 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::orchestration::departments::orchestrator::{
+    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
+};
+use crate::orchestration::departments::types::{
+    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
+};
 
 pub struct FinanceAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -22,7 +26,7 @@ impl Department for FinanceAgent {
             "tenant.payment.received".to_string(),
             "payment.captured".to_string(),
             "charge.dispute.created".to_string(),
-            "invoice.overdue".to_string()
+            "invoice.overdue".to_string(),
         ]
     }
 
@@ -62,7 +66,11 @@ impl Department for FinanceAgent {
                 "customer_id": event.payload.get("customer").and_then(|v| v.as_str()).unwrap_or(""),
             });
         } else if event.event_type == "invoice.overdue" {
-            let invoice_id = event.payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let invoice_id = event
+                .payload
+                .get("invoice_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
             payload = serde_json::json!({
                 "feature_type": "invoice_followup",
                 "invoice_id": invoice_id,
@@ -73,26 +81,41 @@ impl Department for FinanceAgent {
             });
         }
 
-        self.orchestrator.execute_action(
-            DepartmentType::Finance,
-            action_description,
-            event.tenant_id.clone(),
-            risk,
-            payload,
-        ).await.map(|_| ())
+        self.orchestrator
+            .execute_action(
+                DepartmentType::Finance,
+                action_description,
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            )
+            .await
+            .map(|_| ())
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
         None
     }
 
-
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    async fn request_approval(
+        &self,
+        description: String,
+        tenant_id: String,
+        risk: ActionRisk,
+    ) -> Result<ApprovalRequest, String> {
+        self.orchestrator
+            .execute_action(
+                self.department_type(),
+                description.clone(),
+                tenant_id.clone(),
+                risk,
+                serde_json::json!({}),
+            )
+            .await
     }
 }
 
@@ -105,5 +128,4 @@ impl BaseAgent for FinanceAgent {
     fn trigger_type(&self) -> AgentTriggerType {
         AgentTriggerType::Scheduled
     }
-
 }
