@@ -6273,6 +6273,8 @@ async fn create_ui_bom_item_handler(
         .nest("/api/integrations", crate::api::tool_integrations::router(db.clone()))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
+        .route("/api/triage/pending", axum::routing::get(crate::api::triage::get_triage_pending_handler).with_state(db.clone()))
+        .route("/api/triage/action", axum::routing::post(crate::api::triage::post_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))

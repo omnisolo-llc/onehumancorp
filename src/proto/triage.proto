@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package ohc.triage;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/triage;triagepb";
+
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  LOW = 1;
+  MEDIUM = 2;
+  HIGH = 3;
+}
+
+message SourceEvent {
+  string event_type = 1; // e.g. "Message", "Booking"
+  string event_id = 2;
+  string payload_json = 3;
+}
+
+message SuggestedAction {
+  string action_id = 1;
+  string action_type = 2; // e.g. "DraftReply", "ApproveQuote"
+  string label = 3;
+  string payload_json = 4;
+}
+
+message AgentDraft {
+  string draft_id = 1;
+  string content = 2;
+  string context_summary = 3;
+}
+
+message TriageItem {
+  string item_id = 1;
+  string tenant_id = 2;
+  Priority priority = 3;
+  string source_icon = 4;
+  string customer_name = 5;
+  string summary = 6;
+  SourceEvent source_event = 7;
+  repeated SuggestedAction suggested_actions = 8;
+  AgentDraft agent_draft = 9;
+  bool is_resolved = 10;
+  int64 created_at_unix = 11;
+}
+
+message GetTriageFeedRequest {
+  string tenant_id = 1;
+  bool include_resolved = 2;
+}
+
+message GetTriageFeedResponse {
+  repeated TriageItem items = 1;
+}
+
+message ExecuteActionRequest {
+  string tenant_id = 1;
+  string item_id = 2;
+  string action_id = 3;
+}
+
+message ExecuteActionResponse {
+  bool success = 1;
+  TriageItem updated_item = 2;
+}
+
+service TriageFeedService {
+  rpc GetTriageFeed(GetTriageFeedRequest) returns (GetTriageFeedResponse);
+  rpc ExecuteAction(ExecuteActionRequest) returns (ExecuteActionResponse);
+}
