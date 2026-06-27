@@ -431,6 +431,11 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     await expect(container).toHaveCSS('border-radius', '16px');
     await expect(container).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
 
+    // Check the Onboarding Welcome Card specifically
+    const welcomeCard = page.getByTestId('onboarding-welcome-card');
+    await expect(welcomeCard).toBeVisible();
+    await expect(welcomeCard).toHaveCSS('border-radius', '16px');
+
         // Check dark mode
     await page.emulateMedia({ colorScheme: 'dark' });
     const darkBg = await container.evaluate((el) => window.getComputedStyle(el).backgroundColor);
