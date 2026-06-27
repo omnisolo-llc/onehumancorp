@@ -53,6 +53,7 @@ export default function TriagePage() {
   const [error, setError] = useState("");
   const [actionStatus, setActionStatus] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
 
@@ -115,6 +116,36 @@ export default function TriagePage() {
   const urgentCount = items.filter((item) =>
     ["urgent", "high"].includes((item.priority || "").toLowerCase()),
   ).length;
+
+  async function simulateDM() {
+    setIsSimulating(true);
+    try {
+      const res = await fetch(
+        `/api/triage/create?tenant_id=${encodeURIComponent(tenantId())}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            data: {
+              source: "Instagram DM",
+              priority: "high",
+              context: "Message: Hi Maya! Do you have availability for a custom 2-tier vanilla cake for this Saturday? Needs to be vegan.",
+              action_type: "DraftQuote",
+              action_payload: "Hi! Yes, I have availability this Saturday. A 2-tier vegan vanilla cake will be $150. Here is your deposit link: [Pay $50 Deposit]",
+              customer_id: "Customer_DM_" + Math.floor(Math.random() * 1000)
+            }
+          }),
+        }
+      );
+      if (!res.ok) throw new Error("Failed to simulate DM");
+      await loadItems();
+    } catch (e) {
+      console.error(e);
+      setActionStatus("Error simulating DM.");
+    } finally {
+      setIsSimulating(false);
+    }
+  }
 
   async function handleDecision(id: string, approved: boolean) {
     if (isOffline) {
@@ -192,6 +223,7 @@ export default function TriagePage() {
         </div>
       )}
 
+      <button onClick={simulateDM} disabled={isSimulating} className="mb-4 w-full px-4 py-3 bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-[16px] font-medium shadow-md transition-all flex items-center justify-center disabled:opacity-50"> {isSimulating ? "Parsing DM & Generating Quote..." : "Simulate Incoming DM (Agentic Workflow)"} </button>
       <div className="flex flex-col gap-4 w-full max-w-full pb-20">
         {error && <div className="app-empty">{error}</div>}
         {loading ? (
