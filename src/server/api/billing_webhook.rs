@@ -619,6 +619,37 @@ pub async fn stripe_webhook_handler(
                             .bind(stripe_subscription_id)
                             .execute(&webhook_state.db.pool)
                             .await;
+
+                            // Create an order for the Manager agent
+                            let order_id = uuid::Uuid::new_v4().to_string();
+                            let amount_total = obj.get("amount_total").and_then(|a| a.as_i64()).unwrap_or(0);
+                            let _ = sqlx::query(
+                                "INSERT INTO orders (id, tenant_id, customer_id, total_amount_cents, status) VALUES ($1, $2, $3, $4, 'paid')"
+                            )
+                            .bind(&order_id)
+                            .bind(tenant_id)
+                            .bind(customer_id)
+                            .bind(amount_total)
+                            .execute(&webhook_state.db.pool)
+                            .await;
+
+                            // Let the manager agent know
+                            let orch = webhook_state.orchestrator.clone();
+                            let payload_val = serde_json::json!({
+                                "order_id": order_id,
+                                "customer_id": customer_id,
+                                "subscription_id": subscription_id
+                            });
+                            let tenant_id_val = tenant_id.to_string();
+                            tokio::spawn(async move {
+                                let evt = crate::orchestration::departments::types::DepartmentEvent {
+                                    id: uuid::Uuid::new_v4().to_string(),
+                                    tenant_id: tenant_id_val,
+                                    event_type: "tenant.order.created".to_string(),
+                                    payload: payload_val,
+                                };
+                                let _ = orch.dispatch_event(evt).await;
+                            });
                         }
                     }
                 }
