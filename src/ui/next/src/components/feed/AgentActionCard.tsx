@@ -1,3 +1,4 @@
+import { ShiftReassignmentCard } from "../../app/dashboard/ShiftReassignmentCard";
 import { InstagramDMCard } from "../../app/dashboard/InstagramDMCard";
 import { AmbassadorReplyCard } from "../../app/dashboard/AmbassadorReplyCard";
 import { ReviewFeedCard } from "../../app/dashboard/ReviewFeedCard";
@@ -46,6 +47,16 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   setEditQuoteScope,
   handleDecision,
 }) => {
+  if ((approval.proposed_action || approval.context_payload)?.feature_type === "shift_reassignment") {
+    return (
+      <ShiftReassignmentCard
+        approval={approval}
+        queuedActionIds={queuedActionIds}
+        handleDecision={handleDecision}
+      />
+    );
+  }
+
   return (
     <div
       key={approval.id}
