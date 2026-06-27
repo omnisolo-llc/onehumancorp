@@ -587,7 +587,30 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </div>
                 ))}
               </div>
-
+            ) : (approval.proposed_action || approval.context_payload)
+                ?.feature_type === "ambassador_reply_never_match" ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Context:
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {(approval.proposed_action || approval.context_payload)
+                      .source || "Message"}
+                  </span>
+                </div>
+                <div className="flex flex-col text-sm mt-1">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Draft:
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mt-1">
+                    {
+                      (approval.proposed_action || approval.context_payload)
+                        .generated_response
+                    }
+                  </span>
+                </div>
+              </div>
             ) : (approval.proposed_action || approval.context_payload)
                 ?.feature_type === "quote_draft" ? (
               <div className="flex flex-col gap-2">
@@ -1188,7 +1211,94 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             (approval.proposed_action || approval.context_payload)
             ?.feature_type === "task") ? (
            null
-
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "ambassador_reply_never_match" ? (
+          editingId === approval.id ? (
+            <div className="flex flex-col gap-3 w-full">
+              <textarea
+                className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                rows={4}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                data-testid="edit-ambassador-reply-textarea"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    handleDecision(
+                      approval.id,
+                      true,
+                      editContent,
+                      approval.event_source,
+                    );
+                    setEditingId(null);
+                  }}
+                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  data-testid="save-send-ambassador-reply"
+                >
+                  Save & Send
+                </button>
+                <button
+                  onClick={() => setEditingId(null)}
+                  className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  data-testid="cancel-edit-ambassador-reply"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() =>
+                  handleDecision(
+                    approval.id,
+                    true,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                aria-label="Approve & Send Draft"
+                data-testid="approve-ambassador-reply"
+              >
+                Send Draft
+              </button>
+              <button
+                onClick={() => {
+                  setEditingId(approval.id);
+                  setEditContent(
+                    (approval.proposed_action || approval.context_payload)
+                      ?.generated_response ||
+                      (approval.proposed_action || approval.context_payload)
+                        ?.draft_reply ||
+                      "",
+                  );
+                }}
+                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                aria-label="Edit Draft"
+                data-testid="edit-ambassador-reply"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() =>
+                  handleDecision(
+                    approval.id,
+                    false,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                aria-label="Dismiss Draft"
+                data-testid="dismiss-ambassador-reply"
+              >
+                Dismiss
+              </button>
+            </div>
+          )
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "quote_draft" ? (
           editingId === approval.id ? (

@@ -284,6 +284,31 @@ impl Department for SalesAgent {
             }
             return Ok(());
         }
+        if event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            if source == "booking_form" || source == "sms" {
+                let preferred_time = event.payload.get("timestamp").and_then(|v| v.as_str()).unwrap_or("");
+                let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+                let service_name = "Field Service Repair";
+                let price = 150.0;
+
+                let sched_event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_type: "tenant.quote.requires_scheduling".to_string(),
+                    payload: serde_json::json!({
+                        "source": source,
+                        "message": message,
+                        "service_name": service_name,
+                        "price": price,
+                        "preferred_time": preferred_time,
+                        "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+                    }),
+                };
+                let _ = self.orchestrator.dispatch_event(sched_event).await;
+            }
+        }
+
 
                 if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
             let planned_intent = match self
