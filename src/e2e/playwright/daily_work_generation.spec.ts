@@ -8,7 +8,7 @@ test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
     await loginAs(page, adminUser);
 
     // 1. Inject raw signal to simulate Triage Engine processing
-    const tenantId = 'default'; // In a real E2E, this aligns with the configured test tenant
+    const tenantId = 'e2e-tenant'; // In a real E2E, this aligns with the configured test tenant
     const payload = {
       source: "Instagram DM",
       payload: { text: "Do you do vegan cakes for Saturday?" }

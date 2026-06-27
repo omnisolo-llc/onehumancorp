@@ -5,7 +5,7 @@ test.describe('Quote Deposit Follow-up', () => {
 
   test('Deposit State Machine generates an automated follow-up when quote deposit is unpaid after 48 hours', async ({ page, request }) => {
     // 1. Simulate the webhook/agent action background task
-    const tenantId = 'default';
+    const tenantId = 'e2e-tenant';
 
     // Mock API for feed items to include a deposit follow up specifically
     await page.route('**/api/ui/dashboard/unified-agent-feed*', async route => {

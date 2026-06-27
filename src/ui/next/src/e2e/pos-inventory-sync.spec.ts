@@ -156,21 +156,21 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
   test('Operations Agent generates a Restock notification in the owner feed when item sells out', async ({ page }) => {
     // 1. Log in to get token
     await page.goto('/login');
-    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Email address').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
 
     const response = await page.request.post('/api/v1/auth/login', {
         data: {
-            email: 'admin@ohc.local',
+            email: 'test@example.com',
             password: 'admin'
         }
     });
     expect(response.ok()).toBeTruthy();
     const { token } = await response.json();
 
-    const tenantId = 'default';
+    const tenantId = 'e2e-tenant';
     const productId = 'e2e-product-restock-' + Date.now();
 
     // 2. Create the product with stock 1

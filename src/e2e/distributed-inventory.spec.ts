@@ -15,7 +15,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
     });
 
     await page.goto('/login');
-    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Email address').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
 
@@ -88,7 +88,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
      });
 
      await page.goto('/login');
-     await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+     await page.getByPlaceholder('Email address').fill('test@example.com');
      await page.getByPlaceholder('Password').fill('admin');
      await page.getByRole('button', { name: 'Sign In' }).click();
 

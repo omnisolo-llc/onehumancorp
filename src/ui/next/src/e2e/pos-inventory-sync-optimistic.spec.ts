@@ -4,14 +4,14 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
   test('POS terminal immediately updates stock UI on charge before API returns', async ({ page }) => {
     // 1. Log in to get token
     await page.goto('/login');
-    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Email address').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
 
     const response = await page.request.post('/api/v1/auth/login', {
         data: {
-            email: 'admin@ohc.local',
+            email: 'test@example.com',
             password: 'admin'
         }
     });
@@ -74,14 +74,14 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
   test('Offline sync conflict generates Operations Agent Triage Task', async ({ page }) => {
     // 1. Log in to get token
     await page.goto('/login');
-    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Email address').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
 
     const response = await page.request.post('/api/v1/auth/login', {
         data: {
-            email: 'admin@ohc.local',
+            email: 'test@example.com',
             password: 'admin'
         }
     });
@@ -179,14 +179,14 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
   test('POS terminal immediately updates stock UI on cash sale before API returns', async ({ page }) => {
     // 1. Log in to get token
     await page.goto('/login');
-    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Email address').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
 
     const response = await page.request.post('/api/v1/auth/login', {
         data: {
-            email: 'admin@ohc.local',
+            email: 'test@example.com',
             password: 'admin'
         }
     });

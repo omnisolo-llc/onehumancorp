@@ -15,7 +15,7 @@ test('Prevents simultaneous online and offline purchases via Redis Redlock and g
 
     // 1. Log in as an admin or tenant
     await page.goto('/login');
-    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Email address').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
 
@@ -24,7 +24,7 @@ test('Prevents simultaneous online and offline purchases via Redis Redlock and g
 
     const response = await request.post('/api/v1/auth/login', {
         data: {
-            email: 'admin@ohc.local',
+            email: 'test@example.com',
             password: 'admin'
         }
     });

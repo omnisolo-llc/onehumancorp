@@ -5,8 +5,8 @@ test.describe('Unified Agent Feed - Promoter Auto-Draft', () => {
     // 1. Start by logging in via UI (mandatory for owner E2E flow)
     await page.goto('/login');
     // Ensure we are on the login page and use test credentials
-    await page.fill('input[type="email"]', 'admin@ohc.local');
-    await page.fill('input[type="password"]', 'changeme');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Log In")');
 
     // Ensure successful navigation to the dashboard after login

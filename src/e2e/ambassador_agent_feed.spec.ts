@@ -6,17 +6,17 @@ test.describe('The Ambassador - Intelligent Customer Auto-Responder', () => {
 
     // 1. Log in via UI
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin@ohc.local');
-    await page.fill('input[type="password"]', 'changeme');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password123');
     await page.click('button:has-text("Log In")');
     await expect(page).toHaveURL(/\/dashboard/);
 
     // 2. Simulate incoming Instagram DM via omnichannel webhook
-    const tenantId = 'default';
+    const tenantId = 'e2e-tenant';
     const messagePayload = {
       tenant_id: tenantId,
       channel: 'instagram',
-      sender_id: 'maya_bakes',
+      sender_id: '@customer',
       message: 'Do you have vegan chocolate cake available for Saturday?'
     };
 

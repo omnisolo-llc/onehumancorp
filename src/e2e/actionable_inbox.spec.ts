@@ -12,7 +12,7 @@ test.describe('Actionable Inbox UX flow for owners on mobile', () => {
       data: {
         tenant_id: tenantId,
         source: 'Instagram DM',
-        sender_id: 'maya_bakes',
+        sender_id: '@customer',
         message: message,
       }
     });

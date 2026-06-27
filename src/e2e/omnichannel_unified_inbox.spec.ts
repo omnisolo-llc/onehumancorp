@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Omnichannel Unified Inbox Event and UI', () => {
   test('receives webhook, processes, and displays in UI', async ({ page }) => {
-    const tenantId = 'default';
+    const tenantId = 'e2e-tenant';
     const payload = {
         tenant_id: tenantId,
         source: 'whatsapp',

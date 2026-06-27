@@ -290,14 +290,14 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
 
     // 1. Log in to get token
     await page.goto('/login');
-    await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+    await page.getByPlaceholder('Email address').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('admin');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
     const response = await request.post('/api/v1/auth/login', {
         data: {
-            email: 'admin@ohc.local',
+            email: 'test@example.com',
             password: 'admin'
         }
     });
