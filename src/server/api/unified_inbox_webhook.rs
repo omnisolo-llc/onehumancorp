@@ -31,7 +31,7 @@ pub struct DraftedResponse {
     pub draft_reply: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedThread {
     pub id: String,
     pub tenant_id: String,
@@ -42,7 +42,7 @@ pub struct UnifiedThread {
     pub updated_at: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedMessage {
     pub id: String,
     pub tenant_id: String,
@@ -52,7 +52,7 @@ pub struct UnifiedMessage {
     pub created_at: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedTriageAction {
     pub id: String,
     pub tenant_id: String,
@@ -64,7 +64,7 @@ pub struct UnifiedTriageAction {
     pub updated_at: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedFeedItem {
     pub thread: UnifiedThread,
     pub messages: Vec<UnifiedMessage>,
@@ -182,11 +182,53 @@ pub async fn handle_unified_webhook(
     (StatusCode::OK, axum::Json(serde_json::json!({"success": true, "thread_id": thread_id}))).into_response()
 }
 
+
+static UI_WEBHOOK_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<UnifiedFeedItem>>> = std::sync::OnceLock::new();
+
 pub async fn get_unified_feed(
     State(state): State<AppState>,
     Query(query): Query<LocalUiTenantQuery>,
 ) -> impl IntoResponse {
     let tenant_id = get_ui_tenant_id(&query);
+
+    let cache_key = format!("ui_webhook_feed:{}", tenant_id);
+    let cache = UI_WEBHOOK_FEED_CACHE.get_or_init(|| {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_client = match redis::Client::open(redis_url) {
+            Ok(client) => Some(client),
+            Err(e) => {
+                tracing::warn!("Failed to initialize Redis client for UI_WEBHOOK_FEED_CACHE: {}. Falling back to in-memory cache.", e);
+                None
+            }
+        };
+        ::server_utils::cache::HybridCache::new(redis_client)
+    });
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (StatusCode::OK, axum::Json(cached)).into_response();
+        }
+
+        let state_bg = state.clone();
+        let tenant_id_bg = tenant_id.clone();
+        let cache_bg = cache.clone();
+        let cache_key_bg = cache_key.clone();
+
+        tokio::spawn(async move {
+            let items = fetch_unified_feed_items(&state_bg, &tenant_id_bg).await;
+            cache_bg.set(&cache_key_bg, items, std::time::Duration::from_secs(30)).await;
+        });
+
+        return (StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
+    let feed_items = fetch_unified_feed_items(&state, &tenant_id).await;
+    cache.set(&cache_key, feed_items.clone(), std::time::Duration::from_secs(30)).await;
+
+    (StatusCode::OK, axum::Json(feed_items)).into_response()
+}
+
+async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str) -> Vec<UnifiedFeedItem> {
 
     let mut feed_items: Vec<UnifiedFeedItem> = vec![];
 
@@ -297,5 +339,5 @@ pub async fn get_unified_feed(
         }
     }
 
-    (StatusCode::OK, axum::Json(feed_items)).into_response()
+    feed_items
 }
