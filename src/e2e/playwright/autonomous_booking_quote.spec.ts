@@ -4,7 +4,7 @@ test.describe('Autonomous Booking Quote & Scheduling Flow', () => {
     test.use({ viewport: { width: 375, height: 667 } }); // Mobile viewport
 
     test('should allow owner to 1-tap approve an autonomous quote with proposed times', async ({ page, request }) => {
-        const tenantId = 'auto_quote_test_tenant_' + Date.now();
+        const tenantId = "auto_quote_test_tenant_" + Date.now();
 
         // 1. Seed the database
         await request.post('/api/v1/builder/seeder/exec', {
@@ -71,5 +71,8 @@ test.describe('Autonomous Booking Quote & Scheduling Flow', () => {
 
         // Assert the feed item is now marked as Approved or Sent
         await expect(page.locator('text=Draft quote and propose schedule for Emergency Handyman Service').first()).toBeHidden();
+
+        // Assert the #34C759 badge for confirmed booking dynamically shows up
+        await expect(page.locator('.app-badge.good').first()).toBeVisible();
     });
 });
