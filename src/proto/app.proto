@@ -367,6 +367,8 @@ message CreateQuoteRequest {
   string customer_id = 2;
   repeated QuoteLineItem line_items = 3;
   int64 required_deposit = 4;
+  optional string service_id = 5;
+  optional string proposed_slot_id = 6;
 }
 
 message FetchQuoteRequest {
@@ -380,6 +382,8 @@ message QuoteResponse {
   int64 total_amount_cents = 4;
   int64 required_deposit = 5;
   repeated QuoteLineItem line_items = 6;
+  optional string service_id = 7;
+  optional string proposed_slot_id = 8;
 }
 
 message BookingResource {
