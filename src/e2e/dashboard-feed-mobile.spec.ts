@@ -11,7 +11,7 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     await page.waitForLoadState('networkidle');
 
     // The feed should be present and visible
-    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    const feedSection = page.locator('section[aria-label="Action Required"]');
     await expect(feedSection).toBeVisible();
 
     // Ensure there is no horizontal scroll on the body
