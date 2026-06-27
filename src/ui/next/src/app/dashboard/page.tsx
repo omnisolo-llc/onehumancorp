@@ -361,7 +361,7 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
-      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
+      <div className="hidden md:block mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
@@ -371,16 +371,16 @@ export default function Dashboard() {
         <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [], pendingReviews: dashboardData?.pendingReviews || [] }} />
       </div>
 
-      <AIUsageLimitWidget />
-      <DashboardViralInviteWidget />
+      <div className="hidden md:block"><AIUsageLimitWidget /></div>
+      <div className="hidden md:block"><DashboardViralInviteWidget /></div>
 
-      <AiTimeSavingsWidget />
-      <NeighborhoodPulseCard tenant={tenantId()} />
+      <div className="hidden md:block"><AiTimeSavingsWidget /></div>
+      <div className="hidden md:block"><NeighborhoodPulseCard tenant={tenantId()} /></div>
       <FloatingActionButton />
       <VoiceAssistantFAB />
 
-      <MorningBriefingCard tenant={tenantId()} />
-      <AIFeaturePaywallWidget />
+      <div className="hidden md:block"><MorningBriefingCard tenant={tenantId()} /></div>
+      <div className="hidden md:block"><AIFeaturePaywallWidget /></div>
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -388,7 +388,7 @@ export default function Dashboard() {
         onClose={() => setIsWalkthroughOpen(false)}
       />
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="hidden md:flex mb-4 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => {
@@ -437,11 +437,11 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-col">
         <div className="order-last md:order-first">
           <WrappedWidget />
-          <SuccessMilestoneWidget />
-          <ViralLoopPerformanceWidget />
+          <div className="hidden md:block"><SuccessMilestoneWidget /></div>
+          <div className="hidden md:block"><ViralLoopPerformanceWidget /></div>
           <div className="mb-6">
             <div className="mb-4"><CartRecoveryWidget /></div>
-            <AffiliateMarketingWidget />
+            <div className="hidden md:block"><AffiliateMarketingWidget /></div>
           </div>
         </div>
       </div>
@@ -553,8 +553,8 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        <GrowBusinessCard />
-          <PromoterCard />
+        <div className="hidden md:block"><GrowBusinessCard /></div>
+          <div className="hidden md:block"><PromoterCard /></div>
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">

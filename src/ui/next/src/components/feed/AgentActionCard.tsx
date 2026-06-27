@@ -1464,6 +1464,39 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
+        ) : (approval.proposed_action || approval.context_payload)?.feature_type === "customer_service" && (approval.proposed_action || approval.context_payload)?.action_type === "draft_response" ? (
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="View & Approve"
+              data-testid="approve-mock-card"
+            >
+              View & Approve
+            </button>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  false,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              aria-label="Dismiss proposal"
+              data-testid="dismiss-mock-card"
+            >
+              Dismiss
+            </button>
+          </div>
         ) : (approval.proposed_action || approval.context_payload)
             ?.remaining_stock !== undefined ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
