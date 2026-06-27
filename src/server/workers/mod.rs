@@ -20,3 +20,7 @@ pub mod subscription_replenishment_job;
 
 #[cfg(test)]
 mod invoice_followup_worker_test;
+pub mod reputation_worker;
+
+#[cfg(test)]
+mod reputation_worker_test;
