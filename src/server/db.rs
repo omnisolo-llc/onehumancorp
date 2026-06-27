@@ -92,6 +92,7 @@ pub struct SearchResult {
 
 fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, sqlx::Error> {
     chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+        .or_else(|_| chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f"))
         .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
         .or_else(|_| chrono::DateTime::parse_from_rfc3339(s).map(|d| d.with_timezone(&chrono::Utc)))
         .map_err(|e| sqlx::Error::Decode(Box::new(e)))
@@ -1816,6 +1817,9 @@ mod tests {
         assert_eq!(dt1.to_rfc3339(), "2023-10-25T14:30:00+00:00");
 
         let dt2 = parse_sqlite_datetime("2023-10-25T14:30:00Z").unwrap();
+
+        let dt3 = parse_sqlite_datetime("2023-10-25 14:30:00.123").unwrap();
+        assert_eq!(dt3.to_rfc3339(), "2023-10-25T14:30:00.123+00:00");
         assert_eq!(dt2.to_rfc3339(), "2023-10-25T14:30:00+00:00");
     }
 
