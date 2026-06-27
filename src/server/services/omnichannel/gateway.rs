@@ -78,6 +78,13 @@ pub async fn handle_webhook(
     );
     let context_summary = format!("Customer '{}' has a history of prior engagements.", customer.name);
 
+    let mut draft_json = serde_json::to_value(&DraftedResponse {
+        customer_id: customer.id.clone(),
+        context_summary,
+        draft_reply,
+    }).unwrap();
+    draft_json["feature_type"] = serde_json::json!("ambassador_reply");
+
     let draft = DraftedResponse {
         customer_id: customer.id.clone(),
         context_summary,
@@ -89,8 +96,8 @@ pub async fn handle_webhook(
         id: Uuid::new_v4().to_string(),
         tenant_id: payload.tenant_id.clone(),
         event_source: "omnichannel_gateway".to_string(),
-        context_payload: Some(sqlx::types::Json(serde_json::to_value(&draft).unwrap())),
-        proposed_action: Some(sqlx::types::Json(serde_json::to_value(&draft).unwrap())),
+        context_payload: Some(sqlx::types::Json(draft_json.clone())),
+        proposed_action: Some(sqlx::types::Json(draft_json)),
         lifecycle_state: "PENDING_APPROVAL".to_string(),
         created_at: Some(Utc::now()),
         updated_at: Some(Utc::now()),
