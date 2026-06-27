@@ -11323,7 +11323,7 @@ mod fail_fast_tests {
 
         // Now check if a pattern was recorded and saved
         let loaded_matcher = crate::sona_patterns::PatternMatcher::load_from_disk(&sona_path_str).await.unwrap();
-        let patterns = loaded_matcher.get_patterns();
+        let _patterns = loaded_matcher.get_patterns();
 
         // Second run, we should see the SONA prompt injected
         struct MockLlmClientSona2;
