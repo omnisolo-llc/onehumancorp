@@ -81,7 +81,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
             customer_id: 'cust_demo1',
             total_amount: 15000,
             required_deposit: 7500,
-            checkout_url: 'https://buy.stripe.com/test_mock',
+            stripe_payment_link: 'https://buy.stripe.com/test_mock',
             line_items: []
         }
     });
@@ -93,7 +93,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
     expect(getRes.ok()).toBeTruthy();
     const fetchedData = await getRes.json();
     expect(fetchedData.quote.status).toBe('DRAFT');
-    expect(fetchedData.quote.checkout_url).toContain('stripe.com');
+    expect(fetchedData.quote.stripe_payment_link).toContain('stripe.com');
   });
 
   test('Accepting a quote transitions the status to ACCEPTED', async ({ browser }) => {
@@ -106,7 +106,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
             customer_id: 'cust_demo1',
             total_amount: 10000,
             required_deposit: 5000,
-            checkout_url: 'https://buy.stripe.com/test_mock',
+            stripe_payment_link: 'https://buy.stripe.com/test_mock',
             line_items: []
         }
     });
@@ -116,6 +116,6 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
     expect(acceptRes.ok()).toBeTruthy();
     const acceptData = await acceptRes.json();
     expect(acceptData.success).toBeTruthy();
-    expect(acceptData.checkout_url).toContain('stripe.com');
+    expect(acceptData.stripe_payment_link).toContain('stripe.com');
   });
 });
