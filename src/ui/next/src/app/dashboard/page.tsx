@@ -31,6 +31,7 @@ import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
+import { WrappedWidget } from "./WrappedWidget";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -435,6 +436,7 @@ export default function Dashboard() {
 
       <div className="flex flex-col md:flex-col">
         <div className="order-last md:order-first">
+          <WrappedWidget />
           <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
           <div className="mb-6">

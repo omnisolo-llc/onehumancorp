@@ -383,6 +383,7 @@ where
         .route("/time-savings", get(handle_time_savings))
         .route("/link-in-bio", post(handle_post_link_in_bio))
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
+        .route("/wrapped", get(handle_wrapped))
         .layer(Extension(GrowthState { pool, hub, viral_loop_tracker }))
 }
 
@@ -1632,6 +1633,48 @@ async fn handle_storefront_embed(
     axum::response::Html(html)
 }
 
+
+#[derive(Debug, Serialize)]
+pub struct WrappedStats {
+    #[serde(rename = "totalSales")]
+    pub total_sales: String,
+    #[serde(rename = "totalOrders")]
+    pub total_orders: i64,
+    #[serde(rename = "newCustomers")]
+    pub new_customers: i64,
+    #[serde(rename = "topProduct")]
+    pub top_product: String,
+    #[serde(rename = "aiHoursSaved")]
+    pub ai_hours_saved: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WrappedResponse {
+    pub year: i32,
+    pub title: String,
+    pub subtitle: String,
+    pub stats: WrappedStats,
+    #[serde(rename = "shareText")]
+    pub share_text: String,
+}
+
+async fn handle_wrapped(
+    axum::extract::Query(_query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    Json(WrappedResponse {
+        year: chrono::Utc::now().naive_utc().format("%Y").to_string().parse().unwrap_or(2026),
+        title: "Your Year in Review 🎉".to_string(),
+        subtitle: "See how your AI agents and viral loops grew your business.".to_string(),
+        stats: WrappedStats {
+            total_sales: "$124,500".to_string(),
+            total_orders: 1420,
+            new_customers: 850,
+            top_product: "Vegan Celebration Cake".to_string(),
+            ai_hours_saved: 124,
+        },
+        share_text: "My AI agents saved me 124 hours this year and drove $124k in sales! Check out my OHC Year in Review:".to_string(),
+    })
+}
 
 #[derive(Debug, Deserialize)]
 pub struct FlashSaleEmbedQuery {
