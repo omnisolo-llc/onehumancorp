@@ -5315,8 +5315,10 @@ async fn ui_dashboard_unified_feed_handler(
             let db_bg_3 = db_bg.clone(); let t_bg_3 = t_bg.clone(); let i_key_3 = i_key.clone();
             let db_bg_4 = db_bg.clone(); let t_bg_4 = t_bg.clone(); let t_key_4 = t_key.clone();
             let db_bg_5 = db_bg.clone(); let t_bg_5 = t_bg.clone(); let p_key_5 = p_key.clone();
-            let db_bg_6 = db_bg.clone(); let t_bg_6 = t_bg.clone();
-            let db_bg_7 = db_bg.clone(); let t_bg_7 = t_bg.clone();
+            let a_key = format!("ui_approvals:{}:mobile:{}", t_bg, mobile_optimized);
+            let f_key = format!("ui_agent_feed:{}:mobile:{}", t_bg, mobile_optimized);
+            let db_bg_6 = db_bg.clone(); let t_bg_6 = t_bg.clone(); let a_key_6 = a_key.clone();
+            let db_bg_7 = db_bg.clone(); let t_bg_7 = t_bg.clone(); let f_key_7 = f_key.clone();
 
             let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res) = tokio::join!(
                 tokio::spawn(async move {
@@ -5349,8 +5351,22 @@ async fn ui_dashboard_unified_feed_handler(
                     }
                     load_ui_priority_tasks_from_db(&db_bg_5, &t_bg_5, mobile_optimized).await.unwrap_or_default()
                 }),
-                tokio::spawn(async move { load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default() }),
-                tokio::spawn(async move { load_ui_agent_feed_from_db(&db_bg_7, &t_bg_7, mobile_optimized).await.unwrap_or_default() })
+                tokio::spawn(async move {
+                    if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
+                        if let Some((v, _)) = c.get_with_swr(&a_key_6).await { return v; }
+                    }
+                    let res = load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default();
+                    if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_6, res.clone(), std::time::Duration::from_secs(10)).await; }
+                    res
+                }),
+                tokio::spawn(async move {
+                    if let Some(c) = UI_AGENT_FEED_CACHE.get() {
+                        if let Some((v, _)) = c.get_with_swr(&f_key_7).await { return v; }
+                    }
+                    let res = load_ui_agent_feed_from_db(&db_bg_7, &t_bg_7, mobile_optimized).await.unwrap_or_default();
+                    if let Some(c) = UI_AGENT_FEED_CACHE.get() { c.set(&f_key_7, res.clone(), std::time::Duration::from_secs(10)).await; }
+                    res
+                })
             );
 
             let metrics_val = metrics_res.unwrap_or_default();
@@ -5390,6 +5406,8 @@ async fn ui_dashboard_unified_feed_handler(
     let i_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
     let t_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
     let p_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
+    let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
+    let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
 
     let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res, supply_res) = tokio::join!(
         tokio::spawn({
@@ -5450,15 +5468,27 @@ async fn ui_dashboard_unified_feed_handler(
         tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
+            let a_key_clone = a_key.clone();
             async move {
-                load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&a_key_clone).await { return v; }
+                }
+                let res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
+                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
+                res
             }
         }),
         tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
+            let f_key_clone = f_key.clone();
             async move {
-                load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+                if let Some(c) = UI_AGENT_FEED_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&f_key_clone).await { return v; }
+                }
+                let res = load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
+                if let Some(c) = UI_AGENT_FEED_CACHE.get() { c.set(&f_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
+                res
             }
         }),
         supply_future
@@ -5562,6 +5592,8 @@ async fn ui_dashboard_unified_agent_feed_handler(
 }
 
 static UI_PRIORITY_TASKS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_AGENT_APPROVALS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
 pub async fn list_ui_priority_tasks_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
