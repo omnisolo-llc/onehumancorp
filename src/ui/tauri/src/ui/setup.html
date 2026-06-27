@@ -159,8 +159,8 @@
       }
 
       .invalid-input {
+        background: rgba(255, 59, 48, 0.1) !important;
         border-color: #ff3b30 !important;
-        background-color: rgba(255, 59, 48, 0.05) !important;
       }
 
       .text-\[\#FF3B30\] {
@@ -371,6 +371,17 @@
         z-index: 1;
         transform: translateY(-50%);
       }
+      .stepper-progress {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        height: 2px;
+        background: #0066ff;
+        z-index: 1;
+        transform: translateY(-50%);
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 0%;
+      }
       .step-indicator {
         width: 12px;
         height: 12px;
@@ -465,8 +476,8 @@
         box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
       }
       .step-indicator.completed {
-        background: #0066ff;
-        border-color: #0071e3;
+        background: #34c759;
+        border-color: #34c759;
       }
 
       .capability-toggles {
@@ -574,6 +585,17 @@
         }
         .stepper::before {
           background: rgba(22, 22, 26, 0.7);
+        }
+        .stepper-progress {
+          position: absolute;
+          top: 50%;
+          left: 0;
+          height: 2px;
+          background: #0066ff;
+          z-index: 1;
+          transform: translateY(-50%);
+          transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          width: 0%;
         }
         .step-indicator {
           background: rgba(22, 22, 26, 0.7);
@@ -1683,6 +1705,7 @@
         aria-valuemin="0"
         aria-valuemax="8"
       >
+        <div class="stepper-progress" id="stepper-progress"></div>
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
@@ -3151,6 +3174,11 @@
         const currentIndex = steps.indexOf(stepId);
         if (stepperIndicator)
           stepperIndicator.setAttribute("aria-valuenow", currentIndex + 1);
+
+        const stepperProgress = document.getElementById("stepper-progress");
+        if (stepperProgress) {
+          stepperProgress.style.width = (currentIndex / 7) * 100 + "%";
+        }
 
         document
           .querySelectorAll(".step-indicator")
