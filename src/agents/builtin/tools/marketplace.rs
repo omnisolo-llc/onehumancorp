@@ -18,6 +18,7 @@ pub struct MarketplaceAgent {
 pub trait MarketplaceProvider: Send + Sync {
     async fn search(&self, query: &str) -> Result<Vec<MarketplaceAgent>, String>;
     async fn fetch_agent(&self, agent_id: &str) -> Result<MarketplaceAgent, String>;
+    async fn publish_agent(&self, agent: MarketplaceAgent) -> Result<MarketplaceAgent, String>;
 }
 
 pub struct HttpMarketplaceProvider {
@@ -70,6 +71,24 @@ impl MarketplaceProvider for HttpMarketplaceProvider {
 
         Ok(agent)
     }
+
+    async fn publish_agent(&self, agent: MarketplaceAgent) -> Result<MarketplaceAgent, String> {
+        let url = format!("{}/agents", self.registry_url);
+        let response = self.http_client.post(&url)
+            .json(&agent)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to publish agent: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Marketplace returned status: {}", response.status()));
+        }
+
+        let published_agent: MarketplaceAgent = response.json().await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        Ok(published_agent)
+    }
 }
 
 pub struct MarketplaceClient {
@@ -106,9 +125,17 @@ impl MarketplaceClient {
         }
         Ok(agent)
     }
+
+    /// Publish a new agent to the marketplace
+    pub async fn publish_agent(&self, agent: MarketplaceAgent) -> Result<MarketplaceAgent, String> {
+        let published_agent = self.provider.publish_agent(agent).await?;
+        if let Ok(mut cache) = self.cache.write() {
+            cache.insert(published_agent.id.clone(), published_agent.clone());
+        }
+        Ok(published_agent)
+    }
 }
 
-#[cfg(test)]
 pub mod test_utils {
     use super::*;
 
@@ -144,6 +171,16 @@ pub mod test_utils {
                 Err("Not found".to_string())
             }
         }
+
+        async fn publish_agent(&self, mut agent: MarketplaceAgent) -> Result<MarketplaceAgent, String> {
+            if agent.name == "error" {
+                return Err("Mock publish error".to_string());
+            }
+            if agent.id.is_empty() {
+                agent.id = "mock-id-123".to_string();
+            }
+            Ok(agent)
+        }
     }
 }
 
@@ -172,5 +209,33 @@ mod tests {
 
         let not_found = client.fetch_agent("unknown").await;
         assert!(not_found.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_marketplace_publish() {
+        let client = MarketplaceClient::new(Box::new(MockMarketplaceProvider));
+        let new_agent = MarketplaceAgent {
+            id: "".to_string(),
+            name: "New Agent".to_string(),
+            description: "A new test agent".to_string(),
+            author: "Tester".to_string(),
+            version: "1.0".to_string(),
+            endpoint: "http://example.com".to_string(),
+        };
+
+        let published = client.publish_agent(new_agent).await.unwrap();
+        assert_eq!(published.id, "mock-id-123");
+        assert_eq!(published.name, "New Agent");
+
+        let error_agent = MarketplaceAgent {
+            id: "".to_string(),
+            name: "error".to_string(),
+            description: "".to_string(),
+            author: "".to_string(),
+            version: "".to_string(),
+            endpoint: "".to_string(),
+        };
+        let error_res = client.publish_agent(error_agent).await;
+        assert!(error_res.is_err());
     }
 }

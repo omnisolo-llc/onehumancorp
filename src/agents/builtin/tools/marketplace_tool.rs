@@ -5,12 +5,19 @@ use serde::Deserialize;
 use std::sync::Arc;
 use super::marketplace::MarketplaceClient;
 
+use super::marketplace::MarketplaceAgent;
+
 // Pydantic-first tool schema validation: MarketplaceArgs
 #[derive(Deserialize)]
 struct MarketplaceArgs {
     action: String,
     query: Option<String>,
     agent_id: Option<String>,
+    agent_name: Option<String>,
+    agent_description: Option<String>,
+    agent_author: Option<String>,
+    agent_version: Option<String>,
+    agent_endpoint: Option<String>,
 }
 
 /// Exposes the marketplace to the agent so it can dynamically fetch new tools/agents.
@@ -38,6 +45,20 @@ impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
                 Ok(agent) => Ok(format!("Successfully fetched agent definition:\n{}", serde_json::to_string_pretty(&agent).unwrap_or_default())),
                 Err(e) => Err(ToolError::Transient(e)),
             }
+        } else if action == "publish" {
+            let agent = MarketplaceAgent {
+                id: "".to_string(), // Let server assign
+                name: args.agent_name.unwrap_or_default(),
+                description: args.agent_description.unwrap_or_default(),
+                author: args.agent_author.unwrap_or_default(),
+                version: args.agent_version.unwrap_or_else(|| "1.0.0".to_string()),
+                endpoint: args.agent_endpoint.unwrap_or_default(),
+            };
+
+            match self.client.publish_agent(agent).await {
+                Ok(published) => Ok(format!("Successfully published agent to marketplace:\n{}", serde_json::to_string_pretty(&published).unwrap_or_default())),
+                Err(e) => Err(ToolError::Transient(e)),
+            }
         } else {
             Err(ToolError::LlmRecoverable(format!("Unknown action: {}", action)))
         }
@@ -47,15 +68,15 @@ impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
 pub fn marketplace_tool(client: Arc<MarketplaceClient>) -> Tool {
     Tool {
         name: "agent_marketplace".to_string(),
-        description: "Search for and fetch pre-built agents from the AutoGPT Agent Marketplace.".to_string(),
-        is_read_only: true,
+        description: "Search for, fetch, and publish pre-built agents to the AutoGPT Agent Marketplace.".to_string(),
+        is_read_only: false,
         parameters: json!({
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["search", "fetch"],
-                    "description": "Action to perform: 'search' to find agents, 'fetch' to get a specific agent's details."
+                    "enum": ["search", "fetch", "publish"],
+                    "description": "Action to perform: 'search' to find agents, 'fetch' to get a specific agent's details, 'publish' to publish a new agent."
                 },
                 "query": {
                     "type": "string",
@@ -64,6 +85,26 @@ pub fn marketplace_tool(client: Arc<MarketplaceClient>) -> Tool {
                 "agent_id": {
                     "type": "string",
                     "description": "The ID of the agent to fetch (used if action is 'fetch')."
+                },
+                "agent_name": {
+                    "type": "string",
+                    "description": "The name of the agent to publish (used if action is 'publish')."
+                },
+                "agent_description": {
+                    "type": "string",
+                    "description": "The description of the agent to publish (used if action is 'publish')."
+                },
+                "agent_author": {
+                    "type": "string",
+                    "description": "The author of the agent to publish (used if action is 'publish')."
+                },
+                "agent_version": {
+                    "type": "string",
+                    "description": "The version of the agent to publish (used if action is 'publish')."
+                },
+                "agent_endpoint": {
+                    "type": "string",
+                    "description": "The endpoint where the agent definition can be fetched (used if action is 'publish')."
                 }
             },
             "required": ["action"]
@@ -105,6 +146,24 @@ mod tests {
         let result = tool.execute.execute(args).await.unwrap();
         assert!(result.contains("Successfully fetched"));
         assert!(result.contains("Data Analyst"));
+    }
+
+    #[tokio::test]
+    async fn test_marketplace_tool_publish() {
+        let client = Arc::new(MarketplaceClient::new(Box::new(MockMarketplaceProvider)));
+        let tool = marketplace_tool(client);
+
+        let args = json!({
+            "action": "publish",
+            "agent_name": "Writer",
+            "agent_description": "Writes essays",
+            "agent_author": "Tester"
+        });
+
+        let result = tool.execute.execute(args).await.unwrap();
+        assert!(result.contains("Successfully published"));
+        assert!(result.contains("mock-id-123"));
+        assert!(result.contains("Writer"));
     }
 
     #[tokio::test]
