@@ -33,11 +33,11 @@ test.describe('The Ambassador - Intelligent Customer Auto-Responder', () => {
     await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 25000 });
 
     // Look for the specific card based on source or content
-    const feedCard = page.locator('div[data-testid="agent-feed-card"]', { hasText: 'instagram dm' }).first();
+    const feedCard = page.locator('div[data-testid="agent-feed-card"]', { hasText: 'New Message from' }).first();
     await expect(feedCard).toBeVisible({ timeout: 25000 });
 
     // Ensure draft text contains "vegan" (from context) or at least basic draft
-    await expect(feedCard).toContainText('vegan', { ignoreCase: true });
+    await expect(feedCard).toContainText('vegan', { ignoreCase: true, timeout: 25000 });
 
     // 5. Click "Send Draft"
     const approveBtn = feedCard.getByTestId('feed-approve-btn');

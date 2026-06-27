@@ -329,7 +329,7 @@ impl Department for CustomerSuccessAgent {
             let description = if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
             } else {
-                "Action Required: Approve Reply".to_string()
+                "The Ambassador drafted a response for your review.".to_string()
             };
 
             let inbox_id = event.payload.get("inbox_message_id")
@@ -380,7 +380,7 @@ impl Department for CustomerSuccessAgent {
         }
 
         if event.payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
-            let description = "Action Required: Approve Reply".to_string();
+            let description = "The Ambassador drafted a response for your review.".to_string();
             let action_payload = event.payload.clone();
 
             let approval_req = self.orchestrator.execute_action(
