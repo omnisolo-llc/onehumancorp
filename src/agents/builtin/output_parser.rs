@@ -113,10 +113,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 .find(|t| t.name == "structured_output")
         {
             if let Some(data) = call.arguments.get("data") {
-                return match serde_json::from_value::<T>(data.clone()) {
-                    Ok(parsed) => Ok(parsed),
-                    Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
-                };
+                return self.validate_schema(data);
             } else {
                 return Err(
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
@@ -1003,6 +1000,22 @@ mod tests_clamped {
 }
 
 impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for AdvancedPydanticOutputParser<T> {
+    fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
+        match serde_json::from_value::<T>(data.clone()) {
+            Ok(parsed) => Ok(parsed),
+            Err(e) => {
+                let args_str = serde_json::to_string(data).unwrap_or_default();
+                Err(crate::types::format_pydantic_error(
+                    &e,
+                    Some(&args_str),
+                    Some("Please strictly follow the Pydantic-first tool schema and try again."),
+                ))
+            }
+        }
+    }
+}
+
+impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
         match serde_json::from_value::<T>(data.clone()) {
             Ok(parsed) => Ok(parsed),
