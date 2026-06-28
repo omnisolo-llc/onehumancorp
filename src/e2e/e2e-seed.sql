@@ -645,3 +645,10 @@ ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE IF EXISTS job_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS service_routes ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+VALUES
+('e2e-feed-ops-daily-routine', 'e2e-tenant', 'Operations Agent', '{"feature_type": "daily_prep_checklist", "description": "Daily Prep Checklist"}'::jsonb, '{"action_type": "Daily Prep Checklist", "message": "Review Daily Prep Checklist"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET lifecycle_state = EXCLUDED.lifecycle_state,
+    updated_at = CURRENT_TIMESTAMP;
