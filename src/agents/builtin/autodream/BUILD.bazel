@@ -4,7 +4,6 @@ rust_library(
     name = "autodream",
     srcs = [
         "mod.rs",
-        "store.rs",
     ],
     crate_root = "mod.rs",
 
