@@ -1426,7 +1426,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss proposal"
-              data-testid="dismiss-sale"
+              data-testid="feed-dismiss-btn"
             >
               Dismiss
             </button>
@@ -1445,7 +1445,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Draft it"
-              data-testid="approve-draft"
+              data-testid="feed-approve-btn"
             >
               Yes, draft it!
             </button>
@@ -1460,7 +1460,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss proposal"
-              data-testid="dismiss-draft"
+              data-testid="feed-dismiss-btn"
             >
               Dismiss
             </button>
@@ -1479,7 +1479,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Approve Restock"
-              data-testid="approve-restock"
+              data-testid="feed-approve-btn"
             >
               Approve Restock
             </button>
@@ -1494,7 +1494,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss restock"
-              data-testid="dismiss-restock"
+              data-testid="feed-dismiss-btn"
             >
               Dismiss
             </button>
@@ -1513,7 +1513,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve & Send"
-              data-testid="approve-send-proposal"
+              data-testid="feed-approve-btn"
             >
               Approve & Send
             </button>
@@ -1537,7 +1537,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 }
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Ask Agent to Adjust"
-                data-testid="reject-proposal"
+                data-testid="feed-dismiss-btn"
               >
                 Ask Agent to Adjust
               </button>
@@ -1591,7 +1591,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve proposal"
-              data-testid={`triage-approve-${approval.id}`}
+              data-testid="feed-approve-btn"
             >
               Approve
             </button>
@@ -1627,7 +1627,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 }
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Reject proposal"
-                data-testid={`triage-dismiss-${approval.id}`}
+                data-testid="feed-dismiss-btn"
               >
                 Deny
               </button>

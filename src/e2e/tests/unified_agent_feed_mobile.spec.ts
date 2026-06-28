@@ -7,6 +7,7 @@ test.describe('Mobile Unified Agent Feed @mobile', () => {
   test('should display Action Center and agent feed cards on mobile dashboard', async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard');
+    await page.waitForTimeout(5000);
 
     // Check if the unified agent feed structure is present
     await expect(page.locator('section[aria-label="Unified Agent Feed"]')).toBeVisible();

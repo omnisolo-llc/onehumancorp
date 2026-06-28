@@ -40,7 +40,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
   test("1b. Check specific seeded cards", async ({ page }) => {
     await performLogin(page);
 
-    await page.goto("/feed");
+    await page.goto("/dashboard");
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000); // give time for ws
 
@@ -57,7 +57,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
   test("2. Tapping Approve & Send on Instagram DM dismisses the card", async ({ page }) => {
     await performLogin(page);
 
-    await page.goto("/feed");
+    await page.goto("/dashboard");
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -75,7 +75,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
   test("3. Tapping Approve on default proposal dismisses the card", async ({ page }) => {
     await performLogin(page);
 
-    await page.goto("/feed");
+    await page.goto("/dashboard");
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -93,7 +93,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
   test("4. Tapping 'Yes, draft it!' on a draft proposal dismisses the card", async ({ page }) => {
     await performLogin(page);
 
-    await page.goto("/feed");
+    await page.goto("/dashboard");
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
@@ -111,7 +111,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
   test("5. Tapping Dismiss on a draft proposal dismisses the card", async ({ page }) => {
     await performLogin(page);
 
-    await page.goto("/feed");
+    await page.goto("/dashboard");
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(2000);
 
