@@ -310,18 +310,36 @@
             const planRes = await fetch('/api/billing/my-plan', { headers });
             if (planRes.ok) {
                 const planData = await planRes.json();
-                const currentPlan = planData.current_plan; // e.g. "Free", "Starter", "Pro", "Business"
+                const currentPlan = planData.current_plan || 'Free'; // e.g. "Free", "Starter", "Pro", "Business"
 
-                const btnId = `btn-${currentPlan}`;
-                const btn = document.getElementById(btnId);
-                if (btn) {
-                    btn.className = 'btn-secondary';
-                    if (currentPlan === "Free") { btn.disabled = true; } else { btn.onclick = managePlan; }
-                    if (currentPlan === 'Free') { btn.innerText = 'Current Plan'; } else { btn.innerText = 'Manage Plan'; }
-                    btn.style.backgroundColor = '';
-                    btn.style.boxShadow = '';
-                    if (currentPlan === "Free") { btn.onclick = null; }
-                }
+                const allPlans = ['Free', 'Starter', 'Pro', 'Business'];
+                allPlans.forEach(plan => {
+                    const btn = document.getElementById(`btn-${plan}`);
+                    if (!btn) return;
+
+                    if (plan === currentPlan) {
+                        btn.className = 'btn-secondary';
+                        btn.style.backgroundColor = '';
+                        btn.style.boxShadow = '';
+                        if (currentPlan === "Free") {
+                            btn.disabled = true;
+                            btn.onclick = null;
+                            btn.innerText = 'Current Plan';
+                        } else {
+                            btn.disabled = false;
+                            btn.onclick = managePlan;
+                            btn.innerText = 'Manage Plan';
+                        }
+                    } else if (plan === 'Free') {
+                        // User is on a paid plan, but looking at Free
+                        btn.className = 'btn-secondary';
+                        btn.style.backgroundColor = '';
+                        btn.style.boxShadow = '';
+                        btn.disabled = false;
+                        btn.innerText = 'Downgrade to Free';
+                        btn.onclick = managePlan;
+                    }
+                });
             }
         } catch (e) {
             console.error('Failed to fetch current plan', e);
