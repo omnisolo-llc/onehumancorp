@@ -359,7 +359,7 @@
       async function loadItems() {
         const listEl = document.getElementById("triage-list");
         try {
-          const res = await fetch(`/api/ui/dashboard/daily-work?tenant_id=${encodeURIComponent(tenantId())}`);
+          const res = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${encodeURIComponent(tenantId())}`);
           if (!res.ok) throw new Error("Failed to load triage items from the database");
 
           const data = await res.json();
@@ -396,10 +396,17 @@
         }
 
         try {
-          const res = await fetch(`/api/ui/omni_inbox/action?tenant_id=${encodeURIComponent(tenantId())}`, {
-            method: "POST",
+          let url = `/api/ui/omni_inbox/action?tenant_id=${encodeURIComponent(tenantId())}`;
+          let method = "POST";
+          const selected = items.find(i => i.id === id);
+          if (selected && selected.lifecycle_state) {
+            url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
+            method = "PUT";
+          }
+          const res = await fetch(url, {
+            method: method,
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message_id: id, approved, edited_reply: editedReply })
+            body: JSON.stringify(selected && selected.lifecycle_state ? { state: approved ? "APPROVED" : "DISMISSED", context_payload: editedReply ? { draft_reply: editedReply } : undefined } : { message_id: id, approved, edited_reply: editedReply })
           });
 
           if (!res.ok) throw new Error("Failed to update action");
