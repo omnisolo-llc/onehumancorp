@@ -214,7 +214,7 @@ export default function FeedPage() {
 
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
-      <div className="w-full max-w-[375px] mx-auto p-4 space-y-4" data-testid="agent-feed">
+      <div className="w-full max-w-full overflow-hidden px-4 mx-auto space-y-4" data-testid="agent-feed">
 
         {loading && (
           <div className="flex justify-center items-center py-12">
@@ -254,7 +254,7 @@ export default function FeedPage() {
             return (
               <div
                 key={item.id}
-                className={`glassmorphism p-5 relative overflow-hidden transition-all duration-300 rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[210%] ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
+                className={`glassmorphism p-5 relative overflow-hidden break-words whitespace-normal transition-all duration-300 rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[210%] ${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}
                 data-testid="agent-feed-card"
               >
                 <div className="flex justify-between items-start mb-3">
@@ -300,14 +300,14 @@ export default function FeedPage() {
                           // UnifiedAgentFeed does: `handleDecision(approval.id, true, editContent); setEditingId(null);`
                           // Let's keep it separate for now or change saveEdit to do handleAction directly if needed.
                         }}
-                        className="flex-1 min-h-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                         data-testid="feed-save-edit-btn"
                       >
                         {isAmbassador ? 'Save & Send' : 'Save'}
                       </button>
                       <button
                         onClick={cancelEdit}
-                        className="flex-1 min-h-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                         data-testid="feed-cancel-edit-btn"
                       >
                         Cancel
