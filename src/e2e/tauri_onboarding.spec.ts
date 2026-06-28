@@ -236,7 +236,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // It should load the values, we can skip through
     await newPage.waitForTimeout(500);
-    await newPage.evaluate(() => { if (typeof window.goToStep === 'function') { window.goToStep('step-context'); } });
+    await newPage.evaluate(() => { if (typeof window.goToStep === 'function') { window.goToStep('step-context', false); } });
     await newPage.waitForTimeout(500);
     // Mock input selection to pass the UI state if the storage wasn't perfectly parsed
     await newPage.locator('input[value="Local Service"]').evaluate(el => el.checked = true);
