@@ -23,8 +23,15 @@ describe('TooltipRegistry', () => {
 
   it('renders default text on hover', async () => {
     let button: any;
+    const ui = (
+      <TooltipProvider>
+        <WithTooltip id="test-id" defaultText="Default Tooltip">
+          <button>Hover me</button>
+        </WithTooltip>
+      </TooltipProvider>
+    );
     await act(async () => {
-      render(<TooltipProvider><WithTooltip id="test-id" defaultText="Default Tooltip"><button>Hover me</button></WithTooltip></TooltipProvider>);
+      render(ui);
       await new Promise(r => setTimeout(r, 20));
     });
 
@@ -51,8 +58,15 @@ describe('TooltipRegistry', () => {
 
   it('handles touch events (long press) for mobile', async () => {
     let button: any;
+    const ui = (
+      <TooltipProvider>
+        <WithTooltip id="test-id" defaultText="Default Tooltip">
+          <button>Touch me</button>
+        </WithTooltip>
+      </TooltipProvider>
+    );
     await act(async () => {
-      render(<TooltipProvider><WithTooltip id="test-id" defaultText="Default Tooltip"><button>Touch me</button></WithTooltip></TooltipProvider>);
+      render(ui);
       await new Promise(r => setTimeout(r, 20));
     });
 
