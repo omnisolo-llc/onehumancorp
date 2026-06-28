@@ -1,7 +1,7 @@
-vi.mock("next/link", () => ({ default: (props: any) => <a href={props.href}>{props.children}</a> }));
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+vi.mock("next/link", () => ({ default: (props: any) => <a href={props.href}>{props.children}</a> }));
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HelpCenterPage from './page';
 import { TooltipProvider } from '../../components/TooltipRegistry';
