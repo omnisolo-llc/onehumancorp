@@ -3160,6 +3160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="ohc-floating-help-tabs">
             <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
             <button class="ohc-help-tab" data-target="tab-tours">Interactive Tours</button>
+            <button class="ohc-help-tab" data-target="tab-videos">Videos</button>
             <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
         </div>
 
@@ -3202,6 +3203,10 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
+        <div id="tab-videos" class="ohc-help-content">
+            <div id="video-list" style="display: flex; flex-direction: column; gap: 12px;">Loading videos...</div>
+        </div>
+
         <div id="tab-chat" class="ohc-help-content" style="padding-bottom: 12px;">
             <div id="ohc-help-chat-messages">
                 <div class="ohc-chat-msg agent">
@@ -3235,6 +3240,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tab.classList.add('active');
             document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+            if (tab.getAttribute("data-target") === "tab-videos") {
+                fetch("/api/videos").then(r => r.json()).then(data => {
+                    const list = document.getElementById("video-list");
+                    let html = "";
+                    data.forEach(v => {
+                        const safeTitle = v.title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        const safeDuration = (v.duration || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        html += `<div style="background: rgba(255,255,255,0.7); border: 1px solid rgba(226,232,240,0.8); border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 60px; height: 40px; background: #e2e8f0; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 2px;">${safeTitle}</div>
+                                <div style="font-size: 11px; color: #64748b;">${safeDuration}</div>
+                            </div>
+                        </div>`;
+                    });
+                    list.innerHTML = html;
+                }).catch(e => { document.getElementById("video-list").innerHTML = "Error loading videos."; });
+            }
         });
     });
 
