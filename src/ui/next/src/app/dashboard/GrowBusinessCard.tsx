@@ -15,16 +15,25 @@ export function GrowBusinessCard() {
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white font-outfit">Grow Business</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Deploy a zero-config edge-cached storefront for instant consumer discovery.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Deploy a zero-config edge-cached storefront for instant consumer discovery or build a viral widget.</p>
             </div>
           </div>
-          <Link
-            id="review-storefront-btn"
-            href="/edge-storefront-setup"
-            className="px-4 py-2 bg-[#0071E3] hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-          >
-            Review Storefront
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              id="viral-widget-btn"
+              href="/viral-powered-by-ohc-widget"
+              className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Viral Widget
+            </Link>
+            <Link
+              id="review-storefront-btn"
+              href="/edge-storefront-setup"
+              className="px-4 py-2 bg-[#0071E3] hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Review Storefront
+            </Link>
+          </div>
         </div>
       </div>
     </div>
