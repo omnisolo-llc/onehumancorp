@@ -6,14 +6,15 @@ export async function POST(req: Request) {
     const backendUrl = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
 
     // Try to actually store the credentials in the database if there is an endpoint
-    await fetch(`${backendUrl}/api/v1/settings/integrations/whatsapp`, {
+    const response = await fetch(`${backendUrl}/api/v1/settings/integrations/whatsapp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-    }).catch(e => {
-        // Fallback for tests if endpoint is not implemented
-        console.warn("Backend integration endpoint not reachable, simulating success", e);
     });
+
+    if (!response.ok) {
+        throw new Error(`Backend returned ${response.status}`);
+    }
 
     return NextResponse.json({ success: true, message: 'Twilio WhatsApp connected successfully' });
   } catch (error) {
