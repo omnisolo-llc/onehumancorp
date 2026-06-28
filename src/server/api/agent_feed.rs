@@ -2,7 +2,7 @@ use axum::{
     extract::{Extension, Path, Query, State, ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, put},
+    routing::{get, put, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -103,6 +103,7 @@ where
         .route("/", get(list_feed_items).post(create_feed_item))
         .route("/{id}/state", put(update_feed_item_state))
         .route("/ws", get(ws_feed_handler))
+        .route("/approve", post(approve_feed_item))
 }
 
 pub async fn ws_feed_handler(
@@ -351,6 +352,24 @@ async fn update_feed_item_state(
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+#[derive(Deserialize)]
+pub struct ApproveFeedItemRequest {
+    pub id: String,
+}
+
+async fn approve_feed_item(
+    pool: State<PgPool>,
+    claims: Extension<Claims>,
+    Json(payload): Json<ApproveFeedItemRequest>,
+) -> impl IntoResponse {
+    let update_req = UpdateStateRequest {
+        state: "APPROVED".to_string(),
+        proposed_action: None,
+        context_payload: None,
+    };
+    update_feed_item_state(pool, Path(payload.id), claims, Json(update_req)).await
 }
 
 #[cfg(test)]
