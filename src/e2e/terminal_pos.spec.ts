@@ -117,7 +117,7 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     await page.getByRole('button', { name: /Record Cash Sale \$/ }).click();
 
     // Wait for the payment success text
-    await expect(page.getByText('Payment Successful!')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(/Payment received/)).toBeVisible({ timeout: 20000 });
   });
 
   test('Clears cart correctly after skipping receipt on tap-to-pay', async ({ page }) => {
@@ -131,7 +131,7 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     await page.getByRole('button', { name: /Record Cash Sale \$/ }).click();
 
     // Wait for the success screen to appear
-    await expect(page.getByText('Payment Successful!')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(/Payment received/)).toBeVisible({ timeout: 20000 });
 
     // Click No Receipt
     await page.getByRole('button', { name: 'No Receipt' }).click();
