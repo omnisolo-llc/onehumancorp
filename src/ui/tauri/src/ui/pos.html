@@ -844,18 +844,32 @@
                                   if (processResult.error) {
                                       console.error('Process failed:', processResult.error);
                                   } else {
-                                      // Commit inventory
-                                      await fetch('/api/v1/payments/terminal/commit', {
+                                      // Capture Payment and Commit Inventory
+                                      const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
                                           method: 'POST',
                                           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
-                                          body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, amount_cents: currentAmountCents, lock_id: intentData.lock_id })
+                                          body: JSON.stringify({
+                                              payment_intent_id: collectResult.paymentIntent.id,
+                                              product_id: currentProductId,
+                                              quantity: 1,
+                                              amount_cents: currentAmountCents,
+                                              lock_id: intentData.lock_id
+                                          })
                                       });
+
+                                      const captureData = await captureRes.json();
 
                                       // Success
                                       tapOverlay.style.display = 'none';
                                       posView.style.display = 'none';
                                       receiptScreen.style.display = 'flex';
-                                      document.querySelector('.receipt-text').innerText = "Payment Successful";
+
+                                      if (captureData.success) {
+                                          const invId = captureData.invoice_id ? captureData.invoice_id : "Generated";
+                                          document.querySelector('.receipt-text').innerText = "Payment received. Invoice #" + invId + " sent.";
+                                      } else {
+                                          document.querySelector('.receipt-text').innerText = "Payment Successful, but capture failed: " + captureData.error_message;
+                                      }
                                       return; // done!
                                   }
                               }
@@ -877,7 +891,19 @@
 
           // In real flow, we'd confirm the intent and sync offline txs.
           // We simulate the offline sync for E2E validation:
-          if (!navigator.onLine) {
+          if (!stripeTerminal && navigator.onLine) {
+              fetch('/api/v1/payments/terminal/commit', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                  body: JSON.stringify({ tenant_id: tenantId, product_id: currentProductId, quantity: 1, amount_cents: currentAmountCents })
+              }).then(res => res.json()).then(data => {
+                  if (data.success && data.invoice_id) {
+                      document.querySelector('.receipt-text').innerText = "Payment received. Invoice #" + data.invoice_id + " sent.";
+                  } else {
+                      document.querySelector('.receipt-text').innerText = "Payment Successful";
+                  }
+              }).catch(console.error);
+          } else if (!navigator.onLine) {
               document.querySelector('.receipt-text').innerText = "Offline Quick Charge Saved.";
               enqueueOfflineMutation({
                   type: 'tap_to_pay',

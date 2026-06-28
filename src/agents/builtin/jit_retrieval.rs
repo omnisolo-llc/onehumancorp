@@ -1,6 +1,6 @@
 #![allow(clippy::empty_line_after_doc_comments)]
 /// Master Catalog B.4. Context Management (Preventing Context Rot)
-/// Just-in-Time (JIT) Retrieval Mechanic
+/// JetBrains JIT Retrieval Mechanic
 /// "Never load full files. Implement tools that act like grep, glob, head, and tail."
 /// And dynamically pull relevant past sessions, tool docs, or code snippets before LLM calls.
 use crate::memory_store::LongTermMemory;

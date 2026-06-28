@@ -131,7 +131,7 @@ fn glob_match(pattern: &str, text: &str) -> bool {
 pub fn find_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Find".to_string(),
-        description: "Search for files in a directory hierarchy. Returns newline-separated paths. Used for Context Management (Preventing Context Rot): Just-in-Time (JIT) Context Retrieval.".to_string(),
+        description: "Search for files in a directory hierarchy. Returns newline-separated paths. Used for Context Management (Preventing Context Rot): JetBrains JIT Retrieval (grep, glob).".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
