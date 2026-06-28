@@ -105,7 +105,7 @@ async fn create_invoice_draft(
 
     let invoice = Invoice {
         id: invoice_id,
-        tenant_id: payload.tenant_id,
+        tenant_id: auth.organization_id.clone().unwrap_or_default(),
         customer_id: payload.customer_id,
         status: Some("Draft".to_string()),
         due_date: payload.due_date,
@@ -143,7 +143,7 @@ async fn apply_payment(
     let repo = LedgerRepository::new(state.db);
     let event = PaymentEvent {
         id: Uuid::new_v4().to_string(),
-        tenant_id: payload.tenant_id,
+        tenant_id: auth.organization_id.clone().unwrap_or_default(),
         invoice_id: payload.invoice_id,
         amount: payload.amount,
         method: payload.method,

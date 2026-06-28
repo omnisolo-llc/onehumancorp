@@ -200,6 +200,7 @@ async fn create_quote(
 }
 
 async fn draft_quote_agent(
+    axum::extract::Extension(auth): axum::extract::Extension<server_common::Claims>,
     State(pool): State<PgPool>,
     Json(payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
@@ -240,7 +241,7 @@ async fn draft_quote_agent(
     let required_deposit_cents = total_amount_cents / 3;
 
     let create_req = CreateQuoteRequest {
-        tenant_id: payload.tenant_id,
+        tenant_id: auth.organization_id.clone().unwrap_or_default(),
         customer_id: payload.customer_id,
         total_amount_cents: Some(total_amount_cents),
         required_deposit_cents: Some(required_deposit_cents),
