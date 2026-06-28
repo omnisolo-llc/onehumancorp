@@ -371,16 +371,8 @@ export default function OnboardingWizard() {
         updateState({ location: intakeData.location || "" });
         updateState({ targetAudience: intakeData.target_audience || "" });
 
-        // Let the normal handleStartOnboarding function take over if admin details are missing
-        if (!adminEmail.trim() || !adminPassword.trim()) {
-          updateState({ step: 3 }); syncStateToBackend({
-            step: 3,
-            firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-            firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00"
-          });
-          updateState({ isLoading: false });
-          return;
-        }
+        const defaultAdminEmail = adminEmail.trim() ? adminEmail : `admin@${generateSubdomain(intakeData.business_name || 'my-business')}`;
+        const defaultAdminPassword = adminPassword.trim() ? adminPassword : 'Password123!';
 
         const startRes = await fetchWithRetry(`${backendUrl}/api/onboarding/start`, {
           method: 'POST',
@@ -395,9 +387,9 @@ export default function OnboardingWizard() {
             company_description: newHistory.map(m => m.content).join(" "),
             selling_categories: intakeData.categories || ["physical"],
             payment_pref: "online",
-            admin_email: adminEmail,
+            admin_email: defaultAdminEmail,
             admin_name: adminName || intakeData.business_name || "Admin",
-            admin_password: adminPassword,
+            admin_password: defaultAdminPassword,
             website_template: "auto",
             first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
             first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
@@ -716,7 +708,7 @@ Image provided: ${instantImageUrl}`;
                 <button
                   type="button"
                   className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all"
-                  onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }}
+                  onClick={() => { updateState({ step: 0 }); syncStateToBackend({ step: 0 }); }}
                 >
                   Conversational Setup
                 </button>
