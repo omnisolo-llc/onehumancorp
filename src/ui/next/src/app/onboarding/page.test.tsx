@@ -1021,6 +1021,127 @@ describe("OnboardingWizard", () => {
     });
   });
 
+  it("Instant Build: shows validation error when bio is empty", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({ step: -1, bio: "", error: "" });
+    });
+
+    await renderOnboardingWizard();
+
+    const bioInput = screen.getByTestId("instant-bio");
+    await user.clear(bioInput);
+
+    const generateBtn = screen.getByRole("button", { name: /Generate Storefront/i });
+
+    await waitFor(() => {
+      expect(generateBtn).toBeDisabled();
+    });
+  });
+
+  it("Instant Build: completes end-to-end flow with correct API calls", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    let fetchCalls: any[] = [];
+    global.fetch = vi.fn().mockImplementation((url, options) => {
+      fetchCalls.push({ url, options });
+
+      if (typeof url === "string" && url.includes("/api/onboarding/intake")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            business_name: "Instant Tech",
+            business_type: "Consulting",
+            categories: ["digital"],
+            location: "SF",
+            target_audience: "Startups",
+            initial_products: [{ name: "Consult", price: "500.00" }]
+          }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/api/onboarding/start")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ organization_id: "org_123" }),
+        });
+      }
+      if (typeof url === "string" && url.includes("/api/onboarding/launch")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      }
+      if (typeof url === "string" && url.includes("/api/onboarding/state")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      }
+      if (typeof url === "string" && url.includes("/api/onboarding/draft")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      }
+
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    act(() => {
+      useOnboardingStore.setState({ step: -2 });
+    });
+
+    await renderOnboardingWizard();
+
+    const instantBuildBtn = screen.getByRole("button", { name: "Instant Build" });
+    await user.click(instantBuildBtn);
+
+    const bioInput = await screen.findByTestId("instant-bio");
+    await user.type(bioInput, "I consult startups in SF.");
+
+    const generateBtn = screen.getByRole("button", { name: "Generate Storefront" });
+    await user.click(generateBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/You're Live!/i)).toBeInTheDocument();
+    }, { timeout: 4000 });
+
+    const intakeCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/intake'));
+    expect(intakeCall).toBeDefined();
+
+    const startCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/start'));
+    expect(startCall).toBeDefined();
+    const startBody = JSON.parse(startCall.options.body);
+    expect(startBody.company_name).toBe("Instant Tech");
+    expect(startBody.first_product_name).toBe("Consult");
+
+    const launchCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/launch'));
+    expect(launchCall).toBeDefined();
+  });
+
+  it("Instant Build: displays error when API fails", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (typeof url === "string" && url.includes("/api/onboarding/intake")) {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve({ error: "Failed to generate your business" }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    act(() => {
+      useOnboardingStore.setState({ step: -1, bio: "Some bio" });
+    });
+
+    await renderOnboardingWizard();
+
+    const generateBtn = screen.getByRole("button", { name: "Generate Storefront" });
+    await user.click(generateBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/HTTP error! status: 500/i) || screen.queryByText(/Failed to generate your business/i)).toBeInTheDocument();
+    });
+  });
+
   it("allows skipping setup and opens the assistant", async () => {
     const user = userEvent.setup({ delay: null });
 
