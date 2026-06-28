@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('../components/PoweredByOHC', () => ({
+vi.mock('../../components/PoweredByOHC', () => ({
   PoweredByOHC: () => <div data-testid="powered-by-ohc">Powered by OHC</div>,
 }));
 
