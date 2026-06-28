@@ -561,7 +561,7 @@ Your response:",
                 .await
             {
                 ::server_telemetry::record_error_signal("[bug] Failed to schedule weekly health report");
-                tracing::error!("Failed to schedule weekly health report: {}", e);
+                tracing::error!("Failed to schedule weekly health report: {}", e); // pii-safe
             }
 
             Ok::<(), String>(())

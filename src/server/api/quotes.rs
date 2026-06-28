@@ -501,7 +501,7 @@ async fn approve_quote(
             (StatusCode::OK, Json(serde_json::json!({"quote": q}))).into_response()
         },
         Err(e) => {
-            tracing::error!("Failed to create Stripe checkout session: {}", e);
+            tracing::error!("Failed to create Stripe checkout session: {}", e); // pii-safe
             (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
         }
     }

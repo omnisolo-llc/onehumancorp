@@ -102,7 +102,7 @@ pub async fn get_account_handler(
     match engine::get_customer_account(&state.pool, &query.tenant_id, &query.program_id, &query.customer_id).await {
         Ok(account) => Ok(Json(account)),
         Err(e) => {
-            tracing::error!("Failed to fetch account: {}", e);
+            tracing::error!("Failed to fetch account: {}", e); // pii-safe
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
