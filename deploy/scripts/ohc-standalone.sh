@@ -35,6 +35,7 @@ export OHC_STATUS_DIR="${OHC_RUNTIME_DIR}/status"
 
 if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
   export OHC_TELEMETRY_ENABLED=false
+  export DISABLE_TELEMETRY=true
 fi
 
 umask 077
