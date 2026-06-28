@@ -38,6 +38,52 @@ function formatStatus(status?: string) {
   return status || "Open";
 }
 
+function CustomerContextCard({ customerId, tenantId }: { customerId: string; tenantId: string }) {
+  const [summary, setSummary] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchSummary() {
+      try {
+        const res = await fetch(`/api/memory/summary/${tenantId}/${customerId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSummary(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch customer memory summary:", err);
+      }
+    }
+    fetchSummary();
+  }, [customerId, tenantId]);
+
+  if (!summary) return null;
+  if (summary.total_interactions === 0 && summary.segments.length === 0) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border border-gray-100 bg-blue-50/50 p-4 dark:border-white/10 dark:bg-blue-900/10">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Unified Customer Memory</h3>
+        <span className="app-badge good">{summary.total_interactions} interactions</span>
+      </div>
+      {summary.segments.length > 0 && (
+        <div className="mb-2 text-xs text-gray-700 dark:text-gray-300">
+          <span className="font-semibold text-gray-900 dark:text-white">Segments: </span>
+          {summary.segments.join(", ")}
+        </div>
+      )}
+      {summary.preferences.length > 0 && (
+        <div className="mb-2 text-xs text-gray-700 dark:text-gray-300">
+          <span className="font-semibold text-gray-900 dark:text-white">Preferences: </span>
+          {summary.preferences.join(", ")}
+        </div>
+      )}
+      <div className="text-xs text-gray-600 dark:text-gray-400">
+        {summary.summary}
+      </div>
+    </div>
+  );
+}
+
 function InboxWorkspace({
   messages,
   sourceLabel,
@@ -219,6 +265,9 @@ function InboxWorkspace({
                     </div>
                   )}
                 </div>
+                {selected.customer_id && (
+                  <CustomerContextCard customerId={selected.customer_id} tenantId={tenantId()} />
+                )}
                 <div className="mb-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="app-metric-label">Customer Message</div>
