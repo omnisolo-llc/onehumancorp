@@ -297,54 +297,58 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     }
 
                     // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
-                    if !msg.tool_calls.is_empty() {
-                        current_req.messages.push(msg.clone());
-                        let detailed_error = if parse_error_msg.contains("Validation Error") || parse_error_msg.contains("Semantic validation failed") {
-                            parse_error_msg.clone()
-                        } else {
-                            // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
-                            let args_snippet = msg.tool_calls.first().map(|tc| tc.arguments.to_string());
-                            crate::types::format_pydantic_error_string(&parse_error_msg, args_snippet.as_deref(), None)
-                        };
-                        let tool_results = msg
-                            .tool_calls
-                            .iter()
-                            .map(|tc| crate::types::ToolResult::new_llm_recoverable(
-                                tc.id.clone(),
-                                &detailed_error,
-                            ))
-                            .collect();
-
-                        current_req.messages.push(Message {
-                            role: crate::types::Role::Tool,
-                            content: String::new(),
-                            tool_calls: vec![],
-                            tool_results,
-                            response_id: None,
-                            previous_response_id: msg.response_id.clone(),
-                        });
-                    } else {
-                        current_req.messages.push(msg.clone());
-                        let error_context = if parse_error_msg.contains("Validation Error") {
-                            format!(
-                                "{}\nFailed completion: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
-                                parse_error_msg, msg.content
-                            )
-                        } else {
-                            format!(
-                                "Validation Error (Pydantic-first tool schema): Your previous completion failed to parse.\nFailed completion: {}\nReason: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
-                                msg.content, parse_error_msg
-                            )
-                        };
-                        let mut error_msg = Message::user(error_context);
-                        error_msg.previous_response_id = msg.response_id.clone();
-                        current_req.messages.push(error_msg);
-                    }
+                    Self::generate_feedback_message(&mut current_req, msg, &parse_error_msg);
                     attempt += 1;
                 }
             }
         }
     }
+    fn generate_feedback_message(current_req: &mut ChatRequest, msg: &Message, parse_error_msg: &str) {
+        if !msg.tool_calls.is_empty() {
+            current_req.messages.push(msg.clone());
+            let detailed_error = if parse_error_msg.contains("Validation Error") || parse_error_msg.contains("Semantic validation failed") {
+                parse_error_msg.to_string()
+            } else {
+                // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
+                let args_snippet = msg.tool_calls.first().map(|tc| tc.arguments.to_string());
+                crate::types::format_pydantic_error_string(parse_error_msg, args_snippet.as_deref(), None)
+            };
+            let tool_results = msg
+                .tool_calls
+                .iter()
+                .map(|tc| crate::types::ToolResult::new_llm_recoverable(
+                    tc.id.clone(),
+                    &detailed_error,
+                ))
+                .collect();
+
+            current_req.messages.push(Message {
+                role: crate::types::Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results,
+                response_id: None,
+                previous_response_id: msg.response_id.clone(),
+            });
+        } else {
+            current_req.messages.push(msg.clone());
+            let error_context = if parse_error_msg.contains("Validation Error") {
+                format!(
+                    "{}\nFailed completion: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
+                    parse_error_msg, msg.content
+                )
+            } else {
+                format!(
+                    "Validation Error (Pydantic-first tool schema): Your previous completion failed to parse.\nFailed completion: {}\nReason: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
+                    msg.content, parse_error_msg
+                )
+            };
+            let mut error_msg = Message::user(error_context);
+            error_msg.previous_response_id = msg.response_id.clone();
+            current_req.messages.push(error_msg);
+        }
+    }
+
 }
 
 /// Implements the Output Parsing mechanic from the Master Catalog:
