@@ -522,7 +522,55 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   }
                 </div>
               </>
-            ) : (approval.proposed_action || approval.context_payload)?.context
+            ) : (approval.proposed_action?.action_type === 'Daily Prep Checklist' || approval.context_payload?.feature_type === 'daily_prep_checklist') ? (
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="Mark Complete"
+              data-testid="feed-approve-btn"
+            >
+              Mark Complete
+            </button>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  'Assign to Staff',
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="Assign to Staff"
+              data-testid="feed-assign-btn"
+            >
+              Assign to Staff
+            </button>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  false,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              aria-label="Dismiss task"
+              data-testid="feed-dismiss-btn"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)?.context
                 ?.smart_pricing === true ? (
               <>
                 <div className="flex justify-between items-center text-sm mb-1">
