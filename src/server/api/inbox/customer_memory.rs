@@ -78,6 +78,6 @@ pub fn router(db: Arc<DB>) -> Router {
     Router::new()
         .route("/ingest", post(ingest_event))
         .route("/process", post(trigger_processing))
-        .route("/summary/:tenant_id/:customer_id", get(get_profile_summary))
+        .route("/summary/{tenant_id}/{customer_id}", get(get_profile_summary))
         .with_state(state)
 }
