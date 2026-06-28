@@ -184,7 +184,6 @@
       .route-card {
         margin-bottom: 0;
       }
-    }
 
     @media (min-width: 1024px) {
       .route-list {
@@ -196,6 +195,14 @@
 <body>
 
   <div class="app-container">
+
+    <!-- Offline Indicator Banner -->
+    <div id="network-status-indicator" class="hidden mb-4 items-center justify-between px-4 py-2" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px) saturate(200%); border-bottom: 1px solid rgba(0,0,0,0.05);">
+      <div class="flex items-center gap-2 w-full justify-center">
+        <div id="network-status-dot" class="w-2 h-2 rounded-full bg-yellow-400" style="width: 8px; height: 8px; border-radius: 50%; background-color: #FF9500; display: inline-block; margin-right: 6px;"></div>
+        <span id="network-status-text" style="font-size: 14px; font-weight: 600; color: #111;">Working Offline</span>
+      </div>
+    </div>
     <div class="header">
       <h1 class="header-title">Today's Route</h1>
       <div class="header-subtitle" id="date-display">Loading...</div>
@@ -216,9 +223,151 @@
   <script>
     // In a real mobile app/PWA context, we retrieve the tenant ID from the session.
 
+
+    // Offline Sync Logic (IndexedDB CRDT)
+    const DB_NAME = "OHC_Offline_Queue_FieldService";
+    const STORE_NAME = "actions";
+    const DB_VERSION = 1;
+
+    let currentRoutesData = null; // Store local state for optimistic updates
+
+    function getDB() {
+        return new Promise((resolve, reject) => {
+            const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = event => reject(request.error);
+            request.onsuccess = event => resolve(event.target.result);
+            request.onupgradeneeded = event => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: "id" });
+                }
+            };
+        });
+    }
+
+    async function getQueue() {
+        if (!window.indexedDB) return [];
+        try {
+            const db = await getDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readonly");
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error);
+            });
+        } catch(e) {
+            return [];
+        }
+    }
+
+    async function enqueueOfflineMutation(mutation) {
+        if (!mutation.id) {
+            mutation.id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random().toString();
+        }
+        if (!mutation.timestamp) {
+            mutation.timestamp = Date.now();
+        }
+
+        try {
+            const db = await getDB();
+            await new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(mutation);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+            window.dispatchEvent(new Event("ohc_queue_updated"));
+        } catch (e) {
+            console.error("Failed to enqueue offline mutation", e);
+        }
+
+        if (navigator.onLine) {
+            syncOfflineQueue();
+        }
+    }
+
+    async function updateOfflineStatus() {
+        const networkIndicator = document.getElementById("network-status-indicator");
+        if (!networkIndicator) return;
+
+        const queue = await getQueue();
+        const dot = document.getElementById("network-status-dot");
+        const text = document.getElementById("network-status-text");
+
+        if (!navigator.onLine) {
+            networkIndicator.style.display = "flex";
+            networkIndicator.classList.remove("hidden");
+            if (dot) dot.style.backgroundColor = "#FF9500";
+            if (text) text.innerText = "Working Offline - Changes Saved";
+        } else if (queue.length > 0) {
+            networkIndicator.style.display = "flex";
+            networkIndicator.classList.remove("hidden");
+            if (dot) dot.style.backgroundColor = "#0066FF";
+            if (text) text.innerText = "Syncing...";
+        } else {
+            networkIndicator.style.display = "none";
+            networkIndicator.classList.add("hidden");
+        }
+    }
+
+    async function syncOfflineQueue() {
+        if (!navigator.onLine) return;
+        const queue = await getQueue();
+        if (queue.length === 0) return;
+
+        let allOk = true;
+
+        for (const m of queue) {
+            if (m.type === "job_status") {
+                try {
+                    const res = await fetch(`/api/v1/field-service-routing/jobs/${m.jobId}/status`, {
+                        method: 'POST',
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ status: m.status })
+                    });
+                    if (!res.ok) {
+                        allOk = false;
+                    }
+                } catch (e) {
+                    allOk = false;
+                }
+            }
+        }
+
+        if (allOk) {
+            try {
+                const db = await getDB();
+                await new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], "readwrite");
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            } catch(e) {
+                console.error("Failed to clear IndexedDB", e);
+            }
+            updateOfflineStatus();
+            fetchRoutes(); // refresh UI with real truth
+        }
+    }
+
+    window.addEventListener("online", () => {
+        updateOfflineStatus();
+        syncOfflineQueue();
+    });
+    window.addEventListener("offline", updateOfflineStatus);
+    window.addEventListener("ohc_queue_updated", updateOfflineStatus);
+
+    // Initial check
+    updateOfflineStatus();
+
     document.getElementById('date-display').textContent = new Date().toLocaleDateString('en-US', {
       weekday: 'long', month: 'long', day: 'numeric'
     });
+
 
     async function fetchRoutes() {
       try {
@@ -227,17 +376,52 @@
         if (!response.ok) throw new Error('Failed to fetch routes');
 
         const data = await response.json();
+        currentRoutesData = data.routes;
         renderRoutes(data.routes);
       } catch (err) {
         console.error(err);
-        document.getElementById('loading-state').innerHTML = `<p>Error loading routes. Please try again.</p>`;
+        if (!currentRoutesData && !navigator.onLine) {
+          document.getElementById('loading-state').innerHTML = `<p>Offline. No cached data available.</p>`;
+        } else if (!currentRoutesData) {
+          document.getElementById('loading-state').innerHTML = `<p>Error loading routes. Please try again.</p>`;
+        } else {
+          // Keep showing cached data
+          renderRoutes(currentRoutesData);
+        }
       }
     }
+    }
+
 
     async function updateJobStatus(jobId, newStatus) {
-      try {
-        // Optimistic UI update could go here
+      // Optimistic UI update
+      if (currentRoutesData) {
+          let updated = false;
+          for (const route of currentRoutesData) {
+              for (const job of (route.jobs || [])) {
+                  if (job.id === jobId) {
+                      job.status = newStatus;
+                      updated = true;
+                      break;
+                  }
+              }
+              if (updated) break;
+          }
+          if (updated) {
+              renderRoutes(currentRoutesData);
+          }
+      }
 
+      if (!navigator.onLine) {
+          enqueueOfflineMutation({
+              type: "job_status",
+              jobId: jobId,
+              status: newStatus
+          });
+          return;
+      }
+
+      try {
         const response = await fetch(`/api/v1/field-service-routing/jobs/${jobId}/status`, {
           method: 'POST',
           headers: {
@@ -246,13 +430,20 @@
           body: JSON.stringify({ status: newStatus })
         });
 
-        if (!response.ok) throw new Error('Failed to update status');
+        if (!response.ok) {
+            // enqueue to retry later
+            enqueueOfflineMutation({
+                type: "job_status",
+                jobId: jobId,
+                status: newStatus
+            });
+            throw new Error('Failed to update status');
+        }
 
         // Refresh the list to get ground truth from the server
         await fetchRoutes();
       } catch (err) {
         console.error(err);
-        alert('Could not update job status. Check your connection.');
       }
     }
 
