@@ -50,7 +50,7 @@ test('shows predictive AI insights when pro is active', () => {
   localStorage.setItem('pro_plan', 'true');
   render(<BusinessAnalytics />);
   expect(screen.queryByText('See The Future')).not.toBeInTheDocument();
-  expect(screen.getByText('Predictive Data Not Available Yet')).toBeInTheDocument();
+  expect(screen.getByText('Revenue Forecast')).toBeInTheDocument();
 });
 
 test('opens soft paywall modal when clicking Unlock Predictions', () => {

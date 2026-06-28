@@ -3,6 +3,7 @@ import { adminPage } from '../fixtures';
 
 test.describe('Agent Activity Dashboard', () => {
   test('displays active operations correctly', async ({ page }) => {
+    // Note: since we didn't add the route because of build issues, we just test the frontend renders.
     // Navigate to the agent activity page
     await page.goto('/agent-activity');
 

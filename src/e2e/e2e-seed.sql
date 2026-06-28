@@ -197,10 +197,10 @@ SET name = EXCLUDED.name,
     preferences = EXCLUDED.preferences,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata, is_subscribable, subscription_frequency, subscription_discount_percent)
+INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
 VALUES
-  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb, true, 'monthly', 10),
-  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}'::jsonb, false, null, null)
+  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb),
+  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}'::jsonb)
 ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
     description = EXCLUDED.description,
@@ -212,14 +212,14 @@ SET title = EXCLUDED.title,
     metadata = EXCLUDED.metadata,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO orders (id, tenant_id, customer_id, total_amount_cents, status)
+INSERT INTO orders (id, tenant_id, customer_id, total_amount, status)
 VALUES
   ('e2e-order-1', 'e2e-tenant', 'e2e-customer-ava', 39.99, 'ready'),
   ('e2e-order-2', 'e2e-tenant', 'e2e-customer-ben', 75.00, 'pending'),
   ('e2e-order-abandoned-1', 'e2e-tenant', 'e2e-customer-ben', 100.00, 'abandoned')
 ON CONFLICT (id) DO UPDATE
 SET customer_id = EXCLUDED.customer_id,
-    total_amount_cents = EXCLUDED.total_amount_cents,
+    total_amount = EXCLUDED.total_amount,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
@@ -535,7 +535,7 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
-INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES
+INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES
 ('823e4567-e89b-12d3-a456-426614174000', 'e2e-tenant', '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', 'DRAFT', 15000, 5000, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 
@@ -560,10 +560,6 @@ VALUES
   ('e2e-product-4002-pos', 'e2e-tenant', 'POS Fail Product', 'POS Fail Product', 'physical', 40.02, 4002, 'USD', 100, '{"seeded_by":"e2e"}'::jsonb);
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALUES
 ('ms_e2e_revenue_1k', 'e2e-tenant', 'revenue_1k', CURRENT_TIMESTAMP)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALUES
-('ms_e2e_revenue_10k', 'e2e-milestone-tenant', 'revenue_10k', CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 UPDATE tenants SET plan_tier = 'Starter' WHERE id = 'e2e-tenant';
 INSERT INTO tenants (id, name, industry, plan_tier, has_claimed_trial_extension)
@@ -628,20 +624,3 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('e2e-tenant', 'ohc_llm_cost_total_cents', 'gauge', 200000, '{"agent_id": "agent_test_high_usage"}', CURRENT_TIMESTAMP, 'PENDING');
-
-ALTER TABLE IF EXISTS service_routes DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS job_locations DISABLE ROW LEVEL SECURITY;
-
-INSERT INTO service_routes (id, tenant_id, staff_id, route_date, status)
-VALUES
-  ('e2e-route-1', 'e2e-tenant', 'e2e-admin-user', CURRENT_DATE, 'planned')
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO job_locations (id, tenant_id, service_route_id, customer_id, job_title, address, lat, lng, scheduled_start, scheduled_end, status, order_index)
-VALUES
-  ('e2e-job-1', 'e2e-tenant', 'e2e-route-1', 'e2e-customer-ava', 'Fix leaking sink', '123 Main St', 37.7749, -122.4194, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + interval '1 hour', 'pending', 0),
-  ('e2e-job-2', 'e2e-tenant', 'e2e-route-1', 'e2e-customer-ben', 'Roof repair estimate', '456 Oak Ave', 37.7849, -122.4294, CURRENT_TIMESTAMP + interval '2 hours', CURRENT_TIMESTAMP + interval '3 hours', 'pending', 1)
-ON CONFLICT (id) DO NOTHING;
-
-ALTER TABLE IF EXISTS job_locations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS service_routes ENABLE ROW LEVEL SECURITY;

@@ -3,7 +3,7 @@ use serde_json::json;
 
 #[tokio::test]
 async fn test_create_skill() {
-    let tool = create_skill_tool(None);
+    let tool = create_skill_tool();
 
     // Test match
     let res = tool.execute.execute(json!({

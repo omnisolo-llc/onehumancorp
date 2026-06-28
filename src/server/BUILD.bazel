@@ -84,8 +84,6 @@ SERVER_RS_SRCS = [
     "//src/server/api:fulfillment.rs",
     "//src/server/api:shipping.rs",
     "//src/server/api/booking:mod.rs",
-
-
     "//src/server/api/booking:request.rs",
     "//src/server/api/booking:available_slots.rs",
     "//src/server/api/booking:reserve.rs",
@@ -101,7 +99,6 @@ SERVER_RS_SRCS = [
     "//src/server/api/agents:client_intake.rs",
     "//src/server/api/onboarding:mod.rs",
     "//src/server/api/inbox:srcs",
-    "//src/server/api/ohc_job_queue:srcs",
     "//src/server/autodream:mod.rs",
     "//src/server/autodream_pipeline:llm_client.rs",
     "//src/server/autodream_pipeline:mod.rs",
@@ -349,8 +346,6 @@ SERVER_RS_SRCS = [
     "//src/server/workers:calendar_sync.rs",
     "//src/server/workers:booking_reengagement.rs",
     "//src/server/workers:mod.rs",
-    "//src/server/workers:subscription_replenishment_job.rs",
-    "//src/server/workers:subscription_replenishment_worker.rs",
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",
     "//src/server/voice:router.rs",
@@ -361,7 +356,7 @@ SERVER_RS_SRCS = [
 rust_library(
     name = "minimax",
     srcs = ["minimax.rs"],
-    edition = "2021",
+    edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/pricing:server_pricing",
@@ -383,7 +378,7 @@ rust_library(
         "//:CHANGELOG.md",
     ],
     data = ["//src/server/migrations"],
-    edition = "2021",
+    edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -396,7 +391,6 @@ rust_library(
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:app_tonic",
-        "//src/proto:inventory_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:common_prost",
         "//src/proto:docs_prost",
@@ -493,7 +487,7 @@ rust_test(
     ],
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-    edition = "2021",
+    edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
@@ -518,7 +512,7 @@ rust_test(
 rust_binary(
     name = "server",
     srcs = ["main.rs"],
-    edition = "2021",
+    edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
         ":server_lib",
@@ -628,7 +622,7 @@ SERVER_LIB_SPLIT_TESTS = [
         args = filters,
         crate = ":server_lib",
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-        edition = "2021",
+        edition = "2024",
         rustc_flags = ["--cfg=ohc_bazel"],
         env = {
             "RUST_TEST_THREADS": "1",
@@ -661,7 +655,7 @@ rust_test(
     args = SERVER_LIB_TEST_GROUPS["core"],
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-    edition = "2021",
+    edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
@@ -715,7 +709,7 @@ test_suite(
         ],
         crate = ":server_lib",
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-        edition = "2021",
+        edition = "2024",
         rustc_flags = ["--cfg=ohc_bazel"],
         env = {
             "RUST_TEST_THREADS": "1",
@@ -763,7 +757,7 @@ rust_test(
         "lib.rs",
         "//src/server/migrations",
     ],
-    edition = "2021",
+    edition = "2024",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -783,7 +777,7 @@ rust_test(
     size = "small",
     srcs = ["cart_recovery.rs"],
     crate_root = "cart_recovery.rs",
-    edition = "2021",
+    edition = "2024",
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -808,7 +802,7 @@ rust_test(
     size = "large",
     srcs = ["telemetry_test.rs"],
     data = ["//deploy/scripts:ohc-standalone.sh"] + SERVER_RS_SRCS,
-    edition = "2021",
+    edition = "2024",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -834,7 +828,7 @@ rust_test(
     ],
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-    edition = "2021",
+    edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
@@ -858,7 +852,7 @@ rust_test(
     size = "small",
     srcs = ["crypto.rs"],
     crate_root = "crypto.rs",
-    edition = "2021",
+    edition = "2024",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -890,7 +884,7 @@ rust_test(
     ],
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-    edition = "2021",
+    edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
@@ -917,7 +911,7 @@ rust_test(
     args = ["api::growth"],
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-    edition = "2021",
+    edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
@@ -945,7 +939,7 @@ rust_test(
     ],
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-    edition = "2021",
+    edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
@@ -976,7 +970,7 @@ rust_test(
     ],
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-    edition = "2021",
+    edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",

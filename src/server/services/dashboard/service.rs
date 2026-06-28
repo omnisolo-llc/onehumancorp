@@ -48,13 +48,30 @@ impl MyDashboardService {
         let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
         let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        let s = self.clone();
-        let org_id_clone = org_id.to_string();
-        let agents = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(30), move || async move {
-            s.fetch_agents_impl(&org_id_clone, mobile_optimized).await.ok()
-        }).await;
+        if let Some((agents, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(agents);
+            }
 
-        agents.ok_or_else(|| "Failed to fetch agents".to_string())
+            // Prevent thundering herd by extending the TTL briefly before spawning
+            cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
+
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(agents) = s.fetch_agents_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = AGENTS_CACHE.get() {
+                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(30)).await;
+                    }
+                }
+            });
+            return Ok(agents);
+        }
+
+        let agents = self.fetch_agents_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(30)).await;
+        Ok(agents)
     }
 
     #[tracing::instrument(skip(self))]
@@ -82,13 +99,30 @@ impl MyDashboardService {
         let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
         let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        let s = self.clone();
-        let org_id_clone = org_id.to_string();
-        let meetings = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(15), move || async move {
-            s.fetch_meetings_impl(&org_id_clone, mobile_optimized).await.ok()
-        }).await;
+        if let Some((meetings, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(meetings);
+            }
 
-        meetings.ok_or_else(|| "Failed to fetch meetings".to_string())
+            // Prevent thundering herd by extending the TTL briefly before spawning
+            cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
+
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(meetings) = s.fetch_meetings_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = MEETINGS_CACHE.get() {
+                        c.set(&cache_key_bg, meetings, std::time::Duration::from_secs(15)).await;
+                    }
+                }
+            });
+            return Ok(meetings);
+        }
+
+        let meetings = self.fetch_meetings_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(15)).await;
+        Ok(meetings)
     }
 
     #[tracing::instrument(skip(self))]
@@ -118,13 +152,30 @@ impl MyDashboardService {
         let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
         let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        let s = self.clone();
-        let org_id_clone = org_id.to_string();
-        let cost = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(60), move || async move {
-            s.fetch_cost_summary_impl(&org_id_clone, mobile_optimized).await.ok()
-        }).await;
+        if let Some((cost_data, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(cost_data);
+            }
 
-        cost.ok_or_else(|| "Failed to fetch cost summary".to_string())
+            // Prevent thundering herd by extending the TTL briefly before spawning
+            cache.set(&cache_key, cost_data.clone(), std::time::Duration::from_secs(5)).await;
+
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(cost_data) = s.fetch_cost_summary_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = COST_CACHE.get() {
+                        c.set(&cache_key_bg, cost_data, std::time::Duration::from_secs(60)).await;
+                    }
+                }
+            });
+            return Ok(cost_data);
+        }
+
+        let cost_data = self.fetch_cost_summary_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, cost_data.clone(), std::time::Duration::from_secs(60)).await;
+        Ok(cost_data)
     }
 
     #[tracing::instrument(skip(self))]
@@ -201,13 +252,30 @@ impl MyDashboardService {
         let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
         let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        let s = self.clone();
-        let org_id_clone = org_id.to_string();
-        let products = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(3600), move || async move {
-            s.fetch_products_impl(&org_id_clone, mobile_optimized).await.ok()
-        }).await;
+        if let Some((products, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(products);
+            }
 
-        products.ok_or_else(|| "Failed to fetch products".to_string())
+            // Prevent thundering herd by extending the TTL briefly before spawning
+            cache.set(&cache_key, products.clone(), std::time::Duration::from_secs(5)).await;
+
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(products) = s.fetch_products_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = PRODUCTS_CACHE.get() {
+                        c.set(&cache_key_bg, products, std::time::Duration::from_secs(3600)).await;
+                    }
+                }
+            });
+            return Ok(products);
+        }
+
+        let products = self.fetch_products_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, products.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(products)
     }
 
     #[tracing::instrument(skip(self))]
@@ -262,13 +330,30 @@ impl MyDashboardService {
         let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
         let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        let s = self.clone();
-        let org_id_clone = org_id.to_string();
-        let orders = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), move || async move {
-            s.fetch_orders_impl(&org_id_clone, mobile_optimized).await.ok()
-        }).await;
+        if let Some((orders, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(orders);
+            }
 
-        orders.ok_or_else(|| "Failed to fetch orders".to_string())
+            // Prevent thundering herd by extending the TTL briefly before spawning
+            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
+
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(orders) = s.fetch_orders_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = ORDERS_CACHE.get() {
+                        c.set(&cache_key_bg, orders, std::time::Duration::from_secs(5)).await;
+                    }
+                }
+            });
+            return Ok(orders);
+        }
+
+        let orders = self.fetch_orders_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
+        Ok(orders)
     }
 
     #[tracing::instrument(skip(self))]
@@ -335,13 +420,30 @@ impl MyDashboardService {
         let cache_key = format!("hub:bookings:{}:{}", org_id, mobile_optimized);
         let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        let s = self.clone();
-        let org_id_clone = org_id.to_string();
-        let bookings = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), move || async move {
-            s.fetch_bookings_impl(&org_id_clone, mobile_optimized).await.ok()
-        }).await;
+        if let Some((bookings, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(bookings);
+            }
 
-        bookings.ok_or_else(|| "Failed to fetch bookings".to_string())
+            // Prevent thundering herd by extending the TTL briefly before spawning
+            cache.set(&cache_key, bookings.clone(), std::time::Duration::from_secs(5)).await;
+
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(bookings) = s.fetch_bookings_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = BOOKINGS_CACHE.get() {
+                        c.set(&cache_key_bg, bookings, std::time::Duration::from_secs(5)).await;
+                    }
+                }
+            });
+            return Ok(bookings);
+        }
+
+        let bookings = self.fetch_bookings_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, bookings.clone(), std::time::Duration::from_secs(5)).await;
+        Ok(bookings)
     }
 
     #[tracing::instrument(skip(self))]
@@ -392,13 +494,30 @@ impl MyDashboardService {
         let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
         let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        let s = self.clone();
-        let org_id_clone = org_id.to_string();
-        let org = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(3600), move || async move {
-            s.fetch_org_impl(&org_id_clone, mobile_optimized).await.ok()
-        }).await;
+        if let Some((org, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(org);
+            }
 
-        org.ok_or_else(|| "Failed to fetch org".to_string())
+            // Prevent thundering herd by extending the TTL briefly before spawning
+            cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(5)).await;
+
+            let s = self.clone();
+            let org_id_clone = org_id.to_string();
+            let cache_key_bg = cache_key.clone();
+            tokio::spawn(async move {
+                if let Ok(org) = s.fetch_org_impl(&org_id_clone, mobile_optimized).await {
+                    if let Some(c) = ORG_CACHE.get() {
+                        c.set(&cache_key_bg, org, std::time::Duration::from_secs(3600)).await;
+                    }
+                }
+            });
+            return Ok(org);
+        }
+
+        let org = self.fetch_org_impl(org_id, mobile_optimized).await?;
+        cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
+        Ok(org)
     }
 }
 

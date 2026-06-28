@@ -35,7 +35,10 @@ describe('POST /api/v1/growth/campaign/generate-customer-referral', () => {
         });
 
         const res = await POST(req);
-        expect(res.status).toBe(502);
+        const data = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(data.message).toContain('at Test Store');
     });
 
     it('returns fallback message on fetch error', async () => {
@@ -48,7 +51,10 @@ describe('POST /api/v1/growth/campaign/generate-customer-referral', () => {
         });
 
         const res = await POST(req);
-        expect(res.status).toBe(502);
+        const data = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(data.message).toContain('at our store');
 
         consoleErrorSpy.mockRestore();
     });

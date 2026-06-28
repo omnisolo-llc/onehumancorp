@@ -514,18 +514,12 @@ mod tests {
 
 async fn simulate_autonomous_booking_quote(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
-    headers: axum::http::HeaderMap,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    let tenant_id = headers.get("x-test-tenant-id").and_then(|h| h.to_str().ok()).unwrap_or("test_tenant").to_string();
-
-    let proposed_slot_id = uuid::Uuid::new_v4().to_string();
-
-    // Acquire Redis Redlock for the slot
-    if let Ok(redis_url) = std::env::var("OHC_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
-        if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url) {
-            let _ = redis_lock.acquire_lock(&tenant_id, "booking_slot", &proposed_slot_id, 600).await;
-        }
-    }
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
 
     let payload = serde_json::json!({
         "feature_type": "autonomous_quote",
@@ -537,7 +531,6 @@ async fn simulate_autonomous_booking_quote(
             { "start_time": "2024-10-15T14:00:00Z", "end_time": "2024-10-15T15:00:00Z" },
             { "start_time": "2024-10-15T16:00:00Z", "end_time": "2024-10-15T17:00:00Z" }
         ],
-        "proposed_slot_id": proposed_slot_id,
         "require_deposit": true,
         "deposit_amount_cents": 9000,
         "inbox_message_id": "msg_simulated_quote_123"

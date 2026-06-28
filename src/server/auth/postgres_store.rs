@@ -125,8 +125,8 @@ impl UserRepository for PgUserRepository {
         };
 
         // Parse roles from JSON string
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
-        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
+        let roles_json: String = row.get("roles");
+        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -170,8 +170,8 @@ impl UserRepository for PgUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
-        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
+        let roles_json: String = row.get("roles");
+        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -215,8 +215,8 @@ impl UserRepository for PgUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
-        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
+        let roles_json: String = row.get("roles");
+        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -260,8 +260,8 @@ impl UserRepository for PgUserRepository {
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
-        let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
+        let roles_json: String = row.get("roles");
+        let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
         tx.rollback().await.map_err(|e| e.to_string())?;
 
@@ -300,8 +300,8 @@ impl UserRepository for PgUserRepository {
 
         let mut users = Vec::new();
         for row in rows {
-            let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
-            let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
+            let roles_json: String = row.get("roles");
+            let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
             users.push(User {
                 id: row.get("id"),

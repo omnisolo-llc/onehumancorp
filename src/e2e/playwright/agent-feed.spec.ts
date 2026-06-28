@@ -26,14 +26,14 @@ test.describe('Unified Agent Feed (Mobile MVP)', () => {
     await page.goto('/feed');
 
     // Wait for feed items to load
-    await page.waitForSelector('[data-testid="agent-feed"]', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('[data-testid="agent-feed"]');
 
     // Ensure there is no horizontal scroll
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 
-    await page.waitForSelector('[data-testid="agent-feed-card"]', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('[data-testid="agent-feed-card"]');
 
     const cards = page.locator('[data-testid="agent-feed-card"]');
 
@@ -45,10 +45,8 @@ test.describe('Unified Agent Feed (Mobile MVP)', () => {
       const buttonCount = await buttons.count();
       for (let i = 0; i < buttonCount; i++) {
           const boundingBox = await buttons.nth(i).boundingBox();
-          if (boundingBox) {
-            expect(boundingBox.width).toBeGreaterThanOrEqual(44);
-            expect(boundingBox.height).toBeGreaterThanOrEqual(44);
-          }
+          expect(boundingBox?.width).toBeGreaterThanOrEqual(44);
+          expect(boundingBox?.height).toBeGreaterThanOrEqual(44);
       }
 
       const firstApproveButton = buttons.filter({ hasText: 'Approve' }).first();

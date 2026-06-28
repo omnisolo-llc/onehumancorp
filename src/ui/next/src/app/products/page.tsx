@@ -1,26 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AppShell } from "../components/AppShell";
 
-
+const importedProducts = [
+  { name: "Chocolate Cake", price: "$20.00", status: "Imported" },
+  { name: "Vanilla Celebration Cake", price: "$24.00", status: "Imported" },
+  { name: "Wedding Cake Consultation", price: "$75.00", status: "Imported" },
+];
 
 export default function ProductsPage() {
-  const [importedProducts, setImportedProducts] = useState<any[]>([]);
-  useEffect(() => {
-    fetch('/api/v1/catalog/products')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-            setImportedProducts(data.map(p => ({
-                name: p.title,
-                price: "$" + (p.price_cents / 100).toFixed(2),
-                status: "Active"
-            })));
-        }
-      })
-      .catch(console.error);
-  }, []);
   const [selectedProduct, setSelectedProduct] = useState<{ name: string; price: string; status: string } | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 

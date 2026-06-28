@@ -1,33 +1,52 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  const payload = await request.json().catch(() => null);
   try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-    const tenantId = request.headers.get('x-tenant-id') || 'storefront';
-    const headers: Record<string, string> = {
-      'x-tenant-id': tenantId,
-      'Content-Type': 'application/json',
-    };
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
+    const body = await request.json();
+    const { appointments, delayJobId } = body;
+
+    if (!appointments || !Array.isArray(appointments) || !delayJobId) {
+      return NextResponse.json({ error: 'Missing or invalid data' }, { status: 400 });
     }
 
-    const res = await fetch(`${backendUrl}/api/v1/field-ops/running-late`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
+    const delayedJobIndex = appointments.findIndex((a: any) => a.id === delayJobId);
+
+    if (delayedJobIndex === -1) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    const DELAY_MINUTES = 30;
+    const DELAY_MS = DELAY_MINUTES * 60 * 1000;
+
+    let subsequentCount = 0;
+    const optimizedRoute = appointments.map((job: any, index: number) => {
+      if (index > delayedJobIndex && !['Completed', 'Cancelled'].includes(job.status)) {
+        subsequentCount++;
+        const newStart = new Date(new Date(job.scheduled_start_time).getTime() + DELAY_MS).toISOString();
+        const newEnd = new Date(new Date(job.scheduled_end_time).getTime() + DELAY_MS).toISOString();
+        return {
+          ...job,
+          scheduled_start_time: newStart,
+          scheduled_end_time: newEnd
+        };
+      }
+      return job;
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data, { status: 200 });
+    let agentSuggestion = null;
+    if (subsequentCount > 0) {
+      agentSuggestion = `Drafting delay notifications for the next ${subsequentCount} clients. Approve?`;
     } else {
-        return NextResponse.json({ error: 'Failed to update running late' }, { status: res.status });
+      agentSuggestion = "No subsequent appointments to notify.";
     }
+
+    return NextResponse.json({
+        success: true,
+        optimizedRoute,
+        subsequentCount,
+        agentSuggestion
+    });
   } catch (error) {
-    console.error('Failed to update running late in backend:', error);
-    return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 }

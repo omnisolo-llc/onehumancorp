@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
 import { useWalkthrough } from "../../components/help";
-import { WalkthroughTarget, InteractiveWalkthrough } from "../../components/Walkthrough";
+import { WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useBuilderStore } from "./store";
 
@@ -28,8 +28,6 @@ export default function BuilderPage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [startY, setStartY] = useState(0);
   const [saveMessage, setSaveMessage] = useState("");
-  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
   const { startWalkthrough } = useWalkthrough();
 
   const [wizardStep1Error, setWizardStep1Error] = useState("");
@@ -58,15 +56,6 @@ export default function BuilderPage() {
   const [tenantId, setTenantId] = useState("storefront");
 
   useEffect(() => {
-    fetch("/api/walkthrough/store-setup")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setWalkthroughSteps(data);
-        }
-      })
-      .catch((err) => console.error("Walkthrough fetch failed:", err));
-
     const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
     setTenantId(savedTenantId);
     setIsLoaded(true);
@@ -296,26 +285,9 @@ export default function BuilderPage() {
           </div>
 
           <div className="px-8 pb-8 flex flex-col flex-1 justify-start overflow-y-auto">
-            <InteractiveWalkthrough
-              steps={walkthroughSteps}
-              isOpen={isWalkthroughOpen}
-              onClose={() => setIsWalkthroughOpen(false)}
-            />
             {wizardStep === 1 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                <WalkthroughTarget id="dashboard-title">
-                  <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Let's build your store</h1>
-                </WalkthroughTarget>
-                <div className="mb-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsWalkthroughOpen(true)}
-                    id="dashboard-walkthrough-btn"
-                    className="app-button min-h-[44px]"
-                  >
-                    Start Tour
-                  </button>
-                </div>
+                <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Let's build your store</h1>
                 <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                   Start with the basics. What's your business called, and what do you do?
                 </p>

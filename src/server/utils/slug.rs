@@ -1,9 +1,5 @@
 pub fn slugify(text: &str) -> String {
     let text = text.trim();
-    if text.is_empty() {
-        return String::new();
-    }
-
     let mut slug = String::with_capacity(text.len());
     let mut last_was_dash = true; // Start true to prevent leading dash
 

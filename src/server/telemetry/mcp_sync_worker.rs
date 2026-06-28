@@ -16,11 +16,6 @@ impl McpSyncWorker {
         }
     }
 
-    pub fn process_telemetry_labels(labels_json: &str) -> String {
-        let parsed = serde_json::from_str::<serde_json::Value>(labels_json).unwrap_or(serde_json::Value::Null);
-        crate::redact_interface_pii(parsed).to_string()
-    }
-
     pub async fn run(&self) {
         info!("Starting McpSyncWorker...");
         loop {
@@ -51,13 +46,11 @@ impl McpSyncWorker {
             let labels_json: String = row.get("labels_json");
             let timestamp: chrono::NaiveDateTime = row.get("timestamp");
 
-            let redacted_labels_str = Self::process_telemetry_labels(&labels_json);
-
             let res = sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'synced')")
                 .bind(metric_name)
                 .bind(metric_type)
                 .bind(value)
-                .bind(redacted_labels_str)
+                .bind(labels_json)
                 .bind(chrono::DateTime::<Utc>::from_naive_utc_and_offset(timestamp, Utc))
                 .execute(&mut *tx)
                 .await;

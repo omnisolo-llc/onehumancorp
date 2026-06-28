@@ -31,7 +31,7 @@ pub async fn compact_context(
             if !m.tool_calls.is_empty() {
                 middle_text.push_str("Tool Calls:\n");
                 for tc in &m.tool_calls {
-                    middle_text.push_str(&format!("  {} ({})\n", tc.name, tc.arguments));
+                    middle_text.push_str(&format!("  {} ({})\n", tc.name, tc.arguments.to_string()));
                 }
             }
             if !m.tool_results.is_empty() {

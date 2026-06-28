@@ -120,16 +120,12 @@ Source: {}
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
 If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
-You have access to the following Staff Availability Data (Simulated):
-Shift ID 'shift_123' belongs to 'sam_890'.
-Available replacement: 'alex_456'.
-If the message is a call-out, action_type MUST be 'Reassign Shift' and action_payload MUST be a JSON string with 'original_staff_id' (e.g. 'sam_890'), 'new_staff_id' (e.g. 'alex_456'), 'shift_id' (e.g. 'shift_123'), 'start_time', 'end_time'.
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
     \"feature_type\": \"instagram_dm\" or \"general\",
     \"context_summary\": \"A short one sentence summary of the request.\",
-    \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\" or \"Reassign Shift\",
+    \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
     \"action_payload\": \"The draft reply, or quote JSON string, or booking JSON string.\"
 }}",
                 sender_id, customer_message, source
@@ -339,11 +335,6 @@ Output JSON format:
                         }
                     }
                 }
-            } else if action_type == "Reassign Shift" {
-                if let Ok(_shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
-                    let draft_shift_id = Uuid::new_v4();
-                    booking_id_opt = Some(draft_shift_id.to_string());
-                }
             } else if action_type == "Draft Quote" {
                 if let Ok(quote_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                     let draft_quote_id = Uuid::new_v4();
@@ -513,7 +504,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
@@ -641,7 +632,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" { "ambassador_reply" } else { "quote_draft" }
                     }).to_string())
                     .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);

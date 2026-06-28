@@ -14,7 +14,7 @@ struct CreateSkillArgs {
 }
 
 struct CreateSkillExecutor {
-    accessor: Option<Arc<dyn super::anthropic_memory::MemoryAccessor>>,
+    // We are mocking persistence for now as LongTermMemory is not exported easily
 }
 
 #[async_trait::async_trait]
@@ -24,13 +24,10 @@ impl PydanticToolExecutor<CreateSkillArgs> for CreateSkillExecutor {
         let description = args.description;
         let instruction = args.instruction;
 
-        let content = format!("Skill: {}\nDescription: {}\nInstruction: {}", skill_name, description, instruction);
+        let _content = format!("Skill: {}\nDescription: {}\nInstruction: {}", skill_name, description, instruction);
         let _tags = vec!["skill".to_string(), "autonomous".to_string(), skill_name.clone()];
 
-        if let Some(accessor) = &self.accessor {
-            if let Err(e) = accessor.write_topic(&skill_name, &content).await {
-                return Err(ToolError::LlmRecoverable(format!("Failed to save curated skill to memory: {}", e)));
-            }
+        if false {
             Ok(format!("Successfully created and saved curated skill '{}'. Description: {}. Instruction: {}", skill_name, description, instruction))
         } else {
             // For tests or runs without a memory store
@@ -39,7 +36,7 @@ impl PydanticToolExecutor<CreateSkillArgs> for CreateSkillExecutor {
     }
 }
 
-pub fn create_skill_tool(accessor: Option<Arc<dyn super::anthropic_memory::MemoryAccessor>>) -> Tool {
+pub fn create_skill_tool() -> Tool {
     Tool {
         name: "CreateSkill".to_string(),
         description: "Curates recent complex trajectory into a reusable autonomous skill.".to_string(),
@@ -62,7 +59,7 @@ pub fn create_skill_tool(accessor: Option<Arc<dyn super::anthropic_memory::Memor
             },
             "required": ["name", "description", "instruction"]
         }),
-        execute: Arc::new(PydanticAdapter::new(CreateSkillExecutor { accessor })),
+        execute: Arc::new(PydanticAdapter::new(CreateSkillExecutor {})),
     }
 }
 

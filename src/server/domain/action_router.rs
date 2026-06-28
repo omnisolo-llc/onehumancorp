@@ -34,14 +34,7 @@ pub async fn dispatch_action(
                 .await
                 .map_err(|e| e.to_string())?;
         }
-
-        "autonomous_quote" => {
-            crate::domain::booking::handle_autonomous_quote_action(tenant_id, payload, pool)
-                .await
-                .map_err(|e| e.to_string())?;
-        }
         "dispute_resolution" => {
-
             tracing::info!("Approved and resolved dispute for tenant: {}", tenant_id);
             if let Some(msg) = payload.get("generated_response").and_then(|v| v.as_str()) {
                 tracing::info!("Dispute Resolution Engine sent reply: {}", msg);

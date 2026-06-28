@@ -35,20 +35,13 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         setTargetRect(targetElement.getBoundingClientRect());
       }, 300);
 
-      // Also attach resize/scroll listeners for recalculation with debounce
-      let resizeTimeoutId: NodeJS.Timeout;
-      const handleScroll = () => {
-          clearTimeout(resizeTimeoutId);
-          resizeTimeoutId = setTimeout(() => {
-              setTargetRect(targetElement.getBoundingClientRect());
-          }, 50);
-      };
+      // Also attach resize/scroll listeners for recalculation (simplified for this example)
+      const handleScroll = () => setTargetRect(targetElement.getBoundingClientRect());
       window.addEventListener('scroll', handleScroll, true);
       window.addEventListener('resize', handleScroll);
 
       return () => {
         clearTimeout(timeoutId);
-        clearTimeout(resizeTimeoutId);
         window.removeEventListener('scroll', handleScroll, true);
         window.removeEventListener('resize', handleScroll);
       };
@@ -146,7 +139,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
         id="walkthrough-bubble"
-        className="ohc-walkthrough-bubble fixed z-[10000] bg-white/80 dark:bg-black/60 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.15)] rounded-3xl p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
+        className="ohc-walkthrough-bubble fixed z-[10000] bg-white/80 dark:bg-black/60 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 shadow-2xl rounded-3xl p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
@@ -192,10 +185,10 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
  * It wraps its children in a relative container with the specified ID, which is then
  * targeted by the walkthrough overlay and speech bubble logic.
  */
-export function WalkthroughTarget({ id, children, className = "" }: { id: string, children?: ReactNode, className?: string }) {
+export function WalkthroughTarget({ id, children, className = "" }: { id: string, children: ReactNode, className?: string }) {
   return (
     <div id={id} className={`relative ${className}`}>
-      {children || <div className="hidden" aria-hidden="true" />}
+      {children}
     </div>
   );
 }

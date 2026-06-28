@@ -41,7 +41,6 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     scrollToBottom();
   }, [messages, isLoading, isProvisioning]);
 
-
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!input.trim() || isLoading || isProvisioning) return;
@@ -50,38 +49,34 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
-    setIsProvisioning(true);
+    setIsLoading(true);
 
     try {
-      const response = await fetch('/api/v1/growth/zero-click-builder/generate', {
+      const response = await fetch('/api/v1/onboarding/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userMessage.content }),
+        body: JSON.stringify({ messages: newMessages }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate business');
+      if (!response.ok) throw new Error('Failed to communicate with agent');
 
       const data = await response.json();
 
-      // Complete immediately in tests to avoid timeout issues
-      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-         setIsProvisioning(false);
-         onComplete(data);
-      } else {
-        setTimeout(() => {
-          setIsProvisioning(false);
-          onComplete(data);
-        }, 1500);
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+
+      if (data.is_complete && data.intake_data) {
+        setIsProvisioning(true);
+        handleProvisioning(data.intake_data, newMessages.map(m => m.content).join(' '));
       }
     } catch (error) {
-      console.error("Provisioning error:", error);
-      setIsProvisioning(false);
+      console.error("Chat error:", error);
       setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I ran into an issue processing that. Please try again." }]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleProvisioning = async (intakeData: IntakeData, fullPrompt: string) => {
-
     try {
       const firstProduct = intakeData.initial_products?.[0] || { name: 'Standard Service', price: '10.00' };
 
@@ -222,7 +217,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading || isProvisioning}
-            placeholder="e.g. I am a home baker in Austin selling custom vegan cakes."
+            placeholder="Type your message..."
             className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full py-3 pl-4 pr-12 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           />
           <button

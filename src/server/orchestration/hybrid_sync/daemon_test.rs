@@ -470,8 +470,6 @@ async fn test_hybrid_sync_pos_offline_transactions() {
                 last_synced_at TEXT
             )").execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
-
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
@@ -499,8 +497,6 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         .execute(&pg_pool)
         .await
         .unwrap();
-
-        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS sub_agent_queue (
@@ -579,8 +575,6 @@ async fn test_hybrid_sync_pos_offline_transactions() {
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )").execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
-
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
@@ -611,8 +605,6 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         .execute(&pg_pool)
         .await
         .unwrap();
-
-        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         // Insert stuck queued tasks
         sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at) VALUES ('stuck_queued_sqlite', 'tenant1', 'QUEUED', datetime('now', '-25 hour'))")

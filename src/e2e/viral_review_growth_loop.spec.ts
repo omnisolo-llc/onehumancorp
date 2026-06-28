@@ -12,7 +12,7 @@ test.describe('Viral Review Growth Loop', () => {
     await page.goto('/leave-review?order=e2e-order-123');
 
     // Wait for the UI to be ready
-
+    await page.waitForLoadState('networkidle');
 
     // Check if the form is visible
     await expect(page.getByRole('heading', { name: 'How was your experience?' })).toBeVisible();
@@ -53,8 +53,8 @@ test.describe('Viral Review Growth Loop', () => {
 });
 
   test('submitting a low review reveals generic feedback without referral link', async ({ page }) => {
-    await page.goto('/leave-review?order=e2e-order-123');
-
+    await page.goto('/leave-review.html');
+    await page.waitForLoadState('networkidle');
     const stars = page.locator('button:has(span:has-text("★"))');
     await expect(stars).toHaveCount(5);
     await stars.nth(2).click();
@@ -65,8 +65,8 @@ test.describe('Viral Review Growth Loop', () => {
   });
 
   test('review form submits even if optional comment is not filled', async ({ page }) => {
-    await page.goto('/leave-review?order=e2e-order-123');
-
+    await page.goto('/leave-review.html');
+    await page.waitForLoadState('networkidle');
     const stars = page.locator('button:has(span:has-text("★"))');
     await expect(stars).toHaveCount(5);
     await stars.nth(4).click();
@@ -75,15 +75,15 @@ test.describe('Viral Review Growth Loop', () => {
   });
 
   test('review form fails validation and disables submit if 0 stars', async ({ page }) => {
-    await page.goto('/leave-review?order=e2e-order-123');
-
+    await page.goto('/leave-review.html');
+    await page.waitForLoadState('networkidle');
     const submitBtn = page.getByRole('button', { name: 'Submit Review' });
     await expect(submitBtn).toBeDisabled();
   });
 
   test('return to store button works from success page', async ({ page }) => {
-    await page.goto('/leave-review?order=e2e-order-123');
-
+    await page.goto('/leave-review.html');
+    await page.waitForLoadState('networkidle');
     const stars = page.locator('button:has(span:has-text("★"))');
     await stars.nth(4).click();
     await page.getByRole('button', { name: 'Submit Review' }).click();

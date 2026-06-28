@@ -146,7 +146,7 @@
       <div class="card-footer">
         <div>Redeemable at My Store</div>
         <span>Powered by OHC</span>
-        <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=&source=gift_card" id="powered-by-link">⚡ Powered by OHC</a>
+        <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-tenant&source=gift_card" id="powered-by-link">⚡ Powered by OHC</a>
       </div>
     </div>
 
@@ -186,7 +186,7 @@
         generateBtn.textContent = 'Generating...';
 
         try {
-          const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant");
+          const tenantId = localStorage.getItem('tenant_id') || 'default-tenant';
           const amount = valueInput.value || '50';
 
           // Set href dynamically based on tenant id (though default-tenant is hardcoded in initial HTML for preview)

@@ -28,7 +28,6 @@ pub mod local_fs_sync;
 pub mod ollama;
 pub mod subagent;
 pub mod head;
-pub mod superpowers_tool;
 pub mod tail;
 pub mod find;
 pub mod hybrid_blob;
@@ -164,7 +163,7 @@ pub fn all_tools(
         checkout::conversational_checkout_tool(),
         quote::generate_quote_tool(),
         aider_pair_programming::aider_pair_programming_tool(),
-        superpowers_tool::superpowers_skill_tool(),
+
 ];
 
     if let Some(llm) = agent_llm {

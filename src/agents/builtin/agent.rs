@@ -115,8 +115,6 @@ pub struct AgentRunConfig {
     pub acon_config: Option<crate::acon_context::AconConfig>,
     pub enable_progressive_skills: bool,
     pub progressive_skills_dir: Option<String>,
-    pub enable_sona_patterns: bool,
-    pub sona_patterns_path: Option<String>,
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
     pub observation_masking_size_limit: usize,
@@ -154,6 +152,7 @@ pub struct AgentRunConfig {
     pub curated_memory_nudge_threshold: i32,
     pub enable_time_travel_rewind: bool,
     pub enable_serverless_hibernation: bool,
+    pub enable_sona_patterns: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
@@ -250,8 +249,6 @@ impl Default for AgentRunConfig {
             acon_config: None,
             enable_progressive_skills: false,
             progressive_skills_dir: None,
-            enable_sona_patterns: false,
-            sona_patterns_path: None,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
@@ -289,6 +286,7 @@ impl Default for AgentRunConfig {
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
             enable_serverless_hibernation: false,
+            enable_sona_patterns: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
@@ -3176,30 +3174,17 @@ impl Agent {
 
         let mut self_with_memory = self;
         let owned_agent;
-
-        // We might need to mutate sona_matcher if it's enabled but not loaded
-        let mut dynamic_sona_matcher = self.sona_matcher.clone();
-        if cfg.enable_sona_patterns && dynamic_sona_matcher.is_none() {
-            if let Some(path_str) = &cfg.sona_patterns_path {
-                if let Ok(loaded) = crate::sona_patterns::PatternMatcher::load_from_disk(path_str).await {
-                    dynamic_sona_matcher = Some(Arc::new(tokio::sync::Mutex::new(loaded)));
-                } else {
-                    dynamic_sona_matcher = Some(Arc::new(tokio::sync::Mutex::new(crate::sona_patterns::PatternMatcher::new())));
-                }
-            }
-        }
-
-        if cfg.long_term_memory.is_some() || (cfg.enable_sona_patterns && self.sona_matcher.is_none()) {
+        if let Some(ltm) = &cfg.long_term_memory {
             owned_agent = Agent {
                 event_stream: None,
                 llm: self.llm.clone(),
                 tools: self.tools.clone(),
                 progress: self.progress.clone(),
-                memory_store: cfg.long_term_memory.clone().or_else(|| self.memory_store.clone()),
+                memory_store: Some(ltm.clone()),
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
                 native_env: self.native_env.clone(),
-                sona_matcher: dynamic_sona_matcher,
+                sona_matcher: self.sona_matcher.clone(),
                 skill_trace: self.skill_trace.clone(),
             };
             self_with_memory = &owned_agent;
@@ -3209,17 +3194,16 @@ impl Agent {
 
         let mut final_cfg = cfg.clone();
         let mut actual_initial_message = initial_message.to_string();
-
-        if final_cfg.enable_sona_patterns {
-            if let Some(matcher_arc) = &self_with_memory.sona_matcher {
-                let matcher = matcher_arc.lock().await;
-                if let Some(pattern) = matcher.find_best_match(initial_message) {
-                    actual_initial_message = format!(
-                        "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
-                        pattern.successful_tools.join(" -> "),
-                        initial_message
-                    );
-                }
+        if final_cfg.enable_sona_patterns
+            && let Some(matcher_arc) = &self_with_memory.sona_matcher
+        {
+            let matcher = matcher_arc.lock().await;
+            if let Some(pattern) = matcher.find_best_match(initial_message) {
+                actual_initial_message = format!(
+                    "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
+                    pattern.successful_tools.join(" -> "),
+                    initial_message
+                );
             }
         }
         if final_cfg.max_retries > 2 {
@@ -3921,33 +3905,24 @@ impl Agent {
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
-                if final_cfg.enable_sona_patterns {
-                    if let Some(matcher_arc) = &self_with_memory.sona_matcher {
-                        let mut matcher = matcher_arc.lock().await;
-                        let mut successful_tools = Vec::new();
-                        for msg in &messages {
-                            if msg.role == Role::Assistant {
-                                for tc in &msg.tool_calls {
-                                    successful_tools.push(tc.name.clone());
-                                }
-                            }
-                        }
-                        // Deduplicate tool sequence
-                        successful_tools.dedup();
-
-                        matcher.record_pattern(crate::sona_patterns::TrajectoryPattern {
-                            id: uuid::Uuid::new_v4().to_string(),
-                            initial_context: initial_message.to_string(),
-                            successful_tools,
-                            outcome_score: 1.0,
-                        });
-
-                        if let Some(path_str) = &final_cfg.sona_patterns_path {
-                            if let Err(e) = matcher.save_to_disk(path_str).await {
-                                tracing::warn!("Failed to save SONA patterns to disk: {}", e);
+                if final_cfg.enable_sona_patterns
+                    && let Some(matcher_arc) = &self_with_memory.sona_matcher
+                {
+                    let mut matcher = matcher_arc.lock().await;
+                    let mut successful_tools = Vec::new();
+                    for msg in &messages {
+                        if msg.role == Role::Assistant {
+                            for tc in &msg.tool_calls {
+                                successful_tools.push(tc.name.clone());
                             }
                         }
                     }
+                    matcher.record_pattern(crate::sona_patterns::TrajectoryPattern {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        initial_context: initial_message.to_string(),
+                        successful_tools,
+                        outcome_score: 1.0,
+                    });
                 }
                 return Ok(last_assistant_content);
             }
@@ -11236,117 +11211,5 @@ mod fail_fast_tests {
         // It does not emit event for the skipped tools? Wait, run_anthropic_dumb_loop modifies tool_results locally and then pushes it in a Message.
         // If we want to verify, we might not get the second event. Let us just check dummy_count.
         assert_eq!(dummy_count.load(std::sync::atomic::Ordering::SeqCst), 0);
-    }
-
-    #[tokio::test]
-    async fn test_sona_patterns_integration() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let sona_path = temp_dir.path().join("patterns.json");
-        let sona_path_str = sona_path.to_str().unwrap().to_string();
-
-        struct MockLlmClientSona {
-            call_count: tokio::sync::Mutex<i32>,
-        }
-
-        #[async_trait::async_trait]
-        impl LlmClient for MockLlmClientSona {
-            async fn chat(
-                &self,
-                _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                let mut c = self.call_count.lock().await;
-                *c += 1;
-
-                if *c == 1 {
-                    Ok(crate::types::ChatResponse {
-                        message: crate::types::Message {
-                            role: crate::types::Role::Assistant,
-                            content: "".to_string(),
-                            tool_calls: vec![crate::types::ToolCall {
-                                id: "call_1".to_string(),
-                                name: "read_file".to_string(),
-                                arguments: serde_json::json!({}),
-                            }],
-                            tool_results: vec![],
-                            response_id: Some("mock-id-1".to_string()),
-                            previous_response_id: None,
-                        },
-                        usage: crate::types::Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
-                        response_id: Some("mock-id-1".to_string()),
-                    })
-                } else {
-                    Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("I am done processing the file."),
-                        usage: crate::types::Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id-done".to_string()),
-                    })
-                }
-            }
-        }
-
-        let client = Arc::new(MockLlmClientSona {
-            call_count: tokio::sync::Mutex::new(0),
-        });
-
-        struct MockReadOnlyExecutor;
-        #[async_trait::async_trait]
-        impl ohc_builtin_agent_tools::ToolExecutor for MockReadOnlyExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-                Ok("read".to_string())
-            }
-        }
-
-        let tool = Tool {
-            name: "read_file".to_string(),
-            description: "read".to_string(),
-            parameters: serde_json::json!({}),
-            is_read_only: true,
-            execute: Arc::new(MockReadOnlyExecutor),
-        };
-
-        let mut agent = Agent::new(client, vec![tool]);
-        agent.sona_matcher = Some(Arc::new(tokio::sync::Mutex::new(crate::sona_patterns::PatternMatcher::new())));
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_sona_patterns = true;
-        cfg.sona_patterns_path = Some(sona_path_str.clone());
-
-        cfg.max_iterations = 2;
-
-        let mut on_event = |_| {};
-
-        let initial_message = "Analyze file structure";
-        let res = agent.run(&cfg, initial_message, &mut on_event).await;
-        assert!(res.is_ok());
-
-        // Now check if a pattern was recorded and saved
-        let loaded_matcher = crate::sona_patterns::PatternMatcher::load_from_disk(&sona_path_str).await.unwrap();
-        let _patterns = loaded_matcher.get_patterns();
-
-        // Second run, we should see the SONA prompt injected
-        struct MockLlmClientSona2;
-
-        #[async_trait::async_trait]
-        impl LlmClient for MockLlmClientSona2 {
-            async fn chat(
-                &self,
-                _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                Ok(crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("Done processing immediately."),
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("mock-id-done".to_string()),
-                })
-            }
-        }
-
-        let client_2 = Arc::new(MockLlmClientSona2);
-
-        let agent_2 = Agent::new(client_2.clone(), vec![]);
-        let res_2 = agent_2.run(&cfg, initial_message, &mut on_event).await;
-        assert!(res_2.is_ok());
     }
 }

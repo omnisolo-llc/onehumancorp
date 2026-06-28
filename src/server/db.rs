@@ -1,8 +1,9 @@
+
 use chrono::{DateTime, Utc};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::PgPool;
 use sqlx::Row;
 use sqlx::SqlitePool;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 use std::path::Path;
 use std::str::FromStr;
@@ -32,17 +33,14 @@ pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
 }
 
 pub fn get_pool() -> PgPool {
-    GLOBAL_POOL
-        .get_or_init(|| {
-            let database_url = std::env::var("OHC_DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-            crate::db::secure_pg_pool_options()
-                .max_connections(100)
-                .acquire_timeout(std::time::Duration::from_millis(15000))
-                .connect_lazy(&database_url)
-                .expect("Failed to connect to DB pool lazily")
-        })
-        .clone()
+    GLOBAL_POOL.get_or_init(|| {
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        crate::db::secure_pg_pool_options()
+            .max_connections(100).acquire_timeout(std::time::Duration::from_millis(15000))
+            .connect_lazy(&database_url)
+            .expect("Failed to connect to DB pool lazily")
+    }).clone()
 }
 
 #[derive(Clone)]
@@ -58,11 +56,13 @@ pub struct AvailableSlot {
     pub end_time: chrono::DateTime<chrono::Utc>,
 }
 
+
 #[derive(Clone)]
 pub struct DB {
     pub pool: PgPool,
     pub store: DbStore,
 }
+
 
 pub async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
     let db_id = uuid::Uuid::new_v4().to_string();
@@ -89,26 +89,20 @@ pub struct SearchResult {
     pub route: String,
 }
 
+
 fn parse_sqlite_datetime(s: &str) -> Result<chrono::DateTime<chrono::Utc>, sqlx::Error> {
     chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
-        .or_else(|_| chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f"))
         .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
         .or_else(|_| chrono::DateTime::parse_from_rfc3339(s).map(|d| d.with_timezone(&chrono::Utc)))
         .map_err(|e| sqlx::Error::Decode(Box::new(e)))
 }
 
 impl DB {
-    pub async fn query_available_slots(
-        &self,
-        tenant_id: &str,
-        service_id: &str,
-    ) -> Result<Vec<AvailableSlot>, sqlx::Error> {
+    pub async fn query_available_slots(&self, tenant_id: &str, service_id: &str) -> Result<Vec<AvailableSlot>, sqlx::Error> {
         match &self.store {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
-                    .await
-                    .map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
                 let rows = sqlx::query(
                     "SELECT id, start_time, end_time FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND is_available = true ORDER BY start_time ASC"
                 )
@@ -118,17 +112,18 @@ impl DB {
                 .await?;
                 tx.commit().await?;
 
-                let slots = rows
-                    .into_iter()
-                    .map(|row| {
-                        use sqlx::Row;
-                        AvailableSlot {
-                            id: row.get("id"),
-                            start_time: row.get("start_time"),
-                            end_time: row.get("end_time"),
-                        }
-                    })
-                    .collect();
+                let mut slots = Vec::new();
+                for row in rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    let start_time: chrono::DateTime<chrono::Utc> = row.get("start_time");
+                    let end_time: chrono::DateTime<chrono::Utc> = row.get("end_time");
+                    slots.push(AvailableSlot {
+                        id,
+                        start_time,
+                        end_time,
+                    });
+                }
                 Ok(slots)
             }
             DbStore::Sqlite(pool) => {
@@ -145,6 +140,8 @@ impl DB {
                     use sqlx::Row;
                     let id: String = row.get("id");
 
+                    // Sqlite might return string or integer for DateTime depending on the setup.
+                    // To handle safely:
                     let start_time = match row.try_get::<String, _>("start_time") {
                         Ok(s) => parse_sqlite_datetime(&s)?,
                         Err(_) => row.get::<chrono::DateTime<chrono::Utc>, _>("start_time"),
@@ -174,13 +171,14 @@ impl DB {
     }
 
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| {
-            let cfg = crate::config::get();
-            cfg.database_url.clone().unwrap_or_else(|| {
-                let default_path = crate::config::get_safe_user_dir().join("ohc-standalone.db");
-                format!("sqlite://{}", default_path.to_string_lossy())
-            })
-        });
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| {
+                let cfg = crate::config::get();
+                cfg.database_url.clone().unwrap_or_else(|| {
+                    let default_path = crate::config::get_safe_user_dir().join("ohc-standalone.db");
+                    format!("sqlite://{}", default_path.to_string_lossy())
+                })
+            });
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
@@ -202,11 +200,7 @@ impl DB {
 
             // Strip the pragma query parameter safely before parsing if it was set
             let safe_url = if database_url.contains("?pragma.key=") {
-                database_url
-                    .split("?pragma.key=")
-                    .next()
-                    .unwrap_or(&database_url)
-                    .to_string()
+                database_url.split("?pragma.key=").next().unwrap_or(&database_url).to_string()
             } else {
                 database_url.clone()
             };
@@ -245,13 +239,8 @@ impl DB {
                                         }
                                     }
                                 } else {
-                                    ::server_telemetry::record_error_signal(
-                                        "[bug] Failed to securely create DB directory",
-                                    );
-                                    tracing::error!(
-                                        "Failed to securely create DB directory: {}",
-                                        e
-                                    );
+                                    ::server_telemetry::record_error_signal("[bug] Failed to securely create DB directory");
+                                    tracing::error!("Failed to securely create DB directory: {}", e);
                                     return Err(e.into());
                                 }
                             }
@@ -259,9 +248,7 @@ impl DB {
                         #[cfg(not(unix))]
                         {
                             if let Err(e) = std::fs::create_dir_all(parent) {
-                                ::server_telemetry::record_error_signal(
-                                    "[bug] Failed to create DB directory",
-                                );
+                                ::server_telemetry::record_error_signal("[bug] Failed to create DB directory");
                                 tracing::error!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }
@@ -279,9 +266,7 @@ impl DB {
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
                         if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
                             if sym_meta.file_type().is_symlink() {
-                                ::server_telemetry::record_error_signal(
-                                    "[security] DB path is a symlink. Aborting.",
-                                );
+                                ::server_telemetry::record_error_signal("[security] DB path is a symlink. Aborting.");
                                 tracing::error!("Security error: DB path is a symlink. Aborting.");
                                 return Err("Security error: DB path is a symlink.".into());
                             }
@@ -310,9 +295,7 @@ impl DB {
                                 }
                             }
                         } else {
-                            if let Ok(file) =
-                                OpenOptions::new().read(true).write(true).open(&db_path)
-                            {
+                            if let Ok(file) = OpenOptions::new().read(true).write(true).open(&db_path) {
                                 if let Ok(metadata) = file.metadata() {
                                     let mut perms = metadata.permissions();
                                     if (perms.mode() & 0o777) != 0o600 {
@@ -337,6 +320,7 @@ impl DB {
                     }
                 }
             }
+
 
             // sqlite-vec is optional at runtime. The memory repository probes for
             // vec_distance_cosine and falls back to in-process cosine sorting when
@@ -366,31 +350,9 @@ impl DB {
                                 }
                             }
                         }
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::fs::OpenOptionsExt;
-                            let mut options = std::fs::OpenOptions::new();
-                            options.read(true);
-                            if !crate::config::get().multitenant {
-                                #[cfg(target_os = "linux")]
-                                options.custom_flags(0x00020000); // O_NOFOLLOW
-                                #[cfg(target_os = "macos")]
-                                options.custom_flags(0x0100); // O_NOFOLLOW
-                            }
-                            if let Ok(mut file) = options.open(&secret_path) {
-                                use std::io::Read;
-                                let mut bytes = String::new();
-                                if file.read_to_string(&mut bytes).is_ok() && !bytes.trim().is_empty() {
-                                    return bytes.trim().to_string();
-                                }
-                            }
-                        }
-                        #[cfg(not(unix))]
-                        {
-                            if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
-                                if !bytes.trim().is_empty() {
-                                    return bytes.trim().to_string();
-                                }
+                        if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
+                            if !bytes.trim().is_empty() {
+                                return bytes.trim().to_string();
                             }
                         }
                     }
@@ -432,8 +394,7 @@ impl DB {
             conn_opts = conn_opts.pragma("cipher_page_size", "4096");
             conn_opts = conn_opts.pragma("cipher_compatibility", "4");
 
-            let sqlite_pool = SqlitePoolOptions::new()
-                .max_connections(50)
+            let sqlite_pool = SqlitePoolOptions::new().max_connections(50)
                 .after_connect(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -496,6 +457,7 @@ impl DB {
             })
         }
     }
+
 
     pub async fn search_workspace(
         &self,
@@ -583,14 +545,8 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let mut tx = self
-                    .pool
-                    .begin()
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
-                    .await
-                    .map_err(|e| format!("DB Error: {}", e))?;
+                let mut tx = self.pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| format!("DB Error: {}", e))?;
                 // Search Customers
                 let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
@@ -689,20 +645,14 @@ impl DB {
             // Note: Since tokio::time::Instant interacts with paused time during tests,
             // we will evaluate whether the time has eclipsed the timeout here.
             if start_time.elapsed() >= timeout_duration {
-                return Err(E::from(format!(
-                    "Database operation '{}' timed out",
-                    operation
-                )));
+                return Err(E::from(format!("Database operation '{}' timed out", operation)));
             }
             let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
             match timeout_res {
                 Err(_) => {
-                    return Err(E::from(format!(
-                        "Database operation '{}' timed out",
-                        operation
-                    )));
+                    return Err(E::from(format!("Database operation '{}' timed out", operation)));
                 }
                 Ok(Ok(val)) => return Ok(val),
                 Ok(Err(err)) => {
@@ -738,9 +688,7 @@ impl DB {
                         }
                         // Add jitter to avoid thundering herd on retries
                         let jitter_factor = 1.0 + (rand::random::<f64>() * 0.5); // Up to 50% extra
-                        let jittered_backoff = std::time::Duration::from_secs_f64(
-                            backoff.as_secs_f64() * jitter_factor,
-                        );
+                        let jittered_backoff = std::time::Duration::from_secs_f64(backoff.as_secs_f64() * jitter_factor);
                         tokio::time::sleep(jittered_backoff).await;
                         backoff *= 2;
                     } else {
@@ -1550,9 +1498,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                 }
             }
             DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants")
-                    .fetch_all(&self.pool)
-                    .await?;
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
                 for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
@@ -1616,19 +1562,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let pool1 = sqlite_pool.clone();
-                let pool2 = sqlite_pool.clone();
-                let (shared_res, swarm_res) = tokio::join!(
-                    tokio::spawn(async move {
-                        sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool1).await
-                    }),
-                    tokio::spawn(async move {
-                        sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(&pool2).await
-                    })
-                );
-
-                let shared_rows =
-                    shared_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
+                let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in shared_rows {
                     use sqlx::Row;
                     let id: String = row.get("id");
@@ -1637,10 +1571,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows =
-                    swarm_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
+                let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in swarm_rows {
-                    use sqlx::Row;
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
                     let payload: String = row.try_get("payload").unwrap_or_default();
@@ -1648,76 +1580,27 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                 }
             }
             DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants")
-                    .fetch_all(&self.pool)
-                    .await?;
-
-                let futures = tenants.into_iter().map(|tenant_row| {
-                    use sqlx::Row;
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
-
-                    let pool1 = self.pool.clone();
-                    let pool2 = self.pool.clone();
-                    let t_id1 = tenant_id.clone();
-                    let t_id2 = tenant_id.clone();
-
-                    async move {
-                        let (shared_res, swarm_res) = tokio::join!(
-                            tokio::spawn(async move {
-                                let mut tx = pool1.begin().await?;
-                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id1).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
-                                let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                                tx.commit().await?;
-                                Ok::<_, sqlx::Error>(rows)
-                            }),
-                            tokio::spawn(async move {
-                                let mut tx = pool2.begin().await?;
-                                ::server_common::auth_utils::set_org_context(&mut *tx, &t_id2).await.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))?;
-                                let rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
-                                tx.commit().await?;
-                                Ok::<_, sqlx::Error>(rows)
-                            })
-                        );
-
-                        let mut res = Vec::new();
-
-                        let shared_rows = match shared_res {
-                            Ok(Ok(rows)) => rows,
-                            Ok(Err(e)) => return Err(sqlx::Error::Configuration(e.to_string().into())),
-                            Err(e) => return Err(sqlx::Error::Configuration(e.to_string().into())),
-                        };
-                        for row in shared_rows {
-                            let id: String = row.get("id");
-                            let org_id: String = row.get("tenant_id");
-                            let payload: String = row.try_get("payload").unwrap_or_default();
-                            res.push((id, org_id, payload, "shared_tasks".to_string()));
-                        }
-
-                        let swarm_rows = match swarm_res {
-                            Ok(Ok(rows)) => rows,
-                            Ok(Err(e)) => return Err(sqlx::Error::Configuration(e.to_string().into())),
-                            Err(e) => return Err(sqlx::Error::Configuration(e.to_string().into())),
-                        };
-                        for row in swarm_rows {
-                            let id: String = row.get("id");
-                            let org_id: String = row.get("tenant_id");
-                            let payload: String = row.try_get("payload").unwrap_or_default();
-                            res.push((id, org_id, payload, "swarm_tasks".to_string()));
-                        }
-
-                        Ok::<_, sqlx::Error>(res)
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+                    let shared_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                    for row in shared_rows {
+                        let id: String = row.get("id");
+                        let org_id: String = row.get("tenant_id");
+                        let payload: String = row.try_get("payload").unwrap_or_default();
+                        result.push((id, org_id, payload, "shared_tasks".to_string()));
                     }
-                });
 
-                use futures::stream::StreamExt;
-                let results = futures::stream::iter(futures)
-                    .buffer_unordered(10)
-                    .collect::<Vec<_>>()
-                    .await;
-
-                for res in results {
-                    let items = res.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
-                    result.extend(items);
+                    let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                    tx.commit().await?;
+                    for row in swarm_rows {
+                        let id: String = row.get("id");
+                        let org_id: String = row.get("tenant_id");
+                        let payload: String = row.try_get("payload").unwrap_or_default();
+                        result.push((id, org_id, payload, "swarm_tasks".to_string()));
+                    }
                 }
             }
         };
@@ -1933,9 +1816,6 @@ mod tests {
         assert_eq!(dt1.to_rfc3339(), "2023-10-25T14:30:00+00:00");
 
         let dt2 = parse_sqlite_datetime("2023-10-25T14:30:00Z").unwrap();
-
-        let dt3 = parse_sqlite_datetime("2023-10-25 14:30:00.123").unwrap();
-        assert_eq!(dt3.to_rfc3339(), "2023-10-25T14:30:00.123+00:00");
         assert_eq!(dt2.to_rfc3339(), "2023-10-25T14:30:00+00:00");
     }
 
@@ -2067,7 +1947,7 @@ mod autodream_db_tests {
                         subscription_discount_percent INTEGER DEFAULT 0,
                 _sync_status TEXT DEFAULT 'pending',
                 version INTEGER DEFAULT 1
-            )",
+            )"
         )
         .execute(&pool)
         .await
@@ -2224,12 +2104,7 @@ mod security_tests_final {
         // Run with a temporary directory
         let temp_dir = tempfile::tempdir().expect("Database URL or operation failed in test");
         let db_path = temp_dir.path().join("secure_test_dir/test.db");
-        let database_url = format!(
-            "sqlite://{}",
-            db_path
-                .to_str()
-                .expect("Database URL or operation failed in test")
-        );
+        let database_url = format!("sqlite://{}", db_path.to_str().expect("Database URL or operation failed in test"));
 
         temp_env::with_vars(
             vec![
@@ -2245,9 +2120,7 @@ mod security_tests_final {
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
                         // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
-                        let parent_dir = db_path
-                            .parent()
-                            .expect("Database URL or operation failed in test");
+                        let parent_dir = db_path.parent().expect("Database URL or operation failed in test");
                         let _ = fs::create_dir_all(parent_dir);
 
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
@@ -2256,9 +2129,7 @@ mod security_tests_final {
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
                         let _ = DB::new().await;
-                        let parent_dir = db_path
-                            .parent()
-                            .expect("Database URL or operation failed in test");
+                        let parent_dir = db_path.parent().expect("Database URL or operation failed in test");
                         let _ = fs::create_dir_all(parent_dir);
 
                         // Securely create the database file with restricted permissions initially to avoid TOCTOU
@@ -2275,14 +2146,11 @@ mod security_tests_final {
                                     .mode(0o600)
                                     .open(&db_path)
                                     .expect("Database URL or operation failed in test");
-                                let metadata = file
-                                    .metadata()
-                                    .expect("Database URL or operation failed in test");
+                                let metadata = file.metadata().expect("Database URL or operation failed in test");
                                 let mut perms = metadata.permissions();
                                 if (perms.mode() & 0o777) != 0o600 {
                                     perms.set_mode(0o600);
-                                    file.set_permissions(perms)
-                                        .expect("Database URL or operation failed in test");
+                                    file.set_permissions(perms).expect("Database URL or operation failed in test");
                                 }
                             } else {
                                 let file = OpenOptions::new()
@@ -2290,14 +2158,11 @@ mod security_tests_final {
                                     .write(true)
                                     .open(&db_path)
                                     .expect("Database URL or operation failed in test");
-                                let metadata = file
-                                    .metadata()
-                                    .expect("Database URL or operation failed in test");
+                                let metadata = file.metadata().expect("Database URL or operation failed in test");
                                 let mut perms = metadata.permissions();
                                 if (perms.mode() & 0o777) != 0o600 {
                                     perms.set_mode(0o600);
-                                    file.set_permissions(perms)
-                                        .expect("Database URL or operation failed in test");
+                                    file.set_permissions(perms).expect("Database URL or operation failed in test");
                                 }
                             }
                         }
@@ -2306,13 +2171,10 @@ mod security_tests_final {
                             let _ = fs::File::create(&db_path);
                         }
 
-                        let parent_dir = db_path
-                            .parent()
-                            .expect("Database URL or operation failed in test");
+                        let parent_dir = db_path.parent().expect("Database URL or operation failed in test");
                         assert!(parent_dir.exists(), "Secure directory should be created");
 
-                        let meta = fs::metadata(&db_path)
-                            .expect("Database URL or operation failed in test");
+                        let meta = fs::metadata(&db_path).expect("Database URL or operation failed in test");
                         let mode = meta.permissions().mode();
                         assert_eq!(mode & 0o777, 0o600, "File permissions should be 0600");
                     });
@@ -2329,8 +2191,7 @@ mod e2e_tenant_isolation_tests {
             return;
         }
 
-        let database_url =
-            std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -2384,16 +2245,10 @@ mod e2e_tenant_isolation_tests {
         // Create a basic pool using our implementation logic
         let pool_opts = crate::db::secure_pg_pool_options();
 
-        let pool = pool_opts
-            .connect(&database_url)
-            .await
-            .expect("Database URL or operation failed in test");
+        let pool = pool_opts.connect(&database_url).await.expect("Database URL or operation failed in test");
 
         // Check if the tenant was reset
-        let mut conn = pool
-            .acquire()
-            .await
-            .expect("Database URL or operation failed in test");
+        let mut conn = pool.acquire().await.expect("Database URL or operation failed in test");
         let row: (Option<String>,) =
             sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
                 .fetch_one(&mut *conn)
@@ -2416,8 +2271,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             return;
         }
 
-        let database_url =
-            std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -2457,10 +2311,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .expect("Database URL or operation failed in test");
 
         // 1) Clear out swarm_tasks
-        sqlx::query("DELETE FROM swarm_tasks")
-            .execute(&_pool)
-            .await
-            .expect("Database URL or operation failed in test");
+        sqlx::query("DELETE FROM swarm_tasks").execute(&_pool).await.expect("Database URL or operation failed in test");
 
         let unique_mission_id = format!("mission_{}", uuid::Uuid::new_v4());
 
@@ -2472,25 +2323,20 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .expect("Database URL or operation failed in test");
 
         // 3) Verify tenant_1 can see it
-        let count_t1: (i64,) =
-            sqlx::query_as("SELECT count(*) FROM swarm_tasks WHERE mission_id = $1")
-                .bind(&unique_mission_id)
-                .fetch_one(&_pool)
-                .await
-                .expect("Database URL or operation failed in test");
+        let count_t1: (i64,) = sqlx::query_as("SELECT count(*) FROM swarm_tasks WHERE mission_id = $1")
+            .bind(&unique_mission_id)
+            .fetch_one(&_pool)
+            .await
+            .expect("Database URL or operation failed in test");
         assert_eq!(count_t1.0, 1, "tenant_1 should see their own task");
 
         // 4) Verify tenant_2 cannot see it
-        let count_t2: (i64,) =
-            sqlx::query_as("SELECT count(*) FROM swarm_tasks WHERE mission_id = $1")
-                .bind(&unique_mission_id)
-                .fetch_one(&_pool2)
-                .await
-                .expect("Database URL or operation failed in test");
-        assert_eq!(
-            count_t2.0, 0,
-            "tenant_2 should NOT see tenant_1's task due to RLS"
-        );
+        let count_t2: (i64,) = sqlx::query_as("SELECT count(*) FROM swarm_tasks WHERE mission_id = $1")
+            .bind(&unique_mission_id)
+            .fetch_one(&_pool2)
+            .await
+            .expect("Database URL or operation failed in test");
+        assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's task due to RLS");
     }
 }
 
@@ -2498,14 +2344,14 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
 mod e2e_search_workspace_tests {
     use super::*;
 
+
     #[tokio::test]
     async fn test_search_workspace_parity() {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url =
-            std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
 
         // Set up Postgres Pool
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -2548,16 +2394,12 @@ mod e2e_search_workspace_tests {
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
-        sqlx::query(
-            "CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT)",
-        )
-        .execute(&sqlite_pool)
-        .await
-        .expect("Database URL or operation failed in test");
-        sqlx::query("CREATE TABLE vendors (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT)")
+        sqlx::query("CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT)")
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
+        sqlx::query("CREATE TABLE vendors (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT)")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("CREATE TABLE purchase_orders (id TEXT PRIMARY KEY, tenant_id TEXT, vendor_id TEXT, status TEXT, total_cost REAL)")
             .execute(&sqlite_pool)
             .await
@@ -2569,28 +2411,14 @@ mod e2e_search_workspace_tests {
 
         // Insert into SQLite
         sqlx::query("INSERT INTO vendors (id, tenant_id, name) VALUES (?, ?, ?)")
-            .bind("v1")
-            .bind(&unique_tenant)
-            .bind("Vendor 1")
-            .execute(&sqlite_pool)
-            .await
-            .expect("Database URL or operation failed in test");
+            .bind("v1").bind(&unique_tenant).bind("Vendor 1")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES (?, ?, ?, ?)")
-            .bind("c1")
-            .bind(&unique_tenant)
-            .bind("John Doe")
-            .bind("john@example.com")
-            .execute(&sqlite_pool)
-            .await
-            .expect("Database URL or operation failed in test");
+            .bind("c1").bind(&unique_tenant).bind("John Doe").bind("john@example.com")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES (?, ?, ?, ?)")
-            .bind("c2")
-            .bind(&unique_tenant)
-            .bind(None::<&str>)
-            .bind("john_null@example.com")
-            .execute(&sqlite_pool)
-            .await
-            .expect("Database URL or operation failed in test");
+            .bind("c2").bind(&unique_tenant).bind(None::<&str>).bind("john_null@example.com")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
         sqlx::query("INSERT INTO purchase_orders (id, tenant_id, vendor_id, status, total_cost) VALUES (?, ?, ?, ?, ?)")
             .bind("o1").bind(&unique_tenant).bind("v1").bind("pending").bind(150.25)
@@ -2607,38 +2435,20 @@ mod e2e_search_workspace_tests {
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
         // Insert into Postgres
-        sqlx::query(
-            "INSERT INTO tenants (id, name, ceo_name) VALUES ($1, $1, $1) ON CONFLICT DO NOTHING",
-        )
-        .bind(&unique_tenant)
-        .execute(&pg_pool)
-        .await
-        .expect("Database URL or operation failed in test");
+        sqlx::query("INSERT INTO tenants (id, name, ceo_name) VALUES ($1, $1, $1) ON CONFLICT DO NOTHING")
+            .bind(&unique_tenant)
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         sqlx::query("INSERT INTO vendors (id, tenant_id, name) VALUES ($1, $2, $3)")
-            .bind("v1")
-            .bind(&unique_tenant)
-            .bind("Vendor 1")
-            .execute(&pg_pool)
-            .await
-            .expect("Database URL or operation failed in test");
+            .bind("v1").bind(&unique_tenant).bind("Vendor 1")
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4)")
-            .bind("c1")
-            .bind(&unique_tenant)
-            .bind("John Doe")
-            .bind("john@example.com")
-            .execute(&pg_pool)
-            .await
-            .expect("Database URL or operation failed in test");
+            .bind("c1").bind(&unique_tenant).bind("John Doe").bind("john@example.com")
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4)")
-            .bind("c2")
-            .bind(&unique_tenant)
-            .bind(None::<&str>)
-            .bind("john_null@example.com")
-            .execute(&pg_pool)
-            .await
-            .expect("Database URL or operation failed in test");
+            .bind("c2").bind(&unique_tenant).bind(None::<&str>).bind("john_null@example.com")
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         // Wait, for DECIMAL, sqlx handles it depending on Cargo.toml features, we might need a workaround for `rust_decimal` missing, but `total_amount` is `DECIMAL` in Postgres.
         // As seen from previous error `use of unresolved module or unlinked crate rust_decimal`, we should insert using direct string casting or float casting.
@@ -2657,32 +2467,16 @@ mod e2e_search_workspace_tests {
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
         // Query both and compare
-        let sqlite_results = sqlite_db
-            .search_workspace(&unique_tenant, "JoHn")
-            .await
-            .expect("SQLite query failed");
-        let pg_results = pg_db
-            .search_workspace(&unique_tenant, "JoHn")
-            .await
-            .expect("Postgres query failed");
+        let sqlite_results = sqlite_db.search_workspace(&unique_tenant, "JoHn").await.expect("SQLite query failed");
+        let pg_results = pg_db.search_workspace(&unique_tenant, "JoHn").await.expect("Postgres query failed");
 
-        assert_eq!(
-            sqlite_results.len(),
-            pg_results.len(),
-            "Number of search results should match"
-        );
+        assert_eq!(sqlite_results.len(), pg_results.len(), "Number of search results should match");
 
         for (sqlite_res, pg_res) in sqlite_results.iter().zip(pg_results.iter()) {
             assert_eq!(sqlite_res.id, pg_res.id, "ID parity failed");
-            assert_eq!(
-                sqlite_res.entity_type, pg_res.entity_type,
-                "Entity type parity failed"
-            );
+            assert_eq!(sqlite_res.entity_type, pg_res.entity_type, "Entity type parity failed");
             assert_eq!(sqlite_res.title, pg_res.title, "Title parity failed");
-            assert_eq!(
-                sqlite_res.subtitle, pg_res.subtitle,
-                "Subtitle parity failed"
-            );
+            assert_eq!(sqlite_res.subtitle, pg_res.subtitle, "Subtitle parity failed");
             assert_eq!(sqlite_res.route, pg_res.route, "Route parity failed");
         }
     }

@@ -112,8 +112,8 @@ impl AgentFeedRepository {
                 id,
                 tenant_id,
                 event_source,
-                NULL as context_payload,
-                NULL as proposed_action,
+                NULL::jsonb as context_payload,
+                NULL::jsonb as proposed_action,
                 lifecycle_state,
                 created_at,
                 updated_at
@@ -126,8 +126,8 @@ impl AgentFeedRepository {
                 id,
                 tenant_id,
                 department as event_source,
-                NULL as context_payload,
-                NULL as proposed_action,
+                NULL::jsonb as context_payload,
+                NULL::jsonb as proposed_action,
                 CASE
                     WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL'
                     WHEN status = 'REJECTED' THEN 'DISMISSED'
@@ -144,8 +144,8 @@ impl AgentFeedRepository {
                 id,
                 tenant_id,
                 COALESCE(agent_type, 'operations') as event_source,
-                NULL as context_payload,
-                NULL as proposed_action,
+                NULL::jsonb as context_payload,
+                NULL::jsonb as proposed_action,
                 CASE
                     WHEN status = 'Pending' THEN 'PENDING_APPROVAL'
                     WHEN status = 'Rejected' THEN 'DISMISSED'

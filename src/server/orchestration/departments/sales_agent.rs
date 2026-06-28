@@ -17,8 +17,6 @@ pub struct SalesAgent {
 pub struct QuoteIntent {
     pub original_message: String,
     pub service_name: String,
-    pub preferred_start_time: Option<String>,
-    pub preferred_end_time: Option<String>,
 }
 
 #[async_trait::async_trait]
@@ -89,7 +87,7 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
 
         let payload_json = serde_json::to_string(payload).map_err(|e| e.to_string())?;
         let prompt = format!(
-            "You are the OneHumanCorp sales intent planner. Decide whether an inbound tenant message is asking for a service quote. Return strict JSON only with keys intent, service_name, confidence, original_message, preferred_start_time, and preferred_end_time. intent must be quote or no_quote. confidence is 0.0 to 1.0. service_name must be the concrete service the customer wants only when intent is quote. preferred_start_time and preferred_end_time are optional ISO8601 strings if the customer mentioned specific times. Do not use keyword rules; infer the customer's request from context. Tenant: {tenant_id}. Payload: {payload_json}"
+            "You are the OneHumanCorp sales intent planner. Decide whether an inbound tenant message is asking for a service quote. Return strict JSON only with keys intent, service_name, confidence, and original_message. intent must be quote or no_quote. confidence is 0.0 to 1.0. service_name must be the concrete service the customer wants only when intent is quote. Do not use keyword rules; infer the customer's request from context. Tenant: {tenant_id}. Payload: {payload_json}"
         );
 
         let raw = match &self.backend {
@@ -157,19 +155,9 @@ pub fn extract_quote_intent(payload: &serde_json::Value) -> Option<QuoteIntent> 
                 .and_then(|v| v.as_str())
                 .map(str::trim)
                 .filter(|name| !name.is_empty())?;
-            let preferred_start_time = llm_intent
-                .get("preferred_start_time")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-            let preferred_end_time = llm_intent
-                .get("preferred_end_time")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
             return Some(QuoteIntent {
                 original_message: original_message.to_string(),
                 service_name: service_name.to_string(),
-                preferred_start_time,
-                preferred_end_time,
             });
         }
     }
@@ -215,20 +203,9 @@ pub fn parse_quote_intent_plan(
         .filter(|message| !message.is_empty())
         .unwrap_or(fallback_original_message);
 
-    let preferred_start_time = value
-        .get("preferred_start_time")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let preferred_end_time = value
-        .get("preferred_end_time")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
     Ok(Some(QuoteIntent {
         original_message: original_message.to_string(),
         service_name: service_name.to_string(),
-        preferred_start_time,
-        preferred_end_time,
     }))
 }
 
@@ -258,35 +235,10 @@ impl Department for SalesAgent {
             "tenant.work_intake.received".to_string(),
             "agent:sales:approved".to_string(),
             "pos_sales".to_string(),
-            "tenant.order.created".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.order.created" {
-            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
-            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
-            tracing::info!("Sales Agent received order created for customer: {}, order: {}", customer_id, order_id);
-
-            // Promoter Logic: Draft an upsell/subscription reply.
-            let proposed_action = serde_json::json!({
-                "action_type": "Draft Reply",
-                "customer_id": customer_id,
-                "draft_reply": format!("Hi! Thanks for your order {}. Would you like to set up a subscription for 10% off your next deliveries? Reply YES to subscribe.", order_id),
-                "order_id": order_id
-            });
-
-            self.orchestrator.execute_action(
-                DepartmentType::Sales,
-                "Promote Subscription".to_string(),
-                event.tenant_id.clone(),
-                ActionRisk::DraftForReview,
-                proposed_action,
-            ).await.map_err(|e| e.to_string())?;
-
-            return Ok(());
-        }
-
         if event.event_type == "POS_SALE_COMPLETED" {
             let amount = event.payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
             let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Unknown");
@@ -323,40 +275,11 @@ impl Department for SalesAgent {
                                 tracing::error!("Failed to create checkout session for quote deposit: {}", e);
                             }
                         }
-
-                        if let Some(slot_id) = payload.get("proposed_slot_id").and_then(|v| v.as_str()) {
-                            let _ = self.orchestrator.confirm_booking_slot(&event.tenant_id, slot_id).await;
-                        }
                     }
                 }
             }
             return Ok(());
         }
-        if event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
-            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
-            if source == "booking_form" || source == "sms" {
-                let preferred_time = event.payload.get("timestamp").and_then(|v| v.as_str()).unwrap_or("");
-                let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
-                let service_name = "Field Service Repair";
-                let price = 150.0;
-
-                let sched_event = DepartmentEvent {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: event.tenant_id.clone(),
-                    event_type: "tenant.quote.requires_scheduling".to_string(),
-                    payload: serde_json::json!({
-                        "source": source,
-                        "message": message,
-                        "service_name": service_name,
-                        "price": price,
-                        "preferred_time": preferred_time,
-                        "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
-                    }),
-                };
-                let _ = self.orchestrator.dispatch_event(sched_event).await;
-            }
-        }
-
 
                 if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
             let planned_intent = match self
@@ -385,7 +308,7 @@ impl Department for SalesAgent {
                     .get_service_by_name_like(&event.tenant_id, &intent.service_name)
                     .await?;
 
-                let (service_name, mut price, service_id) = service.unwrap_or((intent.service_name, 75.0, uuid::Uuid::new_v4().to_string()));
+                let (service_name, mut price) = service.unwrap_or((intent.service_name, 75.0));
 
                 let mut context_summary = String::new();
                 for r in context_records {
@@ -439,16 +362,6 @@ impl Department for SalesAgent {
                     "quote_generated_from_message",
                 );
 
-                let mut proposed_slot_id = None;
-                if !suggested_time.is_empty() {
-                    proposed_slot_id = self.orchestrator.soft_lock_booking_slot(
-                        &event.tenant_id,
-                        &service_name,
-                        &suggested_time,
-                        std::time::Duration::from_secs(600) // 10 mins
-                    ).await.ok().flatten();
-                }
-
                 let action_payload = serde_json::json!({
                     "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
                     "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
@@ -457,13 +370,9 @@ impl Department for SalesAgent {
                     "suggested_price": price,
                     "scope": scope,
                     "suggested_time": suggested_time,
-                    "proposed_slot_id": proposed_slot_id,
                     "generated_response": drafted_message,
                     "service": service_name.clone(),
-                    "service_id": service_id.clone(),
                     "price": price,
-                    "preferred_start_time": intent.preferred_start_time,
-                    "preferred_end_time": intent.preferred_end_time,
                 });
 
                 self.orchestrator
@@ -631,8 +540,6 @@ mod tests {
             intent: Some(QuoteIntent {
                 original_message: "The drain backed up after closing".to_string(),
                 service_name: "Drain Cleaning".to_string(),
-                preferred_start_time: None,
-                preferred_end_time: None,
             }),
         });
 

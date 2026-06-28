@@ -46,7 +46,6 @@ rust_library(
         "sendmessage.rs",
         "skill.rs",
         "create_skill.rs",
-        "superpowers_tool.rs",
         "sleep.rs",
         "subagent.rs",
         "tail.rs",

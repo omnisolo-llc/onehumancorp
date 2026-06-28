@@ -182,8 +182,6 @@ mod tests {
             payment_source: None,
             created_at: None,
             updated_at: None,
-            is_consumable: None,
-            estimated_duration_days: None,
         };
         assert_eq!(o.id, "o1");
 

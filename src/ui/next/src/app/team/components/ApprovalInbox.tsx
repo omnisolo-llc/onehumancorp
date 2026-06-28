@@ -63,7 +63,7 @@ export default function ApprovalInbox({
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
             onClick={onBack}
-            className="w-[44px] h-[44px] flex items-center justify-center rounded-full bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+            className="w-[44px] h-[44px] flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
           >
             <svg
               className="w-5 h-5"
@@ -553,17 +553,11 @@ export default function ApprovalInbox({
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
-                        Quote Ready for Review: {req.payload.service || 'Plumbing Fix'} for Customer
+                        Draft Quote: {req.payload.service || 'Plumbing Fix'} for Customer
                       </div>
                       <div className="text-xs text-[#0066FF] font-medium">
                         {req.payload.customer_inquiry}
                       </div>
-                      {req.payload.suggested_time && (
-                        <div className="text-xs text-orange-600 font-semibold bg-orange-50 p-2 rounded-lg border border-orange-100 mt-1">
-                           🗓️ Proposed Time: {req.payload.suggested_time}
-                           {req.payload.proposed_slot_id ? ' (Slot Temporarily Locked)' : ''}
-                        </div>
-                      )}
 
                       <div className="glassmorphism p-3 rounded-lg border border-white/40 relative mt-2">
                         <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">

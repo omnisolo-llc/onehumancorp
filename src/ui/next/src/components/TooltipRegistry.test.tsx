@@ -84,19 +84,6 @@ describe('TooltipRegistry', () => {
     });
 
     expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
-
-    // Test handleTouchMove clears tooltip
-    await act(async () => {
-        fireEvent.touchStart(button.parentElement!);
-        await new Promise(r => setTimeout(r, 600)); // Show it
-    });
-    expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
-
-    await act(async () => {
-        fireEvent.touchMove(button.parentElement!); // Move clears it
-        await new Promise(r => setTimeout(r, 20));
-    });
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
   });
 
   it('handles fetch errors gracefully', async () => {

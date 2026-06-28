@@ -20,28 +20,29 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         expect(response.ok()).toBeTruthy();
 
         // Step 3: Navigate to Work Triage UI
-        await page.goto('/api/ui/triage.html');
+        await page.goto('/triage');
 
         // Wait for feed to load
+        await page.waitForSelector('.app-list-item');
         await expect(page.getByTestId(/triage-card-/).first()).toBeVisible();
 
         // Step 4: Verify the message appears in the feed
-        const sourceText = await page.locator('[data-testid^="triage-card-"] .font-outfit').first().textContent();
+        const sourceText = await page.locator('.app-list-item .app-list-title').first().textContent();
         expect(sourceText).toContain('Instagram DM');
 
-        const messageText = await page.locator('[data-testid^="triage-card-"] .text-\[15px\]').first().textContent();
+        const messageText = await page.locator('.app-list-item .app-list-subtitle').first().textContent();
         expect(messageText).toContain('Do you make vegan cakes for this Saturday?');
 
         // Click the first item to select it
-        await page.locator('[data-testid^="triage-card-"]').first().click();
+        await page.locator('.app-list-item').first().click();
 
         // Step 5: Verify Thread view & Draft reply
-        await page.locator('text=Proposed Action').first().waitFor();
-        const draftReplyText = await page.locator('.proposed-action').first().textContent();
+        await page.waitForSelector('.text-xs:has-text("Proposed Action")');
+        const draftReplyText = await page.locator('.text-sm.leading-6').textContent();
         expect(draftReplyText).toContain('vegan cake');
 
         // Step 6: Click "Approve & Send"
-        const approveBtn = page.locator('[data-testid^="triage-approve-"]').first();
+        const approveBtn = page.getByTestId('approve-btn');
         await expect(approveBtn).toBeVisible();
         await approveBtn.click();
 
@@ -65,14 +66,16 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         });
         expect(response.ok()).toBeTruthy();
 
-        await page.goto('/api/ui/triage.html');
-        const sourceText = await page.locator('[data-testid^="triage-card-"] .font-outfit').first().textContent();
+        await page.goto('/triage');
+        await page.waitForSelector('.app-list-item');
+
+        const sourceText = await page.locator('.app-list-item .app-list-title').first().textContent();
         expect(sourceText).toContain('Email');
 
-        await page.locator('[data-testid^="triage-card-"]').first().click();
+        await page.locator('.app-list-item').first().click();
 
         // Click Dismiss
-        const dismissBtn = page.locator('[data-testid^="triage-dismiss-"]').first();
+        const dismissBtn = page.getByTestId('dismiss-btn');
         await expect(dismissBtn).toBeVisible();
         await dismissBtn.click();
 

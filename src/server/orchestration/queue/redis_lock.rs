@@ -41,10 +41,6 @@ impl RedisLock {
         }
     }
 
-    pub async fn acquire_booking_slot_lock(&self, tenant_id: &str, slot_time_id: &str, ttl_secs: u64) -> Result<Option<String>, String> {
-        self.acquire_lock(tenant_id, "booking_slot", slot_time_id, ttl_secs).await
-    }
-
     pub async fn release_lock(&self, tenant_id: &str, resource_type: &str, resource_id: &str, lock_val: &str) -> Result<bool, String> {
         let key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
         let mut conn = self.get_connection().await?;

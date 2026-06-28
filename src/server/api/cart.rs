@@ -127,24 +127,12 @@ pub async fn get_cart_handler(
 
     let pool = crate::db::get_pool();
 
-    let (cart_res, items_res) = tokio::join!(
-        async {
-            sqlx::query("SELECT id, customer_id, channel, status, total_amount_cents, currency FROM carts WHERE id = $1 AND tenant_id = $2")
-                .bind(&cart_id)
-                .bind(&tenant_id)
-                .fetch_optional(&pool)
-                .await
-        },
-        async {
-            sqlx::query("SELECT id, product_id, variant_id, quantity, unit_price_cents FROM cart_items WHERE cart_id = $1 AND tenant_id = $2")
-                .bind(&cart_id)
-                .bind(&tenant_id)
-                .fetch_all(&pool)
-                .await
-        }
-    );
-
-    let cart_row = match cart_res {
+    let cart_row = match sqlx::query("SELECT id, customer_id, channel, status, total_amount_cents, currency FROM carts WHERE id = $1 AND tenant_id = $2")
+        .bind(&cart_id)
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await
+    {
         Ok(Some(row)) => row,
         Ok(None) => return (axum::http::StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Cart not found" }))).into_response(),
         Err(e) => {
@@ -153,11 +141,16 @@ pub async fn get_cart_handler(
         }
     };
 
-    let items_rows = match items_res {
+    let items_rows = match sqlx::query("SELECT id, product_id, variant_id, quantity, unit_price_cents FROM cart_items WHERE cart_id = $1 AND tenant_id = $2")
+        .bind(&cart_id)
+        .bind(&tenant_id)
+        .fetch_all(&pool)
+        .await
+    {
         Ok(rows) => rows,
         Err(e) => {
             tracing::error!("Failed to fetch cart items: {}", e);
-            vec![]
+            vec![] // Return empty items on error, or maybe fail entirely
         }
     };
 

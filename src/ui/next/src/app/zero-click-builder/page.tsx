@@ -37,7 +37,7 @@ export default function ZeroClickBuilderPage() {
             Zero-Click Business Generator
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
-            Instantly build your storefront, product catalog, and booking system with a single prompt.
+            Chat with our AI assistant to instantly build your storefront, product catalog, and booking system.
           </p>
         </div>
 

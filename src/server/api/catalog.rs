@@ -28,13 +28,6 @@ pub struct GenerateOfferingResponse {
     pub price: String,
     pub item_type: String,
     pub is_subscription: bool,
-    pub variants: Option<Vec<ProductVariantRequest>>,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct ProductVariantRequest {
-    pub name: String,
-    pub price_modifier: String,
 }
 
 #[derive(Deserialize)]
@@ -47,7 +40,6 @@ pub struct CreateProductRequest {
     pub is_subscribable: Option<bool>,
     pub subscription_frequency: Option<String>,
     pub subscription_discount_percent: Option<i32>,
-    pub variants: Option<Vec<ProductVariantRequest>>,
 }
 
 #[derive(Serialize)]
@@ -70,8 +62,6 @@ pub struct Product {
     pub description: Option<String>,
     pub item_type: Option<String>,
     pub price_cents: Option<i64>,
-    pub inventory_count: Option<i32>,
-    pub variants: Option<Vec<ProductVariantRequest>>,
 }
 
 async fn handle_get_products(
@@ -95,7 +85,7 @@ async fn handle_get_products(
     };
 
     let rows = sqlx::query(
-        "SELECT id, title, description, type as item_type, price_cents, inventory_count FROM products WHERE tenant_id = $1"
+        "SELECT id, title, description, type as item_type, price_cents FROM products WHERE tenant_id = $1"
     )
     .bind(&tenant_id)
     .fetch_all(&mut *conn)
@@ -105,32 +95,12 @@ async fn handle_get_products(
         Ok(rows) => {
             let mut products = Vec::new();
             for row in rows {
-                let p_id: String = row.try_get("id").unwrap_or_default();
-
-                let v_rows = sqlx::query("SELECT name, price_modifier FROM product_variants WHERE product_id = $1")
-                    .bind(&p_id)
-                    .fetch_all(&mut *conn)
-                    .await
-                    .unwrap_or_default();
-
-                let mut variants = Vec::new();
-                for vr in v_rows {
-                    let modifier: i64 = vr.try_get("price_modifier").unwrap_or(0);
-                    let modifier_str = format!("{:.2}", (modifier as f64) / 100.0);
-                    variants.push(ProductVariantRequest {
-                        name: vr.try_get("name").unwrap_or_default(),
-                        price_modifier: modifier_str,
-                    });
-                }
-
                 products.push(Product {
-                    id: p_id,
+                    id: row.try_get("id").unwrap_or_default(),
                     title: row.try_get("title").unwrap_or_default(),
                     description: row.try_get("description").ok(),
                     item_type: row.try_get("item_type").ok(),
                     price_cents: row.try_get("price_cents").ok(),
-                    inventory_count: row.try_get("inventory_count").ok(),
-                    variants: if variants.is_empty() { None } else { Some(variants) },
                 });
             }
             (StatusCode::OK, Json(products)).into_response()
@@ -271,21 +241,6 @@ async fn handle_create_product(
             .into_response();
     }
 
-    if let Some(variants) = payload.variants {
-        for variant in variants {
-            let variant_id = format!("var-{}", uuid::Uuid::new_v4());
-            let v_price_mod = (variant.price_modifier.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
-            let _ = sqlx::query("INSERT INTO product_variants (id, tenant_id, product_id, name, price_modifier, inventory_count) VALUES ($1, $2, $3, $4, $5, 100)")
-                .bind(&variant_id)
-                .bind(&tenant_id)
-                .bind(&product_id)
-                .bind(&variant.name)
-                .bind(v_price_mod)
-                .execute(&mut *conn)
-                .await;
-        }
-    }
-
     // Invalidate cache
     let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
     cache.invalidate(&tenant_id).await;
@@ -372,7 +327,6 @@ async fn handle_generate_offering(
         price: "10.00".to_string(),
         item_type: "Service".to_string(),
         is_subscription: false,
-        variants: None,
     };
 
     if let Ok(reasoned) = client.reason(&prompt).await {
@@ -394,19 +348,6 @@ async fn handle_generate_offering(
             }
             if let Some(is_sub) = parsed.get("is_subscription").and_then(|v| v.as_bool()) {
                 response_json.is_subscription = is_sub;
-            }
-            if let Some(variants) = parsed.get("variants").and_then(|v| v.as_array()) {
-                let mut v_list = Vec::new();
-                for v in variants {
-                    let mut req = ProductVariantRequest { name: "".to_string(), price_modifier: "0.00".to_string() };
-                    if let Some(n) = v.get("name").and_then(|n| n.as_str()) { req.name = n.to_string(); }
-                    if let Some(p) = v.get("price_modifier").and_then(|p| p.as_str()) { req.price_modifier = p.to_string(); }
-                    else if let Some(p) = v.get("price_modifier").and_then(|p| p.as_f64()) { req.price_modifier = format!("{:.2}", p); }
-                    v_list.push(req);
-                }
-                if !v_list.is_empty() {
-                    response_json.variants = Some(v_list);
-                }
             }
         } else {
              tracing::warn!("Failed to parse LLM JSON: {}", cleaned);

@@ -65,8 +65,8 @@ test.describe('Triage Action Feed UI', () => {
     while (count > 0) {
       const firstCard = listItems.nth(0);
       const testId = await firstCard.getAttribute('data-testid');
-      const approveBtn = firstCard.locator('button', { hasText: /Approve|Yes, draft it!/i }).first();
-      const dismissBtn = firstCard.locator('button', { hasText: /Dismiss|Deny/i }).first();
+      const approveBtn = firstCard.getByTestId('approve-btn');
+      const dismissBtn = firstCard.getByTestId('dismiss-btn');
 
       if (await approveBtn.isVisible()) {
         await approveBtn.click();

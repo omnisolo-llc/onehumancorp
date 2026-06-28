@@ -14,12 +14,6 @@ type TooltipContextType = {
 
 const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
 
-declare global {
-  interface Window {
-    OHC_TOOLTIPS?: Record<string, string>;
-  }
-}
-
 export function TooltipProvider({ children }: { children: ReactNode }) {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
@@ -39,7 +33,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
             Object.entries(data).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
           );
           setTooltips(safeTooltips);
-          window.OHC_TOOLTIPS = safeTooltips;
+          (window as any).OHC_TOOLTIPS = safeTooltips;
         }
       })
       .catch(() => {});
@@ -67,7 +61,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
-          className="fixed z-[100] bg-white/70 dark:bg-black/60 backdrop-blur-xl saturate-[210%] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 rounded-2xl border border-white/40 dark:border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.15)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed animate-fade-in-up"
+          className="fixed z-[100] bg-white/80 dark:bg-black/60 backdrop-blur-[30px] saturate-[210%] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 rounded-2xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.15)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
             left: Math.max(128, Math.min(windowWidth - 128, tooltipRect.left + tooltipRect.width / 2)),
@@ -75,7 +69,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           }}
         >
           {tooltipText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/70 dark:border-t-black/60 border-t-8 border-x-transparent border-x-8 border-b-0 backdrop-blur-xl"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/80 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
         </div>
       )}
       <style dangerouslySetInnerHTML={{__html: `
@@ -125,7 +119,6 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
   const handleTouchMove = () => {
     // If the user scrolls, cancel the long press tooltip
     if (timerRef.current) clearTimeout(timerRef.current);
-    setActiveTooltip(null);
   };
 
   const handleTouchEnd = () => {

@@ -51,10 +51,16 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
 
                 // Track cost dynamically
                 if true {
-                    let input_tokens = if t_type == "input" { count } else { 0 };
-                    let output_tokens = if t_type == "output" { count } else { 0 };
-
-                    let cost_usd = ::server_pricing::calculator::calculate_cost(model, input_tokens, output_tokens, 0);
+                    let cost_per_1k = match model {
+                        "claude-3-opus" => 15.0,
+                        "claude-3-sonnet" => 3.0,
+                        "claude-3-haiku" => 0.25,
+                        "gpt-4" => 30.0,
+                        "gpt-4o" => 5.0,
+                        "gpt-3.5-turbo" => 0.5,
+                        _ => 1.0,
+                    };
+                    let cost_usd = (count as f64 / 1000.0) * cost_per_1k;
 
                     let model_string = model.to_string();
                     let tenant_id = item

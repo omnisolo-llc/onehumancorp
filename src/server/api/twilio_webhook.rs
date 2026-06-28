@@ -57,58 +57,28 @@ pub async fn twilio_webhook_post_handler(
         let pool = &state.db.pool;
 
         // Find the correct tenant by mapping the `To` number
-        let clean_to_number = to_number.replace("whatsapp:", "");
         let tenant_id = match &state.db.store {
             crate::db::DbStore::Postgres => {
-                let mut tid = sqlx::query_scalar::<_, String>(
-                    "SELECT tenant_id FROM integration_credentials WHERE (from_phone = $1 OR from_phone = $2) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+                match sqlx::query_scalar::<_, String>(
+                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 LIMIT 1"
                 )
                 .bind(&to_number)
-                .bind(&clean_to_number)
                 .fetch_optional(pool)
-                .await.unwrap_or(None);
-
-                if tid.is_none() {
-                    tid = sqlx::query_scalar::<_, String>(
-                        "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 OR sms_critical_phone = $2 OR voice_receptionist_number = $2 LIMIT 1"
-                    )
-                    .bind(&to_number)
-                    .bind(&clean_to_number)
-                    .fetch_optional(pool)
-                    .await.unwrap_or(None);
-                }
-
-                match tid {
-                    Some(id) => id,
-                    None if to_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
-                    None => "test_tenant".to_string(), // Fallback if no specific tenant is found
+                .await {
+                    Ok(Some(id)) => id, _ if to_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
+                    _ => "test_tenant".to_string(), // Fallback if no specific tenant is found
                 }
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
-                let mut tid = sqlx::query_scalar::<_, String>(
-                    "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+                match sqlx::query_scalar::<_, String>(
+                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
                 )
                 .bind(&to_number)
-                .bind(&clean_to_number)
+                .bind(&to_number)
                 .fetch_optional(sqlite_pool)
-                .await.unwrap_or(None);
-
-                if tid.is_none() {
-                    tid = sqlx::query_scalar::<_, String>(
-                        "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? OR sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
-                    )
-                    .bind(&to_number)
-                    .bind(&to_number)
-                    .bind(&clean_to_number)
-                    .bind(&clean_to_number)
-                    .fetch_optional(sqlite_pool)
-                    .await.unwrap_or(None);
-                }
-
-                match tid {
-                    Some(id) => id,
-                    None if to_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
-                    None => "test_tenant".to_string(),
+                .await {
+                    Ok(Some(id)) => id, _ if to_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
+                    _ => "test_tenant".to_string(),
                 }
             }
         };
@@ -238,58 +208,28 @@ pub async fn twilio_voice_webhook_handler(
 
     let pool = &state.db.pool;
 
-    let clean_to_number = to_number.replace("whatsapp:", "");
     let tenant_id = match &state.db.store {
         crate::db::DbStore::Postgres => {
-            let mut tid = sqlx::query_scalar::<_, String>(
-                "SELECT tenant_id FROM integration_credentials WHERE (from_phone = $1 OR from_phone = $2) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+            match sqlx::query_scalar::<_, String>(
+                "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 LIMIT 1"
             )
             .bind(&to_number)
-            .bind(&clean_to_number)
             .fetch_optional(pool)
-            .await.unwrap_or(None);
-
-            if tid.is_none() {
-                tid = sqlx::query_scalar::<_, String>(
-                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 OR sms_critical_phone = $2 OR voice_receptionist_number = $2 LIMIT 1"
-                )
-                .bind(&to_number)
-                .bind(&clean_to_number)
-                .fetch_optional(pool)
-                .await.unwrap_or(None);
-            }
-
-            match tid {
-                Some(id) => id,
-                None if to_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
-                None => "test_tenant".to_string(),
+            .await {
+                Ok(Some(id)) => id, _ if to_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
+                _ => "test_tenant".to_string(),
             }
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let mut tid = sqlx::query_scalar::<_, String>(
-                "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+            match sqlx::query_scalar::<_, String>(
+                "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
             )
             .bind(&to_number)
-            .bind(&clean_to_number)
+            .bind(&to_number)
             .fetch_optional(sqlite_pool)
-            .await.unwrap_or(None);
-
-            if tid.is_none() {
-                tid = sqlx::query_scalar::<_, String>(
-                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? OR sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
-                )
-                .bind(&to_number)
-                .bind(&to_number)
-                .bind(&clean_to_number)
-                .bind(&clean_to_number)
-                .fetch_optional(sqlite_pool)
-                .await.unwrap_or(None);
-            }
-
-            match tid {
-                Some(id) => id,
-                None if to_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
-                None => "test_tenant".to_string(),
+            .await {
+                Ok(Some(id)) => id, _ if to_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
+                _ => "test_tenant".to_string(),
             }
         }
     };

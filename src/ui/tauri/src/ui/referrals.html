@@ -280,19 +280,19 @@
 
     <div class="metrics-grid">
       <div class="metric-box">
-        <p class="metric-value" id="metrics-invites">-</p>
+        <p class="metric-value" id="metrics-invites">0</p>
         <p class="metric-label">Invites Sent</p>
       </div>
       <div class="metric-box">
-        <p class="metric-value" id="metrics-active">-</p>
+        <p class="metric-value" id="metrics-active">0</p>
         <p class="metric-label">Active Referrals</p>
       </div>
       <div class="metric-box">
-        <p class="metric-value" id="metrics-revenue">-</p>
+        <p class="metric-value" id="metrics-revenue">$0.00</p>
         <p class="metric-label">Revenue Generated</p>
       </div>
       <div class="metric-box">
-        <p class="metric-value" id="metrics-pending">-</p>
+        <p class="metric-value" id="metrics-pending">$0.00</p>
         <p class="metric-label">Pending Rewards</p>
       </div>
     </div>
@@ -324,7 +324,7 @@
         } else {
           // Fallback
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
-          link = `ohc://join?ref=${tenantId}`;
+          link = `https://ohc.app/setup.html?ref=${tenantId}`;
         }
 
         document.getElementById('referral-link').value = link;
@@ -334,7 +334,7 @@
       } catch (e) {
         console.error("Failed to generate referral link", e);
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
-        document.getElementById('referral-link').value = `ohc://join?ref=${tenantId}`;
+        document.getElementById('referral-link').value = `https://ohc.app/setup.html?ref=${tenantId}`;
         document.getElementById('loading-state').style.display = 'none';
         document.getElementById('link-state').style.display = 'block';
       }

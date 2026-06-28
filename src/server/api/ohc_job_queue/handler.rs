@@ -1,28 +1,29 @@
-use axum::{routing::get, Json, Router, extract::Extension};
+use axum::{extract::State, routing::get, Json, Router};
+use std::sync::Arc;
 use serde_json::json;
 
 use crate::db;
 
-pub fn router() -> Router<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router() -> Router<Arc<crate::AppState>> {
     Router::new().route("/", get(list_jobs))
 }
 
 async fn list_jobs(
-    Extension(claims): Extension<::server_common::Claims>,
+    State(state): State<Arc<crate::AppState>>,
+    crate::auth::extractors::TenantAuth(auth): crate::auth::extractors::TenantAuth,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
     let pool = db::get_pool();
-    let tenant_id = claims.organization_id.clone().unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
 
-    let jobs = match sqlx::query(
+    let jobs = match sqlx::query!(
         r#"
         SELECT id, job_type, status, retry_count, created_at, updated_at
         FROM ohc_job_queue
         WHERE tenant_id = $1
         ORDER BY created_at DESC
         LIMIT 50
-        "#
+        "#,
+        auth.tenant_id
     )
-    .bind(tenant_id)
     .fetch_all(&pool)
     .await {
         Ok(j) => j,
@@ -34,14 +35,13 @@ async fn list_jobs(
 
     let mut response_jobs = Vec::new();
     for job in jobs {
-        use sqlx::Row;
         response_jobs.push(json!({
-            "id": job.try_get::<String, _>("id").unwrap_or_default(),
-            "job_type": job.try_get::<String, _>("job_type").unwrap_or_default(),
-            "status": job.try_get::<String, _>("status").unwrap_or_default(),
-            "retry_count": job.try_get::<i32, _>("retry_count").unwrap_or(0),
-            "created_at": job.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").unwrap_or_else(|_| chrono::Utc::now()),
-            "updated_at": job.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+            "id": job.id,
+            "job_type": job.job_type,
+            "status": job.status,
+            "retry_count": job.retry_count,
+            "created_at": job.created_at,
+            "updated_at": job.updated_at,
         }));
     }
 

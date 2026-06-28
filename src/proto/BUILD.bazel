@@ -3,7 +3,6 @@ load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 
 exports_files([
-    "inventory.proto",
     "agent.proto",
     "agent_service.proto",
     "app.proto",
@@ -310,20 +309,6 @@ proto_library(
 proto_rust_library(
     name = "funding",
     proto = ":funding_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
-
-proto_library(
-    name = "inventory_proto",
-    srcs = ["inventory.proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_rust_library(
-    name = "inventory",
-    proto = ":inventory_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )

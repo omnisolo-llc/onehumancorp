@@ -124,7 +124,6 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'authorization': 'Bearer ' + localStorage.getItem('ohc_token')
                         }
                     });
 
@@ -369,6 +368,7 @@ function initWalkthrough() {
 initWalkthrough();
 </script>
 
+<script src="help-widget.mjs"></script>
 </body>
 </html>
 

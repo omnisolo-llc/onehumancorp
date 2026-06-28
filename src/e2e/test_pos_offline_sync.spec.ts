@@ -471,3 +471,4 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     const errorJson = await addItemRes.json();
     expect(errorJson.error).toContain('checked out');
   });
+});

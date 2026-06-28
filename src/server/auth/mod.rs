@@ -189,31 +189,9 @@ impl Store {
                             }
                         }
                     }
-                    #[cfg(unix)]
-                    {
-                        use std::os::unix::fs::OpenOptionsExt;
-                        let mut options = std::fs::OpenOptions::new();
-                        options.read(true);
-                        if !::server_config::get().multitenant {
-                            #[cfg(target_os = "linux")]
-                            options.custom_flags(0x00020000); // O_NOFOLLOW
-                            #[cfg(target_os = "macos")]
-                            options.custom_flags(0x0100); // O_NOFOLLOW
-                        }
-                        if let Ok(mut file) = options.open(&secret_path) {
-                            use std::io::Read;
-                            let mut bytes = Vec::new();
-                            if file.read_to_end(&mut bytes).is_ok() && bytes.len() >= 32 {
-                                return bytes;
-                            }
-                        }
-                    }
-                    #[cfg(not(unix))]
-                    {
-                        if let Ok(bytes) = std::fs::read(&secret_path) {
-                            if bytes.len() >= 32 {
-                                return bytes;
-                            }
+                    if let Ok(bytes) = std::fs::read(&secret_path) {
+                        if bytes.len() >= 32 {
+                            return bytes;
                         }
                     }
                 }
@@ -238,31 +216,9 @@ impl Store {
                                 }
                             }
                         }
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::fs::OpenOptionsExt;
-                            let mut options = std::fs::OpenOptions::new();
-                            options.read(true);
-                            if !::server_config::get().multitenant {
-                                #[cfg(target_os = "linux")]
-                                options.custom_flags(0x00020000); // O_NOFOLLOW
-                                #[cfg(target_os = "macos")]
-                                options.custom_flags(0x0100); // O_NOFOLLOW
-                            }
-                            if let Ok(mut file) = options.open(&secret_path) {
-                                use std::io::Read;
-                                let mut bytes = String::new();
-                                if file.read_to_string(&mut bytes).is_ok() && !bytes.trim().is_empty() {
-                                    return Some(bytes.trim().to_string());
-                                }
-                            }
-                        }
-                        #[cfg(not(unix))]
-                        {
-                            if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
-                                if !bytes.trim().is_empty() {
-                                    return Some(bytes.trim().to_string());
-                                }
+                        if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
+                            if !bytes.trim().is_empty() {
+                                return Some(bytes.trim().to_string());
                             }
                         }
                     }

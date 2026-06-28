@@ -1328,7 +1328,8 @@ pub async fn record_storage_rw_cost(
         cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
-            "operation": operation
+            "operation": operation,
+            "cost_cents": cost_cents,
         }),
     )
     .await
@@ -1346,7 +1347,8 @@ pub async fn record_email_send_cost(
         "counter",
         cost_cents,
         serde_json::json!({
-            "organization_id": organization_id
+            "organization_id": organization_id,
+            "cost_cents": cost_cents,
         }),
     )
     .await

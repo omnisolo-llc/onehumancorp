@@ -23,14 +23,10 @@ impl Department for OperationsAgent {
             "tenant.order.created".to_string(),
             "tenant.order.updated".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
-            "tenant.booking.request_received".to_string(),
             "LowStockAlert".to_string(),
             "inventory.sync.conflict".to_string(),
             "tenant.inventory.updated".to_string(),
             "pos_sales".to_string(),
-            "tenant.quote.requires_scheduling".to_string(),
-            "tenant.omnichannel.message.received".to_string(),
-            "agent:operations:approved".to_string(),
 
             "tenant.pricing.updated".to_string(),]
     }
@@ -60,140 +56,6 @@ impl Department for OperationsAgent {
             }
         }
 
-        if event.event_type == "tenant.quote.requires_scheduling" {
-            let preferred_time = event.payload.get("preferred_time").and_then(|v| v.as_str()).unwrap_or("");
-            let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
-            let _price = event.payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            // In a real implementation this would check capacity using DB/Redis,
-            // For this task we acquire a tentative lock representing the held slot.
-            if let Ok(true) = self.orchestrator.mesh().acquire_lock(&format!("ohc:lock:booking_slot:{}", preferred_time), "operations_agent", 600).await {
-                tracing::info!("Operations Agent: Locked slot {} for {}", preferred_time, service_name);
-                let action_description = format!("Tentatively locked slot {} for quote on {}", preferred_time, service_name);
-                let _ = self.orchestrator.execute_action(
-                    DepartmentType::Operations,
-                    action_description,
-                    event.tenant_id.clone(),
-                    ActionRisk::AutoExecute,
-                    event.payload.clone(),
-                ).await;
-            } else {
-                tracing::warn!("Operations Agent: Failed to lock slot {} for {}. It might be taken.", preferred_time, service_name);
-            }
-            return Ok(());
-        }
-
-        if event.event_type == "tenant.omnichannel.message.received" {
-            let message = event.payload.get("original_message")
-                .or_else(|| event.payload.get("message"))
-                .or_else(|| event.payload.get("content"))
-                .and_then(|v| v.as_str()).unwrap_or("");
-            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
-
-            // Simple intent parse for sick/call-out
-            let msg_lower = message.to_lowercase();
-            if msg_lower.contains("sick") || msg_lower.contains("call out") || msg_lower.contains("can't make it") || msg_lower.contains("can't make my shift") || msg_lower.contains("not feeling well") {
-                // Check if sender is staff
-                let pool = crate::db::get_pool();
-                let staff_res: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT id, name, role FROM ohc_staff_member WHERE tenant_id = $1 AND phone_number = $2 LIMIT 1")
-                    .bind(&event.tenant_id)
-                    .bind(&sender_id)
-                    .fetch_one(&pool).await;
-
-                if let Ok((staff_id, staff_name, role)) = staff_res {
-                    // It's a call-out from staff. Find their upcoming shift
-                    let shift_res: Result<(String, chrono::DateTime<chrono::Utc>), sqlx::Error> = sqlx::query_as("SELECT id, start_time FROM shifts WHERE tenant_id = $1 AND staff_id = $2 AND start_time > NOW() AND status = 'scheduled' ORDER BY start_time ASC LIMIT 1")
-                        .bind(&event.tenant_id)
-                        .bind(&staff_id)
-                        .fetch_one(&pool).await;
-
-                    if let Ok((shift_id, _start_time)) = shift_res {
-                        // Find replacement staff
-                        // For simplicity, we just find any other staff with same role who is available and not this staff member
-                        // A true implementation would check staff_availability table.
-                        let replacement_res: Result<(String, String), sqlx::Error> = sqlx::query_as("SELECT id, name FROM ohc_staff_member WHERE tenant_id = $1 AND role = $2 AND id != $3 LIMIT 1")
-                            .bind(&event.tenant_id)
-                            .bind(&role)
-                            .bind(&staff_id)
-                            .fetch_one(&pool).await;
-
-                        let mut action_desc = format!("{} called out sick for their upcoming shift. We don't have an available replacement.", staff_name);
-                        let mut action_payload = serde_json::json!({
-                            "feature_type": "shift_reassignment",
-                            "shift_id": shift_id,
-                            "original_staff_id": staff_id,
-                            "original_staff_name": staff_name,
-                        });
-
-                        if let Ok((rep_id, rep_name)) = replacement_res {
-                            action_desc = format!("{} called out sick for their shift. {} is available, hasn't reached overtime, and has {} skills. Reassign shift to {}?", staff_name, rep_name, role, rep_name);
-                            action_payload = serde_json::json!({
-                                "feature_type": "shift_reassignment",
-                                "shift_id": shift_id,
-                                "original_staff_id": staff_id,
-                                "original_staff_name": staff_name,
-                                "proposed_staff_id": rep_id,
-                                "proposed_staff_name": rep_name,
-                                "action_type": "Approve & Notify"
-                            });
-                        }
-
-                        let _ = self.orchestrator.execute_action(
-                            DepartmentType::Operations,
-                            action_desc,
-                            event.tenant_id.clone(),
-                            ActionRisk::DraftForReview,
-                            action_payload,
-                        ).await;
-                        return Ok(());
-                    }
-                }
-            }
-        }
-
-        if event.event_type == "agent:operations:approved" {
-            if let Some(payload) = event.payload.get("original_payload") {
-                if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
-                    if feature_type == "shift_reassignment" {
-                        let shift_id = payload.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
-                        let proposed_staff_id = payload.get("proposed_staff_id").and_then(|v| v.as_str()).unwrap_or("");
-                        let _proposed_staff_name = payload.get("proposed_staff_name").and_then(|v| v.as_str()).unwrap_or("");
-
-                        if !shift_id.is_empty() && !proposed_staff_id.is_empty() {
-                            let pool = crate::db::get_pool();
-                            let _ = sqlx::query("UPDATE shifts SET staff_id = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3")
-                                .bind(proposed_staff_id)
-                                .bind(shift_id)
-                                .bind(&event.tenant_id)
-                                .execute(&pool)
-                                .await;
-
-                            // Get replacement staff's phone number and send them an SMS
-                            if let Ok(phone) = sqlx::query_scalar::<_, String>("SELECT phone_number FROM ohc_staff_member WHERE id = $1 AND tenant_id = $2")
-                                .bind(proposed_staff_id)
-                                .bind(&event.tenant_id)
-                                .fetch_one(&pool)
-                                .await {
-
-                                // We simulate sending SMS via twilio worker by pushing a job or we can just log it here.
-                                // The architecture specifies: "Dispatch SMS to Replacement Staff"
-                                let sms_payload = serde_json::json!({
-                                    "to": phone,
-                                    "message": "You have been reassigned to a new shift. Please check your app for details."
-                                });
-                                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'send_sms', $3, 'PENDING')")
-                                    .bind(uuid::Uuid::new_v4().to_string())
-                                    .bind(&event.tenant_id)
-                                    .bind(sms_payload.to_string())
-                                    .execute(&pool)
-                                    .await;
-                            }
-                        }
-                        return Ok(());
-                    }
-                }
-            }
-        }
-
         if event.event_type == "POS_SALE_COMPLETED" {
             tracing::info!("Operations Agent: Handling POS sale completion for tenant {}", event.tenant_id);
             return Ok(());
@@ -220,46 +82,6 @@ impl Department for OperationsAgent {
         };
 
         let action_description = match event.event_type.as_str() {
-            "tenant.booking.request_received" => {
-                let start_time = event.payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
-                let lock_key = format!("ohc:lock:{}:booking_slot:{}", event.tenant_id, start_time);
-
-                // Redlock the slot for 10 minutes to prevent double booking during quote generation
-                if let Some(redis_client) = crate::get_redis_client() {
-                    // Need to use async connection correctly but wait OperationsAgent handle_event is async!
-                    if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
-                        let acquired: bool = redis::cmd("SET")
-                            .arg(&lock_key)
-                            .arg("locked")
-                            .arg("NX")
-                            .arg("EX")
-                            .arg(600) // 10 minutes hold
-                            .query_async(&mut conn)
-                            .await
-                            .unwrap_or(false);
-
-                        if acquired {
-                            // We successfully locked it, let's dispatch the quote request to Sales
-                            let cs_event = DepartmentEvent {
-                                id: uuid::Uuid::new_v4().to_string(),
-                                tenant_id: event.tenant_id.clone(),
-                                event_type: "tenant.sales.quote_requested".to_string(),
-                                payload: event.payload.clone(),
-                            };
-                            let _ = self.orchestrator.dispatch_event(cs_event).await;
-                            return Ok(());
-                        } else {
-                            tracing::warn!("Failed to acquire lock for {}", lock_key);
-                            return Err("Double booking prevented".to_string());
-                        }
-                    } else {
-                        return Err("Failed to connect to Redis".to_string());
-                    }
-                } else {
-                    return Err("Redis not available".to_string());
-                }
-            },
-
             "tenant.order.created" => {
                 let notes = event.payload.get("notes").and_then(|v| v.as_str()).unwrap_or("");
                 if !notes.is_empty() {

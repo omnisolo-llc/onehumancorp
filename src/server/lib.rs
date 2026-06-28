@@ -135,23 +135,6 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("help-center-nav-btn".to_string(), "Open the Help Center for guides and support.".to_string());
     m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
 
-    m.insert("cart-recovery-tooltip".to_string(), "Recover abandoned carts with personalized AI follow-ups.".to_string());
-    m.insert("flash-sale-tooltip".to_string(), "Create high-converting flash sale countdown widgets.".to_string());
-    m.insert("pre-order-tooltip".to_string(), "Launch an omnichannel pre-order engine with tiered waitlist capabilities.".to_string());
-    m.insert("discount-code-tooltip".to_string(), "Create discount code widgets for your customers.".to_string());
-    m.insert("link-in-bio-tooltip".to_string(), "One link to rule them all. Drive social traffic to your store.".to_string());
-    m.insert("spin-to-win-tooltip".to_string(), "Create interactive discount wheels to capture emails.".to_string());
-    m.insert("trial-extension-tooltip".to_string(), "Share your setup on X to instantly unlock 7 extra days of Pro.".to_string());
-    m.insert("field-ops-tooltip".to_string(), "Offline-first mobile route management for field service workers.".to_string());
-    m.insert("my-plan-tooltip".to_string(), "Manage your subscription, usage, and billing.".to_string());
-    m.insert("proposal-draft-tooltip".to_string(), "Generate complex AI proposals instantly.".to_string());
-    m.insert("settings-widget-tooltip".to_string(), "Manage your account and preferences.".to_string());
-
-    m.insert("lead-capture-tooltip".to_string(), "Embed a smart lead capture form with a viral loop directly on your site.".to_string());
-    m.insert("quiz-generator-tooltip".to_string(), "Create AI-powered product recommendation quizzes to capture leads.".to_string());
-
-
-
     // Additional default tooltips for existing dashboard buttons
     m.insert("promoter-btn".to_string(), "Launch a new marketing campaign to grow your audience.".to_string());
     m.insert("share-savings-btn".to_string(), "Share your success to unlock 7 days of Pro.".to_string());
@@ -571,9 +554,6 @@ pub mod proto {
     pub mod common {
         pub use ::server_ohc::common::*;
     }
-    pub mod inventory {
-        pub use ::server_ohc::inventory::*;
-    }
     pub mod app {
         pub use ::server_ohc::app::*;
     }
@@ -700,54 +680,50 @@ async fn http_metrics_handler(
         return (StatusCode::OK, axum::Json(metrics)).into_response();
     }
 
-    let pool1 = db.pool.clone();
-    let pool2 = db.pool.clone();
-    let pool3 = db.pool.clone();
-    let pool4 = db.pool.clone();
-    let pool5 = db.pool.clone();
-
-    let t_id1 = tenant_id.to_string();
-    let t_id2 = tenant_id.to_string();
-    let t_id3 = tenant_id.to_string();
-    let t_id4 = tenant_id.to_string();
-    let t_id5 = tenant_id.to_string();
-
-    let is_pg = matches!(db.store, crate::db::DbStore::Postgres);
-
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res, top_product_res) = tokio::join!(
-        tokio::spawn(async move {
-            let query = if is_pg { "SELECT COUNT(*) FROM users WHERE tenant_id = $1" } else { "SELECT COUNT(*) FROM users WHERE tenant_id = ?" };
-            sqlx::query_scalar::<_, i64>(query).bind(&t_id1).fetch_one(&pool1).await
-        }),
-        tokio::spawn(async move {
-            let query = if is_pg { "SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'" } else { "SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending'" };
-            sqlx::query_scalar::<_, i64>(query).bind(&t_id2).fetch_one(&pool2).await
-        }),
-        tokio::spawn(async move {
-            let query = if is_pg { "SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1" } else { "SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS REAL) FROM orders WHERE tenant_id = ?" };
-            sqlx::query_scalar::<_, f64>(query).bind(&t_id3).fetch_one(&pool3).await
-        }),
-        tokio::spawn(async move {
-            let query = if is_pg { "SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'" } else { "SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'" };
-            sqlx::query_scalar::<_, i64>(query).bind(&t_id4).fetch_one(&pool4).await
-        }),
-        tokio::spawn(async move {
-            let query = if is_pg { "SELECT p.title FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = $1 AND p.tenant_id = $1 AND o.status != 'abandoned' GROUP BY p.title ORDER BY SUM(oi.quantity) DESC LIMIT 1" } else { "SELECT p.title FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = ? AND p.tenant_id = ? AND o.status != 'abandoned' GROUP BY p.title ORDER BY SUM(oi.quantity) DESC LIMIT 1" };
-            if is_pg {
-                sqlx::query_scalar::<_, String>(query).bind(&t_id5).fetch_optional(&pool5).await
-            } else {
-                sqlx::query_scalar::<_, String>(query).bind(&t_id5).bind(&t_id5).fetch_optional(&pool5).await
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
             }
-        })
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, f64>("SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, f64>("SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS REAL) FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, String>(
+                    "SELECT p.title FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = $1 AND p.tenant_id = $1 AND o.status != 'abandoned' GROUP BY p.title ORDER BY SUM(oi.quantity) DESC LIMIT 1"
+                ).bind(&tenant_id).fetch_optional(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, String>(
+                    "SELECT p.title FROM products p JOIN order_items oi ON p.id = oi.product_id JOIN orders o ON oi.order_id = o.id WHERE o.tenant_id = $1 AND p.tenant_id = $1 AND o.status != 'abandoned' GROUP BY p.title ORDER BY SUM(oi.quantity) DESC LIMIT 1"
+                ).bind(&tenant_id).fetch_optional(pool).await,
+            }
+        }
     );
 
-    let active_customers = active_customers_res.unwrap_or(Ok(0)).unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(Ok(0)).unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(Ok(0.0)).unwrap_or(0.0);
-    let total_campaigns_sent = campaigns_res.unwrap_or(Ok(0)).unwrap_or(0);
-    let top_product = top_product_res.unwrap_or(Ok(None)).unwrap_or(None).unwrap_or_else(|| "None".to_string());
+    let active_customers = active_customers_res.unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(0);
+    let total_sales = sales_res.unwrap_or(0.0);
+    let total_campaigns_sent = campaigns_res.unwrap_or(0);
+    let top_product = top_product_res.unwrap_or_default();
 
-    let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent, top_product: Some(top_product) };
+    let metrics = HttpMetricsResponse { active_customers, pending_orders, total_sales, total_campaigns_sent, top_product };
     cache.set(&cache_key, metrics.clone(), std::time::Duration::from_secs(60)).await;
 
     (
@@ -2577,12 +2553,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, Some(cb))); let _ = consolidation_worker.clone().spawn_background_task();
     let _ = consolidation_worker.clone().spawn_background_task();
 
-    let replenishment_job = crate::workers::subscription_replenishment_job::SubscriptionReplenishmentJob::new(db.clone());
-    replenishment_job.start();
-    // Start Subscription Replenishment Worker
-    let replenishment_worker = std::sync::Arc::new(crate::workers::subscription_replenishment_worker::SubscriptionReplenishmentWorker::new(db.clone()));
-    replenishment_worker.start();
-
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
@@ -3879,33 +3849,6 @@ pub async fn update_ui_triage_action_handler(
                         } else {
                             tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
                         }
-                    } else if action_type == "Reassign Shift" {
-                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload);
-                        if let Ok(shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
-                            let shift_id = shift_data.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
-                            let new_staff_id = shift_data.get("new_staff_id").and_then(|v| v.as_str()).unwrap_or("");
-                            if !shift_id.is_empty() && !new_staff_id.is_empty() {
-                                let _ = sqlx::query("UPDATE shifts SET staff_id = $1 WHERE id = $2 AND tenant_id = $3")
-                                    .bind(new_staff_id)
-                                    .bind(shift_id)
-                                    .bind(&tenant_id)
-                                    .execute(&mut *tx).await;
-                                tracing::info!("Successfully reassigned shift {} to {}", shift_id, new_staff_id);
-
-                                // Dispatch SMS
-                                let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default();
-                                let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default();
-                                let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_default();
-
-                                if !account_sid.is_empty() && !auth_token.is_empty() && !from_number.is_empty() {
-                                    // Normally we would lookup new_staff_id phone number from staff_profiles,
-                                    // but we can dispatch to a placeholder or use the payload info.
-                                    let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
-                                    let message = format!("Your shift {} has been reassigned to you.", shift_id);
-                                    let _ = provider.send_sms(&from_number, "+15550000000", &message).await;
-                                }
-                            }
-                        }
                     } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
                         tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
@@ -4134,31 +4077,6 @@ pub async fn update_ui_triage_action_handler(
                         } else {
                             tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
                         }
-                    } else if action_type == "Reassign Shift" {
-                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload);
-                        if let Ok(shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
-                            let shift_id = shift_data.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
-                            let new_staff_id = shift_data.get("new_staff_id").and_then(|v| v.as_str()).unwrap_or("");
-                            if !shift_id.is_empty() && !new_staff_id.is_empty() {
-                                let _ = sqlx::query("UPDATE shifts SET staff_id = ? WHERE id = ? AND tenant_id = ?")
-                                    .bind(new_staff_id)
-                                    .bind(shift_id)
-                                    .bind(&tenant_id)
-                                    .execute(&mut *tx).await;
-                                tracing::info!("Successfully reassigned shift {} to {}", shift_id, new_staff_id);
-
-                                // Dispatch SMS
-                                let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default();
-                                let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default();
-                                let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_default();
-
-                                if !account_sid.is_empty() && !auth_token.is_empty() && !from_number.is_empty() {
-                                    let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
-                                    let message = format!("Your shift {} has been reassigned to you.", shift_id);
-                                    let _ = provider.send_sms(&from_number, "+15550000000", &message).await;
-                                }
-                            }
-                        }
                     } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
                         tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
@@ -4259,69 +4177,80 @@ pub(crate) struct UiDashboardMetrics {
 pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
-    _mobile_optimized: bool,
+    mobile_optimized: bool,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
     let t_id = tenant_id.to_string();
 
-    let (c_res, po_res, ts_res, cs_res, ar_res) = match &db.store {
-        crate::db::DbStore::Postgres => {
-            let pool1 = db.pool.clone();
-            let pool2 = db.pool.clone();
-            let pool3 = db.pool.clone();
-            let pool4 = db.pool.clone();
-            let pool5 = db.pool.clone();
-
-            let t_id1 = t_id.clone();
-            let t_id2 = t_id.clone();
-            let t_id3 = t_id.clone();
-            let t_id4 = t_id.clone();
-            let t_id5 = t_id.clone();
-
-            tokio::join!(
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id1).fetch_one(&pool1).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, Option<i64>>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT) FROM orders WHERE tenant_id = $1").bind(&t_id2).fetch_one(&pool2).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id3).fetch_one(&pool3).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id4).fetch_one(&pool4).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id5).fetch_one(&pool5).await })
-            )
-        },
-        crate::db::DbStore::Sqlite(pool) => {
-            let pool1 = pool.clone();
-            let pool2 = pool.clone();
-            let pool3 = pool.clone();
-            let pool4 = pool.clone();
-            let pool5 = pool.clone();
-
-            let t_id1 = t_id.clone();
-            let t_id2 = t_id.clone();
-            let t_id3 = t_id.clone();
-            let t_id4 = t_id.clone();
-            let t_id5 = t_id.clone();
-
-            tokio::join!(
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id1).fetch_one(&pool1).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, Option<i64>>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER) FROM orders WHERE tenant_id = ?").bind(&t_id2).fetch_one(&pool2).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id3).fetch_one(&pool3).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id4).fetch_one(&pool4).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id5).fetch_one(&pool5).await })
-            )
-        }
+    let (active_customers_res, orders_metrics_res, campaigns_res, auto_replied_res) = if mobile_optimized {
+        tokio::join!(
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id).fetch_one(pool).await,
+                }
+            },
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id).fetch_one(pool).await,
+                }
+            },
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(pool).await,
+                }
+            },
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id).fetch_one(pool).await,
+                }
+            }
+        )
+    } else {
+        tokio::join!(
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id).fetch_one(pool).await,
+                }
+            },
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id).fetch_one(pool).await,
+                }
+            },
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id).fetch_one(pool).await,
+                }
+            },
+            async {
+                match &db.store {
+                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id).fetch_one(&db.pool).await,
+                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id).fetch_one(pool).await,
+                }
+            }
+        )
     };
 
-    let row = (
-        c_res.unwrap_or(Ok(0))?,
-        po_res.unwrap_or(Ok(None))?,
-        ts_res.unwrap_or(Ok(None))?,
-        cs_res.unwrap_or(Ok(0))?,
-        ar_res.unwrap_or(Ok(0))?,
-    );
+    let active_customers = active_customers_res.unwrap_or(0);
+    let (pending_orders, total_sales) = match orders_metrics_res {
+        Ok((p, s)) => (p.unwrap_or(0), s.unwrap_or(0.0)),
+        _ => (0, 0.0)
+    };
+    let total_campaigns_sent = campaigns_res.unwrap_or(0);
+    let auto_replied = auto_replied_res.unwrap_or(0);
 
     Ok(UiDashboardMetrics {
-        active_customers: row.0,
-        pending_orders: row.1.unwrap_or(0),
-        total_sales: row.2.unwrap_or(0.0),
-        total_campaigns_sent: row.3,
-        auto_replied: row.4,
+        active_customers,
+        pending_orders,
+        total_sales,
+        total_campaigns_sent,
+        auto_replied,
     })
 }
 
@@ -5352,72 +5281,40 @@ async fn ui_dashboard_unified_feed_handler(
             let t_key = format!("ui_triage:{}:mobile:{}", t_bg, mobile_optimized);
             let p_key = format!("ui_priority_tasks:{}:mobile:{}", t_bg, mobile_optimized);
 
-            let db_bg_1 = db_bg.clone(); let t_bg_1 = t_bg.clone(); let m_key_1 = m_key.clone();
-            let db_bg_2 = db_bg.clone(); let t_bg_2 = t_bg.clone(); let o_key_2 = o_key.clone();
-            let db_bg_3 = db_bg.clone(); let t_bg_3 = t_bg.clone(); let i_key_3 = i_key.clone();
-            let db_bg_4 = db_bg.clone(); let t_bg_4 = t_bg.clone(); let t_key_4 = t_key.clone();
-            let db_bg_5 = db_bg.clone(); let t_bg_5 = t_bg.clone(); let p_key_5 = p_key.clone();
-            let a_key = format!("ui_approvals:{}:mobile:{}", t_bg, mobile_optimized);
-            let f_key = format!("ui_agent_feed:{}:mobile:{}", t_bg, mobile_optimized);
-            let db_bg_6 = db_bg.clone(); let t_bg_6 = t_bg.clone(); let a_key_6 = a_key.clone();
-            let db_bg_7 = db_bg.clone(); let t_bg_7 = t_bg.clone(); let f_key_7 = f_key.clone();
-
-            let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res) = tokio::join!(
-                tokio::spawn(async move {
+            let (metrics_val, orders, inbox, triage, priority_tasks, approvals, agent_feed) = tokio::join!(
+                async {
                     if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&m_key_1).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&m_key).await { return v; }
                     }
-                    load_ui_dashboard_metrics(&db_bg_1, &t_bg_1, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
-                }),
-                tokio::spawn(async move {
+                    load_ui_dashboard_metrics(&db_bg, &t_bg, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
+                },
+                async {
                     if let Some(c) = UI_ORDERS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&o_key_2).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&o_key).await { return v; }
                     }
-                    load_ui_orders_from_db(&db_bg_2, &t_bg_2, mobile_optimized).await.unwrap_or_default()
-                }),
-                tokio::spawn(async move {
+                    load_ui_orders_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
+                },
+                async {
                     if let Some(c) = UI_INBOX_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&i_key_3).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&i_key).await { return v; }
                     }
-                    load_ui_inbox_from_db(&db_bg_3, &t_bg_3, mobile_optimized).await.unwrap_or_default()
-                }),
-                tokio::spawn(async move {
+                    load_ui_inbox_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
+                },
+                async {
                     if let Some(c) = UI_TRIAGE_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&t_key_4).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&t_key).await { return v; }
                     }
-                    load_ui_triage_from_db(&db_bg_4, &t_bg_4, mobile_optimized).await.unwrap_or_default()
-                }),
-                tokio::spawn(async move {
+                    load_ui_triage_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
+                },
+                async {
                     if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&p_key_5).await { return v; }
+                        if let Some((v, _)) = c.get_with_swr(&p_key).await { return v; }
                     }
-                    load_ui_priority_tasks_from_db(&db_bg_5, &t_bg_5, mobile_optimized).await.unwrap_or_default()
-                }),
-                tokio::spawn(async move {
-                    if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&a_key_6).await { return v; }
-                    }
-                    let res = load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default();
-                    if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_6, res.clone(), std::time::Duration::from_secs(10)).await; }
-                    res
-                }),
-                tokio::spawn(async move {
-                    if let Some(c) = UI_AGENT_FEED_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&f_key_7).await { return v; }
-                    }
-                    let res = load_ui_agent_feed_from_db(&db_bg_7, &t_bg_7, mobile_optimized).await.unwrap_or_default();
-                    if let Some(c) = UI_AGENT_FEED_CACHE.get() { c.set(&f_key_7, res.clone(), std::time::Duration::from_secs(10)).await; }
-                    res
-                })
+                    load_ui_priority_tasks_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default()
+                },
+                async { load_ui_agent_approvals_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default() },
+                async { load_ui_agent_feed_from_db(&db_bg, &t_bg, mobile_optimized).await.unwrap_or_default() }
             );
-
-            let metrics_val = metrics_res.unwrap_or_default();
-            let orders = orders_res.unwrap_or_default();
-            let inbox = inbox_res.unwrap_or_default();
-            let triage = triage_res.unwrap_or_default();
-            let priority_tasks = priority_tasks_res.unwrap_or_default();
-            let approvals = approvals_res.unwrap_or_default();
-            let agent_feed = agent_feed_res.unwrap_or_default();
 
             let result = serde_json::json!({
                 "metrics": metrics_val,
@@ -5448,101 +5345,60 @@ async fn ui_dashboard_unified_feed_handler(
     let i_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
     let t_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
     let p_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
-    let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
-    let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
 
-    let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res, supply_res) = tokio::join!(
-        tokio::spawn({
+    let (metrics_val, orders, inbox, triage, priority_tasks, approvals, agent_feed, supply_res) = tokio::join!(
+        async {
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            let m_key_clone = m_key.clone();
-            async move {
-                if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&m_key_clone).await { return v; }
-                }
-                load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
+            if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&m_key).await { return v; }
             }
-        }),
-        tokio::spawn({
+            load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
+        },
+        async {
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            let o_key_clone = o_key.clone();
-            async move {
-                if let Some(c) = UI_ORDERS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&o_key_clone).await { return v; }
-                }
-                load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            if let Some(c) = UI_ORDERS_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&o_key).await { return v; }
             }
-        }),
-        tokio::spawn({
+            load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            let i_key_clone = i_key.clone();
-            async move {
-                if let Some(c) = UI_INBOX_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&i_key_clone).await { return v; }
-                }
-                load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            if let Some(c) = UI_INBOX_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&i_key).await { return v; }
             }
-        }),
-        tokio::spawn({
+            load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            let t_key_clone = t_key.clone();
-            async move {
-                if let Some(c) = UI_TRIAGE_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&t_key_clone).await { return v; }
-                }
-                load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            if let Some(c) = UI_TRIAGE_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&t_key).await { return v; }
             }
-        }),
-        tokio::spawn({
+            load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            let p_key_clone = p_key.clone();
-            async move {
-                if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&p_key_clone).await { return v; }
-                }
-                load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
+                if let Some((v, _)) = c.get_with_swr(&p_key).await { return v; }
             }
-        }),
-        tokio::spawn({
+            load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            let a_key_clone = a_key.clone();
-            async move {
-                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&a_key_clone).await { return v; }
-                }
-                let res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
-                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
-                res
-            }
-        }),
-        tokio::spawn({
+            load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
+        async {
             let db_clone = db.clone();
             let t_clone = tenant_id.clone();
-            let f_key_clone = f_key.clone();
-            async move {
-                if let Some(c) = UI_AGENT_FEED_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&f_key_clone).await { return v; }
-                }
-                let res = load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
-                if let Some(c) = UI_AGENT_FEED_CACHE.get() { c.set(&f_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
-                res
-            }
-        }),
+            load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+        },
         supply_future
     );
-
-    let metrics_val = metrics_res.unwrap_or_default();
-    let orders = orders_res.unwrap_or_default();
-    let inbox = inbox_res.unwrap_or_default();
-    let triage = triage_res.unwrap_or_default();
-    let priority_tasks = priority_tasks_res.unwrap_or_default();
-    let approvals = approvals_res.unwrap_or_default();
-    let agent_feed = agent_feed_res.unwrap_or_default();
 
     let supply_val = supply_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
 
@@ -5634,8 +5490,6 @@ async fn ui_dashboard_unified_agent_feed_handler(
 }
 
 static UI_PRIORITY_TASKS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
-static UI_AGENT_APPROVALS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
-static UI_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
 pub async fn list_ui_priority_tasks_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
@@ -6112,7 +5966,7 @@ async fn create_ui_bom_item_handler(
     );
     let app = axum::Router::new()
         .nest("/oauth", crate::api::oauth::proxy::router())
-        .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
+        .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone()))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -6783,7 +6637,6 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/sync", api::sync_gateway::router())
-        .nest("/api/ohc_job_queue", api::ohc_job_queue::handler::router())
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
@@ -6817,6 +6670,9 @@ async fn create_ui_bom_item_handler(
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
         .route("/api/ui/help.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
+        }))
+        .route("/api/ui/help-widget.mjs", axum::routing::get(|| async {
+            ([(axum::http::header::CONTENT_TYPE, "application/javascript")], include_str!("../ui/tauri/src/ui/help-widget.mjs"))
         }))
         .route("/api/ui/help_article.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help_article.html"))
@@ -7106,7 +6962,7 @@ async fn create_ui_bom_item_handler(
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
-        .add_service(::server_ohc::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
+        .add_service(::server_ohc::app::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))
 
         .serve(addr)

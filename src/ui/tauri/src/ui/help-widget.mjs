@@ -9,23 +9,20 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 56px;
             height: 56px;
             border-radius: 28px;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
-            color: #0f172a;
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            background-color: rgba(0, 102, 255, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 16px rgba(0, 102, 255, 0.3);
             cursor: pointer;
             z-index: 99990;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #ohc-floating-help-btn:hover {
             transform: scale(1.05);
-            background: rgba(255, 255, 255, 0.3);
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
         }
         #ohc-floating-help-btn svg {
             width: 28px;
@@ -39,17 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
             width: 380px;
             height: 600px;
             max-height: calc(100vh - 120px);
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
-            border-radius: 20px;
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             z-index: 99990;
             display: none;
             flex-direction: column;
             overflow: hidden;
             font-family: Outfit, -apple-system, sans-serif;
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0,0,0,0.05);
         }
 
         /* Tooltip Styles */
@@ -126,8 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
             font-size: 14px;
         }
         .ohc-help-tab.active {
-            color: #2563eb;
-            border-bottom-color: #2563eb;
+            color: #0066FF;
+            border-bottom-color: #0066FF;
         }
         .ohc-help-content {
             display: none;
@@ -169,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border-bottom-left-radius: 4px;
         }
         .ohc-chat-msg a {
-            color: #2563eb;
+            color: #0066FF;
             text-decoration: underline;
             font-weight: 500;
             display: block;
@@ -191,10 +187,10 @@ document.addEventListener('DOMContentLoaded', () => {
             background: rgba(255, 255, 255, 0.8);
         }
         #ohc-help-chat-input:focus {
-            border-color: #2563eb;
+            border-color: #0066FF;
         }
         #ohc-help-chat-send {
-            background: #2563eb;
+            background: #0066FF;
             color: white;
             border: none;
             border-radius: 20px;
@@ -284,9 +280,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
-                <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
-                <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
+                <li><a href="/help_article.html?id=getting-started-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
+                <li><a href="/help_article.html?id=my-store-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
+                <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
                 <div style="margin-bottom: 8px;">
@@ -550,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                         ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #2563eb; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                     </div>
                 `;
 

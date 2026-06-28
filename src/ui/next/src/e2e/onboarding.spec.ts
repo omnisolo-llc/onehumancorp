@@ -2,41 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('OnboardingWizard CUJ', () => {
   test.beforeEach(async ({ page, context }) => {
-    await context.route('**/api/onboarding/intake', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: {
-          business_type: "Online Store",
-          business_name: "Mock Business",
-          categories: ["physical"],
-          initial_products: [
-            { name: "Mock Product", price: "10.00" }
-          ]
-        }
-      });
-    });
-
-    await context.route('**/api/onboarding/start', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: { organization_id: 'org_123' }
-      });
-    });
-
-    await context.route('**/api/onboarding/launch', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: { status: 'launched' }
-      });
-    });
-
-    await context.route('**/api/onboarding/state', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: { status: 'ok' }
-      });
-    });
-
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
       window.localStorage.clear();
@@ -65,7 +30,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
 
-    await page.waitForSelector("text=Review Details", { state: "visible", timeout: 30000 });
+    await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByText('Modern').click();
@@ -99,7 +64,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
 
-    await page.waitForSelector("text=Review Details", { state: "visible", timeout: 30000 });
+    await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByText('Minimal').click();
@@ -189,7 +154,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
 
     // Check for glassmorphism classes
-    await expect(page.locator('#setup-screen')).toHaveClass(/.*glassmorphism.*/);
+    await expect(page.locator('#setup-screen')).toHaveClass(/bg-white\/65/);
 
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
@@ -326,7 +291,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await page.waitForSelector("text=Style & Team", { state: "visible", timeout: 30000 });
+    await expect(page.getByText("Style & Team")).toBeVisible({ timeout: 15000 });
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
     await page.getByPlaceholder(/you@example.com/i).fill('admin@test.com');
     await page.getByPlaceholder(/••••••••/i).fill('password123');

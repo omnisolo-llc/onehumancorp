@@ -50,7 +50,7 @@ test.describe('In-Person POS UI', () => {
     await expect(receiptScreen).toBeVisible({ timeout: 5000 });
 
     await expect(adminPage.locator('#receipt-amount')).toHaveText('$15.00');
-    await expect(adminPage.locator('.receipt-text')).toContainText('Payment received');
+    await expect(adminPage.locator('.receipt-text')).toHaveText('Payment Successful');
 
     // Return to New Sale
     await adminPage.locator('button:has-text("New Sale")').click();

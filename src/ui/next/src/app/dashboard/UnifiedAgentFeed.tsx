@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
 import { InstagramDMCard } from "./InstagramDMCard";
 import { AgentActionCard } from "../../components/feed/AgentActionCard";
-import { GroupedAgentActionCard } from "../../components/feed/GroupedAgentActionCard";
 
 type TriageItem = {
   id: string;
@@ -68,24 +67,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     "proposals",
   );
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
-
-  const groupedProposals = useMemo(() => {
-    const groups: Record<string, { groupKey: string; title: string; items: AgentFeedItem[] }> = {};
-    items.forEach(item => {
-      const featureType = item.proposed_action?.feature_type || item.context_payload?.feature_type || item.event_source || "unknown";
-      const actionType = item.proposed_action?.action_type || "default";
-      const key = `${featureType}-${actionType}`;
-      if (!groups[key]) {
-        groups[key] = {
-          groupKey: key,
-          title: featureType.replace(/_/g, " "),
-          items: []
-        };
-      }
-      groups[key].items.push(item);
-    });
-    return Object.values(groups);
-  }, [items]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
@@ -245,51 +226,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             if (unifiedData.triage && Array.isArray(unifiedData.triage)) {
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.triage.map((ti: any) => {
-                  let featureType = "triage";
-
-                  if (ti.source?.toLowerCase() === "instagram dm") {
-                    featureType = "instagram_dm";
-                  }
-
-                  let draftReply = ti.action_payload || "Triage item";
-                  try {
-                      if (ti.action_payload && typeof ti.action_payload === "string" && ti.action_payload.startsWith("{")) {
-                          const parsed = JSON.parse(ti.action_payload);
-                          if (parsed.feature_type) {
-                              featureType = parsed.feature_type;
-                          }
-                          if (parsed.draft_reply) {
-                              draftReply = parsed.draft_reply;
-                          } else if (parsed.action_payload) {
-                              draftReply = parsed.action_payload;
-                          }
-                      }
-                  } catch (e) {
-                      // ignore parse errors
-                  }
-
-                  return {
-                    id: ti.id,
-                    tenant_id: ti.tenant_id || "default",
-                    event_source: "triage",
-                    context_payload: {
-                      description: ti.context || "Message requires attention",
-                      customer_message: ti.context || "",
-                      feature_type: featureType
-                    },
-                    proposed_action: {
-                      message: ti.action_payload || "Triage item",
-                      draft_reply: draftReply,
-                      action_type: ti.action_type || "resolve",
-                      feature_type: featureType
-                    },
-                    lifecycle_state:
-                      ti.status === "RESOLVED" || ti.status === "resolved" ? "DISMISSED" : "PENDING_APPROVAL",
-                    created_at: ti.created_at || new Date().toISOString(),
-                    updated_at: ti.created_at || new Date().toISOString(),
-                  };
-                }),
+                ...unifiedData.triage.map((ti: any) => ({
+                  id: ti.id,
+                  tenant_id: ti.tenant_id || "default",
+                  event_source: "triage",
+                  context_payload: {
+                    description: ti.context || "Message requires attention",
+                    feature_type: "triage"
+                  },
+                  proposed_action: {
+                    message: ti.action_payload || "Triage item",
+                    action_type: ti.action_type || "resolve",
+                    feature_type: "triage"
+                  },
+                  lifecycle_state:
+                    ti.status === "RESOLVED" ? "DISMISSED" : "PENDING_APPROVAL",
+                  created_at: ti.created_at || new Date().toISOString(),
+                  updated_at: ti.created_at || new Date().toISOString(),
+                })),
               ];
             }
 
@@ -720,11 +674,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   return (
     <section
       id="triage-queue"
-      className="app-panel mb-6 w-full overflow-hidden"
+      className="mb-6 w-full overflow-hidden"
       aria-label="Unified Agent Feed"
     >
-      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 ">
-        Action Required
+      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">
+        Unified Agent Feed
       </h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
@@ -785,45 +739,22 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </div>
               </div>
             )}
-            {groupedProposals.map((group) => {
-              if (group.items.length === 1) {
-                const approval = group.items[0];
-                return (
-                  <AgentActionCard
-                    key={approval.id}
-                    approval={approval}
-                    queuedActionIds={queuedActionIds}
-                    editingId={editingId}
-                    editContent={editContent}
-                    editQuotePrice={editQuotePrice}
-                    editQuoteScope={editQuoteScope}
-                    setEditingId={setEditingId}
-                    setEditContent={setEditContent}
-                    setEditQuotePrice={setEditQuotePrice}
-                    setEditQuoteScope={setEditQuoteScope}
-                    handleDecision={handleDecision}
-                  />
-                );
-              }
-              return (
-                <GroupedAgentActionCard
-                  key={group.groupKey}
-                  groupKey={group.groupKey}
-                  title={group.title}
-                  items={group.items}
-                  queuedActionIds={queuedActionIds}
-                  editingId={editingId}
-                  editContent={editContent}
-                  editQuotePrice={editQuotePrice}
-                  editQuoteScope={editQuoteScope}
-                  setEditingId={setEditingId}
-                  setEditContent={setEditContent}
-                  setEditQuotePrice={setEditQuotePrice}
-                  setEditQuoteScope={setEditQuoteScope}
-                  handleDecision={handleDecision}
-                />
-              );
-            })}
+            {items.map((approval) => (
+              <AgentActionCard
+                key={approval.id}
+                approval={approval}
+                queuedActionIds={queuedActionIds}
+                editingId={editingId}
+                editContent={editContent}
+                editQuotePrice={editQuotePrice}
+                editQuoteScope={editQuoteScope}
+                setEditingId={setEditingId}
+                setEditContent={setEditContent}
+                setEditQuotePrice={setEditQuotePrice}
+                setEditQuoteScope={setEditQuoteScope}
+                handleDecision={handleDecision}
+              />
+            ))}
           </>
         )}
 
@@ -865,7 +796,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-md font-semibold font-sans text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug break-words">
+                  <h3 className="text-md font-semibold font-sans text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
                     {(() => {
                       try {
                         const p =

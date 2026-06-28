@@ -26,5 +26,6 @@ pub mod quoting;
 pub mod inventory_sync;
 pub mod inventory;
 pub mod agent_memory;
+pub mod omnichannel;
 pub mod agent_feed;
 pub mod customer_memory_graph;
