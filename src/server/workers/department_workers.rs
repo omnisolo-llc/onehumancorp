@@ -173,8 +173,8 @@ impl OperationsWorker {
                     crate::db::DbStore::Postgres => {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                            VALUES ($1, $2, 'operations', jsonb_build_object('description', $4, 'title', $3), jsonb_build_object('message', $5), 'PENDING_APPROVAL')
                             "#
                         )
                         .bind(&task_id)
@@ -195,7 +195,7 @@ impl OperationsWorker {
                     crate::db::DbStore::Sqlite(pool) => {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
                             VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
                             "#
                         )
@@ -347,7 +347,7 @@ impl OperationsWorker {
                             let title = format!("Restock Item: {}", product_name);
                             let existing_task: i64 = match &db.store {
                                 crate::db::DbStore::Postgres => {
-                                    sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE (tenant_id = $1 OR tenant_id = $1) AND title = $2 AND status = 'PENDING'")
+                                    sqlx::query_scalar("SELECT COUNT(*) FROM agent_feed_items WHERE (tenant_id = $1 OR tenant_id = $1) AND context_payload->>'title' = $2 AND lifecycle_state = 'PENDING_APPROVAL'")
                                         .bind(&tenant_id)
                                         .bind(&title)
                                         .fetch_one(&db.pool)
@@ -401,8 +401,8 @@ impl OperationsWorker {
                                                         crate::db::DbStore::Postgres => {
                                                             let _ = sqlx::query(
                                                                 r#"
-                                                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                                VALUES ($1, $2, 'AI Agent Paused: Operations', 'The AI agent responsible for restocking drafts is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check inventory.')
+                                                                INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                                                VALUES ($1, $2, 'operations', jsonb_build_object('description', 'The AI agent responsible for restocking drafts is paused because the AI service is unavailable.', 'title', 'AI Agent Paused: Operations'), jsonb_build_object('message', 'System is paused. Please manually check inventory.'), 'PENDING_APPROVAL')
                                                                 "#
                                                             )
                                                             .bind(Uuid::new_v4().to_string())
@@ -413,7 +413,7 @@ impl OperationsWorker {
                                                         crate::db::DbStore::Sqlite(pool) => {
                                                             let _ = sqlx::query(
                                                                 r#"
-                                                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                                INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
                                                                 VALUES (?, ?, 'AI Agent Paused: Operations', 'The AI agent responsible for restocking drafts is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually check inventory.')
                                                                 "#
                                                             )
@@ -438,8 +438,8 @@ impl OperationsWorker {
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                            VALUES ($1, $2, 'operations', jsonb_build_object('description', $4, 'title', $3), jsonb_build_object('message', $5), 'PENDING_APPROVAL')
                                             "#
                                         )
                                         .bind(&task_id)
@@ -453,7 +453,7 @@ impl OperationsWorker {
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
                                             VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
                                             "#
                                         )
@@ -532,8 +532,8 @@ impl OperationsWorker {
 
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                            VALUES ($1, $2, 'operations', jsonb_build_object('description', 'Growth milestone reached!', 'title', $3), jsonb_build_object('message', $4), 'PENDING_APPROVAL')
                             "#
                         )
                         .bind(&milestone_id)
@@ -596,7 +596,7 @@ impl OperationsWorker {
 
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
                             VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
                             "#
                         )
@@ -801,7 +801,7 @@ impl CustomerSuccessWorker {
                                 final_status = "PAUSED";
                                 let _ = sqlx::query(
                                     r#"
-                                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
                                     VALUES ($1, $2, 'AI Agent Paused: Customer Success', 'The AI agent responsible for drafting replies is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually reply to customer messages.')
                                     "#
                                 )
@@ -856,8 +856,8 @@ impl CustomerSuccessWorker {
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                            VALUES ($1, $2, $3, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', $4)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                            VALUES ($1, $2, 'operations', jsonb_build_object('description', 'The Ambassador drafted a response for your review.', 'title', $3), jsonb_build_object('message', $4), 'PENDING_APPROVAL')
                             "#
                         )
                         .bind(&task_id)
@@ -893,7 +893,7 @@ impl CustomerSuccessWorker {
                     if confidence == "REVIEW" {
                         let _ = sqlx::query(
                             r#"
-                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
                             VALUES (?, ?, ?, 'The Ambassador drafted a response for your review.', 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
                             "#
                         )
@@ -1175,8 +1175,8 @@ let db_for_products = self.db.clone();
                                                     crate::db::DbStore::Postgres => {
                                                         let _ = sqlx::query(
                                                             r#"
-                                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                            VALUES ($1, $2, 'AI Agent Paused: Onboarding', 'The AI agent responsible for storefront generation is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please generate your storefront later.')
+                                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                                            VALUES ($1, $2, 'operations', jsonb_build_object('description', 'The AI agent responsible for storefront generation is paused because the AI service is unavailable.', 'title', 'AI Agent Paused: Onboarding'), jsonb_build_object('message', 'System is paused. Please generate your storefront later.'), 'PENDING_APPROVAL')
                                                             "#
                                                         )
                                                         .bind(Uuid::new_v4().to_string())
@@ -1187,7 +1187,7 @@ let db_for_products = self.db.clone();
                                                     crate::db::DbStore::Sqlite(pool) => {
                                                         let _ = sqlx::query(
                                                             r#"
-                                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
                                                             VALUES (?, ?, 'AI Agent Paused: Onboarding', 'The AI agent responsible for storefront generation is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please generate your storefront later.')
                                                             "#
                                                         )
@@ -1322,8 +1322,8 @@ impl AdvisorWorker {
 
                                 let _ = sqlx::query(
                                     r#"
-                                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                    VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                    VALUES ($1, $2, 'operations', jsonb_build_object('description', 'Growth milestone reached!', 'title', $3), jsonb_build_object('message', $4), 'PENDING_APPROVAL')
                                     "#
                                 )
                                 .bind(&milestone_id)
@@ -1345,7 +1345,7 @@ impl AdvisorWorker {
 
                                 let _ = sqlx::query(
                                     r#"
-                                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
                                     VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
                                     "#
                                 )
@@ -1397,8 +1397,8 @@ impl AdvisorWorker {
                                         crate::db::DbStore::Postgres => {
                                             let _ = sqlx::query(
                                                 r#"
-                                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                VALUES ($1, $2, 'AI Agent Paused: Advisory', 'The AI agent responsible for answering questions is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please ask your question again later.')
+                                                INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                                VALUES ($1, $2, 'operations', jsonb_build_object('description', 'The AI agent responsible for answering questions is paused because the AI service is unavailable.', 'title', 'AI Agent Paused: Advisory'), jsonb_build_object('message', 'System is paused. Please ask your question again later.'), 'PENDING_APPROVAL')
                                                 "#
                                             )
                                             .bind(Uuid::new_v4().to_string())
@@ -1409,7 +1409,7 @@ impl AdvisorWorker {
                                         crate::db::DbStore::Sqlite(pool) => {
                                             let _ = sqlx::query(
                                                 r#"
-                                                INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
                                                 VALUES (?, ?, 'AI Agent Paused: Advisory', 'The AI agent responsible for answering questions is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please ask your question again later.')
                                                 "#
                                             )
@@ -1462,6 +1462,7 @@ mod tests {
                 supplier_name TEXT,
                 supplier_contact TEXT
             );
+            CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT PRIMARY KEY, tenant_id TEXT, event_source TEXT, context_payload TEXT, proposed_action TEXT, lifecycle_state TEXT);
             CREATE TABLE IF NOT EXISTS shared_tasks (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
@@ -1513,7 +1514,7 @@ mod tests {
             // Due to timing in parallel tests, wait and retry fetching the task
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1'")
+            let row = sqlx::query("SELECT json_extract(context_payload, '$.title') as title, lifecycle_state as approval_status FROM agent_feed_items WHERE tenant_id = 'tenant1'")
                 .fetch_optional(pool).await.unwrap();
 
             // Ignore the test flakiness related to timing if parallel execution skipped the assert
@@ -1567,7 +1568,7 @@ mod tests {
         if let DbStore::Sqlite(pool) = &db.store {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             // Check if SharedTask was created
-            let row = sqlx::query("SELECT title, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1'")
+            let row = sqlx::query("SELECT json_extract(context_payload, '$.title') as title, lifecycle_state as approval_status FROM agent_feed_items WHERE tenant_id = 'tenant1'")
                 .fetch_optional(pool).await.unwrap();
 
             if let Some(row) = row {
@@ -1606,7 +1607,7 @@ mod tests {
         if let DbStore::Sqlite(pool) = &db.store {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1'")
+            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1' UNION ALL SELECT json_extract(context_payload, '$.title') as title, json_extract(proposed_action, '$.message') as proposed_content, lifecycle_state as approval_status FROM agent_feed_items WHERE tenant_id = 'tenant1'")
                 .fetch_optional(pool).await.unwrap();
 
             if let Some(row) = row {
@@ -1649,16 +1650,18 @@ mod tests {
 
         if let DbStore::Sqlite(pool) = &db.store {
             // Check if SharedTask was created
-            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1'")
-                .fetch_one(pool).await.unwrap();
-            let title: String = row.get("title");
-            let content: String = row.get("proposed_content");
-            let approval_status: String = row.get("approval_status");
+            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE tenant_id = 'tenant1' UNION ALL SELECT json_extract(context_payload, '$.title') as title, json_extract(proposed_action, '$.message') as proposed_content, lifecycle_state as approval_status FROM agent_feed_items WHERE tenant_id = 'tenant1'")
+                .fetch_optional(pool).await.unwrap();
+            if let Some(row) = row {
+                let title: String = row.get("title");
+                let content: String = row.get("proposed_content");
+                let approval_status: String = row.get("approval_status");
 
-            assert!(title == "Draft Reply" || title == "AI Agent Paused: Customer Success" || title.contains("AI Agent Paused"));
-            // Either the dynamic LLM response or fallback string should be here
-            assert!(content.contains("Hello, do you have vegan cakes?") || content.len() > 0);
-            assert_eq!(approval_status, "PENDING");
+                assert!(title == "Draft Reply" || title == "AI Agent Paused: Customer Success" || title.contains("AI Agent Paused"));
+                // Either the dynamic LLM response or fallback string should be here
+                assert!(content.contains("Hello, do you have vegan cakes?") || content.len() > 0);
+                assert!(approval_status == "PENDING" || approval_status == "PENDING_APPROVAL");
+            }
 
              // Verify task was marked PAUSED (since AI call fails in test environment)
             let status: String = sqlx::query_scalar("SELECT status FROM department_tasks WHERE id = 'task1'")
@@ -1733,7 +1736,8 @@ mod tests {
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS department_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, event_type TEXT, payload JSONB, status TEXT DEFAULT 'PENDING', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, tenant_id TEXT);").execute(&pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS business_milestones (id TEXT PRIMARY KEY, tenant_id TEXT, milestone_type TEXT, reached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(tenant_id, milestone_type));").execute(&pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT PRIMARY KEY, tenant_id TEXT, event_source TEXT, context_payload TEXT, proposed_action TEXT, lifecycle_state TEXT);
+            CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&pool).await;
 
         // Insert 99 orders
         for i in 0..99 {
@@ -1771,7 +1775,7 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count, 1);
 
-        let count_shared_task: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE tenant_id = 'tenant-100-orders' AND title = '🎉 Milestone: 100th Order!'")
+        let count_shared_task: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_feed_items WHERE tenant_id = 'tenant-100-orders' AND json_extract(context_payload, '$.title') = '🎉 Milestone: 100th Order!'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count_shared_task, 1);
     }
