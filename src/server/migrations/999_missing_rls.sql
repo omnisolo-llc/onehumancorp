@@ -137,3 +137,6 @@ DROP POLICY IF EXISTS tenant_isolation_business_milestones ON business_milestone
 CREATE POLICY tenant_isolation_business_milestones ON business_milestones USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
 DROP POLICY IF EXISTS tenant_isolation_epics ON epics;
 CREATE POLICY tenant_isolation_epics ON epics USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+ALTER TABLE IF EXISTS incidents ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_incidents ON incidents;
+CREATE POLICY tenant_isolation_incidents ON incidents USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
