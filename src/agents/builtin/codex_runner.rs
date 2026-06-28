@@ -408,19 +408,16 @@ impl AppServer {
         if req.method == "execute_visual_workflow" {
             let client = reqwest::Client::new();
             let url = format!("http://localhost:18789/api/workflow/run");
-            match client.post(&url).json(&req.params.clone()).send().await {
-                Ok(res) => {
-                    let body = res.json::<serde_json::Value>().await.unwrap_or_default();
-                    let resp = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        id: req.id.clone(),
-                        result: Some(body),
-                        error: None,
-                        meta: None,
-                    };
-                    return serde_json::to_string(&resp).unwrap_or_default();
-                }
-                Err(_) => {}
+            if let Ok(res) = client.post(&url).json(&req.params.clone()).send().await {
+                let body = res.json::<serde_json::Value>().await.unwrap_or_default();
+                let resp = JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id.clone(),
+                    result: Some(body),
+                    error: None,
+                    meta: None,
+                };
+                return serde_json::to_string(&resp).unwrap_or_default();
             }
         }
 
