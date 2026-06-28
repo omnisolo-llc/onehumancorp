@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOHC } from '../../components/PoweredByOHC';
 import { OnboardingChatAgent } from './components/OnboardingChatAgent';
 
 export default function ZeroClickBuilderPage() {

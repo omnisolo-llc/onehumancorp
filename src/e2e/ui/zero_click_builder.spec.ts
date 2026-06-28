@@ -20,7 +20,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
 
     const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..', '..');
 
-    await page.route('**/setup.html', async route => {
+    await page.route('**/onboarding/zero-click', async route => {
         const fileContent = fs.readFileSync(path.join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({
             status: 200,
@@ -30,7 +30,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     });
 
     // Mock the api response
-    await page.route('**/api/v1/growth/zero-click-builder/generate*', async route => {
+    await page.route('**/api/v1/onboarding/start_zero_click*', async route => {
         await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -51,7 +51,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     });
 
     // Navigate to the real setup page
-    await page.goto('http://mock/setup.html');
+    await page.goto('http://mock/onboarding/zero-click');
 
     // Verify Initial Screen
     await expect(page.locator("h1").filter({ hasText: "10-Minute Setup Wizard" })).toBeAttached();

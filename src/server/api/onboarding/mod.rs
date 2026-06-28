@@ -10,6 +10,7 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
         .route("/start", post(start_onboarding))
+        .route("/start_zero_click", post(start_zero_click))
         .route("/intake", post(process_intake_handler))
         .route("/chat", post(process_chat_handler))
         .route("/state", get(get_state).post(save_state))
@@ -169,6 +170,84 @@ async fn start_onboarding(
         },
     }
 }
+#[derive(serde::Deserialize)]
+pub struct ZeroClickGenerateRequest {
+    pub prompt: String,
+    #[serde(default)]
+    pub image_url: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct ZeroClickGenerateResponse {
+    pub organization_id: String,
+    pub user_id: String,
+    pub message: String,
+}
+
+async fn start_zero_click(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ZeroClickGenerateRequest>,
+) -> Result<Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
+    let mut combined_prompt = req.prompt.clone();
+    if let Some(image_url) = &req.image_url {
+        combined_prompt.push_str(&format!("\nImage provided: {}", image_url));
+    }
+
+    let intake_data = agent.process_intake(&combined_prompt).await.map_err(|e| {
+        tracing::error!("Intake error: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let first_product = intake_data.initial_products.first();
+    let first_product_name = first_product.map(|p| p.name.clone()).unwrap_or_else(|| "Standard Product".to_string());
+    let first_product_price = first_product.map(|p| p.price.clone()).unwrap_or_else(|| "10.00".to_string());
+
+    let start_req = ::server_ohc::orchestration::StartOnboardingRequest {
+        business_type: if intake_data.business_type.is_empty() { "Other".to_string() } else { intake_data.business_type },
+        company_name: if intake_data.business_name.is_empty() { "My Store".to_string() } else { intake_data.business_name.clone() },
+        company_description: req.prompt.clone(),
+        selling_categories: if intake_data.categories.is_empty() { vec!["Other".to_string()] } else { intake_data.categories },
+        payment_pref: "online".to_string(),
+        admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
+        admin_name: "Owner".to_string(),
+        admin_password: uuid::Uuid::new_v4().to_string(),
+        website_template: "Modern".to_string(),
+        first_product_name,
+        first_product_price,
+        domain_choice: "subdomain".to_string(),
+        price_type: "fixed".to_string(),
+        location: intake_data.location.unwrap_or_else(|| "Global".to_string()),
+        target_audience: intake_data.target_audience.unwrap_or_else(|| "Everyone".to_string()),
+        initial_products: intake_data.initial_products.into_iter().map(|p| {
+            ::server_ohc::orchestration::IntakeProductProto {
+                name: p.name,
+                price: p.price,
+                description: p.description.unwrap_or_default(),
+                variants: p.variants.unwrap_or_default().into_iter().map(|v| {
+                    ::server_ohc::orchestration::IntakeProductVariantProto {
+                        name: v.name,
+                        price_modifier: v.price_modifier,
+                    }
+                }).collect(),
+            }
+        }).collect(),
+        ai_agents: vec![],
+        ai_auto_respond: false, deposit_percentage: intake_data.deposit_percentage, lead_time_days: intake_data.lead_time_days,
+    };
+
+    let start_res = agent.start_onboarding(start_req).await.map_err(|e| {
+        tracing::error!("Start onboarding error: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(ZeroClickGenerateResponse {
+        organization_id: start_res.organization_id,
+        user_id: start_res.user_id,
+        message: "Storefront generated successfully".to_string()
+    }))
+}
+
 
 async fn launch_onboarding(
     State(agent): State<Arc<OnboardingAgent>>,
@@ -269,5 +348,23 @@ async fn save_state(
             tracing::error!("Failed to save onboarding state: {}", e);
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_zero_click_generate_request_deserialization() {
+        let json = r#"{"prompt": "I am a baker"}"#;
+        let req: ZeroClickGenerateRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.prompt, "I am a baker");
+        assert_eq!(req.image_url, None);
+
+        let json2 = r#"{"prompt": "I am a baker", "image_url": "http://example.com/img.png"}"#;
+        let req2: ZeroClickGenerateRequest = serde_json::from_str(json2).unwrap();
+        assert_eq!(req2.prompt, "I am a baker");
+        assert_eq!(req2.image_url, Some("http://example.com/img.png".to_string()));
     }
 }

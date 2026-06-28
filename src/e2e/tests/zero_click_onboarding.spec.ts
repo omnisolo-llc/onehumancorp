@@ -3,18 +3,18 @@ import { test, expect } from '@playwright/test';
 test.describe('Zero-Click Onboarding to Agent Feed', () => {
   test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
     // Navigate to the setup route
-    await page.goto('/setup.html');
+    await page.goto('/onboarding/zero-click');
 
     // Make sure we're on a mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
 
     // Click Conversational Setup
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
     // Wait for chat input to be visible
-    const chatInput = page.locator('#chat-input');
+    const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
     await expect(chatInput).toBeVisible();
 
     // Type a simple sentence and press Enter
@@ -22,10 +22,10 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await chatInput.press('Enter');
 
     // The app should automatically transition to provisioning state
-    await expect(page.locator('text=Provisioning your workspace...')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Building Your Business...')).toBeVisible({ timeout: 15000 });
 
     // Since this uses the real backend, the UI will eventually redirect to /dashboard
-    await expect(page.getByRole('heading', { name: /You're all set!|Dashboard/ })).toBeVisible({ timeout: 60000 });
+    await expect(page.getByRole('heading', { name: /Your business is live!/ })).toBeVisible({ timeout: 60000 });
 
     // Check horizontal scroll by verifying document width equals window innerWidth
     const hasHorizontalScroll = await page.evaluate(() => {
@@ -35,18 +35,18 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup prevents empty submissions', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding/zero-click');
 
     // Click Conversational Setup
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
     // Ensure input is empty and send
-    const chatInput = page.locator('#chat-input');
+    const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
     await expect(chatInput).toBeVisible();
     await chatInput.fill('');
-    await page.locator('#chat-send-btn').click();
+    await page.locator('button[type="submit"]').click();
 
     // Message shouldn't appear in chat history
     const userMessages = page.locator('.chat-message.user');
@@ -54,10 +54,10 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup opens image upload input when toggled', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding/zero-click');
 
     // Click Conversational Setup
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
@@ -74,18 +74,18 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup maintains history after reload', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding/zero-click');
 
     // Start conversational flow
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
     // Type a message
-    const chatInput = page.locator('#chat-input');
+    const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
     await expect(chatInput).toBeVisible();
     await chatInput.fill('This is a test message to ensure history persistence.');
-    await page.locator('#chat-send-btn').click();
+    await page.locator('button[type="submit"]').click();
 
     // Wait for the message to appear
     const userMessages = page.locator('.chat-message.user');
@@ -103,18 +103,18 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup renders user messages correctly', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('/onboarding/zero-click');
 
     // Start conversational flow
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
     // Type a message
-    const chatInput = page.locator('#chat-input');
+    const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
     await expect(chatInput).toBeVisible();
     await chatInput.fill('Testing chat bubble formatting');
-    await page.locator('#chat-send-btn').click();
+    await page.locator('button[type="submit"]').click();
 
     // Check message wrapper layout
     const lastUserMessage = page.locator('.chat-message.user').last();
