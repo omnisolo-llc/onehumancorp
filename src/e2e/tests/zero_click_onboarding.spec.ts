@@ -22,10 +22,10 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await chatInput.press('Enter');
 
     // In the actual app, wait for the summary card to appear
-    await expect(page.locator('text=Ready to Launch')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('h2:has-text("Ready to Launch")')).toBeVisible({ timeout: 30000 });
 
     // Click Approve & Publish
-    const launchBtn = page.getByTestId('approve-publish-btn');
+    const launchBtn = page.locator('#approve-publish-btn-chat');
     await expect(launchBtn).toBeVisible();
     await launchBtn.click();
 
