@@ -4269,42 +4269,54 @@ pub(crate) async fn load_ui_dashboard_metrics(
             let pool2 = db.pool.clone();
             let pool3 = db.pool.clone();
             let pool4 = db.pool.clone();
-            let pool5 = db.pool.clone();
 
             let t_id1 = t_id.clone();
             let t_id2 = t_id.clone();
             let t_id3 = t_id.clone();
             let t_id4 = t_id.clone();
-            let t_id5 = t_id.clone();
 
-            tokio::join!(
+            let (c_res, orders_res, cs_res, ar_res) = tokio::join!(
                 tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id1).fetch_one(&pool1).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, Option<i64>>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT) FROM orders WHERE tenant_id = $1").bind(&t_id2).fetch_one(&pool2).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id3).fetch_one(&pool3).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id4).fetch_one(&pool4).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id5).fetch_one(&pool5).await })
-            )
+                tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id2).fetch_one(&pool2).await }),
+                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id3).fetch_one(&pool3).await }),
+                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await })
+            );
+
+
+            let (po_res, ts_res): (Result<Result<Option<i64>, sqlx::Error>, tokio::task::JoinError>, Result<Result<Option<f64>, sqlx::Error>, tokio::task::JoinError>) = match orders_res {
+                Ok(Ok(val)) => (Ok(Ok(val.0)), Ok(Ok(val.1))),
+                Ok(Err(_)) => (Ok(Err(sqlx::Error::RowNotFound)), Ok(Err(sqlx::Error::RowNotFound))),
+                Err(_) => (Ok(Err(sqlx::Error::RowNotFound)), Ok(Err(sqlx::Error::RowNotFound))),
+            };
+            (c_res, po_res, ts_res, cs_res, ar_res)
+
         },
         crate::db::DbStore::Sqlite(pool) => {
             let pool1 = pool.clone();
             let pool2 = pool.clone();
             let pool3 = pool.clone();
             let pool4 = pool.clone();
-            let pool5 = pool.clone();
 
             let t_id1 = t_id.clone();
             let t_id2 = t_id.clone();
             let t_id3 = t_id.clone();
             let t_id4 = t_id.clone();
-            let t_id5 = t_id.clone();
 
-            tokio::join!(
+            let (c_res, orders_res, cs_res, ar_res) = tokio::join!(
                 tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id1).fetch_one(&pool1).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, Option<i64>>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER) FROM orders WHERE tenant_id = ?").bind(&t_id2).fetch_one(&pool2).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id3).fetch_one(&pool3).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id4).fetch_one(&pool4).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id5).fetch_one(&pool5).await })
-            )
+                tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id2).fetch_one(&pool2).await }),
+                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id3).fetch_one(&pool3).await }),
+                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await })
+            );
+
+
+            let (po_res, ts_res): (Result<Result<Option<i64>, sqlx::Error>, tokio::task::JoinError>, Result<Result<Option<f64>, sqlx::Error>, tokio::task::JoinError>) = match orders_res {
+                Ok(Ok(val)) => (Ok(Ok(val.0)), Ok(Ok(val.1))),
+                Ok(Err(_)) => (Ok(Err(sqlx::Error::RowNotFound)), Ok(Err(sqlx::Error::RowNotFound))),
+                Err(_) => (Ok(Err(sqlx::Error::RowNotFound)), Ok(Err(sqlx::Error::RowNotFound))),
+            };
+            (c_res, po_res, ts_res, cs_res, ar_res)
+
         }
     };
 
@@ -4710,14 +4722,13 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str, mo
     match &db.store {
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
-                sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
+                sqlx::query("SELECT id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
                     .bind(tenant_id)
                     .bind(limit)
                     .fetch_all(&db.pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
-                            "tenant_id": row.get::<String, _>("tenant_id"),
                             "department": row.get::<String, _>("department"),
                             "description": row.get::<String, _>("description"),
                             "status": row.get::<String, _>("status"),
@@ -4744,14 +4755,13 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str, mo
         },
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
-                sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
+                sqlx::query("SELECT id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
                     .bind(tenant_id)
                     .bind(limit)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
-                            "tenant_id": row.get::<String, _>("tenant_id"),
                             "department": row.get::<String, _>("department"),
                             "description": row.get::<String, _>("description"),
                             "status": row.get::<String, _>("status"),
@@ -4944,7 +4954,6 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             let item = if mobile_optimized {
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
-                                    "tenant_id": row.get::<String, _>("tenant_id"),
                                     "event_source": row.get::<String, _>("event_source"),
                                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
@@ -4992,7 +5001,6 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                             let item = if mobile_optimized {
                                 serde_json::json!({
                                     "id": row.get::<String, _>("id"),
-                                    "tenant_id": row.get::<String, _>("tenant_id"),
                                     "event_source": row.get::<String, _>("event_source"),
                                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                                     "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
@@ -5237,7 +5245,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5246,7 +5254,6 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                 .map(|rows| rows.into_iter().map(|row| {
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })
@@ -5276,7 +5283,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, tenant_id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5285,7 +5292,6 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                 .map(|rows| rows.into_iter().map(|row| {
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
                         "event_source": row.get::<String, _>("event_source"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     })

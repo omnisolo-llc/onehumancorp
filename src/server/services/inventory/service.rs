@@ -36,9 +36,7 @@ impl InventoryService {
         Self { redis_client }
     }
 
-    #[inline]
     // Redis Redlock pattern for distributed lock
-    #[inline]
     fn get_lock_key(tenant_id: &str, product_id: &str) -> String {
         format!("ohc:lock:{}:inventory:{}", tenant_id, product_id)
     }
