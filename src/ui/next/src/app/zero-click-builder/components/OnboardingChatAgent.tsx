@@ -25,7 +25,27 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
+  const [provisioningStateIndex, setProvisioningStateIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const provisioningStates = [
+    "Building Your Business...",
+    "Creating your menu...",
+    "Designing the storefront...",
+    "Configuring AI agents...",
+    "Finalizing launch setup..."
+  ];
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isProvisioning) {
+      setProvisioningStateIndex(0);
+      interval = setInterval(() => {
+        setProvisioningStateIndex((prev) => (prev + 1) % provisioningStates.length);
+      }, 2000);
+    }
+    return () => clearInterval(interval);
+  }, [isProvisioning]);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
@@ -187,12 +207,12 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
       {/* Provisioning Overlay */}
       {isProvisioning && (
-        <div className="absolute inset-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-[10px] flex flex-col items-center justify-center rounded-2xl">
-          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 animate-pulse">
-            Building Your Business...
+        <div className="absolute inset-0 z-10 bg-white/10 dark:bg-black/20 backdrop-blur-[20px] flex flex-col items-center justify-center rounded-2xl">
+          <div className="w-16 h-16 border-4 border-indigo-200/50 border-t-indigo-600 rounded-full animate-spin mb-6 shadow-lg shadow-indigo-500/20"></div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 animate-pulse text-center px-4 drop-shadow-md">
+            {provisioningStates[provisioningStateIndex]}
           </h3>
-          <p className="text-sm text-gray-500 font-medium">Provisioning workspace, products, and agents.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300 font-medium drop-shadow-sm">Provisioning workspace, products, and agents.</p>
         </div>
       )}
 
