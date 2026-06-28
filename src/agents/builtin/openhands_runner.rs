@@ -13,6 +13,12 @@ pub struct OpenHandsCore {
     harness_state: Arc<Mutex<String>>,
 }
 
+impl Default for OpenHandsCore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OpenHandsCore {
     pub fn new() -> Self {
         Self {
