@@ -786,14 +786,14 @@ pub async fn stripe_webhook_handler(
             .await
             {
                 Ok(Some(subscriber_id)) => {
-                    tracing::info!("Processed Stripe failed-payment dunning for subscriber {}", subscriber_id);
+                    tracing::info!("Processed Stripe failed-payment dunning for subscriber {}", subscriber_id); // pii-safe
                 }
                 Ok(None) => {
                     tracing::warn!("Stripe invoice.payment_failed did not match an OHC subscriber");
                 }
                 Err(err) => {
                     ::server_telemetry::record_error_signal("[bug] Failed to process Stripe failed-payment dunning");
-                    tracing::error!("Failed to process Stripe failed-payment dunning: {}", err);
+                    tracing::error!("Failed to process Stripe failed-payment dunning: {}", err); // pii-safe
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
             }

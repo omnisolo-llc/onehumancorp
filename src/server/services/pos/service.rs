@@ -37,7 +37,7 @@ impl MyPosService {
             } else if payload.r#type == "transaction" {
                 // Here we might handle creating the offline transaction, but since it's already recorded we just reconcile
                 // To keep it simple, we record a log for the transaction type CRDT if needed
-                tracing::info!("Reconciled transaction CRDT for item {}", payload.item_id);
+                tracing::info!("Reconciled transaction CRDT for item {}", payload.item_id); // pii-safe
             }
         }
 

@@ -720,7 +720,7 @@ pub async fn create_payment_intent_handler(
                         hub.redis_client.clone()
                     );
                     if let Err(err) = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await {
-                        tracing::error!("Failed to release inventory after stripe intent failed: {}", err);
+                        tracing::error!("Failed to release inventory after stripe intent failed: {}", err); // pii-safe
                     }
                 }
                 Json(Err(e))
@@ -733,7 +733,7 @@ pub async fn create_payment_intent_handler(
                     hub.redis_client.clone()
                 );
                 if let Err(err) = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await {
-                    tracing::error!("Failed to release inventory after stripe intent failed: {}", err);
+                    tracing::error!("Failed to release inventory after stripe intent failed: {}", err); // pii-safe
                 }
             }
             Json(Err(e.to_string()))

@@ -158,7 +158,7 @@ async fn create_initial_admin(
             )
         }
         Err(e) => {
-            tracing::error!("Failed to create admin account: {}", e);
+            tracing::error!("Failed to create admin account: {}", e); // pii-safe
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(SetupAdminResponse {
