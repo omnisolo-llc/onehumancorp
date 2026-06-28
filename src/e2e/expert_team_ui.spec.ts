@@ -12,15 +12,6 @@ test.describe('Expert Team Workflow UI (Tencent Workbuddy Feature)', () => {
     const taskInput = page.getByPlaceholder(/Write a comprehensive business plan/);
     await taskInput.fill('Analyze market trends. Chart: Required. Analysis: Deep.');
 
-    // Mock the backend API response to avoid actual LLM calls
-    await page.route('**/api/expert-team', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ result: 'Final Synthesized Expert Report: Market trends are up. Chart: Market Growth 2025. Analysis: Confirmed.' }),
-      });
-    });
-
     // Click to execute
     const executeButton = page.getByRole('button', { name: /Execute Task via Expert Team/ });
     await expect(executeButton).toBeEnabled();
@@ -29,33 +20,25 @@ test.describe('Expert Team Workflow UI (Tencent Workbuddy Feature)', () => {
     // Verify loading state
     await expect(page.getByRole('button', { name: /Orchestrating Expert Team/ })).toBeDisabled();
 
-    // Verify final delivered output
-    await expect(page.getByRole('heading', { name: 'Final Delivered Output' })).toBeVisible();
-    await expect(page.getByText('Final Synthesized Expert Report: Market trends are up.')).toBeVisible();
+    // Verify final delivered output - wait longer as real E2E takes time
+    await expect(page.getByRole('heading', { name: 'Final Delivered Output' })).toBeVisible({ timeout: 60000 });
+    // Expect the real output container to have text content indicating synthesis
+    await expect(page.locator('.expert-output-content')).not.toBeEmpty();
   });
 
   test('User handles quality gate errors from backend', async ({ page }) => {
     // Navigate to the Expert Team page
     await page.goto('/expert-team');
 
-    // Fill in the task context
+    // Fill in the task context that will intentionally fail the Pre-Deliver gate (e.g. too short)
     const taskInput = page.getByPlaceholder(/Write a comprehensive business plan/);
     await taskInput.fill('Do something short.');
-
-    // Mock the backend API response to simulate a Pre-deliver gate failure
-    await page.route('**/api/expert-team', async (route) => {
-      await route.fulfill({
-        status: 400,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Pre-deliver Gate Failed: Missing required chart/analysis/graph verification in final output.' }),
-      });
-    });
 
     // Click to execute
     await page.getByRole('button', { name: /Execute Task via Expert Team/ }).click();
 
-    // Verify error message is displayed
-    await expect(page.getByRole('heading', { name: 'Quality Gate or Execution Error:' })).toBeVisible();
-    await expect(page.getByText('Pre-deliver Gate Failed: Missing required chart/analysis/graph verification')).toBeVisible();
+    // Verify error message is displayed - wait longer as real E2E takes time
+    await expect(page.getByRole('heading', { name: 'Quality Gate or Execution Error:' })).toBeVisible({ timeout: 60000 });
+    await expect(page.locator('.expert-error-content')).not.toBeEmpty();
   });
 });
