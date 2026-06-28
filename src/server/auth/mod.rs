@@ -904,13 +904,25 @@ impl AuthService for AuthServiceServerImpl {
     }
 
     async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserProto>, Status> {
+        let auth_info = request.extensions().get::<AuthInfo>()
+            .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
+        let org_id = auth_info.org_id.clone();
+
+        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id)
+            .ok_or_else(|| Status::not_found("Caller not found"))?;
+
+        if !caller.roles.contains(&"ADMIN".to_string()) {
+            return Err(Status::permission_denied("Only ADMIN can create users"));
+        }
+
         let req = request.into_inner();
+        // Force the new user to be in the caller's organization to prevent cross-tenant injection
         let user = self.store.create_user(
             req.email.clone(),
             req.email.clone(),
             "temp".to_string(),
             vec![],
-            req.organization_id.clone(),
+            org_id,
         ).map_err(|e| Status::internal(e))?;
         Ok(Response::new(UserProto {
             id: user.id,
@@ -946,12 +958,27 @@ impl AuthService for AuthServiceServerImpl {
     }
 
     async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserProto>, Status> {
-        let org_id = request.extensions().get::<AuthInfo>()
-            .map(|ai| ai.org_id.clone())
+        let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
+        let org_id = auth_info.org_id.clone();
+
+        // Privilege Escalation fix: Ensure caller is ADMIN or the target user themselves
+        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id)
+            .ok_or_else(|| Status::not_found("Caller not found"))?;
+
         let req = request.into_inner();
 
-        let user = self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &org_id)
+        let is_admin = caller.roles.contains(&"ADMIN".to_string());
+        if !is_admin && caller.id != req.id {
+            return Err(Status::permission_denied("Insufficient permissions to update this user"));
+        }
+
+        // Only ADMIN can change roles or active status
+        let target_user = self.store.get_user(&req.id, &org_id).ok_or_else(|| Status::not_found("User not found"))?;
+        let final_roles = if is_admin { req.roles } else { target_user.roles.clone() };
+        let final_active = if is_admin { req.active } else { Some(target_user.active) };
+
+        let user = self.store.update_user(&req.id, req.email, Some(final_roles), final_active, &org_id)
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(UserProto {
@@ -968,9 +995,17 @@ impl AuthService for AuthServiceServerImpl {
     }
 
     async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<EmptyResponse>, Status> {
-        let org_id = request.extensions().get::<AuthInfo>()
-            .map(|ai| ai.org_id.clone())
+        let auth_info = request.extensions().get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
+        let org_id = auth_info.org_id.clone();
+
+        // Privilege Escalation fix: Ensure caller is ADMIN
+        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id)
+            .ok_or_else(|| Status::not_found("Caller not found"))?;
+
+        if !caller.roles.contains(&"ADMIN".to_string()) {
+            return Err(Status::permission_denied("Only ADMIN can delete users"));
+        }
 
         self.store.delete_user(&request.get_ref().id, &org_id)
             .map_err(|e| Status::internal(e))?;

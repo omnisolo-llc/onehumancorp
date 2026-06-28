@@ -32,12 +32,37 @@ pub fn router_with_pool<S: Clone + Send + Sync + 'static>() -> Router<sqlx::PgPo
         .route("/power_sync_push", post(power_sync_push_handler))
 }
 
+
+async fn validate_token_and_get_tenant(pool: &sqlx::PgPool, headers: &axum::http::HeaderMap) -> Result<(String, String), axum::response::Response> {
+    let auth_header = headers.get("authorization").and_then(|h| h.to_str().ok());
+    let token = match auth_header {
+        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+        _ => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()),
+    };
+
+    let repo = std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(pool.clone()));
+    let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
+
+    let claims = match store.validate_token(token).await {
+        Ok(c) => c,
+        Err(_) => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()),
+    };
+
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let agent_id = claims.sub;
+
+    Ok((tenant_id, agent_id))
+}
+
 pub async fn power_sync_pull_handler(
     State(pool): State<sqlx::PgPool>,
     headers: axum::http::HeaderMap,
     Json(_payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
+        Ok((tenant_id, agent_id)) => format!("spiffe://onehumancorp.io/org/{}/agent/{}", tenant_id, agent_id),
+        Err(e) => return e,
+    };
     let mut tonic_request = tonic::Request::new(::server_ohc::orchestration::PowerSyncPullRequest {});
 
     if let Ok(metadata_value) = spiffe_id_str.parse() {
@@ -64,7 +89,10 @@ pub async fn power_sync_push_handler(
     headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
+        Ok((tenant_id, agent_id)) => format!("spiffe://onehumancorp.io/org/{}/agent/{}", tenant_id, agent_id),
+        Err(e) => return e,
+    };
     let payload_str = serde_json::to_string(&payload.get("payload").unwrap_or(&payload)).unwrap_or_else(|_| "[]".to_string());
 
     let mut tonic_request = tonic::Request::new(::server_ohc::orchestration::PowerSyncPushRequest {
@@ -110,8 +138,11 @@ pub async fn sync_mcp_deltas_handler(
     headers: axum::http::HeaderMap,
     Json(payload): Json<McpDeltasPayload>,
 ) -> impl IntoResponse {
-    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-    let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+    let (tenant_id, agent_id) = match validate_token_and_get_tenant(&pool, &headers).await {
+        Ok(t) => t,
+        Err(e) => return e,
+    };
+    let spiffe_id_str = format!("spiffe://onehumancorp.io/org/{}/agent/{}", tenant_id, agent_id);
 
     if tenant_id.is_empty() {
         return (StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({
