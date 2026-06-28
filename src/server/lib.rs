@@ -5045,7 +5045,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 if let Some(obj) = approval.as_object_mut() {
                     // Ensure approval items map correctly to triage UI
                     if !obj.contains_key("lifecycle_state") {
-                        obj.insert("lifecycle_state".to_string(), serde_json::json!("PENDING_APPROVAL"));
+                        let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                        let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                        obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
                     }
                     if !obj.contains_key("created_at") {
                         obj.insert("created_at".to_string(), serde_json::json!(""));
@@ -5403,7 +5405,16 @@ async fn ui_dashboard_unified_feed_handler(
                     if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
                         if let Some((v, _)) = c.get_with_swr(&a_key_6).await { return v; }
                     }
-                    let res = load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default();
+                    let mut res = load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default();
+                    for approval in &mut res {
+                        if let Some(obj) = approval.as_object_mut() {
+                            if !obj.contains_key("lifecycle_state") {
+                                let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                                let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                                obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                            }
+                        }
+                    }
                     if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_6, res.clone(), std::time::Duration::from_secs(10)).await; }
                     res
                 }),
@@ -5521,7 +5532,16 @@ async fn ui_dashboard_unified_feed_handler(
                 if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
                     if let Some((v, _)) = c.get_with_swr(&a_key_clone).await { return v; }
                 }
-                let res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
+                let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
+                for approval in &mut res {
+                    if let Some(obj) = approval.as_object_mut() {
+                        if !obj.contains_key("lifecycle_state") {
+                            let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                            let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                            obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                        }
+                    }
+                }
                 if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
                 res
             }
@@ -5603,7 +5623,16 @@ async fn ui_dashboard_unified_agent_feed_handler(
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } })
             );
 
-            let pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            for approval in &mut pending_approvals {
+                if let Some(obj) = approval.as_object_mut() {
+                    if !obj.contains_key("lifecycle_state") {
+                        let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                        let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                        obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                    }
+                }
+            }
             let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
@@ -5625,7 +5654,16 @@ async fn ui_dashboard_unified_agent_feed_handler(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } })
     );
 
-    let pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            for approval in &mut pending_approvals {
+                if let Some(obj) = approval.as_object_mut() {
+                    if !obj.contains_key("lifecycle_state") {
+                        let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                        let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                        obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                    }
+                }
+            }
     let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
