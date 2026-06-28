@@ -1,6 +1,6 @@
+use crate::llm::LlmClient;
 /// Master Catalog B.4. Context Management
 use crate::types::{ChatRequest, Message};
-use crate::llm::LlmClient;
 use std::sync::Arc;
 
 pub async fn compact_context(
@@ -43,7 +43,10 @@ pub async fn compact_context(
                     } else {
                         format!("Error: {}", tr.error)
                     };
-                    middle_text.push_str(&format!("  tool_call_id: {} -> {}\n", tr.tool_call_id, status));
+                    middle_text.push_str(&format!(
+                        "  tool_call_id: {} -> {}\n",
+                        tr.tool_call_id, status
+                    ));
                 }
             }
             middle_text.push_str("---\n");
@@ -61,7 +64,10 @@ pub async fn compact_context(
         match llm.chat(summary_req).await {
             Ok(summary_resp) => {
                 let summary = summary_resp.message.content;
-                compact_messages.push(Message::user(format!("[Context Compacted by Harness]:\n{}", summary)));
+                compact_messages.push(Message::user(format!(
+                    "[Context Compacted by Harness]:\n{}",
+                    summary
+                )));
             }
             Err(e) => {
                 return Err(format!("Context compaction failed: {}", e));
@@ -83,8 +89,8 @@ pub async fn compact_context(
 mod tests {
     use super::*;
     use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
-    use tokio::sync::Mutex;
     use std::sync::Arc;
+    use tokio::sync::Mutex;
 
     struct MockLlmClient {
         responses: Mutex<Vec<ChatResponse>>,
@@ -92,7 +98,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             if !resps.is_empty() {
                 Ok(resps.remove(0))
@@ -109,7 +118,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_compact_context_short() {
-        let llm: Arc<dyn LlmClient> = Arc::new(MockLlmClient { responses: Mutex::new(vec![]) });
+        let llm: Arc<dyn LlmClient> = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![]),
+        });
         let messages = vec![
             Message::user("0"),
             Message::assistant("1"),
@@ -117,21 +128,21 @@ mod tests {
             Message::assistant("3"),
         ];
 
-        let compacted = compact_context(&messages, "test-model", &llm).await.unwrap();
+        let compacted = compact_context(&messages, "test-model", &llm)
+            .await
+            .unwrap();
         assert_eq!(compacted.len(), 4); // Not compacted because length < 5
     }
 
     #[tokio::test]
     async fn test_compact_context_long() {
         let llm: Arc<dyn LlmClient> = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                ChatResponse {
-                    message: Message::assistant("This is a summary"),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("id1".to_string()),
-                }
-            ])
+            responses: Mutex::new(vec![ChatResponse {
+                message: Message::assistant("This is a summary"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id1".to_string()),
+            }]),
         });
 
         let mut msg_tool = Message::assistant("I am calling a tool");
@@ -168,7 +179,9 @@ mod tests {
             Message::user("Message 6"),
         ];
 
-        let compacted = compact_context(&messages, "test-model", &llm).await.unwrap();
+        let compacted = compact_context(&messages, "test-model", &llm)
+            .await
+            .unwrap();
 
         // Expected layout:
         // 0: Initial prompt
@@ -178,7 +191,11 @@ mod tests {
         // 4: messages[len - 1] -> Message 6
         assert_eq!(compacted.len(), 5);
         assert_eq!(compacted[0].content, "Message 0 (Start)");
-        assert!(compacted[1].content.contains("[Context Compacted by Harness]"));
+        assert!(
+            compacted[1]
+                .content
+                .contains("[Context Compacted by Harness]")
+        );
         assert!(compacted[1].content.contains("This is a summary"));
         assert_eq!(compacted[2].content, "Message 4");
     }
