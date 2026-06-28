@@ -22,6 +22,10 @@ export async function POST(req: Request) {
       });
 
       if (!res.ok) {
+          if (res.status === 409) {
+              const data = await res.json();
+              return NextResponse.json(data, { status: res.status });
+          }
           throw new Error('Backend failed to respond correctly');
       }
 
