@@ -1,5 +1,6 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::services::customer_memory_graph::service::CustomerMemoryGraphService;
 use std::collections::HashMap;
 
 pub struct CustomerSuccessAgent {
@@ -323,26 +324,35 @@ impl Department for CustomerSuccessAgent {
             let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
             let payload_customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
 
-            // Identity Resolution: Look up customer by phone, email, or name
+            // Identity Resolution: Use IdentityResolver to get unified customer graph identity
             let mut customer_id = "".to_string();
             let mut past_orders = "".to_string();
+            let mut profile_summary_text = "".to_string();
             let pool = crate::db::get_pool();
+            let global_db = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
 
             if !payload_customer_id.is_empty() {
                 customer_id = payload_customer_id.to_string();
             } else if !sender_id.is_empty() && sender_id != "unknown" {
-                let result: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2 OR name = $2) LIMIT 1")
-                    .bind(&event.tenant_id)
-                    .bind(&sender_id)
-                    .fetch_one(&pool)
-                    .await;
-                if let Ok((id,)) = result {
+                let resolver = crate::orchestration::identity_resolution::IdentityResolver::new(global_db.clone());
+                if let Ok(id) = resolver.resolve_or_create_customer(&event.tenant_id, sender_id, source).await {
                     customer_id = id.clone();
-                    tracing::info!("Resolved sender {} to customer {}", sender_id, customer_id);
+                    tracing::info!("Resolved sender {} to customer {} via Memory Graph Identity Resolver", sender_id, customer_id);
                 }
             }
 
+            let mut memory_graph_summary = String::new();
             if !customer_id.is_empty() {
+                // Query Unified Customer Memory Graph
+                let mem_service = crate::services::customer_memory_graph::service::CustomerMemoryGraphService::new(pool.clone());
+                let _ = mem_service.ingest_interaction(&event.tenant_id, &customer_id, source, message).await;
+
+                if let Ok(profile_summary) = mem_service.get_profile_summary(&event.tenant_id, &customer_id).await {
+                    if !profile_summary.summary.is_empty() && profile_summary.summary != "No summary available." && profile_summary.summary != "Customer not found." {
+                        profile_summary_text = format!("Unified Customer Memory: {} | Preferences: {}", profile_summary.summary, profile_summary.preferences.join(", "));
+                    }
+                }
+
                 // Fetch past orders context
                 let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
                     .bind(&event.tenant_id)
@@ -352,6 +362,20 @@ impl Department for CustomerSuccessAgent {
                 if let Ok(orders) = orders {
                     if !orders.is_empty() {
                         past_orders = format!("Returning Customer ({} past orders).", orders.len());
+                    }
+                }
+
+                // Query Unified Customer Memory Graph
+                let memory_service = CustomerMemoryGraphService::new(pool.clone());
+                if let Ok(profile_summary) = memory_service.get_profile_summary(&event.tenant_id, &customer_id).await {
+                    if profile_summary.total_interactions > 0 || !profile_summary.segments.is_empty() {
+                        memory_graph_summary = format!(
+                            "Customer Profile: Interactions: {}. Segments: {}. Preferences: {}. Summary: {}",
+                            profile_summary.total_interactions,
+                            profile_summary.segments.join(", "),
+                            profile_summary.preferences.join(", "),
+                            profile_summary.summary
+                        );
                     }
                 }
             }
@@ -380,6 +404,15 @@ impl Department for CustomerSuccessAgent {
             if !past_orders.is_empty() {
                 context_summary.push_str("\n");
                 context_summary.push_str(&past_orders);
+            }
+            if !profile_summary_text.is_empty() {
+                context_summary.push_str("\n");
+                context_summary.push_str(&profile_summary_text);
+            }
+
+            if !memory_graph_summary.is_empty() {
+                context_summary.push_str("\n");
+                context_summary.push_str(&memory_graph_summary);
             }
 
             if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
@@ -433,6 +466,7 @@ impl Department for CustomerSuccessAgent {
                 "sender_id": sender_id,
                 "customer_id": customer_id,
                 "past_orders": past_orders,
+                "profile_summary": profile_summary_text,
             });
 
             let approval_req = self.orchestrator.execute_action(

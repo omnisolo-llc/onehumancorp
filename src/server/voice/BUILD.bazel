@@ -25,6 +25,7 @@ rust_library(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:uuid",
+        "@crates//:rand",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -37,5 +38,6 @@ rust_test(
     rustc_flags = ["--cfg=ohc_bazel_package"],
     deps = [
         "@crates//:tokio",
+        "@crates//:rand",
     ],
 )

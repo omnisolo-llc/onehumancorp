@@ -984,7 +984,7 @@ mod tests_clamped {
 
         // Pass max_retries = 10, but it should be clamped to 2
         let handle = tokio::spawn(async move {
-            retry_parser.parse_with_prompt(req, 10).await
+            retry_parser.parse_with_prompt_and_strategy(req, 10, &crate::output_parser::ExponentialBackoffWithJitter::new(0, 0)).await
         });
 
 

@@ -45,7 +45,7 @@ impl PerplexityAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-        use ohc_builtin_agent_core::types::Usage;
+    use ohc_builtin_agent_core::types::Usage;
 
     struct MockPerplexityLlm {
         response: String,
@@ -69,7 +69,8 @@ mod tests {
     #[tokio::test]
     async fn test_perplexity_flow() {
         let llm = Arc::new(MockPerplexityLlm {
-            response: "According to source [1], the sky is blue. [1] https://example.com".to_string(),
+            response: "According to source [1], the sky is blue. [1] https://example.com"
+                .to_string(),
         });
         let agent = PerplexityAgent::new(llm, "test-model".to_string());
 

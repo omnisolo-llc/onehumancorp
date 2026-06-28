@@ -288,43 +288,37 @@ impl DB {
                         }
 
                         if !db_path.exists() {
-                            if let Ok(file) = OpenOptions::new()
+                            let file = OpenOptions::new()
                                 .read(true)
                                 .write(true)
                                 .create_new(true) // Prevent TOCTOU vulnerabilities
                                 .mode(0o600)
-                                .open(&db_path)
-                            {
-                                if let Ok(metadata) = file.metadata() {
-                                    let mut perms = metadata.permissions();
-                                    if (perms.mode() & 0o777) != 0o600 {
-                                        perms.set_mode(0o600);
-                                        if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!(
-                                                "Failed to securely update existing standalone database file permissions: {}",
-                                                e
-                                            );
-                                            return Err(e.into());
-                                        }
-                                    }
+                                .open(&db_path)?;
+
+                            let metadata = file.metadata()?;
+                            let mut perms = metadata.permissions();
+                            if (perms.mode() & 0o777) != 0o600 {
+                                perms.set_mode(0o600);
+                                if let Err(e) = file.set_permissions(perms) {
+                                    tracing::error!(
+                                        "Failed to securely update existing standalone database file permissions: {}",
+                                        e
+                                    );
+                                    return Err(e.into());
                                 }
                             }
                         } else {
-                            if let Ok(file) =
-                                OpenOptions::new().read(true).write(true).open(&db_path)
-                            {
-                                if let Ok(metadata) = file.metadata() {
-                                    let mut perms = metadata.permissions();
-                                    if (perms.mode() & 0o777) != 0o600 {
-                                        perms.set_mode(0o600);
-                                        if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!(
-                                                "Failed to securely update existing standalone database file permissions: {}",
-                                                e
-                                            );
-                                            return Err(e.into());
-                                        }
-                                    }
+                            let file = OpenOptions::new().read(true).write(true).open(&db_path)?;
+                            let metadata = file.metadata()?;
+                            let mut perms = metadata.permissions();
+                            if (perms.mode() & 0o777) != 0o600 {
+                                perms.set_mode(0o600);
+                                if let Err(e) = file.set_permissions(perms) {
+                                    tracing::error!(
+                                        "Failed to securely update existing standalone database file permissions: {}",
+                                        e
+                                    );
+                                    return Err(e.into());
                                 }
                             }
                         }

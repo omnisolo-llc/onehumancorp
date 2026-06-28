@@ -39,7 +39,7 @@ test.describe('Tauri Onboarding Admin Setup', () => {
 
     // Step Assistant
     await page.waitForSelector('#step-assistant:not([style*="display: none"])');
-    await page.fill('#assistant-name', 'Jarvis');
+    await page.getByTestId('team-operations').click();
     await page.evaluate(() => {
         const sel = document.getElementById('assistant-tone') as HTMLSelectElement;
         if (sel) {

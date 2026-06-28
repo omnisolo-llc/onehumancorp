@@ -436,7 +436,7 @@ impl UserRepository for PgUserRepository {
         let _ = if should_bypass {
             sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = current_setting('app.current_tenant')::text").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         tx.commit().await.map_err(|e| e.to_string())?;
@@ -613,8 +613,6 @@ mod security_tests {
             .connect_lazy(&database_url)
             .unwrap();
 
-        let repo = PgUserRepository::new(pool.clone());
-
         let dummy_user = User {
             id: "dummy_id_update".to_string(),
             username: "dummy_user".to_string(),
@@ -629,9 +627,109 @@ mod security_tests {
         };
 
         // Ensure multitenant environment is mocked strictly for 'system' context evaluation
-        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
-            let res = repo.update_user(dummy_user, "system").await;
-            assert!(res.is_err(), "Must reject system org_id");
+        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], {
+            let dummy_user = dummy_user.clone();
+            let pool_clone = pool.clone();
+            async move {
+                let repo = PgUserRepository::new(pool_clone);
+                let res = repo.update_user(dummy_user, "system").await;
+                assert!(res.is_err(), "Must reject system org_id");
+            }
+        }).await;
+    }
+
+#[tokio::test]
+    async fn test_postgres_create_user_organization_id_parity() {
+        let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => return,
+        };
+
+        if database_url.starts_with("sqlite") {
+            return; // Postgres-specific test
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .acquire_timeout(Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let uid = uuid::Uuid::new_v4().to_string();
+        let repo = PgUserRepository::new(pool.clone());
+        let user = User {
+            id: format!("test-id-pg-parity-{}", uid),
+            username: format!("test-user-pg-parity-{}", uid),
+            email: format!("test-pg-{}@example.com", uid),
+            password_hash: "".to_string(),
+            roles: vec!["admin".to_string()],
+            active: true,
+            organization_id: Some("user-org-id".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            oidc_subject: None,
+        };
+
+        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], {
+            let uid = uid.clone();
+            let user = user.clone();
+            let pool_clone = pool.clone();
+            async move {
+                // Because multi-tenant mode requires the organization to exist for foreign key constraints,
+                // we first need to ensure it exists or use an existing tenant like 'system' or 'default_tenant',
+                // but since 'system' has special bypass rules we will just create a dummy tenant.
+
+                // To ensure hermetic testing, we use a transaction directly, but PgUserRepository::create_user
+                // begins its own transaction. However, creating a dynamic user ID prevents collisions.
+
+                // First we need to make sure the function-arg-org-id exists if there is a foreign key.
+                // Let's create it and rollback later.
+                let org_id = format!("function-arg-org-id-{}", uid);
+                let _ = sqlx::query("INSERT INTO organizations (id, name, created_at, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                    .bind(&org_id)
+                    .bind("Test Parity Org")
+                    .bind(Utc::now())
+                    .bind(Utc::now())
+                    .execute(&pool_clone)
+                    .await;
+
+                // Pass a different org_id argument to verify the model binds `org_id` argument instead
+                repo.create_user(user.clone(), &org_id).await.unwrap();
+
+                let row = sqlx::query("SELECT tenant_id FROM users WHERE id = $1")
+                    .bind(&user.id)
+                    .fetch_one(&pool_clone)
+                    .await
+                    .unwrap();
+
+                let fetched_org_id: String = sqlx::Row::get(&row, "tenant_id");
+                assert_eq!(fetched_org_id, org_id);
+
+                // Cleanup to remain hermetic
+                let _ = sqlx::query("DELETE FROM users WHERE id = $1")
+                    .bind(&user.id)
+                    .execute(&pool_clone)
+                    .await;
+
+                let _ = sqlx::query("DELETE FROM organizations WHERE id = $1")
+                    .bind(&org_id)
+                    .execute(&pool_clone)
+                    .await;
+            }
         }).await;
     }
 }

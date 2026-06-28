@@ -6293,25 +6293,33 @@ async fn create_ui_bom_item_handler(
         .route("/api/settings/voice/provision", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
-                // Mock Twilio number provisioning
-                use rand::Rng;
-                let mut rng = rand::thread_rng();
-                let last_four: u32 = rng.gen_range(1000..9999);
-                let mock_number = format!("+1555123{}", last_four);
+                let twilio_client = std::sync::Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
+                    std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+                    std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+                ));
+
+                let provisioned_number = match twilio_client.provision_number("415").await {
+                    Ok(number) => number,
+                    Err(e) => {
+                        ::server_telemetry::record_error_signal("[bug] Failed to provision voice number");
+                        tracing::error!("Failed to provision voice number: {}", e);
+                        return axum::response::Json(serde_json::json!({ "success": false, "error": "Failed to provision number" }));
+                    }
+                };
 
                 let settings = settings_store.get();
                 if let Err(e) = settings_store.set_voice_settings(
                     settings.voice_receptionist_enabled,
-                    Some(mock_number.clone()),
+                    Some(provisioned_number.clone()),
                     settings.voice_receptionist_persona,
                     settings.voice_receptionist_instructions,
                 ) {
-                    ::server_telemetry::record_error_signal("[bug] Failed to provision voice number");
-                    tracing::error!("Failed to provision voice number: {}", e);
+                    ::server_telemetry::record_error_signal("[bug] Failed to save provisioned voice number");
+                    tracing::error!("Failed to save provisioned voice number: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false, "error": "Internal error" }));
                 }
 
-                axum::response::Json(serde_json::json!({ "success": true, "number": mock_number }))
+                axum::response::Json(serde_json::json!({ "success": true, "number": provisioned_number }))
             }
         }))
         .route("/api/voice/incoming", axum::routing::post({
@@ -6836,6 +6844,12 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/swagger-ui-bundle.js", axum::routing::get(|| async {
             (axum::http::StatusCode::OK, [("content-type", "application/javascript")], include_str!("../ui/tauri/src/ui/swagger-ui-bundle.txt"))
         }))
+        .route("/kairos", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
+        }))
+        .route("/kairos.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
+        }))
         .route("/api/ui/tooltip-registry.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/tooltip-registry.html"))
         }))
@@ -6934,6 +6948,7 @@ async fn create_ui_bom_item_handler(
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
+        .nest("/api/memory", api::inbox::customer_memory::router(db.clone()))
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(api::unified_inbox_webhook::router(db.clone()))

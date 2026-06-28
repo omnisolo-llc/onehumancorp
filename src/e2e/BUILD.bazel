@@ -27,6 +27,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/integrations.spec.ts",
     "//src/ui/next:src/e2e/kds.spec.ts",
     "//src/ui/next:src/e2e/link-in-bio.spec.ts",
+    "//src/ui/next:src/e2e/share_and_save_widget.spec.ts",
     "//src/ui/next:src/e2e/milestone-loop.spec.ts",
     "//src/ui/next:src/e2e/milestones.spec.ts",
     "//src/ui/next:src/e2e/onboarding.spec.ts",
@@ -56,6 +57,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/conversational_checkout.spec.ts",
     "//src/ui/next:e2e/dashboard-feed.spec.ts",
     "//src/ui/next:src/e2e/documentation_cuj.spec.ts",
+    "//src/ui/next:src/e2e/omnichannel_memory_graph.spec.ts",
 
     "//src/ui/next:src/e2e/help_components.spec.ts",
     "//src/ui/next:e2e/localization_offline.spec.ts",

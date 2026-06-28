@@ -8958,6 +8958,7 @@ name = "server_integrations_twilio"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "rand 0.8.6",
  "reqwest 0.12.28",
  "serde",
  "serde_json",

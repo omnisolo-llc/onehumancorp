@@ -164,9 +164,9 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
     await expect(page.locator('#assistant-name-error')).toBeVisible();
     await expect(page.locator('#tone-error')).toBeVisible();
-    await expect(page.locator('#assistant-name')).toHaveCSS('border-color', 'rgb(255, 59, 48)');
 
-    await page.getByPlaceholder("e.g. Jarvis").fill("Jarvis");
+
+    await page.getByTestId('team-operations').click();
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
 
@@ -236,7 +236,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // It should load the values, we can skip through
     await newPage.waitForTimeout(500);
-    await newPage.evaluate(() => { if (typeof window.goToStep === 'function') { window.goToStep('step-context'); } });
+    await newPage.evaluate(() => { if (typeof window.goToStep === 'function') { window.goToStep('step-context', false); } });
     await newPage.waitForTimeout(500);
     // Mock input selection to pass the UI state if the storage wasn't perfectly parsed
     await newPage.locator('input[value="Local Service"]').evaluate(el => el.checked = true);
@@ -256,8 +256,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(newPage.getByPlaceholder("Tagline (optional)")).toHaveValue("Fixing things");
     await newPage.locator('#step-name').getByRole('button', { name: 'Next' }).click();
 
-    await newPage.getByPlaceholder("e.g. Jarvis").fill("Jarvis");
-    await expect(newPage.getByPlaceholder("e.g. Jarvis")).toHaveValue("Jarvis");
+    await newPage.getByTestId('team-operations').click();
+
     await newPage.locator('#assistant-tone').selectOption('Professional');
     await expect(newPage.locator('#assistant-tone')).toHaveValue('Professional');
     await newPage.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
