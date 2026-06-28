@@ -308,7 +308,7 @@ export class SyncManager {
       const fieldOpsActions = generalMutations.filter(m => m.type === 'field_ops_status');
       for (const action of fieldOpsActions) {
         try {
-          const res = await fetch(`/api/v1/field-ops/appointments/schedule`, {
+          const res = await fetch(`/api/v1/field-ops/appointments`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
