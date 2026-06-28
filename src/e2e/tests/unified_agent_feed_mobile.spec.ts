@@ -9,7 +9,7 @@ test.describe('Mobile Unified Agent Feed @mobile', () => {
     await page.goto('/dashboard');
 
     // Check if the unified agent feed structure is present
-    await expect(page.locator('section[aria-label="Action Required"]')).toBeVisible();
+    await expect(page.locator('section[aria-label="Unified Agent Feed"]')).toBeVisible();
 
     // Verify tabs are visible
     await expect(page.getByRole('button', { name: /Proposals/i })).toBeVisible();
