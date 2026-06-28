@@ -926,6 +926,26 @@
                   quantity: 1,
                   timestamp: new Date().toISOString()
               });
+
+              // Optimistic inventory decrement
+              try {
+                  const tenantId = localStorage.getItem('tenant_id') || 'default';
+                  const cacheKey = 'ohc_catalog_' + tenantId;
+                  const cached = localStorage.getItem(cacheKey);
+                  if (cached) {
+                      const catalog = JSON.parse(cached);
+                      const productIndex = catalog.findIndex(p => p.id === currentProductId);
+                      if (productIndex !== -1 && typeof catalog[productIndex].inventory_count === 'number') {
+                          catalog[productIndex].inventory_count -= 1;
+                          localStorage.setItem(cacheKey, JSON.stringify(catalog));
+                          if (typeof window.renderCatalog === 'function') {
+                              window.renderCatalog(catalog);
+                          }
+                      }
+                  }
+              } catch (e) {
+                  console.warn("Failed to optimistically update inventory", e);
+              }
           } else {
               document.querySelector('.receipt-text').innerText = "Payment Successful";
               const tenantId = localStorage.getItem('tenant_id') || 'default';

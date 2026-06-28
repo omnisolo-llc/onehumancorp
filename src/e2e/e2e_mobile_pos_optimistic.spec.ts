@@ -1,23 +1,30 @@
 import { test, expect } from './fixtures';
+import { loginAs } from './utils/auth';
+import { adminUser } from './utils/test-data';
 
 test.describe('Mobile POS Optimistic Inventory Sync', () => {
   test('optimistically updates inventory count on checkout without full reload', async ({ page }) => {
     // Set viewport to mobile (375px minimum)
     await page.setViewportSize({ width: 375, height: 667 });
 
-    // Seed test product with specific inventory
-    await page.goto('/api/staff');
+    // Login correctly to establish session and tenant context
+    await loginAs(page, adminUser);
+
+    // Wait for network/session initialization before writing to localStorage
+    await page.waitForLoadState('networkidle');
+
+    // Seed test product with specific inventory into the correct tenant cache
     await page.evaluate(() => {
         localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'Carlos', role: 'Manager', pin_hash: '1234' }]));
 
-        // Mock a catalog item in local storage as a fallback in case network isn't used
+        // Use the e2e-tenant key which will be picked up by pos.html
         const catalog = [{
-            id: 'prod_optimistic_test',
+            id: 'e2e-product-pos-sync',
             title: 'Optimistic Cake',
             price_cents: 1500,
             inventory_count: 5
         }];
-        localStorage.setItem('ohc_catalog_default', JSON.stringify(catalog));
+        localStorage.setItem('ohc_catalog_e2e-tenant', JSON.stringify(catalog));
     });
 
     // Navigate to POS terminal
@@ -61,9 +68,9 @@ test.describe('Mobile POS Optimistic Inventory Sync', () => {
     // Check if the inventory updated optimistically to 4 (without page reload)
     // The inventory is on the POS view which might be hidden by receipt.
     // Wait, posView.style.display = 'none'; happens in pos.html. Let's look at local storage.
-    const finalCatalogStr = await page.evaluate(() => localStorage.getItem('ohc_catalog_default'));
+    const finalCatalogStr = await page.evaluate(() => localStorage.getItem('ohc_catalog_e2e-tenant'));
     const finalCatalog = JSON.parse(finalCatalogStr || '[]');
-    const product = finalCatalog.find((p: any) => p.id === 'prod_optimistic_test');
+    const product = finalCatalog.find((p: any) => p.id === 'e2e-product-pos-sync');
 
     expect(product).toBeDefined();
     expect(product.inventory_count).toBe(4);
