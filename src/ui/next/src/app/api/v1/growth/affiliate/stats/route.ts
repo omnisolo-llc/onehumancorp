@@ -27,12 +27,10 @@ export async function GET(request: Request) {
         );
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error fetching affiliate stats:", error);
-
-    // Fallback for tests
+    console.error("Error fetching affiliate stats:", error);
     return NextResponse.json(
-        { total_affiliates: 0, total_commission_cents: 0 },
-        { status: 200 }
+        { error: 'Failed to fetch affiliate stats' },
+        { status: 500 }
     );
   }
 }
