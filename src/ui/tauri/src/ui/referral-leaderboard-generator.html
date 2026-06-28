@@ -178,6 +178,111 @@
       font-weight: 600;
       margin: 0 0 12px 0;
     }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 32px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #64748b;
+      cursor: pointer;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s;
+    }
+
+    .modal-close:hover {
+      background: #f1f5f9;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 12px 0;
+    }
+
+    .modal-desc {
+      color: #64748b;
+      margin-bottom: 24px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .paywall-modal .modal-content {
+      text-align: center;
+    }
+
+    .paywall-icon {
+      width: 64px;
+      height: 64px;
+      background: #e0e7ff;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 24px;
+      color: #4f46e5;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .toggle-row label {
+      font-weight: 500;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -198,7 +303,14 @@
       <p style="text-align: center; color: #64748b; font-style: italic;">Loading leaderboard data...</p>
     </div>
 
-    <div id="embed-section" style="display: none;">
+    <div class="toggle-row">
+        <label for="remove-branding">
+          <input type="checkbox" id="remove-branding" />
+          Remove "Powered by OHC" Badge (Pro)
+        </label>
+    </div>
+
+    <div id="embed-section" style="display: none; margin-top: 24px;">
       <h2 class="section-title">Embed Code</h2>
       <p class="subtitle" style="margin-bottom: 12px;">Copy this code to display the leaderboard on your website.</p>
 
@@ -209,13 +321,40 @@
   </div>
 </div>
 
+<!-- Paywall Modal -->
+<div class="modal-overlay paywall-modal" id="paywall-modal">
+  <div class="modal-content">
+    <button class="modal-close" id="close-paywall">&times;</button>
+    <div class="paywall-icon">✨</div>
+    <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
+    <p class="modal-desc">Make the Leaderboard 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+      <button class="btn btn-primary" id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock 7 Days</button>
+      <button class="btn btn-primary" id="upgrade-btn">Upgrade to Pro</button>
+    </div>
+    <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500; text-align: center;">Verifying...</p>
+  </div>
+</div>
+
 <script>
   document.addEventListener('DOMContentLoaded', async () => {
-    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
+    let state = {
+      tenantId: localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant',
+      hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
+      removeBranding: false
+    };
+
+    const tenantId = state.tenantId;
     const previewContainer = document.getElementById('preview-container');
     const embedSection = document.getElementById('embed-section');
     const embedCodeBlock = document.getElementById('embed-code');
     const copyBtn = document.getElementById('copy-btn');
+    const removeBrandingCheckbox = document.getElementById('remove-branding');
+    const paywallModal = document.getElementById('paywall-modal');
+    const closePaywallBtn = document.getElementById('close-paywall');
+    const upgradeBtn = document.getElementById('upgrade-btn');
+    const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
+    const softPaywallStatus = document.getElementById('soft-paywall-status');
 
     const getAuthHeaders = () => {
       const token = localStorage.getItem('ohc_token');
@@ -252,13 +391,34 @@
 
           previewContainer.innerHTML = html;
 
-          // Generate embed code
-          const embedCode = `<!-- OHC Referral Leaderboard -->
+          function updateEmbedCode() {
+            const hideBrandingStr = state.removeBranding ? '&hide_branding=true' : '';
+            const embedCode = `<!-- OHC Referral Leaderboard -->
 <div id="ohc-leaderboard"></div>
-<script src="https://ohc.app/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenantId}"><\/script>`;
+<script src="https://ohc.app/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenantId}${hideBrandingStr}"><\/script>`;
+            embedCodeBlock.textContent = embedCode;
 
-          embedCodeBlock.textContent = embedCode;
+            // Also conditionally hide branding in the preview visually
+            const previewBrandingElements = previewContainer.querySelectorAll('div > a');
+            previewBrandingElements.forEach(el => {
+                if(el.textContent.includes('Powered by OHC')) {
+                     el.parentElement.style.display = state.removeBranding ? 'none' : 'block';
+                }
+            });
+          }
+
+          updateEmbedCode();
           embedSection.style.display = 'block';
+
+          removeBrandingCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked && !state.hasPro) {
+              e.target.checked = false;
+              paywallModal.classList.add('active');
+              return;
+            }
+            state.removeBranding = e.target.checked;
+            updateEmbedCode();
+          });
 
         } else {
           previewContainer.innerHTML = `
@@ -287,6 +447,75 @@
         setTimeout(() => { copyBtn.innerText = originalText; }, 2000);
       });
     });
+
+    closePaywallBtn.addEventListener('click', () => {
+      paywallModal.classList.remove('active');
+    });
+
+    upgradeBtn.addEventListener('click', () => {
+      window.location.href = 'pricing.html';
+    });
+
+    if (shareToUnlockBtn) {
+      shareToUnlockBtn.addEventListener('click', async () => {
+        const message = `Check out my Leaderboard built with OneHumanCorp! 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+        const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+
+        window.open(shareUrl, '_blank');
+
+        shareToUnlockBtn.style.display = 'none';
+        softPaywallStatus.style.display = 'block';
+        softPaywallStatus.innerText = 'Verifying Share...';
+
+        try {
+          let url = '/api/v1/growth/trial-extension/claim';
+          if (window.__TAURI__ && window.__TAURI__.core) {
+              url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+          }
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          if (response.ok) {
+            softPaywallStatus.innerText = 'Unlocked!';
+            state.hasPro = true;
+            localStorage.setItem('has_pro', 'true');
+
+            setTimeout(() => {
+              paywallModal.classList.remove('active');
+              removeBrandingCheckbox.checked = true;
+              state.removeBranding = true;
+
+              // trigger update function defined above, we need to trigger it if available
+              // or just rely on a new checkbox event check if it's cleaner.
+              // we can dispatch a synthetic event
+              const event = new Event('change');
+              removeBrandingCheckbox.dispatchEvent(event);
+
+              shareToUnlockBtn.style.display = 'block';
+              softPaywallStatus.style.display = 'none';
+            }, 1500);
+          } else {
+            softPaywallStatus.innerText = 'Failed to claim trial extension.';
+            setTimeout(() => {
+              shareToUnlockBtn.style.display = 'block';
+              softPaywallStatus.style.display = 'none';
+            }, 3000);
+          }
+        } catch (e) {
+          console.error(e);
+          softPaywallStatus.innerText = 'Error claiming trial extension.';
+          setTimeout(() => {
+              shareToUnlockBtn.style.display = 'block';
+              softPaywallStatus.style.display = 'none';
+          }, 3000);
+        }
+      });
+    }
+
   });
 </script>
 

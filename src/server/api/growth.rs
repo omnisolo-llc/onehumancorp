@@ -3326,6 +3326,7 @@ pub struct EmbedWidgetQuery {
     pub tenant: Option<String>,
     pub r#type: Option<String>,
     pub theme: Option<String>,
+    pub hide_branding: Option<String>,
 }
 
 fn escape_html(s: &str) -> String {
@@ -3470,6 +3471,7 @@ pub async fn handle_embed_widget(
     let tenant = query.tenant_id.or(query.tenant).unwrap_or_else(|| "default-tenant".to_string());
     let w_type = query.r#type.unwrap_or_else(|| "booking".to_string());
     let theme = query.theme.unwrap_or_else(|| "light".to_string());
+    let hide_branding = query.hide_branding.as_deref().unwrap_or("false") == "true";
 
     let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
     let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
@@ -3534,6 +3536,14 @@ pub async fn handle_embed_widget(
             );
         }
 
+        let branding_html = if hide_branding {
+            "".to_string()
+        } else {
+            format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
+        <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={escaped_tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+      </div>"#)
+        };
+
         let html = format!(
             r#"<!DOCTYPE html>
 <html>
@@ -3547,9 +3557,7 @@ pub async fn handle_embed_widget(
   <div style="background: {bg_color}; border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
       <h3 style="margin:0 0 16px 0; font-size:16px;">Top Referrers</h3>
       {leaderboard_html}
-      <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
-        <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={escaped_tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
-      </div>
+      {branding_html}
   </div>
 </body>
 </html>"#
