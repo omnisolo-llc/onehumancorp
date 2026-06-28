@@ -8,47 +8,59 @@ EXIT_CODE=0
 # Check if SRCDIR is set (Bazel), otherwise use src/server
 SRCDIR=${1:-src/server}
 
-# Find all rust files in src/server/
-FILES=$(find "$SRCDIR" -name "*.rs" 2>/dev/null || true)
+python3 -c "
+import os
+import re
+import sys
 
-# comprehensive PII keyword list based on src/server/telemetry/mod.rs
-PII_KEYWORDS="\b(password|secret|key|token|auth|cookie|credential|email|phone|ssn|address|name|pii|jwt|bearer|sessionid|payload|credit|card|cvv|dob|birth|passport|bank|account|stripe|billing|ipaddress|macaddress|geolocation|medical|health|salary|tax|socialsecurity|creditcard|deviceid|gps|latitude|longitude)\b"
+def check_file(filepath):
+    pii = r'\b(password|secret|key|token|auth|cookie|credential|email|phone|ssn|address|name|pii|jwt|bearer|sessionid|payload|credit|card|cvv|dob|birth|passport|bank|account|stripe|billing|ipaddress|macaddress|geolocation|medical|health|salary|tax|socialsecurity|creditcard|deviceid|gps|latitude|longitude)\b'
 
-for FILE in $FILES; do
-    # Exclude the telemetry modules and tests from the leakage check as they deal with these strings intentionally
-    if [[ "$FILE" == *"telemetry"* ]] || [[ "$FILE" == *"analytics.rs" ]] || [[ "$FILE" == *"_test.rs" ]]; then
-        continue
-    fi
+    with open(filepath, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
 
-    # Grep for tracing statements that might contain PII variables that are dynamically interpolated (with {})
-    # This checks if the {} comes before or after the keyword
+    matches = []
+    for i, line in enumerate(lines):
+        if re.search(r'tracing::(info|debug|warn|error)!\(', line):
+            if re.search(r'redacted_', line, re.IGNORECASE):
+                continue
 
-    # We grep all matches first. The issue reviewer mentioned ".*? with grep -E is not supported",
-    # so we should use a simpler pattern for the {}
-    MATCHES=$(grep -nE "tracing::(info|debug|warn|error)!\(" "$FILE" | grep -iE "(\{.*($PII_KEYWORDS).*\}|($PII_KEYWORDS)[[:space:]]*=)" | grep -vE "redacted_" || true)
+            has_pii = False
+            if re.search(r'\{.*?\}', line) and re.search(pii, line, re.IGNORECASE):
+                has_pii = True
+            elif re.search(pii + r'\s*=', line, re.IGNORECASE):
+                has_pii = True
 
-    if [ -n "$MATCHES" ]; then
-        # Check if the matched line has an explicit opt-out // pii-safe
-        FILTERED=$(echo "$MATCHES" | grep -v "// pii-safe" || true)
+            if has_pii and '// pii-safe' not in line:
+                matches.append((i+1, line.strip()))
 
-        if [ -n "$FILTERED" ]; then
-            echo "FAIL: Potential PII leakage in logging found in $FILE"
-            echo "$FILTERED"
-            EXIT_CODE=1
-        fi
-    fi
-done
+    return matches
 
-if [ $EXIT_CODE -eq 0 ]; then
-    echo "PASS: No obvious PII leakage found in tracing logs."
-else
-    # Output something that makes the test fail
-    echo "Failing test due to PII leak"
-    # We avoid the 'exit 1' string to not break the sandbox parsing
-    echo "1" > /tmp/fail_code
-fi
+def main():
+    src_dir = sys.argv[1]
 
-if [ -f /tmp/fail_code ]; then
-    rm /tmp/fail_code
-    exit 1
-fi
+    failed = False
+    for root, _, files in os.walk(src_dir):
+        for file in files:
+            if file.endswith('.rs'):
+                filepath = os.path.join(root, file)
+                if 'telemetry' in filepath or 'analytics.rs' in filepath or '_test.rs' in filepath:
+                    continue
+
+                matches = check_file(filepath)
+                if matches:
+                    print(f'FAIL: Potential PII leakage in logging found in {filepath}')
+                    for line_num, line in matches:
+                        print(f'{line_num}: {line}')
+                    failed = True
+
+    if failed:
+        print('Failing test due to PII leak')
+        sys.exit(1)
+    else:
+        print('PASS: No obvious PII leakage found in tracing logs.')
+        sys.exit(0)
+
+if __name__ == '__main__':
+    main()
+" "$SRCDIR"

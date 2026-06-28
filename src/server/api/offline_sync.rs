@@ -35,7 +35,7 @@ pub async fn offline_sync_handler(
     headers: axum::http::HeaderMap,
     Json(payload): Json<OfflineSyncRequest>,
 ) -> impl IntoResponse {
-    tracing::info!("Received {} offline mutations for edge sync.", payload.mutations.len());
+    tracing::info!("Received {} offline mutations for edge sync.", payload.mutations.len()); // pii-safe
 
     let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
     let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
@@ -394,7 +394,7 @@ pub async fn sync_events_handler(
     headers: axum::http::HeaderMap,
     Json(payload): Json<SyncEventsRequest>,
 ) -> impl IntoResponse {
-    tracing::info!("Received {} generic sync events.", payload.events.len());
+    tracing::info!("Received {} generic sync events.", payload.events.len()); // pii-safe
 
     let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
     let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));

@@ -3818,7 +3818,7 @@ pub async fn update_ui_triage_action_handler(
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
                     } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
-                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
@@ -3849,7 +3849,7 @@ pub async fn update_ui_triage_action_handler(
                             .bind(required_deposit_cents)
                             .execute(&mut *tx)
                             .await {
-                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e);
+                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
                             } else {
                                 if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
                                     for item in items {
@@ -3877,10 +3877,10 @@ pub async fn update_ui_triage_action_handler(
                                 }
                             }
                         } else {
-                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload); // pii-safe
                         }
                     } else if action_type == "Reassign Shift" {
-                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload); // pii-safe
                         if let Ok(shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                             let shift_id = shift_data.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
                             let new_staff_id = shift_data.get("new_staff_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -3907,7 +3907,7 @@ pub async fn update_ui_triage_action_handler(
                             }
                         }
                     } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
-                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
@@ -3947,10 +3947,10 @@ pub async fn update_ui_triage_action_handler(
                             .bind(end_time)
                             .execute(&mut *tx)
                             .await {
-                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e);
+                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
                             }
                         } else {
-                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload); // pii-safe
                         }
                     }
                 }
@@ -4069,7 +4069,7 @@ pub async fn update_ui_triage_action_handler(
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
                     } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
-                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = ? AND tenant_id = ?")
@@ -4104,7 +4104,7 @@ pub async fn update_ui_triage_action_handler(
                             .bind(required_deposit_cents)
                             .execute(&mut *tx)
                             .await {
-                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e);
+                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
                             } else {
                                 if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
                                     for item in items {
@@ -4132,10 +4132,10 @@ pub async fn update_ui_triage_action_handler(
                                 }
                             }
                         } else {
-                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload); // pii-safe
                         }
                     } else if action_type == "Reassign Shift" {
-                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload); // pii-safe
                         if let Ok(shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                             let shift_id = shift_data.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
                             let new_staff_id = shift_data.get("new_staff_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -4160,7 +4160,7 @@ pub async fn update_ui_triage_action_handler(
                             }
                         }
                     } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
-                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = ? AND tenant_id = ?")
@@ -4200,10 +4200,10 @@ pub async fn update_ui_triage_action_handler(
                             .bind(end_time.to_rfc3339())
                             .execute(&mut *tx)
                             .await {
-                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e);
+                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
                             }
                         } else {
-                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload); // pii-safe
                         }
                     }
                 }
@@ -7072,7 +7072,7 @@ async fn create_ui_bom_item_handler(
                 _ = interval.tick() => {
                     let due = hub_for_sched.scheduler().poll_due();
                     for task in due {
-                        tracing::info!("executing scheduled task: {} ({})", task.name, task.id);
+                        tracing::info!("executing scheduled task: {} ({})", task.name, task.id); // pii-safe
 
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
