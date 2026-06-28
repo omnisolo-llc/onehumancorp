@@ -63,16 +63,8 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
       const data = await response.json();
 
-      // Complete immediately in tests to avoid timeout issues
-      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-         setIsProvisioning(false);
-         onComplete(data);
-      } else {
-        setTimeout(() => {
-          setIsProvisioning(false);
-          onComplete(data);
-        }, 1500);
-      }
+      setIsProvisioning(false);
+      onComplete(data);
     } catch (error) {
       console.error("Provisioning error:", error);
       setIsProvisioning(false);
@@ -121,16 +113,8 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
       const provisionedData = await res.json();
 
-      // Complete immediately in tests to avoid timeout issues
-      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-         setIsProvisioning(false);
-         onComplete(provisionedData);
-      } else {
-        setTimeout(() => {
-          setIsProvisioning(false);
-          onComplete(provisionedData);
-        }, 1500);
-      }
+      setIsProvisioning(false);
+      onComplete(provisionedData);
 
     } catch (error) {
       console.error("Provisioning error:", error);

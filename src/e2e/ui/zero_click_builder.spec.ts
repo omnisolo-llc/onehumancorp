@@ -1,86 +1,45 @@
 import { test, expect } from '@playwright/test';
 import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
 
 test.describe('Zero-Click Business Generator CUJ', () => {
 
   test.beforeEach(async ({ page }) => {
-    // Navigate using the real server routing instead of mocks
+    // Generate a valid tenant identity via the standard authentication route
     const tenantId = `tenant-${crypto.randomBytes(4).toString('hex')}`;
-    await page.addInitScript((id) => {
-      localStorage.setItem('tenant_id', id);
-      localStorage.setItem('user_id', id);
-    }, tenantId);
+    const agentId = `owner-${crypto.randomBytes(4).toString('hex')}@test.com`;
 
-    await page.setViewportSize({ width: 375, height: 812 });
+    // Go to login to obtain proper session/token auth context per repo guidelines
+    await page.goto('/login');
+    await page.getByPlaceholder('Email address').fill(agentId);
+    await page.getByPlaceholder('Password').fill('Password123!');
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    await expect(page).toHaveURL('/dashboard');
   });
 
   test('User can generate a business with a single prompt', async ({ page }) => {
-
-    const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..', '..'), process.env.TEST_WORKSPACE) : path.resolve(__dirname, '..', '..', '..');
-
-    await page.route('**/setup.html', async route => {
-        const fileContent = fs.readFileSync(path.join(workspaceRoot, 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
-        await route.fulfill({
-            status: 200,
-            contentType: 'text/html',
-            body: fileContent
-        });
-    });
-
-    // Mock the api response
-    await page.route('**/api/v1/growth/zero-click-builder/generate*', async route => {
-        await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-                organization_id: "test-org",
-                user_id: "test-user",
-                message: "Storefront generated successfully"
-            })
-        });
-    });
-
-    await page.route('**/success.html', async route => {
-        await route.fulfill({
-            status: 200,
-            contentType: 'text/html',
-            body: "<html><body>Success</body></html>"
-        });
-    });
-
-    // Navigate to the real setup page
-    await page.goto('http://mock/setup.html');
+    // Navigate to the real web app path
+    await page.goto('/zero-click-builder');
 
     // Verify Initial Screen
-    await expect(page.locator("h1").filter({ hasText: "10-Minute Setup Wizard" })).toBeAttached();
+    await expect(page.getByText('Zero-Click Business Generator')).toBeVisible();
 
-    // 1. Click "Instant Build"
-    await page.locator('button').filter({ hasText: 'Instant Build' }).evaluate((el: HTMLButtonElement) => el.click());
+    // 1. Fill in the prompt
+    const promptInput = page.getByPlaceholder('e.g. I am a home baker in Austin selling custom vegan cakes.');
+    await expect(promptInput).toBeVisible();
+    await promptInput.fill('I am a home baker in Austin selling custom vegan cakes.');
 
-    // Wait and check if there's any visibility issues.
-    await page.waitForTimeout(500);
-    const content = await page.content();
-    if (!content.includes('Tell us about your business')) {
-        throw new Error(`PAGE CONTENT DOES NOT HAVE HEADING: ${content}`);
-    }
-
-    // 2. Verify we are in the instant step
-    await expect(page.locator("h1").filter({ hasText: "Tell us about your business" })).toBeAttached();
-
-    // 3. Fill in the description
-    const instantInput = page.locator('#instant-bio');
-    await expect(instantInput).toBeAttached();
-    await instantInput.evaluate((el: HTMLTextAreaElement) => { el.value = 'I am a home baker in Austin selling custom vegan cakes and cupcakes.'; el.dispatchEvent(new Event('input')); });
-
-    const generateBtn = page.getByTestId('generate-storefront-btn');
+    const generateBtn = page.getByRole('button');
     await expect(generateBtn).toBeEnabled();
 
-    // 4. Click generate
+    // 2. Click generate
     await generateBtn.click();
 
-    // 5. Wait for generation to complete and the success message to appear
-    await expect(page).toHaveURL(/.*success.html/, { timeout: 15000 });
+    // 3. Verify loading overlay
+    await expect(page.getByText('Building Your Business...')).toBeVisible();
+
+    // 4. Wait for generation to complete and the success state to appear
+    await expect(page.getByText('Your business is live!')).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('iframe')).toBeVisible();
   });
 });
