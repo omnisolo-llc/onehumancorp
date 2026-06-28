@@ -3898,12 +3898,12 @@
           const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
           let loadingTextIdx = 0;
           generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
-          const loadingInterval = setInterval(() => {
+          window.generateStorefrontLoadingInterval = setInterval(() => {
             loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
             generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
           }, 3000);
 
-          generateStorefrontBtn.dataset.loadingInterval = loadingInterval;
+
           goToStep("step-loading");
 
           try {
@@ -3950,9 +3950,9 @@
             localStorage.removeItem("onboardingState");
             localStorage.setItem("has_onboarded", "true");
 
-            if (generateStorefrontBtn.dataset.loadingInterval) {
-                clearInterval(generateStorefrontBtn.dataset.loadingInterval);
-                delete generateStorefrontBtn.dataset.loadingInterval;
+            if (window.generateStorefrontLoadingInterval) {
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
             }
 
             setTimeout(() => {
@@ -3969,9 +3969,9 @@
             instantBioInputEl.classList.add("invalid-input");
             generateStorefrontBtn.disabled = false;
             delete generateStorefrontBtn.dataset.submitting;
-            if (generateStorefrontBtn.dataset.loadingInterval) {
-                clearInterval(generateStorefrontBtn.dataset.loadingInterval);
-                delete generateStorefrontBtn.dataset.loadingInterval;
+            if (window.generateStorefrontLoadingInterval) {
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
             }
             generateStorefrontBtn.innerHTML = "Next";
           }
