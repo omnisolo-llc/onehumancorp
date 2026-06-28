@@ -1,5 +1,6 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::services::customer_memory_graph::service::CustomerMemoryGraphService;
 use std::collections::HashMap;
 
 pub struct CustomerSuccessAgent {
@@ -342,6 +343,7 @@ impl Department for CustomerSuccessAgent {
                 }
             }
 
+            let mut memory_graph_summary = String::new();
             if !customer_id.is_empty() {
                 // Fetch past orders context
                 let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
@@ -352,6 +354,20 @@ impl Department for CustomerSuccessAgent {
                 if let Ok(orders) = orders {
                     if !orders.is_empty() {
                         past_orders = format!("Returning Customer ({} past orders).", orders.len());
+                    }
+                }
+
+                // Query Unified Customer Memory Graph
+                let memory_service = CustomerMemoryGraphService::new(pool.clone());
+                if let Ok(profile_summary) = memory_service.get_profile_summary(&event.tenant_id, &customer_id).await {
+                    if profile_summary.total_interactions > 0 || !profile_summary.segments.is_empty() {
+                        memory_graph_summary = format!(
+                            "Customer Profile: Interactions: {}. Segments: {}. Preferences: {}. Summary: {}",
+                            profile_summary.total_interactions,
+                            profile_summary.segments.join(", "),
+                            profile_summary.preferences.join(", "),
+                            profile_summary.summary
+                        );
                     }
                 }
             }
@@ -380,6 +396,11 @@ impl Department for CustomerSuccessAgent {
             if !past_orders.is_empty() {
                 context_summary.push_str("\n");
                 context_summary.push_str(&past_orders);
+            }
+
+            if !memory_graph_summary.is_empty() {
+                context_summary.push_str("\n");
+                context_summary.push_str(&memory_graph_summary);
             }
 
             if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
