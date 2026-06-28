@@ -78,9 +78,9 @@ impl MicroAgentRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
     use std::fs::File;
     use std::io::Write;
+    use tempfile::tempdir;
 
     #[test]
     fn test_microagent_registry_new() {

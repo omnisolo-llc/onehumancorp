@@ -147,6 +147,14 @@ SET name = EXCLUDED.name,
 
 INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
 VALUES
+('e2e-proactive-ops-1', 'e2e-tenant', 'operations', '{"feature_type": "proactive_ops", "description": "Review Daily Prep Checklist"}'::jsonb, '{"action_type": "mark_complete", "message": "Review Checklist", "feature_type": "proactive_ops"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-proactive-ops-2', 'e2e-tenant', 'operations', '{"feature_type": "proactive_ops", "description": "Follow up on delayed supplier delivery from yesterday"}'::jsonb, '{"action_type": "assign_to_staff", "message": "Assign to Staff", "feature_type": "proactive_ops"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-proactive-ops-3', 'e2e-tenant', 'operations', '{"feature_type": "proactive_ops", "description": "Staffing alert: Only 1 person scheduled for closing shift."}'::jsonb, '{"action_type": "draft_schedule_request", "message": "Draft Schedule Request", "feature_type": "proactive_ops"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+
+VALUES
 ('e2e-feed-social', 'e2e-tenant', 'marketing', '{"feature_type": "social_post_draft", "tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}'::jsonb, '{}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET lifecycle_state = EXCLUDED.lifecycle_state,
@@ -154,7 +162,7 @@ SET lifecycle_state = EXCLUDED.lifecycle_state,
 
 INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
 VALUES
-('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'DRAFT', 'HIGH', '{"feature_type": "ambassador_reply", "original_message": "Do you have vegan options for birthday cakes?", "generated_response": "Yes, we have several vegan options for birthday cakes. We would love to help you plan your special day!"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'DRAFT', 'HIGH', '{"feature_type": "ambassador_reply", "original_message": "Do you have vegan options for birthday cakes?", "generated_response": "Yes, we have several vegan options for birthday cakes. We would love to help you plan your special day!", "past_orders": "Returning Customer (2 past orders).", "context_used": "Customer prefers vegan options."}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ,
 ('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'DRAFT', 'LOW', '{"feature_type": "social_post_draft"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'DRAFT', 'HIGH', '{"feature_type": "abandoned_cart", "context": {"abandoned_carts_count": 3, "potential_revenue": 120.00}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
@@ -169,6 +177,14 @@ SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+VALUES
+('e2e-proactive-ops-1', 'e2e-tenant', 'operations', '{"feature_type": "proactive_ops", "description": "Review Daily Prep Checklist"}'::jsonb, '{"action_type": "mark_complete", "message": "Review Checklist", "feature_type": "proactive_ops"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-proactive-ops-2', 'e2e-tenant', 'operations', '{"feature_type": "proactive_ops", "description": "Follow up on delayed supplier delivery from yesterday"}'::jsonb, '{"action_type": "assign_to_staff", "message": "Assign to Staff", "feature_type": "proactive_ops"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-proactive-ops-3', 'e2e-tenant', 'operations', '{"feature_type": "proactive_ops", "description": "Staffing alert: Only 1 person scheduled for closing shift."}'::jsonb, '{"action_type": "draft_schedule_request", "message": "Draft Schedule Request", "feature_type": "proactive_ops"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+
 VALUES
   ('app-test-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
   ('app-test-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
@@ -645,3 +661,10 @@ ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE IF EXISTS job_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS service_routes ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+VALUES
+('e2e-feed-ops-daily-routine', 'e2e-tenant', 'Operations Agent', '{"feature_type": "daily_prep_checklist", "description": "Daily Prep Checklist"}'::jsonb, '{"action_type": "Daily Prep Checklist", "message": "Review Daily Prep Checklist"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET lifecycle_state = EXCLUDED.lifecycle_state,
+    updated_at = CURRENT_TIMESTAMP;

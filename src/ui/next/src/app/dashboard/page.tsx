@@ -233,14 +233,6 @@ export default function Dashboard() {
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
-        const approvalsPromise = fetch(`/api/agents/approvals?tenant_id=${tenant}`)
-          .then(res => res.ok ? res.json() : [])
-          .catch(() => []);
-
-        const agentFeedPromise = fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'x-tenant-id': tenant, 'x-user-id': userId } })
-          .then(res => res.ok ? res.json() : { items: [] })
-          .catch(() => ({ items: [] }));
-
         const ledgerPromise = fetch("/api/ledger/accounts")
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
@@ -249,11 +241,9 @@ export default function Dashboard() {
           .then(res => res.ok ? res.json() : { remainingActions: 9 })
           .catch(() => ({ remainingActions: 9 }));
 
-        const [unifiedData, onboardingData, approvalsData, agentFeedData, ledgerData, usageData] = await Promise.all([
+        const [unifiedData, onboardingData, ledgerData, usageData] = await Promise.all([
           unifiedPromise,
           onboardingPromise,
-          approvalsPromise,
-          agentFeedPromise,
           ledgerPromise,
           usagePromise,
         ]);
@@ -271,9 +261,12 @@ export default function Dashboard() {
         }
         setLedgerLoading(false);
 
+        const approvalsData = unifiedData?.pending_approvals || [];
+        const agentFeedData = { items: unifiedData?.agent_feed || [] };
+
         setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
-        if (approvalsData && Array.isArray(approvalsData)) {
+        if (approvalsData && Array.isArray(approvalsData) && approvalsData.length > 0 && !agentFeedData.items?.length) {
             setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED"));
             setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED"));
         } else if (agentFeedData && agentFeedData.items) {

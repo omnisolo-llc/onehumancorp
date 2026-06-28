@@ -308,7 +308,14 @@ impl DB {
                                 }
                             }
                         } else {
-                            let file = OpenOptions::new().read(true).write(true).open(&db_path)?;
+                            let mut opts = OpenOptions::new();
+                            opts.read(true).write(true);
+                            #[cfg(target_os = "linux")]
+                            opts.custom_flags(0x00020000); // O_NOFOLLOW
+                            #[cfg(target_os = "macos")]
+                            opts.custom_flags(0x0100); // O_NOFOLLOW
+
+                            let file = opts.open(&db_path)?;
                             let metadata = file.metadata()?;
                             let mut perms = metadata.permissions();
                             if (perms.mode() & 0o777) != 0o600 {
@@ -365,12 +372,10 @@ impl DB {
                             use std::os::unix::fs::OpenOptionsExt;
                             let mut options = std::fs::OpenOptions::new();
                             options.read(true);
-                            if !crate::config::get().multitenant {
-                                #[cfg(target_os = "linux")]
+                            #[cfg(target_os = "linux")]
                                 options.custom_flags(0x00020000); // O_NOFOLLOW
                                 #[cfg(target_os = "macos")]
                                 options.custom_flags(0x0100); // O_NOFOLLOW
-                            }
                             if let Ok(mut file) = options.open(&secret_path) {
                                 use std::io::Read;
                                 let mut bytes = String::new();
@@ -2279,10 +2284,14 @@ mod security_tests_final {
                                         .expect("Database URL or operation failed in test");
                                 }
                             } else {
-                                let file = OpenOptions::new()
-                                    .read(true)
-                                    .write(true)
-                                    .open(&db_path)
+                                let mut opts = OpenOptions::new();
+                                opts.read(true).write(true);
+                                #[cfg(target_os = "linux")]
+                                opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                #[cfg(target_os = "macos")]
+                                opts.custom_flags(0x0100); // O_NOFOLLOW
+
+                                let file = opts.open(&db_path)
                                     .expect("Database URL or operation failed in test");
                                 let metadata = file
                                     .metadata()

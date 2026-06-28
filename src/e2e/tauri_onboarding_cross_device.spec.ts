@@ -113,7 +113,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     await page.getByRole('button', { name: 'Next' }).click();
     await page.fill('#business-name', 'Test');
     await page.getByRole('button', { name: 'Next' }).click();
-    await page.fill('#assistant-name', 'Bot');
+    await page.getByTestId('team-operations').click();
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.getByRole('button', { name: 'Next' }).click();
 
@@ -146,7 +146,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     await page.getByRole('button', { name: 'Next' }).click();
     await page.fill('#business-name', 'Test');
     await page.getByRole('button', { name: 'Next' }).click();
-    await page.fill('#assistant-name', 'Bot');
+    await page.getByTestId('team-operations').click();
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.getByRole('button', { name: 'Next' }).click();
 
@@ -178,7 +178,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     await page.getByRole('button', { name: 'Next' }).click();
     await page.fill('#business-name', 'Final Test Biz');
     await page.getByRole('button', { name: 'Next' }).click();
-    await page.fill('#assistant-name', 'Bot');
+    await page.getByTestId('team-operations').click();
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.getByRole('button', { name: 'Next' }).click();
     await page.fill('#admin-email', 'test@example.com');

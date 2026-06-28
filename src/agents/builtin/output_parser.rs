@@ -340,7 +340,14 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     msg.content, parse_error_msg
                 )
             };
-            let mut error_msg = Message::user(error_context);
+            let mut error_msg = Message {
+                role: crate::types::Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![crate::types::ToolResult::new_llm_recoverable("".to_string(), &error_context)],
+                response_id: None,
+                previous_response_id: None,
+            };
             error_msg.previous_response_id = msg.response_id.clone();
             current_req.messages.push(error_msg);
         }
@@ -984,7 +991,7 @@ mod tests_clamped {
 
         // Pass max_retries = 10, but it should be clamped to 2
         let handle = tokio::spawn(async move {
-            retry_parser.parse_with_prompt(req, 10).await
+            retry_parser.parse_with_prompt_and_strategy(req, 10, &crate::output_parser::ExponentialBackoffWithJitter::new(0, 0)).await
         });
 
 

@@ -186,12 +186,26 @@ pub struct AppServer {
 
 impl AppServer {
     pub fn new(runner: Arc<Runner>) -> Self {
-        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(crate::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string())))));
-        Self { runner, marketplace }
+        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(
+            crate::tools::marketplace::HttpMarketplaceProvider::new(
+                &std::env::var("AGENT_MARKETPLACE_URL")
+                    .unwrap_or_else(|_| "https://marketplace.example.com".to_string()),
+            ),
+        )));
+        Self {
+            runner,
+            marketplace,
+        }
     }
 
-    pub fn new_with_marketplace(runner: Arc<Runner>, marketplace: Arc<crate::tools::marketplace::MarketplaceClient>) -> Self {
-        Self { runner, marketplace }
+    pub fn new_with_marketplace(
+        runner: Arc<Runner>,
+        marketplace: Arc<crate::tools::marketplace::MarketplaceClient>,
+    ) -> Self {
+        Self {
+            runner,
+            marketplace,
+        }
     }
 
     pub async fn handle_request(&self, req_str: &str) -> String {
@@ -208,7 +222,7 @@ impl AppServer {
                     }),
                     meta: None,
                 };
-                return serde_json::to_string(&err_resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                return serde_json::to_string(&err_resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
             }
         };
 
@@ -322,9 +336,24 @@ impl AppServer {
             };
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
-            let name = req.params.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let description = req.params.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let author = req.params.get("role").and_then(|v| v.as_str()).unwrap_or("").to_string(); // mapping role to author
+            let name = req
+                .params
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let description = req
+                .params
+                .get("description")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let author = req
+                .params
+                .get("role")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(); // mapping role to author
 
             let new_agent = crate::tools::marketplace::MarketplaceAgent {
                 id: "".to_string(),
@@ -374,6 +403,25 @@ impl AppServer {
                 meta: None,
             };
             return serde_json::to_string(&resp).unwrap_or_default();
+        }
+
+        if req.method == "execute_visual_workflow" {
+            let client = reqwest::Client::new();
+            let url = format!("http://localhost:18789/api/workflow/run");
+            match client.post(&url).json(&req.params.clone()).send().await {
+                Ok(res) => {
+                    let body = res.json::<serde_json::Value>().await.unwrap_or_default();
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id.clone(),
+                        result: Some(body),
+                        error: None,
+                        meta: None,
+                    };
+                    return serde_json::to_string(&resp).unwrap_or_default();
+                }
+                Err(_) => {}
+            }
         }
 
         // Helper to extract total_cost from run_async execution if needed
@@ -537,7 +585,7 @@ impl AppServer {
                     }),
                     meta: None,
                 };
-                return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                return serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
             }
 
             let mut trace = ohc_builtin_agent_core::expert_team::SkillTrace::new();
@@ -560,7 +608,7 @@ impl AppServer {
                             }),
                             meta: None,
                         };
-                        return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                        return serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
                     }
 
                     let final_output = format!(
@@ -592,7 +640,7 @@ impl AppServer {
                             }),
                             meta: None,
                         };
-                        return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                        return serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
                     }
 
                     let resp = JsonRpcResponse {
@@ -602,7 +650,7 @@ impl AppServer {
                         error: None,
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
                 Err(e) => {
                     let resp = JsonRpcResponse {
@@ -615,7 +663,7 @@ impl AppServer {
                         }),
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
             }
         } else if req.method == "run_agent" {
@@ -661,7 +709,7 @@ impl AppServer {
                     }),
                     meta: None,
                 };
-                return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                return serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
             }
 
             match self
@@ -683,7 +731,7 @@ impl AppServer {
                         error: None,
                         meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
                 Err(e) => {
                     let resp = JsonRpcResponse {
@@ -696,7 +744,7 @@ impl AppServer {
                         }),
                         meta: Some(serde_json::json!({ "total_cost_usd": total_cost })),
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
             }
         } else if req.method == "goose_mcp_list" {
@@ -756,7 +804,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+            serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
         } else if req.method == "record_sona_pattern" {
             let pattern: crate::sona_patterns::TrajectoryPattern = match serde_json::from_value(
                 req.params.clone(),
@@ -773,7 +821,7 @@ impl AppServer {
                         }),
                         meta: None,
                     };
-                    return serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string());
+                    return serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
                 }
             };
             if let Some(matcher) = self.runner.core.agent.sona_matcher.as_ref() {
@@ -786,7 +834,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+            serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
         } else if req.method == "run_actor_model" {
             let initial_message = req
                 .params
@@ -864,7 +912,7 @@ impl AppServer {
                         error: None,
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
                 Err(e) => {
                     let resp = JsonRpcResponse {
@@ -877,7 +925,7 @@ impl AppServer {
                         }),
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
             }
         } else if req.method == "get_task" {
@@ -914,7 +962,7 @@ impl AppServer {
                 error: None,
                 meta: None,
             };
-            serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+            serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
         } else if req.method == "run_scalable_agents" {
             let count = req
                 .params
@@ -983,7 +1031,7 @@ impl AppServer {
                         error: None,
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
                 Err(e) => {
                     let resp = JsonRpcResponse {
@@ -996,7 +1044,7 @@ impl AppServer {
                         }),
                         meta: None,
                     };
-                    serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+                    serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
             }
         } else {
@@ -1010,7 +1058,7 @@ impl AppServer {
                 }),
                 meta: None,
             };
-            serde_json::to_string(&resp).unwrap_or_else(|_| "{\"jsonrpc\": \"2.0\", \"error\": {\"code\": -32603, \"message\": \"Internal error\"}}".to_string())
+            serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
         }
     }
 }
@@ -1160,7 +1208,9 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Arc::new(Runner::new(agent));
-        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(crate::tools::marketplace::test_utils::MockMarketplaceProvider)));
+        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(
+            crate::tools::marketplace::test_utils::MockMarketplaceProvider,
+        )));
         let app_server = AppServer::new_with_marketplace(runner, marketplace);
 
         let req_json = r#"{"jsonrpc": "2.0", "id": "1", "method": "run_agent", "params": {"message": "hello"}}"#;

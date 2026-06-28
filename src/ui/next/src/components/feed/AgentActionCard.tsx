@@ -225,6 +225,27 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             )}
+                        {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "proactive_ops" && (
+              <div className="mb-4 p-4 rounded-[16px] bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 flex flex-col gap-3 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-[#FF9500]"></div>
+                <div className="flex items-center gap-2 text-orange-600 font-semibold text-sm">
+                  <span className="w-5 h-5 flex items-center justify-center">✨</span>
+                  Needs Attention Today
+                </div>
+                <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">
+                  {approval.context_payload?.description || "A proactive ops task needs your attention."}
+                </p>
+                <div className="flex gap-2 w-full mt-1">
+                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#FF9500] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, "operations")}>
+                    {approval.proposed_action?.message || "Approve"}
+                  </button>
+                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-orange-200 text-orange-900 dark:text-orange-100 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, "operations")}>
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "task" && (
               <div className="mb-4 p-4 rounded-[16px] bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 flex flex-col gap-3">
@@ -522,7 +543,55 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   }
                 </div>
               </>
-            ) : (approval.proposed_action || approval.context_payload)?.context
+            ) : (approval.proposed_action?.action_type === 'Daily Prep Checklist' || approval.context_payload?.feature_type === 'daily_prep_checklist') ? (
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="Mark Complete"
+              data-testid="feed-approve-btn"
+            >
+              Mark Complete
+            </button>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  'Assign to Staff',
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="Assign to Staff"
+              data-testid="feed-assign-btn"
+            >
+              Assign to Staff
+            </button>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  false,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+              aria-label="Dismiss task"
+              data-testid="feed-dismiss-btn"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)?.context
                 ?.smart_pricing === true ? (
               <>
                 <div className="flex justify-between items-center text-sm mb-1">
@@ -1221,7 +1290,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             (approval.proposed_action || approval.context_payload)
             ?.feature_type === "triage" ||
             (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "task") ? (
+            ?.feature_type === "task" ||
+            (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "proactive_ops") ? (
            null
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ? (

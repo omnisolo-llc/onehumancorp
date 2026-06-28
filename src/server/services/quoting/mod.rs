@@ -390,7 +390,7 @@ async fn approve_quote(
                         .await;
                 },
                 Err(e) => {
-                    tracing::error!("Failed to create Stripe checkout session: {}", e);
+                    tracing::error!("Failed to create Stripe checkout session: {}", e); // pii-safe
                 }
             }
         }

@@ -30,15 +30,39 @@ pub struct OfflineSyncResponse {
     pub failed_count: i32,
 }
 
+
+async fn validate_token_and_get_tenant(pool: &sqlx::PgPool, headers: &axum::http::HeaderMap) -> Result<(String, String), axum::response::Response> {
+    let auth_header = headers.get("authorization").and_then(|h| h.to_str().ok());
+    let token = match auth_header {
+        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+        _ => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()),
+    };
+
+    let repo = std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(pool.clone()));
+    let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
+
+    let claims = match store.validate_token(token).await {
+        Ok(c) => c,
+        Err(_) => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()),
+    };
+
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let agent_id = claims.sub;
+
+    Ok((tenant_id, agent_id))
+}
+
 pub async fn offline_sync_handler(
     State((db, mesh)): State<(sqlx::PgPool, Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>)>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<OfflineSyncRequest>,
 ) -> impl IntoResponse {
-    tracing::info!("Received {} offline mutations for edge sync.", payload.mutations.len());
+    tracing::info!("Received {} offline mutations for edge sync.", payload.mutations.len()); // pii-safe
 
-    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-    let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+    let (tenant_id, _) = match validate_token_and_get_tenant(&db, &headers).await {
+        Ok(t) => t,
+        Err(e) => return e,
+    };
 
     if tenant_id.is_empty() {
         return (
@@ -390,14 +414,16 @@ pub struct SyncEventsResponse {
 }
 
 pub async fn sync_events_handler(
-    State(pool): State<sqlx::PgPool>,
+    State(db): State<sqlx::PgPool>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<SyncEventsRequest>,
 ) -> impl IntoResponse {
-    tracing::info!("Received {} generic sync events.", payload.events.len());
+    tracing::info!("Received {} generic sync events.", payload.events.len()); // pii-safe
 
-    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-    let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+    let (tenant_id, _) = match validate_token_and_get_tenant(&db, &headers).await {
+        Ok(t) => t,
+        Err(e) => return e,
+    };
 
     if tenant_id.is_empty() {
         return (
@@ -410,7 +436,7 @@ pub async fn sync_events_handler(
     let mut conflict_count = 0;
 
     for event in payload.events {
-        let mut tx = match pool.begin().await {
+        let mut tx = match db.begin().await {
             Ok(tx) => tx,
             Err(e) => {
                 tracing::error!("Failed to begin transaction for sync event {}: {}", event.id, e);

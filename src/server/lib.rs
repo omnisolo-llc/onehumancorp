@@ -134,6 +134,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("dashboard-widget-btn".to_string(), "Build a referral widget for your website.".to_string());
     m.insert("help-center-nav-btn".to_string(), "Open the Help Center for guides and support.".to_string());
     m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
+    m.insert("ohc-floating-help-btn".to_string(), "Open Help Center.".to_string());
 
     m.insert("cart-recovery-tooltip".to_string(), "Recover abandoned carts with personalized AI follow-ups.".to_string());
     m.insert("flash-sale-tooltip".to_string(), "Create high-converting flash sale countdown widgets.".to_string());
@@ -2613,8 +2614,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     missed_lead_recovery_worker.start();
 
     // Start Proactive Analysis Worker
+    let proactive_operations_worker = crate::workers::proactive_operations_worker::ProactiveOperationsWorker::new(db.clone());
+    proactive_operations_worker.start();
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
     proactive_analysis_worker.start();
+
+    // Start Daily Ops Routine Worker
+    let daily_ops_routine_worker = crate::workers::daily_ops_routine_worker::DailyOpsRoutineWorker::new(db.clone());
+    daily_ops_routine_worker.start();
 
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
@@ -3818,7 +3825,7 @@ pub async fn update_ui_triage_action_handler(
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
                     } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
-                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
@@ -3849,7 +3856,7 @@ pub async fn update_ui_triage_action_handler(
                             .bind(required_deposit_cents)
                             .execute(&mut *tx)
                             .await {
-                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e);
+                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
                             } else {
                                 if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
                                     for item in items {
@@ -3877,10 +3884,10 @@ pub async fn update_ui_triage_action_handler(
                                 }
                             }
                         } else {
-                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload); // pii-safe
                         }
                     } else if action_type == "Reassign Shift" {
-                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload); // pii-safe
                         if let Ok(shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                             let shift_id = shift_data.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
                             let new_staff_id = shift_data.get("new_staff_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -3907,7 +3914,7 @@ pub async fn update_ui_triage_action_handler(
                             }
                         }
                     } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
-                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
@@ -3947,10 +3954,10 @@ pub async fn update_ui_triage_action_handler(
                             .bind(end_time)
                             .execute(&mut *tx)
                             .await {
-                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e);
+                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
                             }
                         } else {
-                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload); // pii-safe
                         }
                     }
                 }
@@ -4069,7 +4076,7 @@ pub async fn update_ui_triage_action_handler(
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
                     } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
-                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = ? AND tenant_id = ?")
@@ -4104,7 +4111,7 @@ pub async fn update_ui_triage_action_handler(
                             .bind(required_deposit_cents)
                             .execute(&mut *tx)
                             .await {
-                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e);
+                                tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
                             } else {
                                 if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
                                     for item in items {
@@ -4132,10 +4139,10 @@ pub async fn update_ui_triage_action_handler(
                                 }
                             }
                         } else {
-                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a client_id for Draft Quote action payload: {}", action_payload); // pii-safe
                         }
                     } else if action_type == "Reassign Shift" {
-                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Reassign Shift, payload: {}", action_payload); // pii-safe
                         if let Ok(shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                             let shift_id = shift_data.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
                             let new_staff_id = shift_data.get("new_staff_id").and_then(|v| v.as_str()).unwrap_or("");
@@ -4160,7 +4167,7 @@ pub async fn update_ui_triage_action_handler(
                             }
                         }
                     } else if action_type == "Draft Booking" || action_type == "SuggestedCalendarSlot" {
-                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload);
+                        tracing::info!("Executing proposed action: Draft Booking, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
                         let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = ? AND tenant_id = ?")
@@ -4200,10 +4207,10 @@ pub async fn update_ui_triage_action_handler(
                             .bind(end_time.to_rfc3339())
                             .execute(&mut *tx)
                             .await {
-                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e);
+                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
                             }
                         } else {
-                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload);
+                            tracing::warn!("Could not extract a customer_id for Draft Booking action payload: {}", action_payload); // pii-safe
                         }
                     }
                 }
@@ -5045,7 +5052,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 if let Some(obj) = approval.as_object_mut() {
                     // Ensure approval items map correctly to triage UI
                     if !obj.contains_key("lifecycle_state") {
-                        obj.insert("lifecycle_state".to_string(), serde_json::json!("PENDING_APPROVAL"));
+                        let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                        let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                        obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
                     }
                     if !obj.contains_key("created_at") {
                         obj.insert("created_at".to_string(), serde_json::json!(""));
@@ -5403,7 +5412,16 @@ async fn ui_dashboard_unified_feed_handler(
                     if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
                         if let Some((v, _)) = c.get_with_swr(&a_key_6).await { return v; }
                     }
-                    let res = load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default();
+                    let mut res = load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default();
+                    for approval in &mut res {
+                        if let Some(obj) = approval.as_object_mut() {
+                            if !obj.contains_key("lifecycle_state") {
+                                let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                                let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                                obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                            }
+                        }
+                    }
                     if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_6, res.clone(), std::time::Duration::from_secs(10)).await; }
                     res
                 }),
@@ -5521,7 +5539,16 @@ async fn ui_dashboard_unified_feed_handler(
                 if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
                     if let Some((v, _)) = c.get_with_swr(&a_key_clone).await { return v; }
                 }
-                let res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
+                let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
+                for approval in &mut res {
+                    if let Some(obj) = approval.as_object_mut() {
+                        if !obj.contains_key("lifecycle_state") {
+                            let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                            let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                            obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                        }
+                    }
+                }
                 if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
                 res
             }
@@ -5603,7 +5630,16 @@ async fn ui_dashboard_unified_agent_feed_handler(
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } })
             );
 
-            let pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            for approval in &mut pending_approvals {
+                if let Some(obj) = approval.as_object_mut() {
+                    if !obj.contains_key("lifecycle_state") {
+                        let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                        let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                        obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                    }
+                }
+            }
             let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
@@ -5625,7 +5661,16 @@ async fn ui_dashboard_unified_agent_feed_handler(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } })
     );
 
-    let pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            for approval in &mut pending_approvals {
+                if let Some(obj) = approval.as_object_mut() {
+                    if !obj.contains_key("lifecycle_state") {
+                        let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                        let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                        obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                    }
+                }
+            }
     let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
@@ -6844,6 +6889,12 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/swagger-ui-bundle.js", axum::routing::get(|| async {
             (axum::http::StatusCode::OK, [("content-type", "application/javascript")], include_str!("../ui/tauri/src/ui/swagger-ui-bundle.txt"))
         }))
+        .route("/kairos", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
+        }))
+        .route("/kairos.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
+        }))
         .route("/api/ui/tooltip-registry.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/tooltip-registry.html"))
         }))
@@ -6942,6 +6993,7 @@ async fn create_ui_bom_item_handler(
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
+        .nest("/api/memory", api::inbox::customer_memory::router(db.clone()))
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(api::unified_inbox_webhook::router(db.clone()))
@@ -7066,7 +7118,7 @@ async fn create_ui_bom_item_handler(
                 _ = interval.tick() => {
                     let due = hub_for_sched.scheduler().poll_due();
                     for task in due {
-                        tracing::info!("executing scheduled task: {} ({})", task.name, task.id);
+                        tracing::info!("executing scheduled task: {} ({})", task.name, task.id); // pii-safe
 
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {

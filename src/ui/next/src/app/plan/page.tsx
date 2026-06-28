@@ -106,7 +106,7 @@ export default function MyPlanPage() {
       <main className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="app-card ohc-growth-card glass-card shadow-lg hover:shadow-2xl transition-all duration-300 p-6">
+        <section className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 p-6 rounded-2xl">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900 flex items-center gap-2">
@@ -141,7 +141,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Current Usage Section */}
-        <section className="app-card ohc-growth-card glass-panel shadow-lg hover:shadow-2xl transition-all duration-300 mt-4">
+        <section className="app-card ohc-growth-card glass-panel backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 mt-4 rounded-2xl overflow-hidden">
           <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4 border-b border-white/40 bg-transparent">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
           </div>
@@ -157,7 +157,7 @@ export default function MyPlanPage() {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                           <div
-                              className="bg-indigo-500 h-3 rounded-full transition-all duration-500"
+                              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all duration-500"
                               style={{ width: data?.ai_actions_limit ? `${Math.min(100, ((data?.ai_actions_used || 0) / data.ai_actions_limit) * 100)}%` : '5%' }}>
                           </div>
                       </div>
@@ -173,7 +173,7 @@ export default function MyPlanPage() {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                           <div
-                              className="bg-[#0066FF] h-3 rounded-full transition-all duration-500"
+                              className="bg-gradient-to-r from-blue-500 to-cyan-400 h-3 rounded-full transition-all duration-500"
                               style={{ width: data?.storage_limit_bytes ? `${Math.min(100, ((data?.storage_used_bytes || 0) / data.storage_limit_bytes) * 100)}%` : '5%' }}>
                           </div>
                       </div>
