@@ -43,29 +43,11 @@ export default function PaymentLedger() {
 
       const intentData = await intentRes.json();
 
-      // Simulate Stripe Webhook
-      const webhookRes = await fetch("/api/payments/webhook", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type_field: "payment_intent.succeeded",
-          data: {
-            object: {
-              id: "pi_mock_" + Date.now(),
-              metadata: {
-                tenant_id: "e2e-tenant", // Using default E2E tenant
-                idempotency_key: intentData.idempotency_key
-              }
-            }
-          }
-        })
-      });
-
-      if (webhookRes.ok) {
+      if (intentData.status === "succeeded" || intentData.client_secret) {
         setStatus("Approved");
         fetchBalance();
       } else {
-        setStatus("Failed");
+        setStatus("Failed to initialize");
       }
     } catch (e) {
       console.error(e);
