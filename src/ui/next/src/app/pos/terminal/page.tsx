@@ -256,16 +256,18 @@ export default function POSTerminal() {
          return;
      }
 
-     try {
-         // simulate quick charge
-         await new Promise(r => setTimeout(r, 1000));
-         setOrderStatus(t('Quick charge successful'));
-     } catch (e) {
-         setOrderStatus(t('Quick charge failed'));
-     } finally {
-         setReserving(false);
-         setTimeout(() => setOrderStatus(''), 3000);
-     }
+     const quickChargeProduct = {
+         id: 'quick_charge',
+         name: 'Quick Charge',
+         description: 'Manual entry',
+         price_cents: 5000,
+         currency: 'usd',
+         stock: 9999
+     };
+
+     setCart([{ product: quickChargeProduct, quantity: 1 }]);
+     setReserving(false);
+     setIsCartOpen(true);
   };
 
   if (locked) {
