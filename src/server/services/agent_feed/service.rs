@@ -13,7 +13,7 @@ pub struct AgentFeedService {
 impl AgentFeedService {
     pub fn new(pool: PgPool) -> Self {
         Self {
-            repo: AgentFeedRepository::new(pool.clone()),
+            repo: AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres })),
             pool,
         }
     }
