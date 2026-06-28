@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{id: string}> }) {
     const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
     const tenantId = req.headers.get('x-tenant-id') || 'default';
     const authHeader = req.headers.get('authorization');
@@ -14,7 +14,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     try {
         const body = await req.json();
-        const res = await fetch(`${backendUrl}/api/subscriptions/${params.id}/action`, {
+        const res = await fetch(`${backendUrl}/api/subscriptions/${(await params).id}/action`, {
             method: 'POST',
             headers,
             body: JSON.stringify(body),

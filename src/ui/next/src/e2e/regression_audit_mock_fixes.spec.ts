@@ -43,3 +43,23 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
   });
 
 });
+
+  test('verify affiliate track API fails gracefully when backend is down instead of mocking', async ({ page, request }) => {
+    // Attempting a direct API hit that previously mocked the backend
+    const response = await request.post('/api/v1/growth/affiliate/track', {
+        data: { link: 'test' }
+    });
+    // With backend down or missing, it should no longer return 200 { tracked: true }
+    // It should now return 500 error gracefully
+    expect(response.status()).not.toBe(200);
+    const body = await response.json();
+    expect(body.error).toBe('Failed to track affiliate link');
+  });
+
+  test('verify whatsapp cloud api fails gracefully when backend is down instead of mocking', async ({ page, request }) => {
+    const response = await request.post('/api/integrations/whatsapp_cloud_api/connect', {
+        data: { token: 'test' }
+    });
+    // It should throw error instead of returning 200 success
+    expect(response.status()).not.toBe(200);
+  });
