@@ -1,5 +1,5 @@
-import '@testing-library/jest-dom';
 import React from 'react';
+import '@testing-library/jest-dom';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { TooltipProvider, WithTooltip, useTooltip } from './TooltipRegistry';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
