@@ -235,7 +235,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         cfg.multitenant = false;
 
         // Strict opt-in constraint for local sovereignty in standalone
-        let explicit_opt_in = std::env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
+        let explicit_opt_in = std::env::var("OHC_TELEMETRY_ENABLED").map(|s| s.to_lowercase() == "true").unwrap_or(false);
         if explicit_opt_in {
             tracing::info!("standalone: Telemetry explicitly opted-in by user.");
             cfg.telemetry_enabled = true;
