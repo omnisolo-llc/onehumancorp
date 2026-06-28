@@ -10,7 +10,7 @@ use tower::ServiceExt;
 use axum::extract::Extension;
 
 use crate::hub::Hub;
-use crate::api::settings::integrations::whatsapp::{connect_whatsapp_cloud_api, connect_whatsapp_twilio};
+use crate::settings::integrations::whatsapp::{connect_whatsapp_cloud_api, connect_whatsapp_twilio};
 use ::server_common::Claims;
 
 async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
@@ -69,12 +69,10 @@ async fn test_hub() -> Arc<Hub> {
         store: crate::db::DbStore::Sqlite(pool.clone()),
     });
 
-    let (tx, _rx) = tokio::sync::mpsc::channel(100);
-    let mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh> = Arc::new(crate::orchestration::mesh::MemoryMesh::new());
-    let dept_orchestrator = Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), mesh));
+    let dept_orchestrator = Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone()));
     let tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
 
-    Arc::new(Hub::new(tx, pg_pool))
+    Arc::new(Hub::new(pg_pool, db, dept_orchestrator, tracker))
 }
 
 fn test_claims() -> Claims {
@@ -93,12 +91,12 @@ fn test_claims() -> Claims {
 
 #[tokio::test]
 async fn test_connect_whatsapp_cloud_api() {
-    let registry = Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+    let hub: Arc<Hub> = test_hub().await;
 
     let app = Router::new()
         .route("/api/v1/settings/integrations/whatsapp_cloud_api", post(connect_whatsapp_cloud_api))
         .layer(Extension(test_claims()))
-        .with_state(registry.clone());
+        .with_state(hub.clone());
 
     let payload = json!({
         "api_token": "test-cloud-api-token",
@@ -126,12 +124,12 @@ async fn test_connect_whatsapp_cloud_api() {
 
 #[tokio::test]
 async fn test_connect_whatsapp_twilio() {
-    let registry = Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+    let hub: Arc<Hub> = test_hub().await;
 
     let app = Router::new()
         .route("/api/v1/settings/integrations/whatsapp", post(connect_whatsapp_twilio))
         .layer(Extension(test_claims()))
-        .with_state(registry.clone());
+        .with_state(hub.clone());
 
     let payload = json!({
         "bot_token": "test-sid",
