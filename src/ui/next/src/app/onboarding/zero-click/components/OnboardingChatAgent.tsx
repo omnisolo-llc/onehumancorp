@@ -53,7 +53,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     setIsProvisioning(true);
 
     try {
-      const response = await fetch('/api/v1/growth/zero-click-builder/generate', {
+      const response = await fetch('/api/v1/onboarding/start_zero_click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: userMessage.content }),
