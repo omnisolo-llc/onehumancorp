@@ -8,11 +8,6 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     // Make sure we're on a mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
 
-    // Click Conversational Setup
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
-    await expect(conversationalSetupBtn).toBeVisible();
-    await conversationalSetupBtn.click();
-
     // Wait for chat input to be visible
     const chatInput = page.locator('#chat-input');
     await expect(chatInput).toBeVisible();
@@ -37,11 +32,6 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   test('Conversational Setup prevents empty submissions', async ({ page }) => {
     await page.goto('/setup.html');
 
-    // Click Conversational Setup
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
-    await expect(conversationalSetupBtn).toBeVisible();
-    await conversationalSetupBtn.click();
-
     // Ensure input is empty and send
     const chatInput = page.locator('#chat-input');
     await expect(chatInput).toBeVisible();
@@ -55,11 +45,6 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
 
   test('Conversational Setup opens image upload input when toggled', async ({ page }) => {
     await page.goto('/setup.html');
-
-    // Click Conversational Setup
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
-    await expect(conversationalSetupBtn).toBeVisible();
-    await conversationalSetupBtn.click();
 
     // The image container should be hidden by default
     const imageContainer = page.locator('#chat-image-container');
@@ -75,11 +60,6 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
 
   test('Conversational Setup maintains history after reload', async ({ page }) => {
     await page.goto('/setup.html');
-
-    // Start conversational flow
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
-    await expect(conversationalSetupBtn).toBeVisible();
-    await conversationalSetupBtn.click();
 
     // Type a message
     const chatInput = page.locator('#chat-input');
@@ -104,11 +84,6 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
 
   test('Conversational Setup renders user messages correctly', async ({ page }) => {
     await page.goto('/setup.html');
-
-    // Start conversational flow
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
-    await expect(conversationalSetupBtn).toBeVisible();
-    await conversationalSetupBtn.click();
 
     // Type a message
     const chatInput = page.locator('#chat-input');

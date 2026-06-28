@@ -91,10 +91,6 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     const container = page.locator('.container');
     await expect(container).toBeVisible({ timeout: 30000 });
 
-    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' });
-    await conversationalSetupBtn.waitFor({ state: 'visible' });
-    await conversationalSetupBtn.click();
-
     // Since we made it the default active step, we should be in the chat step
     await expect(page.locator('#step-chat')).toBeVisible({ timeout: 10000 });
 
