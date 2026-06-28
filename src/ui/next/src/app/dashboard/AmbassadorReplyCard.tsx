@@ -7,9 +7,39 @@ type AmbassadorReplyCardProps = {
 };
 
 export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approval, onApprove, onDismiss }) => {
+  const payloadSource = approval.payload?.original_payload || approval.payload || approval.proposed_action || approval.context_payload || {};
+  const pastOrders = payloadSource.past_orders;
+  const contextUsed = payloadSource.context_used;
+
   return (
     <div className="app-list-item mb-4 p-4 rounded-[16px] bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="ambassador-reply-card">
-      <div className="text-gray-900 font-bold mb-2">1 New Message from {(approval.payload?.source || (approval.proposed_action || approval.context_payload)?.source || (approval.proposed_action || approval.context_payload)?.original_payload?.source || approval.payload?.original_payload?.source || "unknown").replace("_", " ")}</div>
+      <div className="text-gray-900 dark:text-gray-100 font-bold mb-2">1 New Message from {(approval.payload?.source || (approval.proposed_action || approval.context_payload)?.source || (approval.proposed_action || approval.context_payload)?.original_payload?.source || approval.payload?.original_payload?.source || "unknown").replace("_", " ")}</div>
+
+      {(pastOrders || contextUsed) && (
+        <div className="bg-blue-50/50 dark:bg-blue-900/20 rounded-[12px] p-3 border border-blue-100 dark:border-blue-800/30">
+          <div className="flex items-center gap-2 mb-2">
+             <svg className="w-4 h-4 text-[#0066FF] dark:text-[#3388FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+             <span className="text-xs font-semibold uppercase tracking-wider text-[#0066FF] dark:text-[#3388FF]">Customer Context</span>
+          </div>
+          <div className="flex flex-col gap-2 text-xs text-gray-700 dark:text-gray-300">
+             {pastOrders && (
+                <div className="flex items-start gap-2">
+                   <span className="text-lg leading-none">🛍️</span>
+                   <span>{pastOrders}</span>
+                </div>
+             )}
+             {contextUsed && (
+                <div className="flex items-start gap-2">
+                   <span className="text-lg leading-none">🧠</span>
+                   <span className="italic line-clamp-2">{contextUsed.substring(0, 150)}{contextUsed.length > 150 ? '...' : ''}</span>
+                </div>
+             )}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center text-[#0066FF] font-semibold text-sm">
         {approval.lifecycle_state === "PENDING_APPROVAL" && (
           <span className="text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100 px-2 py-1 rounded-[8px] self-start sm:self-center">
