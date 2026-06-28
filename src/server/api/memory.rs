@@ -50,7 +50,7 @@ async fn list_memories(
 ) -> Result<Json<Vec<MemoryResponse>>, (axum::http::StatusCode, String)> {
     let tenant_id = auth_info.organization_id.clone().unwrap_or_else(|| "default".to_string());
 
-    let results = repo.cross_department_search(&tenant_id, &vec![0.0; 1536], 100).await
+    let results = repo.list_recent(&tenant_id, 100).await
         .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     let out = results.into_iter().map(|r| MemoryResponse {
