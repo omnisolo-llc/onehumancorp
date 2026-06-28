@@ -53,89 +53,22 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     setIsProvisioning(true);
 
     try {
-      const response = await fetch('/api/v1/growth/zero-click-builder/generate', {
+      const response = await fetch('/api/v1/onboarding/start_zero_click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: userMessage.content }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate business');
+      if (!response.ok) throw new Error('Failed to start zero click onboarding');
 
       const data = await response.json();
 
-      // Complete immediately in tests to avoid timeout issues
-      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-         setIsProvisioning(false);
-         onComplete(data);
-      } else {
-        setTimeout(() => {
-          setIsProvisioning(false);
-          onComplete(data);
-        }, 1500);
-      }
+      setIsProvisioning(false);
+      onComplete(data);
     } catch (error) {
       console.error("Provisioning error:", error);
       setIsProvisioning(false);
       setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I ran into an issue processing that. Please try again." }]);
-    }
-  };
-
-  const handleProvisioning = async (intakeData: IntakeData, fullPrompt: string) => {
-
-    try {
-      const firstProduct = intakeData.initial_products?.[0] || { name: 'Standard Service', price: '10.00' };
-
-      const payload = {
-        business_type: intakeData.business_type || 'Service Business',
-        company_name: intakeData.business_name || 'My New Business',
-        company_description: fullPrompt,
-        selling_categories: intakeData.categories || [],
-        payment_pref: 'online',
-        admin_email: `owner_${Math.floor(Math.random() * 10000)}@example.com`,
-        admin_name: 'Owner',
-        admin_password: 'Password123!',
-        website_template: 'Modern',
-        first_product_name: firstProduct.name,
-        first_product_price: firstProduct.price,
-        domain_choice: 'subdomain',
-        price_type: 'fixed',
-        location: intakeData.location || 'Online',
-        target_audience: intakeData.target_audience || 'Everyone',
-        initial_products: intakeData.initial_products.map((p: any) => ({
-          name: p.name,
-          price: p.price,
-          description: p.description || '',
-          variants: p.variants || []
-        })),
-        ai_agents: [],
-        ai_auto_respond: false
-      };
-
-      const res = await fetch('/api/v1/onboarding/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) throw new Error('Provisioning failed');
-
-      const provisionedData = await res.json();
-
-      // Complete immediately in tests to avoid timeout issues
-      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-         setIsProvisioning(false);
-         onComplete(provisionedData);
-      } else {
-        setTimeout(() => {
-          setIsProvisioning(false);
-          onComplete(provisionedData);
-        }, 1500);
-      }
-
-    } catch (error) {
-      console.error("Provisioning error:", error);
-      setIsProvisioning(false);
-      setMessages(prev => [...prev, { role: 'assistant', content: "I have the details, but failed to create the account. Please try again later." }]);
     }
   };
 
