@@ -127,13 +127,37 @@ pub async fn handle_unified_webhook(
         }
     }
 
-    let customer_id = format!("cust-{}", Uuid::new_v4());
+    let resolved_customer = crate::api::inbox::identity::resolve_identity(&state.db, tenant_id, &payload.source, &payload.identifier).await;
+    let customer_id = resolved_customer.unwrap_or_else(|| format!("cust-{}", Uuid::new_v4()));
     let thread_id = format!("thread-{}", Uuid::new_v4());
     let message_id = format!("msg-{}", Uuid::new_v4());
     let action_id = format!("action-{}", Uuid::new_v4());
 
+    let mut context_summary = "New customer inquiry received.".to_string();
+
     match &state.db.store {
         crate::db::DbStore::Postgres => {
+            // Build Context Memory Graph Summary
+            let recent_history = sqlx::query(
+                "SELECT channel, CAST(created_at AS text) as created_at FROM unified_threads WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT 2"
+            )
+            .bind(tenant_id)
+            .bind(&customer_id)
+            .fetch_all(&state.db.pool).await;
+
+            if let Ok(rows) = recent_history {
+                if !rows.is_empty() {
+                    let mut history_str = String::from("Recent history: ");
+                    let history_items: Vec<String> = rows.into_iter().map(|row| {
+                        let channel: String = row.get("channel");
+                        let created_at: String = row.try_get("created_at").unwrap_or_default();
+                        format!("Sent {} ({})", channel, created_at)
+                    }).collect();
+                    history_str.push_str(&history_items.join(", "));
+                    context_summary = history_str;
+                }
+            }
+
             let _ = sqlx::query("INSERT INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES ($1, $2, $3, $4, 'open') ON CONFLICT DO NOTHING")
                 .bind(&thread_id)
                 .bind(tenant_id)
@@ -154,7 +178,7 @@ pub async fn handle_unified_webhook(
             );
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
-                context_summary: "Customer inquiry received.".to_string(),
+                context_summary,
                 draft_reply,
             })
             .unwrap();
@@ -167,6 +191,27 @@ pub async fn handle_unified_webhook(
                 .execute(&state.db.pool).await;
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
+            // Build Context Memory Graph Summary
+            let recent_history = sqlx::query(
+                "SELECT channel, CAST(created_at AS text) as created_at FROM unified_threads WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT 2"
+            )
+            .bind(tenant_id)
+            .bind(&customer_id)
+            .fetch_all(sqlite_pool).await;
+
+            if let Ok(rows) = recent_history {
+                if !rows.is_empty() {
+                    let mut history_str = String::from("Recent history: ");
+                    let history_items: Vec<String> = rows.into_iter().map(|row| {
+                        let channel: String = row.get("channel");
+                        let created_at: String = row.try_get("created_at").unwrap_or_default();
+                        format!("Sent {} ({})", channel, created_at)
+                    }).collect();
+                    history_str.push_str(&history_items.join(", "));
+                    context_summary = history_str;
+                }
+            }
+
             let _ = sqlx::query("INSERT OR IGNORE INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES (?, ?, ?, ?, 'open')")
                 .bind(&thread_id)
                 .bind(tenant_id)
@@ -187,7 +232,7 @@ pub async fn handle_unified_webhook(
             );
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
-                context_summary: "Customer inquiry received.".to_string(),
+                context_summary,
                 draft_reply,
             })
             .unwrap();
