@@ -329,7 +329,26 @@ impl CheckpointSaver for GitCheckpointer {
             checkpoint_id.to_string(),
         ];
 
-        // 1. Pre-clean to remove any untracked files that might block the checkout
+        // 1. Stash uncommitted and untracked changes to support safe time-travel debugging
+        let stash_out = Command::new("git")
+            .arg("stash")
+            .arg("push")
+            .arg("--include-untracked")
+            .arg("-m")
+            .arg(&format!("Auto-stash before restoring checkpoint {}", checkpoint_id))
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !stash_out.status.success() {
+            tracing::warn!(
+                "Auto-stash failed: {}",
+                String::from_utf8_lossy(&stash_out.stderr)
+            );
+        }
+
+        // 2. Pre-clean to remove any remaining untracked files (that couldn't be stashed) that might block the checkout
         let pre_clean = Command::new("git")
             .arg("clean")
             .arg("-fdx")
@@ -345,7 +364,7 @@ impl CheckpointSaver for GitCheckpointer {
             );
         }
 
-        // 2. Reset HEAD to ensure we are in a clean state before checkout
+        // 3. Reset HEAD to ensure we are in a clean state before checkout
         let reset_head = Command::new("git")
             .arg("reset")
             .arg("--hard")
@@ -1179,5 +1198,75 @@ mod additional_git_tests {
 
         let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
         assert!(branch.starts_with("agent-restore-"));
+    }
+}
+
+#[cfg(test)]
+mod restore_stash_tests {
+    use super::*;
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn test_git_checkpointer_restore_stashes_untracked() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        let cp1 = Checkpoint {
+            thread_id: "thread-git-stash".to_string(),
+            checkpoint_id: "cp-stash-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        // Write a tracked file
+        let file_path = temp_dir.path().join("test_tracked.txt");
+        std::fs::write(&file_path, "tracked 1").unwrap();
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        // Write an untracked file
+        let untracked_file_path = temp_dir.path().join("test_untracked.txt");
+        std::fs::write(&untracked_file_path, "untracked work").unwrap();
+
+        // Modifying the tracked file
+        std::fs::write(&file_path, "tracked modified").unwrap();
+
+        // Restore to first checkpoint
+        saver.restore_checkpoint("cp-stash-1").await.unwrap();
+
+        // Verify the tracked file was restored
+        let file_content = std::fs::read_to_string(&file_path).unwrap();
+        assert_eq!(file_content, "tracked 1");
+
+        // Verify the untracked file is NO LONGER in the working tree (it was stashed, then clean removed it if not tracked)
+        assert!(!untracked_file_path.exists());
+
+        // Verify the stash was created
+        let stash_list = std::process::Command::new("git")
+            .arg("stash")
+            .arg("list")
+            .current_dir(temp_dir.path())
+            .output()
+            .unwrap();
+
+        let stash_content = String::from_utf8_lossy(&stash_list.stdout);
+        assert!(stash_content.contains("Auto-stash before restoring checkpoint cp-stash-1"));
+
+        // Pop the stash to verify untracked file comes back
+        let stash_pop = std::process::Command::new("git")
+            .arg("stash")
+            .arg("pop")
+            .current_dir(temp_dir.path())
+            .output()
+            .unwrap();
+
+        assert!(stash_pop.status.success());
+
+        // Now untracked file should exist again
+        assert!(untracked_file_path.exists());
+        let untracked_content = std::fs::read_to_string(&untracked_file_path).unwrap();
+        assert_eq!(untracked_content, "untracked work");
     }
 }
