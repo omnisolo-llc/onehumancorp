@@ -719,7 +719,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   return (
     <section
-      id="triage-queue"
+      id="unified-agent-feed-section"
       className="app-panel mb-6 w-full overflow-hidden"
       aria-label="Unified Agent Feed"
     >

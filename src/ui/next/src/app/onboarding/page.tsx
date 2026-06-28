@@ -32,6 +32,23 @@ export default function OnboardingWizard() {
   const [chatInput, setChatInput] = useState('');
   const [chatImageUrl, setChatImageUrl] = useState('');
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+
+  useEffect(() => {
+    if (step === 4) {
+      setLoadingProgress(0);
+      const interval = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev >= 99) {
+            clearInterval(interval);
+            return 99;
+          }
+          return prev + 1;
+        });
+      }, 50); // Increment 1% every 50ms, roughly 5 seconds to 99%
+      return () => clearInterval(interval);
+    }
+  }, [step]);
 
   useEffect(() => {
     chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -708,10 +725,10 @@ Image provided: ${instantImageUrl}`;
                 </button>
                 <button
                   type="button"
-                  className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all"
+                  className="flex items-center justify-center w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all"
                   onClick={() => { updateState({ step: -1 }); syncStateToBackend({ step: -1 }); }}
                 >
-                  Instant Build
+                  <span className="flex items-center gap-2"><SetupIcon name="sparkles" /> Instant Build</span>
                 </button>
                 <button
                   type="button"
@@ -855,9 +872,9 @@ Image provided: ${instantImageUrl}`;
                     id="generate-storefront-btn"
                     onClick={handleInstantBuild}
                     disabled={!bio.trim() || isLoading}
-                    className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                    className="flex items-center justify-center w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                   >
-                    Generate Storefront
+                    <span className="flex items-center gap-2"><SetupIcon name="sparkles" /> Generate Storefront</span>
                   </button>
                 </div>
               </div>
@@ -1487,11 +1504,28 @@ Image provided: ${instantImageUrl}`;
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
                </div>
                <h2 id="loading-title" className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
-               <div className="space-y-2">
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
+
+               <div className="w-full max-w-xs h-2 bg-[rgba(255,255,255,0.2)] dark:bg-[rgba(255,255,255,0.1)] rounded-full overflow-hidden mb-6">
+                 <div className="h-full bg-[#0066FF] transition-all duration-300" style={{ width: `${loadingProgress}%` }}></div>
+               </div>
+
+               <div className="space-y-3 w-full max-w-xs text-left">
+                 <div className="flex items-center gap-3">
+                   <svg className={`w-5 h-5 transition-colors ${loadingProgress > 25 ? 'text-[#34C759]' : 'text-gray-300 dark:text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                   <span className={`text-sm ${loadingProgress > 25 ? 'text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold' : 'text-gray-500'}`}>Generating your product catalog</span>
+                 </div>
+                 <div className="flex items-center gap-3">
+                   <svg className={`w-5 h-5 transition-colors ${loadingProgress > 50 ? 'text-[#34C759]' : 'text-gray-300 dark:text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                   <span className={`text-sm ${loadingProgress > 50 ? 'text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold' : 'text-gray-500'}`}>Configuring payment settings</span>
+                 </div>
+                 <div className="flex items-center gap-3">
+                   <svg className={`w-5 h-5 transition-colors ${loadingProgress > 75 ? 'text-[#34C759]' : 'text-gray-300 dark:text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                   <span className={`text-sm ${loadingProgress > 75 ? 'text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold' : 'text-gray-500'}`}>Designing your storefront</span>
+                 </div>
+                 <div className="flex items-center gap-3">
+                   <svg className={`w-5 h-5 transition-colors ${loadingProgress > 90 ? 'text-[#34C759]' : 'text-gray-300 dark:text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                   <span className={`text-sm ${loadingProgress > 90 ? 'text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold' : 'text-gray-500'}`}>Onboarding your AI agents</span>
+                 </div>
                </div>
              </div>
           )}
