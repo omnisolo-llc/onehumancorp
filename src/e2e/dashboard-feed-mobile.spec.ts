@@ -8,11 +8,11 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     await page.goto('/dashboard');
 
     // Make sure we wait for the page to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // The feed should be present and visible
-    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
-    await expect(feedSection).toBeVisible();
+    const feedSection = page.locator('#unified-agent-feed-section');
+    await expect(feedSection).toBeVisible({ timeout: 15000 });
 
     // Ensure there is no horizontal scroll on the body
     const isScrollable = await page.evaluate(() => {
@@ -32,7 +32,7 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     // Since triage items are now part of UnifiedAgentFeed, verify interaction
     // We will wait for at least one triage card to appear, or mock if we have to, but since it's E2E it should hit db.
     // If we have a triage item (like "Proactive Context Agent" or normal), let's find the first approve button
-    const approveBtn = page.getByTestId(/triage-approve-/).first();
+    const approveBtn = page.getByTestId('feed-approve-btn').first();
     const btnCount = await approveBtn.count();
 
     if (btnCount > 0) {

@@ -123,9 +123,23 @@
       }
       .glassmorphism {
         border-radius: 16px !important;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       textarea.glassmorphism, input.glassmorphism {
         border-radius: 8px !important;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       button {
         min-width: 44px;
@@ -2340,12 +2354,11 @@
         </div>
       </div>
 
-      <!-- Step 6: First Offer -->
+      <!-- Step What you sell -->
       <div class="step" id="step-offer">
-        <h1>Your First Offer</h1>
-        <p>What is the main thing you sell?</p>
-        <input
-          type="text"
+        <h1>What do you sell?</h1>
+        <p>This will be used to generate your initial product catalog.</p>
+        <textarea
           id="first-offer"
           data-testid="first-offer"
           class="glassmorphism"
@@ -2353,9 +2366,10 @@
           inputmode="text"
           autocomplete="off"
           enterkeyhint="next"
-        />
+          style="min-height: 128px !important;"
+        ></textarea>
         <div id="offer-error" class="error-msg" aria-live="polite">
-          Please enter an offer.
+          Please tell us what you sell.
         </div>
         <div class="btn-group">
           <button
@@ -2363,11 +2377,10 @@
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
-            data-next="step-domain"
+            data-next="step-location"
           >
             Next
           </button>
-          <!-- Replaced by script below -->
           <button
             type="button"
             class="btn-secondary save-draft-btn"
@@ -2383,6 +2396,102 @@
             title="Previous Step"
             data-testid="prev-step-btn"
             data-prev="step-admin"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step Location -->
+      <div class="step" id="step-location">
+        <h1>Where are you located?</h1>
+        <p>This helps us set up your shipping and tax settings.</p>
+        <input
+          type="text"
+          id="location-input"
+          data-testid="location-input"
+          class="glassmorphism"
+          placeholder="e.g. Portland, OR"
+          inputmode="text"
+          autocomplete="off"
+          enterkeyhint="next"
+        />
+        <div id="location-error" class="error-msg" aria-live="polite">
+          Please tell us your location.
+        </div>
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-target-audience"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-location"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step Target Audience -->
+      <div class="step" id="step-target-audience">
+        <h1>Who is your target audience?</h1>
+        <p>We'll adapt the site's tone and layout to appeal to them.</p>
+        <input
+          type="text"
+          id="target-audience"
+          data-testid="target-audience"
+          class="glassmorphism"
+          placeholder="e.g. Local families, Tech startups"
+          inputmode="text"
+          autocomplete="off"
+          enterkeyhint="next"
+        />
+        <div id="target-audience-error" class="error-msg" aria-live="polite">
+          Please tell us your target audience.
+        </div>
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-domain"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-location"
           >
             Back
           </button>
@@ -2584,6 +2693,8 @@
         admin_email: document.getElementById("admin-email"),
         admin_password: document.getElementById("admin-password"),
         first_offer: document.getElementById("first-offer"),
+        location: document.getElementById("location-input"),
+        target_audience: document.getElementById("target-audience"),
         template_selection: document.getElementById("template-selection"),
         domain_name: document.getElementById("domain-name"),
         instant_bio: document.getElementById("instant-bio"),
@@ -2600,6 +2711,8 @@
         admin_email: document.getElementById("email-error"),
         admin_password: document.getElementById("password-error"),
         first_offer: document.getElementById("offer-error"),
+        location: document.getElementById("location-error"),
+        target_audience: document.getElementById("target-audience-error"),
         template_selection: document.getElementById("template-error"),
         domain_name: document.getElementById("domain-error"),
       };
@@ -2748,6 +2861,8 @@
             "step-assistant",
             "step-admin",
             "step-offer",
+            "step-location",
+            "step-target-audience",
             "step-domain",
             "step-template",
             "step-instant",
@@ -2807,6 +2922,20 @@
         }
       });
 
+      inputs.location.addEventListener("input", () => {
+        if (inputs.location.value.trim().length > 0) {
+          errors.location.style.display = "none";
+          inputs.location.classList.remove("invalid-input");
+        }
+      });
+
+      inputs.target_audience.addEventListener("input", () => {
+        if (inputs.target_audience.value.trim().length > 0) {
+          errors.target_audience.style.display = "none";
+          inputs.target_audience.classList.remove("invalid-input");
+        }
+      });
+
       function populateForm() {
         if (state.business_name) inputs.name.value = state.business_name;
         if (state.tagline) inputs.tagline.value = state.tagline;
@@ -2824,6 +2953,8 @@
         if (state.admin_password)
           inputs.admin_password.value = state.admin_password;
         if (state.first_offer) inputs.first_offer.value = state.first_offer;
+        if (state.location) inputs.location.value = state.location;
+        if (state.target_audience) inputs.target_audience.value = state.target_audience;
         if (state.template_selection)
           inputs.template_selection.value = state.template_selection;
         if (state.domain) inputs.domain_name.value = state.domain;
@@ -2882,6 +3013,8 @@
             "step-assistant",
             "step-admin",
             "step-offer",
+            "step-location",
+            "step-target-audience",
             "step-domain",
             "step-template",
             "step-instant",
@@ -2902,6 +3035,8 @@
         state.assistant_tone = inputs.assistant_tone.value;
         state.admin_name = inputs.admin_name.value;
         state.first_offer = inputs.first_offer.value;
+        state.location = inputs.location.value;
+        state.target_audience = inputs.target_audience.value;
         state.template_selection = inputs.template_selection.value;
         if (inputs.domain_name) state.domain = inputs.domain_name.value;
         if (inputs.instant_bio) state.instant_bio = inputs.instant_bio.value;
@@ -2939,6 +3074,8 @@
             "step-assistant",
             "step-admin",
             "step-offer",
+            "step-location",
+            "step-target-audience",
             "step-domain",
             "step-template",
             "step-instant",
@@ -3100,6 +3237,7 @@
           }
         } else if (stepId === "step-offer") {
           if (inputs.first_offer.value.trim() === "") {
+            errors.first_offer.innerText = "Please tell us what you sell.";
             errors.first_offer.style.display = "block";
             inputs.first_offer.classList.add("invalid-input");
             isValid = false;
@@ -3107,6 +3245,28 @@
             errors.first_offer.style.display = "none";
             inputs.first_offer.classList.remove("invalid-input");
             state.first_offer = inputs.first_offer.value.trim();
+          }
+        } else if (stepId === "step-location") {
+          if (inputs.location.value.trim() === "") {
+            errors.location.innerText = "Please tell us your location.";
+            errors.location.style.display = "block";
+            inputs.location.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.location.style.display = "none";
+            inputs.location.classList.remove("invalid-input");
+            state.location = inputs.location.value.trim();
+          }
+        } else if (stepId === "step-target-audience") {
+          if (inputs.target_audience.value.trim() === "") {
+            errors.target_audience.innerText = "Please tell us your target audience.";
+            errors.target_audience.style.display = "block";
+            inputs.target_audience.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.target_audience.style.display = "none";
+            inputs.target_audience.classList.remove("invalid-input");
+            state.target_audience = inputs.target_audience.value.trim();
           }
         } else if (stepId === "step-domain") {
           if (inputs.domain_name.value.trim().length < 3) {
@@ -3660,14 +3820,14 @@
                 payment_pref: req.payment_pref,
                 admin_email: req.admin_email,
                 website_template: req.website_template,
-                first_product_name: req.first_product_name,
+                first_product_name: state.first_offer || req.first_product_name,
                 first_product_price: req.first_product_price,
                 domain_choice: req.domain_choice,
                 admin_name: req.admin_name,
                 admin_password: req.admin_password,
                 price_type: req.price_type,
-                location: req.location,
-                target_audience: req.target_audience,
+                location: state.location || req.location,
+                target_audience: state.target_audience || req.target_audience,
                 initial_products: req.initial_products,
               }),
             });
