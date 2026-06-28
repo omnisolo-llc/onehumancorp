@@ -17,6 +17,8 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     await expect(page.locator('h1', { hasText: 'Tell us about your business' })).toBeVisible({ timeout: 15000 });
 
     // Verify "Powered by OHC" branding is present (viral loop)
+    await expect(page.locator('#dashboard-footer-viral-link')).toBeVisible();
+
     // The generate button should be disabled initially
     const generateBtn = page.getByTestId('generate-storefront-btn');
     await expect(generateBtn).toBeDisabled();
