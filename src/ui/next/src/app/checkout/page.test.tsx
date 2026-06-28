@@ -30,6 +30,10 @@ vi.mock('../components/PostPurchaseShareWidget', () => ({
   OneTapReferral: () => <div data-testid="one-tap-referral" />,
 }));
 
+vi.mock('../components/ShareAndSaveWidget', () => ({
+  ShareAndSaveWidget: () => <div data-testid="share-and-save-widget" />,
+}));
+
 describe('CheckoutPage', () => {
   afterEach(() => {
     mockUseSearchParams.mockImplementation(() => new URLSearchParams(''));
