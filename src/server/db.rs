@@ -248,7 +248,7 @@ impl DB {
                                     ::server_telemetry::record_error_signal(
                                         "[bug] Failed to securely create DB directory",
                                     );
-                                    tracing::error!(
+                                    tracing::trace!(
                                         "Failed to securely create DB directory: {}",
                                         e
                                     );
@@ -262,7 +262,7 @@ impl DB {
                                 ::server_telemetry::record_error_signal(
                                     "[bug] Failed to create DB directory",
                                 );
-                                tracing::error!("Failed to create DB directory: {}", e);
+                                tracing::trace!("Failed to create DB directory: {}", e);
                                 return Err(e.into());
                             }
                         }
@@ -282,7 +282,7 @@ impl DB {
                                 ::server_telemetry::record_error_signal(
                                     "[security] DB path is a symlink. Aborting.",
                                 );
-                                tracing::error!("Security error: DB path is a symlink. Aborting.");
+                                tracing::trace!("Security error: DB path is a symlink. Aborting.");
                                 return Err("Security error: DB path is a symlink.".into());
                             }
                         }
@@ -300,7 +300,7 @@ impl DB {
                                     if (perms.mode() & 0o777) != 0o600 {
                                         perms.set_mode(0o600);
                                         if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!(
+                                            tracing::trace!(
                                                 "Failed to securely update existing standalone database file permissions: {}",
                                                 e
                                             );
@@ -318,7 +318,7 @@ impl DB {
                                     if (perms.mode() & 0o777) != 0o600 {
                                         perms.set_mode(0o600);
                                         if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!(
+                                            tracing::trace!(
                                                 "Failed to securely update existing standalone database file permissions: {}",
                                                 e
                                             );
@@ -353,7 +353,7 @@ impl DB {
                         {
                             if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
                                 if sym_meta.file_type().is_symlink() {
-                                    tracing::error!("CRITICAL SECURITY ERROR: .ohc_sqlite_key is a symlink. Aborting to prevent TOCTOU vulnerability.");
+                                    tracing::trace!("CRITICAL SECURITY ERROR: .ohc_sqlite_key is a symlink. Aborting to prevent TOCTOU vulnerability.");
                                     std::process::exit(1);
                                 }
                             }

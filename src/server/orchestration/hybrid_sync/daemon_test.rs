@@ -689,12 +689,12 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         daemon.prune_stuck_agent_missions().await.unwrap();
 
         // Verify SQLite mission failure category
-        let dl_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_sqlite_cat'")
+        let dl_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE event_type = 'mission_failed'")
             .fetch_one(&sqlite_pool).await.unwrap();
         assert_eq!(dl_sqlite.0, 1);
 
         // Verify PG mission failure category
-        let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE id = 'stuck_mission_pg_cat'")
+        let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE event_type = 'mission_failed'")
             .fetch_one(&pg_pool).await.unwrap();
         assert_eq!(dl_pg.0, 1);
     }
