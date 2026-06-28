@@ -1,4 +1,5 @@
 use sqlx::{PgPool, FromRow};
+use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
@@ -15,12 +16,12 @@ pub struct AgentFeedItem {
 }
 
 pub struct AgentFeedRepository {
-    pool: PgPool,
+    db: Arc<crate::db::DB>,
 }
 
 impl AgentFeedRepository {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(db: Arc<crate::db::DB>) -> Self {
+        Self { db }
     }
 
     pub async fn create(&self, item: AgentFeedItem) -> Result<AgentFeedItem, sqlx::Error> {
@@ -39,7 +40,7 @@ impl AgentFeedRepository {
         .bind(item.lifecycle_state)
         .bind(item.created_at)
         .bind(item.updated_at)
-        .fetch_one(&self.pool)
+        .fetch_one(&self.db.pool)
         .await?;
 
         Ok(rec)
@@ -99,7 +100,7 @@ impl AgentFeedRepository {
         )
         .bind(tenant_id)
         .bind(id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&self.db.pool)
         .await?;
 
         Ok(rec)
@@ -218,7 +219,7 @@ impl AgentFeedRepository {
         .bind(tenant_id)
         .bind(limit)
         .bind(offset)
-        .fetch_all(&self.pool)
+        .fetch_all(&self.db.pool)
         .await?;
 
         Ok(items)
@@ -236,7 +237,7 @@ impl AgentFeedRepository {
         .bind(new_state)
         .bind(tenant_id)
         .bind(id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&self.db.pool)
         .await?;
 
         if let Some(r) = rec {
@@ -249,7 +250,7 @@ impl AgentFeedRepository {
             .bind(legacy_status)
             .bind(tenant_id)
             .bind(id)
-            .execute(&self.pool)
+            .execute(&self.db.pool)
             .await?
             .rows_affected();
 
@@ -260,7 +261,7 @@ impl AgentFeedRepository {
                  .bind(request_status)
                  .bind(tenant_id)
                  .bind(id)
-                 .execute(&self.pool)
+                 .execute(&self.db.pool)
                  .await?;
         }
 
@@ -284,7 +285,7 @@ impl AgentFeedRepository {
         .bind(&proposed_action)
         .bind(tenant_id)
         .bind(id)
-        .execute(&self.pool)
+        .execute(&self.db.pool)
         .await?;
 
         if res.rows_affected() > 0 {
@@ -303,7 +304,7 @@ impl AgentFeedRepository {
             .bind(action)
             .bind(tenant_id)
             .bind(id)
-            .execute(&self.pool)
+            .execute(&self.db.pool)
             .await?
             .rows_affected();
 
@@ -319,7 +320,7 @@ impl AgentFeedRepository {
                 .bind(action)
                 .bind(tenant_id)
                 .bind(id)
-                .execute(&self.pool)
+                .execute(&self.db.pool)
                 .await?;
             }
         }
@@ -341,7 +342,7 @@ mod tests {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         let pool = PgPool::connect(&database_url).await.unwrap();
-        let repo = AgentFeedRepository::new(pool);
+        let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
 
         let tenant_id = "test-tenant-123";
 

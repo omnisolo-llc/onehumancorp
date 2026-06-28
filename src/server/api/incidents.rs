@@ -101,7 +101,7 @@ async fn create_incident(
     }
 
     // Now, create an AgentFeedItem for the owner
-    let repo = AgentFeedRepository::new(pool.clone());
+    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
     let feed_item = AgentFeedItem {
         id: Uuid::new_v4().to_string(),
         tenant_id: tenant_id.clone(),

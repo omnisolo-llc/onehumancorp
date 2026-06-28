@@ -202,7 +202,7 @@ async fn list_feed_items(
         let cache_key_bg = cache_key.clone();
 
         tokio::spawn(async move {
-            let repo = AgentFeedRepository::new(pool_bg);
+            let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool_bg.clone(), store: crate::db::DbStore::Postgres }));
             if let Ok(items) = repo.list(&tenant_id_bg, limit, offset, mobile_optimized).await {
                 let any_response = if mobile_optimized {
                     let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
@@ -225,7 +225,7 @@ async fn list_feed_items(
         return (StatusCode::OK, Json(cached_resp)).into_response();
     }
 
-    let repo = AgentFeedRepository::new(pool);
+    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
 
     match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
         Ok(items) => {
@@ -313,7 +313,7 @@ async fn update_feed_item_state(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    let repo = AgentFeedRepository::new(pool.clone());
+    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
 
     if payload.proposed_action.is_some() || payload.context_payload.is_some() {
         let proposed = payload.proposed_action.clone().map(sqlx::types::Json);
