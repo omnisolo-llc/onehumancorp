@@ -246,7 +246,7 @@ async fn generate_proposal(
         status: "DRAFT".to_string(),
         line_items: vec![
             QuoteLineItemReq {
-                description: format!("AI Generated Proposal for: {}", request.message),
+                description: format!("AI Generated Proposal for: {}", matched_service_name),
                 unit_price_cents: mock_price,
                 quantity: 1,
                 is_optional: false,
