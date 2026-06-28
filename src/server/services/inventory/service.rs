@@ -291,20 +291,10 @@ impl InventoryService {
                     }
                     let _ = tx.commit().await;
 
-                    // Publish to Redis Pub/Sub for Real-Time Sync
-                    if false {
-
-
-                // Also emit cache invalidation event for storefront
-                let _invalidation_topic = "cache_invalidation_events";
-                let _invalidation_payload = serde_json::json!({
-                    "event": "inventory.updated",
-                    "tags": [
-                        format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
-                    ]
-                }).to_string();
-                    }
+                    // Edge cache invalidation for real-time storefront sync
+                    let edge_cache = crate::builder::edge::get_edge_cache();
+                    edge_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
                 } else {
             self.locker.clear(&lock_key).await;
                     return Ok(ReserveResult {
@@ -544,22 +534,10 @@ impl InventoryService {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        // Publish to Redis Pub/Sub for Real-Time Sync
-        if false {
-            if false {
-
-
-                // Also emit cache invalidation event for storefront
-                let _invalidation_topic = "cache_invalidation_events";
-                let _invalidation_payload = serde_json::json!({
-                    "event": "inventory.updated",
-                    "tags": [
-                        format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
-                    ]
-                }).to_string();
-            }
-        }
+        // Edge cache invalidation for real-time storefront sync
+        let edge_cache = crate::builder::edge::get_edge_cache();
+        edge_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+        edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
         Ok(CommitResult {
             success: true,
