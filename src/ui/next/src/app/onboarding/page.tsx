@@ -304,7 +304,7 @@ export default function OnboardingWizard() {
 
       const intakeData = await intakeRes.json();
       if (!intakeRes.ok) {
-        throw new Error(intakeData.error || intakeData.message || 'Failed to process business details');
+        throw new Error(intakeData.error || intakeData.message || 'Backend connection failed. Please try again.');
       }
 
       updateState({ businessType: intakeData.business_type || 'Online Store' });
@@ -335,7 +335,7 @@ export default function OnboardingWizard() {
       }); // Go to review step
     } catch (err: any) {
       console.error(err);
-      updateState({ error: err.message || 'An error occurred processing details' });
+      updateState({ error: err.message || 'Backend connection failed. Please try again.' });
       updateState({ step: 1 }); syncStateToBackend({ step: 1 });
       updateState({ chatStep: 3 }); syncStateToBackend({ chatStep: 3 });
     } finally {
@@ -535,7 +535,7 @@ Image provided: ${instantImageUrl}`;
 
       const result = await startRes.json().catch(() => ({}));
       if (!startRes.ok) {
-        throw new Error(result.error || result.message || 'Failed to start onboarding');
+        throw new Error(result.error || result.message || 'Backend connection failed. Please try again.');
       }
 
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -556,7 +556,7 @@ Image provided: ${instantImageUrl}`;
 
     } catch (err: any) {
       console.error(err);
-      updateState({ error: err.message || 'Failed to generate your business' });
+      updateState({ error: err.message || 'Backend connection failed. Please try again.' });
       updateState({ step: -1 }); syncStateToBackend({ step: -1 });
     } finally {
       updateState({ isLoading: false });
@@ -621,7 +621,7 @@ Image provided: ${instantImageUrl}`;
 
       const result = await startRes.json().catch(() => ({}));
       if (!startRes.ok) {
-        throw new Error(result.error || result.message || 'Failed to start onboarding');
+        throw new Error(result.error || result.message || 'Backend connection failed. Please try again.');
       }
 
       // UX: enforce a minimum loading screen display of 500ms so the user sees progress
@@ -639,7 +639,7 @@ Image provided: ${instantImageUrl}`;
 
     } catch (err: any) {
       console.error(err);
-      updateState({ error: err.message || 'Failed to start onboarding' });
+      updateState({ error: err.message || 'Backend connection failed. Please try again.' });
       updateState({ step: 3 }); syncStateToBackend({ step: 3 });
     } finally {
       updateState({ isLoading: false });
@@ -697,7 +697,7 @@ Image provided: ${instantImageUrl}`;
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 z-10 bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-md border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
+          <div className="mx-6 mt-4 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
             <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             <p className="flex-1">{error}</p>
           </div>
