@@ -9,7 +9,7 @@ test.describe('Viral Giveaway Loop', () => {
     await page.goto('/dashboard');
 
     // 2. Find and click the Giveaway Generator link
-    const giveawayLink = page.locator('a[href="/giveaway"]');
+    const giveawayLink = page.locator('a[href="giveaway/index.html"]');
     await expect(giveawayLink).toBeVisible();
     await giveawayLink.click();
 
