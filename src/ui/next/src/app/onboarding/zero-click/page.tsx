@@ -27,16 +27,16 @@ export default function ZeroClickBuilderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 font-outfit selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 font-outfit selection:bg-indigo-100 selection:text-indigo-900">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl mb-4">
             <span className="text-3xl">✨</span>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight mb-3">
+          <h1 className="text-4xl font-bold text-[#1D1D1F] dark:text-white tracking-tight mb-3">
             Zero-Click Business Generator
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+          <p className="text-lg text-[#424245] dark:text-[#A1A1A6] max-w-xl mx-auto">
             Instantly build your storefront, product catalog, and booking system with a single prompt.
           </p>
         </div>
@@ -51,16 +51,16 @@ export default function ZeroClickBuilderPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <h2 className="text-3xl font-bold text-[#1D1D1F] dark:text-white mb-2">
                 Your business is live!
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-[#424245] dark:text-[#A1A1A6]">
                 We've configured everything you need to start selling.
               </p>
             </div>
 
             <div className="space-y-6">
-              <div className="w-full h-[500px] rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden relative bg-white dark:bg-gray-800">
+              <div className="w-full h-[500px] rounded-[16px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%]">
                 <iframe
                   src={`/builder?tenant=${generatedStore.organization_id}&preview=true`}
                   className="w-full h-full border-none"
@@ -80,14 +80,14 @@ export default function ZeroClickBuilderPage() {
                     }
                     router.push('/dashboard');
                   }}
-                  className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#005bb5] text-white px-6 py-4 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
+                  className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#005bb5] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
                 >
                   🚀 Launch My Store
                 </button>
 
                 <button
                   onClick={handleShare}
-                  className="w-full flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a91da] text-white px-6 py-4 rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
+                  className="w-full flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#1a91da] text-white min-h-[44px] px-6 py-3 rounded-[8px] font-bold text-lg transition-all active:scale-[0.98] shadow-sm hover:shadow-md"
                 >
                   🐦 Share on X (Twitter)
                 </button>
