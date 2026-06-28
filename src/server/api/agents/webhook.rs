@@ -177,12 +177,13 @@ async fn handle_webhook(
         .await;
 
         let _ = sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())"
+            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW(), $5)"
         )
         .bind(uuid::Uuid::parse_str(&quote_line_item_id).unwrap_or_default())
         .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
         .bind(&scope)
         .bind(price_cents)
+        .bind(tenant_id.clone())
         .execute(&pool)
         .await;
 

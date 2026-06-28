@@ -317,7 +317,7 @@ async fn create_quote(
 
     for item in line_items {
         sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional) VALUES ($1, $2, $3, $4, $5, $6)"
+            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
         )
         .bind(Uuid::new_v4())
         .bind(quote_id)
@@ -325,6 +325,7 @@ async fn create_quote(
         .bind(item.unit_price_cents)
         .bind(item.quantity)
         .bind(item.is_optional)
+        .bind(tenant_id.clone())
         .execute(&mut *tx)
         .await
         .map_err(|e| {
