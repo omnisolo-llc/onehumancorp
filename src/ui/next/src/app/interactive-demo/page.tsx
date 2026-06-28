@@ -32,8 +32,8 @@ export default function InteractiveDemoPage() {
   };
 
   const claimTrialExtension = async () => {
-    const message = \`I just launched an Interactive Demo on OneHumanCorp! It's an amazing way to show off my products. 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/\${tenant}\`;
-    const shareUrl = \`https://twitter.com/intent/tweet?text=\${encodeURIComponent(message)}\`;
+    const message = `I just launched an Interactive Demo on OneHumanCorp! It's an amazing way to show off my products. 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenant}`;
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
     // Simulate opening the share URL
     window.open(shareUrl, '_blank');
@@ -73,17 +73,17 @@ export default function InteractiveDemoPage() {
     }
   };
 
-  const embedCode = \`<!-- Interactive Demo Widget -->
+  const embedCode = `<!-- Interactive Demo Widget -->
 <div style="font-family: sans-serif; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; max-width: 500px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-  <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; color: #111827;">\${demoTitle}</h3>
-  <p style="margin-top: 0; margin-bottom: 16px; font-size: 14px; color: #4b5563;">\${demoDescription}</p>
+  <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; color: #111827;">${demoTitle}</h3>
+  <p style="margin-top: 0; margin-bottom: 16px; font-size: 14px; color: #4b5563;">${demoDescription}</p>
   <div style="background: #f3f4f6; border-radius: 8px; padding: 32px; text-align: center; border: 1px dashed #d1d5db;">
     <button style="background: #0071e3; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Start Interactive Demo</button>
   </div>
-\${removeBranding ? '' : \`  <div style="text-align: center; margin-top: 16px;">
-    <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=\${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-size: 12px; font-weight: 600;">⚡ Powered by OHC</a>
-  </div>\`}
-</div>\`;
+${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
+    <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-size: 12px; font-weight: 600;">⚡ Powered by OHC</a>
+  </div>`}
+</div>`;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-12 font-inter">
@@ -237,11 +237,11 @@ export default function InteractiveDemoPage() {
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{__html: \`
+      <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-      \`}} />
+      `}} />
     </div>
   );
 }
