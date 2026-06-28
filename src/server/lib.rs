@@ -3587,17 +3587,17 @@ pub async fn simulate_agent_feed_item_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
         },
-        crate::db::DbStore::Sqlite(_) => {
+        crate::db::DbStore::Sqlite(ref pool) => {
             if let Err(e) = sqlx::query(
                 "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
             .bind(item_id.clone())
             .bind(&tenant_id)
             .bind("Simulated Webhook")
-            .bind(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."})))
-            .bind(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."})))
+            .bind(serde_json::json!({"description": "A new simulated event needs your attention."}).to_string())
+            .bind(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}).to_string())
             .bind("PENDING_APPROVAL")
-            .execute(&db.pool)
+            .execute(pool)
             .await {
                 tracing::error!("Failed to insert agent_feed_item: {:?}", e);
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
