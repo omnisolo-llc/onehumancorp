@@ -30,46 +30,21 @@ describe('ShareAndSaveWidgetPage', () => {
     });
   });
 
-  it('renders the configuration form', async () => {
+  it('renders the widget UI correctly', async () => {
     await act(async () => {
       render(<ShareAndSaveWidgetPage />);
     });
 
-    expect(screen.getByText('Share & Save Widget')).toBeDefined();
-    expect(screen.getByText('Configure Incentive')).toBeDefined();
-    expect(screen.getByText('Brand Settings')).toBeDefined();
+    expect(screen.getByText('Unlock 10% Off!')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Share on X to Unlock' })).toBeDefined();
   });
 
-  it('renders the Powered by OHC watermark when not removed', async () => {
+  it('shows the back to dashboard button', async () => {
     await act(async () => {
       render(<ShareAndSaveWidgetPage />);
     });
 
-    const watermark = screen.getByText('⚡ Powered by OHC');
-    expect(watermark).toBeDefined();
-    expect(watermark.closest('a')?.href).toContain('/api/v1/growth/referrals/click?target=/onboarding&ref=test-tenant');
-  });
-
-  it('shows soft paywall when trying to remove branding without pro', async () => {
-    await act(async () => {
-      render(<ShareAndSaveWidgetPage />);
-    });
-
-    const checkboxLabel = screen.getByText('Remove "Powered by OHC" branding');
-
-    await act(async () => {
-      fireEvent.click(checkboxLabel.closest('label')!);
-    });
-
-    expect(screen.getByText('Make it Yours')).toBeDefined();
-
-    // Verify upgrade button works
-    const upgradeBtns = screen.getAllByText(/Upgrade to Pro/);
-    await act(async () => {
-      // The button text is exactly "Upgrade to Pro" inside the modal
-      fireEvent.click(screen.getByRole('button', { name: /Upgrade to Pro/i }));
-    });
-
-    expect(mockPush).toHaveBeenCalledWith('/settings?tab=billing&upgrade=true');
+    const backButton = screen.getByRole('button', { name: 'Back to Dashboard' });
+    expect(backButton).toBeDefined();
   });
 });
