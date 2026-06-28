@@ -17,7 +17,15 @@ export const ReviewDraftQuoteCard: React.FC<ReviewDraftQuoteCardProps> = ({
   onEdit
 }) => {
   return (
-    <div className="bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm border border-gray-200">
+    <div
+      className="p-4 shadow-sm"
+      style={{
+        background: 'rgba(255, 255, 255, 0.65)',
+        backdropFilter: 'blur(30px) saturate(210%)',
+        border: '1px solid rgba(255, 255, 255, 0.4)',
+        borderRadius: '16px'
+      }}
+    >
       <div className="flex justify-between items-start mb-2">
         <h3 className="text-lg font-semibold text-gray-900">Draft Quote Ready</h3>
         <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">Action Required</span>
@@ -40,13 +48,15 @@ export const ReviewDraftQuoteCard: React.FC<ReviewDraftQuoteCardProps> = ({
       <div className="flex space-x-3">
         <button
           onClick={onApprove}
-          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="flex-1 bg-blue-600 text-white py-2 px-4 text-sm font-medium hover:bg-blue-700 transition-colors"
+          style={{ borderRadius: '8px' }}
         >
           Approve & Send
         </button>
         <button
           onClick={onEdit}
-          className="flex-1 bg-white text-gray-700 py-2 px-4 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
+          className="flex-1 bg-white text-gray-700 py-2 px-4 text-sm font-medium border border-gray-300 hover:bg-gray-50 transition-colors"
+          style={{ borderRadius: '8px' }}
         >
           Edit
         </button>
