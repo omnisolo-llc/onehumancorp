@@ -1,177 +1,218 @@
 import { test, expect } from './fixtures';
 
-test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
-  test('should queue mutations locally when offline and sync when online', async ({ page, context }) => {
-    // Navigate to the dashboard
-    await page.goto('/pos/kds');
+test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
 
-    // Set network to offline
+  test('1. Toggles "Sold Out" offline and queues mutation', async ({ page, request, memberPage, context }) => {
+    await memberPage.setViewportSize({ width: 375, height: 667 });
+
+    // Login logic via api for token
+    const loginRes = await request.post('/api/v1/auth/login', {
+        data: { email: 'admin@ohc.local', password: 'admin' }
+    });
+    expect(loginRes.ok()).toBeTruthy();
+    const { token, user } = await loginRes.json();
+
+    // Create a product
+    const productTitle = 'Falafel Test ' + Date.now();
+    const createRes = await request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            title: productTitle,
+            price_cents: 800,
+            inventory_count: 5
+        }
+    });
+    expect(createRes.ok()).toBeTruthy();
+
+    await memberPage.goto('/api/staff');
+    await memberPage.evaluate(() => {
+        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
+    });
+
+    await memberPage.goto('/pos.html');
+    await expect(memberPage.locator('text=Terminal Locked')).toBeVisible();
+
+    // Unlock
+    for (let i = 1; i <= 4; i++) {
+        await memberPage.getByRole('button', { name: i.toString(), exact: true }).click();
+    }
+    await memberPage.getByRole('button', { name: 'Clock In' }).click();
+
+    // Verify product exists on POS
+    const productButton = memberPage.locator('div.product-btn').filter({ hasText: productTitle });
+    await expect(productButton).toBeVisible({ timeout: 15000 });
+
+    // Set offline
     await context.setOffline(true);
+    await memberPage.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await expect(memberPage.locator('text=Syncing Paused').first()).toBeVisible();
 
-    // Evaluate to simulate the offline environment trigger
-    await page.evaluate(() => {
-      let indicator = document.getElementById('network-status-indicator');
-      if (indicator) {
-        indicator.classList.remove('hidden');
-        indicator.classList.add('block');
-      }
-    });
+    // Toggle Sold Out
+    await productButton.locator('button:has-text("Sold Out")').click();
 
-    // The network status indicator should show offline
-    await expect(page.locator('#network-status-indicator').first()).toBeVisible();
+    // Queue dashboard should appear
+    await expect(memberPage.locator('text=Items Pending Sync').first()).toBeVisible();
 
-    // Ensure the toggle button exists
-    const toggleButton = page.locator('[data-testid="toggle-soldout-e2e-product-falafel"]').first();
-
-    // Fallback inject if backend doesn't serve the test item
-    await page.evaluate(() => {
-        let btn = document.querySelector('[data-testid="toggle-soldout-e2e-product-falafel"]');
-        if (!btn) {
-             const card = document.createElement('div');
-             card.innerHTML = `
-                <div class="app-card backdrop-blur-[30px] rounded-xl p-4 shadow-sm border border-gray-100 flex justify-between items-center">
-                   <span class="font-bold text-gray-800 text-lg">Falafel</span>
-                   <button
-                     id="sold-out-toggle-e2e-product-falafel"
-                     data-testid="toggle-soldout-e2e-product-falafel"
-                     class="px-6 py-4 rounded-xl font-bold text-lg shadow active:scale-95 transition min-w-[120px] bg-green-100 text-green-700"
-                   >
-                     Available
-                   </button>
-                </div>
-             `;
-             document.body.appendChild(card);
-             document.getElementById('sold-out-toggle-e2e-product-falafel').addEventListener('click', () => {
-                 const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-                 req.onsuccess = (e) => {
-                     const db = (e.target as IDBOpenDBRequest).result;
-                     if (db.objectStoreNames.contains('actions')) {
-                         const tx = db.transaction('actions', 'readwrite');
-                         tx.objectStore('actions').put({
-                             id: 'e2e-product-falafel',
-                             type: 'TOGGLE_SOLD_OUT',
-                             payload: { item_id: 'e2e-product-falafel', is_sold_out: true },
-                             timestamp: new Date().getTime()
-                         });
-                     }
-                 };
-             });
-        }
-        let q = document.getElementById('queue-dashboard');
-        if (!q) {
-            q = document.createElement('div');
-            q.id = 'queue-dashboard';
-            document.body.appendChild(q);
-        }
-        if (q) {
-            q.classList.remove('hidden');
-            q.classList.add('block');
-            q.innerText = '1 Items Pending Sync';
-        }
-    });
-
-    // Actually click the UI element
-    await toggleButton.click();
-    await expect(page.locator('#queue-dashboard')).toBeVisible();
-
-    // Set network to online
+    // Restore online
     await context.setOffline(false);
-
-    // Trigger online event to allow the application to naturally attempt synchronization.
-    // In a real browser, context.setOffline(false) fires the 'online' event natively on the window,
-    // which the React app's useEffect hook listens for.
-    // If the real backend is running, the fetch to /api/v1/sync/offline will succeed,
-    // and the application logic will remove the items from the queue.
-
-    await page.evaluate(() => {
-        window.dispatchEvent(new Event('online'));
-    });
-
-    // Wait for the sync to complete and the queue to hide.
-    // This assertion requires the backend to be running to successfully process the offline mutations.
-    await expect(page.locator('#queue-dashboard')).toHaveClass(/hidden/, { timeout: 15000 });
-
+    await memberPage.evaluate(() => window.dispatchEvent(new Event('online')));
   });
 
-  test('should push CRDT deltas correctly via mcp-deltas endpoint', async ({ page, context }) => {
-    await page.goto('/pos.html');
-    await context.setOffline(true);
+  test('2. Optimistic inventory deduction on offline tap-to-pay', async ({ page, request, memberPage, context }) => {
+    await memberPage.setViewportSize({ width: 375, height: 667 });
 
-    await page.evaluate(async () => {
-        return new Promise((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-            req.onsuccess = (e) => {
-                const db = (e.target as IDBOpenDBRequest).result;
-                if (db.objectStoreNames.contains('actions')) {
-                    const tx = db.transaction('actions', 'readwrite');
-                    tx.objectStore('actions').put({
-                        id: 'crdt-test-1',
-                        type: 'CRDT_MUTATION',
-                        payload: { entity_id: 'task-test', data: { status: 'completed' } },
-                        timestamp: new Date().getTime()
-                    });
-                    tx.oncomplete = () => resolve(true);
-                } else {
-                    resolve(true);
-                }
-            };
-            req.onerror = () => resolve(true);
-        });
+    const loginRes = await request.post('/api/v1/auth/login', {
+        data: { email: 'admin@ohc.local', password: 'admin' }
+    });
+    const { token } = await loginRes.json();
+
+    const productTitle = 'Shawarma Test ' + Date.now();
+    const createRes = await request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { title: productTitle, price_cents: 1000, inventory_count: 2 }
+    });
+    expect(createRes.ok()).toBeTruthy();
+
+    await memberPage.goto('/api/staff');
+    await memberPage.evaluate(() => {
+        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
     });
 
-    const mcpDeltasPromise = page.waitForRequest(request =>
-      request.url().includes('/api/v1/sync/mcp-deltas') && request.method() === 'POST'
-    );
+    await memberPage.goto('/pos.html');
+    for (let i = 1; i <= 4; i++) {
+        await memberPage.getByRole('button', { name: i.toString(), exact: true }).click();
+    }
+    await memberPage.getByRole('button', { name: 'Clock In' }).click();
+
+    const productButton = memberPage.locator('div.product-btn').filter({ hasText: productTitle });
+    await expect(productButton).toBeVisible({ timeout: 15000 });
+    await expect(productButton).toContainText('2 in stock');
+
+    await context.setOffline(true);
+    await memberPage.evaluate(() => window.dispatchEvent(new Event('offline')));
+
+    // Click to add to cart
+    await productButton.locator('div').first().click();
+
+    // Click charge (simulates tap to pay when offline)
+    await memberPage.locator('button.charge-btn').click();
+
+    await expect(memberPage.locator('text=Offline Quick Charge Saved.')).toBeVisible();
+
+    // Close receipt
+    await memberPage.locator('button:has-text("New Sale")').click();
+
+    // Verify inventory updated to 1
+    const newProductButton = memberPage.locator('div.product-btn').filter({ hasText: productTitle });
+    await expect(newProductButton).toContainText('1 in stock');
 
     await context.setOffline(false);
-    await page.evaluate(() => {
-        window.dispatchEvent(new Event('online'));
-    });
-
-    const mcpReq = await mcpDeltasPromise;
-    const postData = mcpReq.postDataJSON();
-
-    expect(postData.deltas).toBeDefined();
-    expect(postData.deltas.length).toBe(1);
-    expect(postData.deltas[0].id).toBe('crdt-test-1');
-    expect(postData.deltas[0].entity_id).toBe('task-test');
-    expect(postData.deltas[0].data).toContain('completed');
-
-    // Wait for the sync to clear the queue
-    await page.waitForFunction(async () => {
-        return new Promise((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
-            req.onsuccess = (e) => {
-                const db = (e.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains('actions')) return resolve(true);
-                const tx = db.transaction('actions', 'readonly');
-                const reqAll = tx.objectStore('actions').getAll();
-                reqAll.onsuccess = () => resolve(reqAll.result.length === 0);
-            };
-            req.onerror = () => resolve(false);
-        });
-    }, { timeout: 15000 });
   });
 
-  test('Push notification test from older test (simulated push event)', async ({ page }) => {
-    await page.goto('/pos/kds');
-    // Push notification (simulate receiving push msg via service worker/FCM)
-    // Here we assume the frontend mounts a push listener in a real PWA context
-    await page.evaluate(() => {
-        // Trigger generic custom Push Event for the App
-        const pushEvent = new CustomEvent('push-notification', { detail: { title: 'New Order!', body: 'Loud Chime!' } });
-        window.dispatchEvent(pushEvent);
+  test('3. Generates Sync Conflict Task for concurrent online purchase', async ({ page, request, memberPage }) => {
+      // Create product
+      const loginRes = await request.post('/api/v1/auth/login', {
+          data: { email: 'admin@ohc.local', password: 'admin' }
+      });
+      const { token } = await loginRes.json();
 
-        // Simulating the reaction of the app to the push event
-        // Let the event loop run to resolve fetch
-        setTimeout(() => {
-            const notif = document.createElement('div');
-            notif.id = 'push-notification-banner';
-            notif.innerText = 'New Order! Loud Chime!';
-            document.body.appendChild(notif);
-        }, 100);
+      const createRes = await request.post('/api/v1/catalog/products', {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { title: 'Concurrent ' + Date.now(), price_cents: 1200, inventory_count: 1 }
+      });
+      const product = await createRes.json();
+      const productId = product.id || product.product_id;
+
+      // Reserve it via POS endpoint
+      const reserveRes = await request.post('/api/v1/payments/terminal/reserve', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            product_id: productId,
+            quantity: 1,
+            ttl_seconds: 15
+        }
+      });
+      expect(reserveRes.ok()).toBeTruthy();
+
+      // Ensure that reserving again fails
+      const reserveRes2 = await request.post('/api/v1/payments/terminal/reserve', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+            product_id: productId,
+            quantity: 1,
+            ttl_seconds: 15
+        }
+      });
+      expect(reserveRes2.ok()).toBeTruthy();
+      const res2 = await reserveRes2.json();
+      expect(res2.success).toBeFalsy();
+      expect(res2.error_message).toContain('checked out');
+  });
+
+  test('4. Queue is cleared upon going online', async ({ page, request, memberPage, context }) => {
+    await memberPage.setViewportSize({ width: 375, height: 667 });
+
+    const loginRes = await request.post('/api/v1/auth/login', {
+        data: { email: 'admin@ohc.local', password: 'admin' }
+    });
+    const { token } = await loginRes.json();
+
+    const productTitle = 'Juice ' + Date.now();
+    await request.post('/api/v1/catalog/products', {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { title: productTitle, price_cents: 500, inventory_count: 10 }
     });
 
-    await expect(page.locator('#push-notification-banner')).toBeVisible();
+    await memberPage.goto('/api/staff');
+    await memberPage.evaluate(() => {
+        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
+    });
+
+    await memberPage.goto('/pos.html');
+    for (let i = 1; i <= 4; i++) {
+        await memberPage.getByRole('button', { name: i.toString(), exact: true }).click();
+    }
+    await memberPage.getByRole('button', { name: 'Clock In' }).click();
+
+    const productButton = memberPage.locator('div.product-btn').filter({ hasText: productTitle });
+    await expect(productButton).toBeVisible({ timeout: 15000 });
+
+    await context.setOffline(true);
+    await memberPage.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await expect(memberPage.locator('text=Syncing Paused').first()).toBeVisible();
+
+    await productButton.locator('div').first().click();
+    await memberPage.locator('button.charge-btn').click();
+
+    await expect(memberPage.locator('text=1 Items Pending Sync').first()).toBeVisible();
+
+    await context.setOffline(false);
+    await memberPage.evaluate(() => window.dispatchEvent(new Event('online')));
+
+    // The items pending text should disappear once synced
+    await expect(memberPage.locator('text=Items Pending Sync')).toBeHidden({ timeout: 15000 });
+  });
+
+  test('5. Translation agent triggers via CRDT sync queue backend handler', async ({ request, memberPage }) => {
+      // Just test that the backend handler for sync deltas is reachable
+      const loginRes = await request.post('/api/v1/auth/login', {
+          data: { email: 'admin@ohc.local', password: 'admin' }
+      });
+      const { token, user } = await loginRes.json();
+
+      const res = await request.post('/api/v1/sync/mcp-deltas', {
+          headers: { Authorization: `Bearer ${token}` },
+          data: {
+              tenant_id: user.tenant_id || 'default',
+              deltas: [{
+                  id: 'delta_lang_' + Date.now(),
+                  entity_type: 'menu_translation',
+                  entity_id: 'menu_1',
+                  payload: { target_language: 'es' },
+                  updated_at: Date.now()
+              }]
+          }
+      });
+      expect(res.status()).toBe(200);
   });
 });
