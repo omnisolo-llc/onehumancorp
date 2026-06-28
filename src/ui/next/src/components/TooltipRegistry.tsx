@@ -62,6 +62,16 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setActiveTooltip(null);
+    };
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, []);
+
   return (
     <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
       {children}

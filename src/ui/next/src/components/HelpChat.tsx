@@ -252,10 +252,10 @@ export function HelpChat() {
                 className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-sm backdrop-blur-md saturate-[210%] ${
+                  className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-sm saturate-[210%] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/95 text-white rounded-br-sm border border-blue-500/50"
-                      : "bg-white/80 dark:bg-black/50 border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm"
+                      ? "bg-blue-600/80 backdrop-blur-xl text-white rounded-br-sm border border-white/20"
+                      : "bg-white/80 dark:bg-black/50 backdrop-blur-md border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
