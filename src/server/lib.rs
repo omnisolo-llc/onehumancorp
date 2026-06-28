@@ -2605,6 +2605,18 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
     message_triage_worker.start();
 
+    // Start Ambassador Worker
+    let db_ambassador = db.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(10));
+        loop {
+            interval.tick().await;
+            if let Err(e) = crate::workers::ambassador_worker::AmbassadorWorker::poll(&db_ambassador).await {
+                tracing::error!("Ambassador worker error: {}", e);
+            }
+        }
+    });
+
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
     deposit_follow_up_worker.start();

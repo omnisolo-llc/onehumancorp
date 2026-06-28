@@ -237,11 +237,19 @@ pub async fn handle_unified_webhook(
             })
             .unwrap();
 
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, 'DRAFT_REPLY', ?, 'pending')")
-                .bind(&action_id)
+            let job_id = format!("job-{}", uuid::Uuid::new_v4());
+            let job_payload = serde_json::to_string(&serde_json::json!({
+                "message_id": message_id,
+                "thread_id": thread_id,
+                "customer_id": customer_id,
+                "source": "instagram",
+                "content": payload.message,
+            })).unwrap();
+
+            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'ambassador_intent', ?, 'PENDING')")
+                .bind(&job_id)
                 .bind(tenant_id)
-                .bind(&thread_id)
-                .bind(&action_payload)
+                .bind(&job_payload)
                 .execute(sqlite_pool).await;
         }
     }
