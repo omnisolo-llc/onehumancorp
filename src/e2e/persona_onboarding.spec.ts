@@ -12,6 +12,7 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await page.locator('#step-initial .next-step-btn').click();
 
 
     // Step 1: Work Context & Persona Quick-Start
@@ -27,43 +28,49 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     const storefrontRadio = page.locator('input[value="Storefront"]');
     await expect(storefrontRadio).toBeChecked();
 
-    await page.getByText('Next').first().click();
+    await page.locator('#step-context .next-step-btn').click();
 
     // Step 2: Categories
     await expect(page.getByText("What's your category?")).toBeVisible();
     const categoriesSelect = page.locator('#business-categories');
     await expect(categoriesSelect).toHaveValue('Bakery');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     // Step 3: Business Name
     await expect(page.getByText("What's the name of your business?")).toBeVisible();
     const nameInput = page.locator('#business-name');
     await expect(nameInput).toHaveValue("Maya's Bakery");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     // Step 4: Assistant Setup
     await expect(page.getByText("Set up your Assistant")).toBeVisible();
     await expect(page.locator('#assistant-intro')).toContainText("partner in growing this business");
-    const assistantName = page.locator('#assistant-name');
-    await expect(assistantName).toHaveValue("Cookie");
+    await page.getByTestId('team-operations').click();
+
     const assistantTone = page.locator('#assistant-tone');
     await expect(assistantTone).toHaveValue("Friendly");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
 
     // Step 5: Admin Credentials
     await expect(page.getByText("Admin Credentials")).toBeVisible();
+    await page.locator('#admin-name').fill('Admin');
     await page.locator('#admin-email').fill('maya@example.com');
     await page.locator('#admin-password').fill('securepassword123');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     // Step 6: First Offer
     await expect(page.getByText("Your First Offer")).toBeVisible();
     const firstOffer = page.locator('#first-offer');
     await expect(firstOffer).toHaveValue("Custom Birthday Cake");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     // Step 6: Template
+    await page.locator('#location-input').fill('Portland, OR');
+    await page.locator('.step.active .next-step-btn').click();
+    await page.locator('#target-audience').fill('Everyone');
+    await page.locator('.step.active .next-step-btn').click();
+    await page.locator('.step.active .next-step-btn').click();
     await expect(page.getByText("Template Selection")).toBeVisible();
   });
 
@@ -76,29 +83,36 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await page.locator('#step-initial .next-step-btn').click();
 
     await page.getByText("I'm a Handyman").click();
     await expect(page.getByText("Applied!")).toBeVisible();
     await expect(page.locator('input[value="Local Service"]')).toBeChecked();
-    await page.getByText('Next').first().click();
+    await page.locator('#step-context .next-step-btn').click();
 
     await expect(page.locator('#business-categories')).toHaveValue('Handyman');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     await expect(page.locator('#business-name')).toHaveValue("Carlos Repairs");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
 
-    await expect(page.locator('#assistant-name')).toHaveValue("Tools");
-    await page.getByRole('button', { name: 'Next' }).click();
 
+    await page.locator('.step.active .next-step-btn').click();
+
+    await page.locator('#admin-name').fill('Admin');
     await page.locator('#admin-email').fill('carlos@example.com');
     await page.locator('#admin-password').fill('securepassword123');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     await expect(page.locator('#first-offer')).toHaveValue("Standard Repair Visit");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
+    await page.locator('#location-input').fill('Portland, OR');
+    await page.locator('.step.active .next-step-btn').click();
+    await page.locator('#target-audience').fill('Everyone');
+    await page.locator('.step.active .next-step-btn').click();
+    await page.locator('.step.active .next-step-btn').click();
     await expect(page.getByText("Template Selection")).toBeVisible();
   });
 
@@ -111,11 +125,12 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await page.locator('#step-initial .next-step-btn').click();
 
     await page.getByText("I'm a Boutique Owner").click();
-    await page.getByText('Next').first().click();
+    await page.locator('#step-context .next-step-btn').click();
     await expect(page.locator('#business-categories')).toHaveValue('Boutique');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await expect(page.locator('#business-name')).toHaveValue("Priya's Boutique");
   });
 
@@ -128,11 +143,12 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await page.locator('#step-initial .next-step-btn').click();
 
     await page.getByText("I'm a Tutor").click();
-    await page.getByText('Next').first().click();
+    await page.locator('#step-context .next-step-btn').click();
     await expect(page.locator('#business-categories')).toHaveValue('Tutoring');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
     await expect(page.locator('#business-name')).toHaveValue("Leo's Music");
   });
 
@@ -145,23 +161,29 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await page.locator('#step-initial .next-step-btn').click();
 
     await page.getByText('Agency or Studio').click();
-    await page.getByText('Next').first().click();
+    await page.locator('#step-context .next-step-btn').click();
 
     await page.locator('#business-categories').selectOption('Design');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     await page.locator('#business-name').fill("Nora Studio");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
-    await page.locator('#assistant-name').fill("Dash");
+    await page.getByTestId('team-operations').click();
     await page.locator('#assistant-tone').selectOption('Professional');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
     await page.locator('#first-offer').fill("Logo Design");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('.step.active .next-step-btn').click();
 
+    await page.locator('#location-input').fill('Portland, OR');
+    await page.locator('.step.active .next-step-btn').click();
+    await page.locator('#target-audience').fill('Everyone');
+    await page.locator('.step.active .next-step-btn').click();
+    await page.locator('.step.active .next-step-btn').click();
     await expect(page.getByText("Template Selection")).toBeVisible();
     await page.locator('#template-selection').selectOption('Modern');
 

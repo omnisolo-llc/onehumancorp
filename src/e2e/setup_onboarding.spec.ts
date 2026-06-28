@@ -46,9 +46,9 @@ test('setup onboarding mobile-first inputs and logic', async ({ page }) => {
   await page.locator('button[data-next="step-assistant"]').click();
 
   // Step 4: Assistant Setup
-  const assistantName = page.locator('#assistant-name');
-  await expect(assistantName).toHaveAttribute('enterkeyhint', 'done');
-  await assistantName.fill('AutoBot');
+  await page.getByTestId('team-operations').click();
+
+
   await page.selectOption('#assistant-tone', { label: 'Professional' });
   await page.locator('button[data-next="step-admin"]').click();
 

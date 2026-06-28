@@ -49,12 +49,13 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await expect(page.locator('#step-assistant')).toHaveClass(/active/);
 
     // Step Assistant
-    await page.locator('#assistant-name').fill('Jarvis');
+    await page.getByTestId('team-operations').click();
     await page.locator('#assistant-tone').selectOption('Professional');
-    await page.locator('#assistant-name').press('Enter');
+    await page.locator('#assistant-tone').press('Enter');
     await expect(page.locator('#step-admin')).toHaveClass(/active/);
 
     // Step Admin
+    await page.locator('#admin-name').fill('Admin');
     await page.locator('#admin-email').fill('admin@test.com');
     await page.locator('#admin-password').fill('password123');
     await page.locator('#admin-password').press('Enter');

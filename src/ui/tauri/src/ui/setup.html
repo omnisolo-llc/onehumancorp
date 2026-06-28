@@ -3316,6 +3316,14 @@
         });
       }
 
+      function updateAssistantTeam() {
+        const selected = document.querySelector('input[name="assistant-team"]:checked');
+        if (selected) {
+          document.getElementById('assistant-name').value = selected.value;
+          state.assistant_name = selected.value;
+        }
+      }
+
       function updateStepper(stepId) {
         const stepperIndicator = document.getElementById("stepper-indicator");
         if (

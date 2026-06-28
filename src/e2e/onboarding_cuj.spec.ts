@@ -57,7 +57,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByTestId('business-name').fill('Maya');
     await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
 
-    await page.getByTestId('assistant-name').fill('Buddy');
+    await page.getByTestId('team-operations').click();
     await page.getByTestId('assistant-tone').selectOption('Friendly');
     await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
 
@@ -109,7 +109,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
     await page.getByTestId('business-name').fill('Maya');
     await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
-    await page.getByTestId('assistant-name').fill('Buddy');
+    await page.getByTestId('team-operations').click();
     await page.getByTestId('assistant-tone').selectOption('Friendly');
     await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
     await page.getByTestId('admin-email').fill('admin@testbakery.local');
