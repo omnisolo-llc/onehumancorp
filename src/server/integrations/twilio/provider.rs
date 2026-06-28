@@ -57,6 +57,10 @@ impl TwilioProvider {
         }
         self.client.send_whatsapp(to, from, body).await
     }
+
+    pub async fn provision_number(&self, area_code: &str) -> Result<String, String> {
+        self.client.provision_number(area_code).await
+    }
 }
 
 #[cfg(test)]
@@ -80,6 +84,13 @@ mod tests {
         async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
+        }
+
+        async fn provision_number(&self, _area_code: &str) -> Result<String, String> {
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            let last_four: u32 = rng.gen_range(1000..9999);
+            Ok(format!("+1555123{}", last_four))
         }
     }
 
