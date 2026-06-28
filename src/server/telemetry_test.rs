@@ -375,6 +375,7 @@ fn test_standalone_wrapper_audit() {
 
     let expected_telemetry_check = r#"if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
   export OHC_TELEMETRY_ENABLED=false
+  export DISABLE_TELEMETRY=true
 fi"#;
 
     assert!(
