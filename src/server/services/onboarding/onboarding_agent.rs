@@ -818,9 +818,9 @@ Example:
             }
         }
 
-        for (name, desc, price_cents, prod_type) in products {
+        for (name, desc, price_cents, _prod_type) in products {
             let price_str = format!("{}.{:02}", price_cents / 100, price_cents % 100);
-            if let Err(e) = self.create_product(org_id, &name, &price_str, "fixed", business_type, Some(&desc), Some(&prod_type), None, None, None).await {
+            if let Err(e) = self.create_product(org_id, &name, &price_str, "fixed", business_type, Some(&desc), Some(&_prod_type), None, None, None).await {
                 tracing::error!("Failed to create generated product {}: {}", name, e);
             }
         }
