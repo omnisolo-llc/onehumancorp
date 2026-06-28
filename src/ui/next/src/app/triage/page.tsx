@@ -56,6 +56,9 @@ export default function TriagePage() {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
 
+  const [swipeState, setSwipeState] = useState<{ id: string | null; startX: number; currentX: number }>({ id: null, startX: 0, currentX: 0 });
+
+
 
   useEffect(() => {
     loadItems();
@@ -115,6 +118,33 @@ export default function TriagePage() {
   const urgentCount = items.filter((item) =>
     ["urgent", "high"].includes((item.priority || "").toLowerCase()),
   ).length;
+
+
+  const handleTouchStart = (e: React.TouchEvent, id: string) => {
+    setSwipeState({ id, startX: e.touches[0].clientX, currentX: e.touches[0].clientX });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (swipeState.id) {
+      setSwipeState((prev) => ({ ...prev, currentX: e.touches[0].clientX }));
+    }
+  };
+
+  const handleTouchEnd = (id: string) => {
+    if (!swipeState.id || swipeState.id !== id) return;
+    const diff = swipeState.currentX - swipeState.startX;
+    const threshold = 100;
+
+    if (diff > threshold) {
+      // Swipe Right -> Approve
+      handleDecision(id, true);
+    } else if (diff < -threshold) {
+      // Swipe Left -> Dismiss
+      handleDecision(id, false);
+    }
+
+    setSwipeState({ id: null, startX: 0, currentX: 0 });
+  };
 
   async function handleDecision(id: string, approved: boolean) {
     if (isOffline) {
@@ -217,6 +247,13 @@ export default function TriagePage() {
               <div
                 key={item.id}
                 data-testid={`triage-card-${item.id}`}
+                onTouchStart={(e) => handleTouchStart(e, item.id)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={() => handleTouchEnd(item.id)}
+                style={{
+                  transform: swipeState.id === item.id ? `translateX(${swipeState.currentX - swipeState.startX}px)` : 'translateX(0)',
+                  transition: swipeState.id === item.id ? 'none' : 'transform 0.3s ease-out'
+                }}
                 className="ohc-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
               >
                 {/* Header Context */}

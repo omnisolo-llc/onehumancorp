@@ -386,6 +386,48 @@
       }
 
 
+
+      // Swipe functionality
+      let swipeState = { id: null, startX: 0, currentX: 0 };
+
+      function handleTouchStart(e, id) {
+        swipeState = { id, startX: e.touches[0].clientX, currentX: e.touches[0].clientX };
+      }
+
+      function handleTouchMove(e, id) {
+        if (swipeState.id === id) {
+          swipeState.currentX = e.touches[0].clientX;
+          const el = document.querySelector(`[data-testid="triage-card-${id}"]`);
+          if (el) {
+            el.style.transform = `translateX(${swipeState.currentX - swipeState.startX}px)`;
+            el.style.transition = 'none';
+          }
+        }
+      }
+
+      function handleTouchEnd(id) {
+        if (swipeState.id !== id) return;
+        const diff = swipeState.currentX - swipeState.startX;
+        const threshold = 100;
+
+        const el = document.querySelector(`[data-testid="triage-card-${id}"]`);
+
+        if (diff > threshold) {
+          // Swipe Right -> Approve
+          handleDecision(id, true);
+        } else if (diff < -threshold) {
+          // Swipe Left -> Dismiss
+          handleDecision(id, false);
+        } else {
+           if (el) {
+             el.style.transform = 'translateX(0)';
+             el.style.transition = 'transform 0.3s ease-out';
+           }
+        }
+
+        swipeState = { id: null, startX: 0, currentX: 0 };
+      }
+
       async function handleDecision(id, approved) {
         let editedReply = null;
         if (approved) {

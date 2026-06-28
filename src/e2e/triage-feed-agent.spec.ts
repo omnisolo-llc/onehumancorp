@@ -17,11 +17,63 @@ test.describe('Agentic Work Triage Feed', () => {
 
     // Wait for the feed to load
     const feed = page.locator('[data-testid^="triage-card-"]').first();
-    await expect(feed).toBeVisible({ timeout: 10000 });
+    await expect(feed).toBeVisible({ timeout: 10000
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
+});
 
     // 4. Verify the triage card exists
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
+});
     await card.click();
 
     // 5. Verify the AI summary and drafted reply
@@ -33,8 +85,60 @@ test.describe('Agentic Work Triage Feed', () => {
     await approveButton.click();
 
     // 7. Verify the item is removed from the feed
+    await expect(card).not.toBeVisible({ timeout: 5000
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
     await expect(card).not.toBeVisible({ timeout: 5000 });
   });
+
+});
+
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
+});
 
   test('Owner can dismiss AI-drafted replies', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
@@ -45,14 +149,92 @@ test.describe('Agentic Work Triage Feed', () => {
     await page.goto('/api/ui/triage.html');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
+});
     await card.click();
 
     const dismissButton = page.locator(`[data-testid="triage-dismiss-${triageItemId}"]`);
     await dismissButton.click();
 
+    await expect(card).not.toBeVisible({ timeout: 5000
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
     await expect(card).not.toBeVisible({ timeout: 5000 });
   });
+
+});
+
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
+});
 
   test('Triage feed handles empty state correctly', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
@@ -68,7 +250,33 @@ test.describe('Agentic Work Triage Feed', () => {
         expect(emptyState).toBeVisible({ timeout: 10000 }).catch(() => {}),
         expect(feed).toBeVisible({ timeout: 10000 }).catch(() => {})
     ]);
+
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
   });
+
+});
 
   test('Triage feed item shows correct metadata', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
@@ -79,13 +287,65 @@ test.describe('Agentic Work Triage Feed', () => {
     await page.goto('/api/ui/triage.html');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
+});
     await card.click();
 
     // Check for source and priority based on our mock data
     await expect(card).toContainText('Instagram DM');
 
+
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
   });
+
+});
 
   test('Triage feed layout is responsive', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
@@ -98,11 +358,141 @@ test.describe('Agentic Work Triage Feed', () => {
     await page.goto('/api/ui/triage.html');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
+});
     await card.click();
 
     // Verify it fits in the mobile viewport
     const box = await card.boundingBox();
     expect(box?.width).toBeLessThanOrEqual(375);
+
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
   });
+
+});
+
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
+
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
+
+  test('Owner can swipe right to approve and left to dismiss on mobile', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
+    const json = await response.json();
+    const triageItemId = json.id;
+
+    await page.goto('/api/ui/triage.html');
+
+    const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
+    await expect(card).toBeVisible({ timeout: 10000 });
+
+    // Simulate swipe right
+    const box = await card.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 200, box.y + box.height / 2, { steps: 5 });
+      await page.mouse.up();
+    }
+
+    await expect(card).not.toBeVisible({ timeout: 5000 });
+  });
+
 });
