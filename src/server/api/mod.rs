@@ -46,7 +46,7 @@ pub mod inbox;
 pub mod sync_gateway;
 pub mod assistant;
 pub mod payment_ledger;
-pub mod integrations_settings;
+pub mod settings;
 
 pub mod field_ops;
 pub mod proposals;

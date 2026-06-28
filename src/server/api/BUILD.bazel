@@ -33,7 +33,7 @@ exports_files(
     "field_ops.rs",
         "storefront_delivery.rs",
         "subscription.rs",
-        "integrations_settings.rs",
+
         "oauth/mod.rs",
         "oauth/proxy.rs",
         "mod.rs",
@@ -90,7 +90,7 @@ rust_library(
     "field_ops.rs",
         "storefront_delivery.rs",
         "subscription.rs",
-        "integrations_settings.rs",
+
         "oauth/mod.rs",
         "oauth/proxy.rs",
         "mod.rs",
@@ -123,6 +123,7 @@ rust_library(
         "//src/server/api/agents:mission/handoff.rs",
         "//src/server/api/agents:mission/mod.rs",
         "//src/server/api/agents:mod.rs",
+        "//src/server/api/settings:srcs",
         "//src/server/api/agents:settings.rs",
         "//src/server/api/agents:translation.rs",
         "//src/server/api/agents:webhook.rs",

@@ -6,7 +6,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use crate::hub::Hub;
+
 use ::server_common::Claims;
 use axum::extract::Extension;
 
@@ -18,7 +18,9 @@ pub struct ConnectWhatsAppRequest {
 }
 
 pub async fn connect_whatsapp_cloud_api(
-    State(hub): State<Arc<Hub>>,
+    State(registry): State<Arc<crate::integrations::registry::IntegrationsRegistry>>,
+
+
     Extension(user): Extension<Claims>,
     Json(payload): Json<ConnectWhatsAppRequest>,
 ) -> impl IntoResponse {
@@ -37,7 +39,7 @@ pub async fn connect_whatsapp_cloud_api(
 
     let id = format!("{}_whatsapp_cloud_api", tenant_id);
 
-    let db_pool = &hub.pool;
+    let db_pool = &crate::db::get_pool();
     let res = sqlx::query(
         "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
          VALUES ($1, $2, 'whatsapp_cloud_api', 'connected', $3)
@@ -82,7 +84,7 @@ pub async fn connect_whatsapp_cloud_api(
         from_phone: from_phone.clone(),
     };
 
-    if let Err(e) = hub.integration_service().connect("whatsapp_cloud_api", "https://graph.facebook.com/v19.0", creds) {
+    if let Err(e) = registry.connect("whatsapp_cloud_api", "https://graph.facebook.com/v19.0", creds) {
          tracing::error!("Failed to register WhatsApp Cloud API in memory: {}", e);
          // Do not fail the request if memory registration fails, as DB is the source of truth,
          // but log it.
@@ -92,7 +94,9 @@ pub async fn connect_whatsapp_cloud_api(
 }
 
 pub async fn connect_whatsapp_twilio(
-    State(hub): State<Arc<Hub>>,
+    State(registry): State<Arc<crate::integrations::registry::IntegrationsRegistry>>,
+
+
     Extension(user): Extension<Claims>,
     Json(payload): Json<ConnectWhatsAppRequest>,
 ) -> impl IntoResponse {
@@ -113,7 +117,7 @@ pub async fn connect_whatsapp_twilio(
 
     let id = format!("{}_whatsapp", tenant_id);
 
-    let db_pool = &hub.pool;
+    let db_pool = &crate::db::get_pool();
     let res = sqlx::query(
         "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
          VALUES ($1, $2, 'whatsapp', 'connected', $3)
@@ -159,7 +163,7 @@ pub async fn connect_whatsapp_twilio(
         from_phone: from_phone.clone(),
     };
 
-    if let Err(e) = hub.integration_service().connect("whatsapp", "https://api.twilio.com", creds) {
+    if let Err(e) = registry.connect("whatsapp", "https://api.twilio.com", creds) {
          tracing::error!("Failed to register WhatsApp Twilio in memory: {}", e);
     }
 
