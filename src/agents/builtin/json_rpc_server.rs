@@ -109,6 +109,26 @@ async fn handle_rpc(
         return Json(resp);
     }
 
+    if payload.method == "execute_visual_workflow" {
+        let workflow_req = payload.params.clone().unwrap_or_else(|| serde_json::json!({}));
+        let client = reqwest::Client::new();
+        let url = format!("http://localhost:18789/api/workflow/run");
+        match client.post(&url).json(&workflow_req).send().await {
+            Ok(res) => {
+                let body = res.json::<serde_json::Value>().await.unwrap_or_default();
+                return Json(JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: payload.id.clone(),
+                    result: Some(body),
+                    error: None,
+                });
+            }
+            Err(_) => {
+                // Fallback to error
+            }
+        }
+    }
+
     let params: RunParams = match payload.params {
         Some(ref p) => match serde_json::from_value(p.clone()) {
             Ok(params) => params,
