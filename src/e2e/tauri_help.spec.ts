@@ -9,6 +9,21 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
     await page.waitForLoadState('networkidle');
 
     // Check if HelpChat component is accessible
+    // Check if Videos tab works in dashboard widget
+    const widgetBtn = page.locator('#ohc-floating-help-btn');
+    await expect(widgetBtn).toBeVisible();
+    await widgetBtn.dispatchEvent('click');
+
+    const videosTab = page.locator('button[data-target="tab-videos"]');
+    await expect(videosTab).toBeVisible();
+    await videosTab.dispatchEvent('click');
+
+    // Verify we fetch and render videos
+    await expect(page.locator('#video-list')).not.toContainText('Loading videos...', { timeout: 10000 });
+    await expect(page.locator('#video-list')).not.toContainText('Error loading videos.');
+
+    await page.locator('#ohc-floating-help-close').dispatchEvent('click');
+
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
     await chatButton.dispatchEvent('click');
