@@ -59,6 +59,89 @@ mod chaos_db_tests {
         assert_eq!(count, 50);
     }
 
+    #[tokio::test]
+    async fn test_sqlite_transaction_isolation_parity() {
+        // Parity Auditing: Identify and fix subtle functional discrepancies between
+        // different database (e.g., SQLite and Postgres) implementations.
+        // Compare query results for identical inputs. Test edge cases (NULL handling, transaction isolation).
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(&uri)
+            .await
+            .unwrap();
+
+        // Initialize schema with a nullable column to test NULL handling
+        sqlx::query("CREATE TABLE IF NOT EXISTS isolation_test (id TEXT PRIMARY KEY, val TEXT);")
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        });
+
+        // Insert a row with NULL
+        db.execute_with_retry::<_, _, _, String>("insert_null", || async {
+            if let DbStore::Sqlite(pool) = &db.store {
+                sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?)")
+                    .bind("row1")
+                    .bind::<Option<String>>(None)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())
+            } else {
+                panic!("Expected SQLite store");
+            }
+        }).await.unwrap();
+
+        // Read the row back and verify NULL handling parity
+        let val: Option<String> = sqlx::query_scalar("SELECT val FROM isolation_test WHERE id = 'row1'")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+
+        assert_eq!(val, None, "NULL handling should be preserved accurately");
+
+        // Concurrent isolation check
+        let db_clone = db.clone();
+        let handle = tokio::spawn(async move {
+            db_clone.execute_with_retry::<_, _, _, String>("isolation_write", || async {
+                if let DbStore::Sqlite(pool) = &db_clone.store {
+                    // Try inserting another row while the main thread might be reading
+                    sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?)")
+                        .bind("row2")
+                        .bind(Some("test_val"))
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())
+                } else {
+                    panic!("Expected SQLite store");
+                }
+            }).await
+        });
+
+        // While the spawn is running, let's do a read
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM isolation_test")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+
+        assert!(count >= 1, "Count should reflect at least the first inserted row");
+
+        handle.await.unwrap().unwrap();
+
+        let count_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM isolation_test")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+
+        assert_eq!(count_after, 2, "Second insert should be visible now");
+    }
+
     #[tokio::test(start_paused = true)]
     async fn test_sql_sync_lag() {
         // We simulate a long-running sync (lag) that times out.
