@@ -2,8 +2,21 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Glassmorphism UI Audit', () => {
 
+  test.beforeEach(async ({ page }) => {
+    const fs = require('fs');
+    const path = require('path');
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    await page.route('**/setup.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+  });
+
+
+
+
   test('onboarding container matches OHC glassmorphism light mode spec', async ({ page }) => {
-    await page.goto('http://127.0.0.1:18789/api/ui/setup.html');
+    await page.goto('http://mock/setup.html');
     const container = page.locator('.container');
     await expect(container).toBeVisible();
 
@@ -25,7 +38,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
   });
 
   test('onboarding container matches OHC glassmorphism dark mode spec', async ({ page }) => {
-    await page.goto('http://127.0.0.1:18789/api/ui/setup.html');
+    await page.goto('http://mock/setup.html');
     const container = page.locator('.container');
     await expect(container).toBeVisible();
 
@@ -45,7 +58,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
   });
 
   test('onboarding inputs and buttons use 8px border radius', async ({ page }) => {
-    await page.goto('http://127.0.0.1:18789/api/ui/setup.html');
+    await page.goto('http://mock/setup.html');
 
     // Start wizard to reach an input
     await page.getByText('Start My Business').click();
