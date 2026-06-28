@@ -1,8 +1,10 @@
 import { test, expect } from './fixtures';
 
 test.describe('Powered by OHC Widget', () => {
-  test('should load the widget and generate embed code', async ({ page }) => {
-    await page.goto('/ui/powered-by-ohc-widget.html');
+  test('should navigate from dashboard to the widget and generate embed code', async ({ page }) => {
+    await page.goto('/ui/dashboard.html');
+    await page.click('#powered-by-ohc-link');
+    await expect(page).toHaveURL(/.*powered-by-ohc-widget\.html/);
 
     await expect(page.locator('h1')).toHaveText('Powered by OHC');
     const generateBtn = page.locator('#generate-btn');
