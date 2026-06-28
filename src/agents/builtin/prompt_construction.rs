@@ -164,7 +164,7 @@ pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) ->
         }
     }
 
-    let mut combined = String::new();
+    let mut combined = String::with_capacity(32768 + 1024);
     let limit = 32768; // char limit
 
     for content in contents {
