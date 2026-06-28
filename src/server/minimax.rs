@@ -8,7 +8,7 @@ use ::server_pricing::compression::{minify_json_prompt};
 use tokio_stream::Stream;
 use std::pin::Pin;
 
-struct CircuitBreaker {
+pub struct CircuitBreaker {
     failures: Mutex<usize>,
     last_failure: Mutex<Option<Instant>>,
     max_failures: usize,
@@ -53,11 +53,19 @@ impl CircuitBreaker {
         let mut last_failure = self.last_failure.lock().unwrap();
         *last_failure = Some(Instant::now());
     }
+
+    #[cfg(test)]
+    pub fn reset_for_tests(&self) {
+        let mut failures = self.failures.lock().unwrap();
+        *failures = 0;
+        let mut last_failure = self.last_failure.lock().unwrap();
+        *last_failure = None;
+    }
 }
 
 static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
 
-fn get_circuit_breaker() -> &'static CircuitBreaker {
+pub fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(120)))
 }
 

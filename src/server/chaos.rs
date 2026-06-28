@@ -1198,6 +1198,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ml_resilience_api_unavailable_paused_state() {
+        crate::minimax::get_circuit_breaker().reset_for_tests();
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use sqlx::sqlite::SqlitePoolOptions;
 
