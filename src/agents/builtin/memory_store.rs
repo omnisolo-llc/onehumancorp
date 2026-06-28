@@ -171,6 +171,57 @@ impl VectorRepository {
             .await
     }
 
+    pub async fn list_recent(
+        &self,
+        tenant_id: &str,
+        limit: i64,
+    ) -> Result<Vec<EmbeddingRecord>, String> {
+        let mut results = Vec::new();
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let rows = sqlx::query(
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                     FROM consolidated_memory \
+                     WHERE tenant_id = $1 \
+                     ORDER BY created_at DESC \
+                     LIMIT $2"
+                )
+                .bind(tenant_id)
+                .bind(limit)
+                .fetch_all(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                for row in rows {
+                    if let Ok(record) = Self::parse_record_row(&row) {
+                        results.push(record);
+                    }
+                }
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let rows = sqlx::query(
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                     FROM consolidated_memory \
+                     WHERE tenant_id = ? \
+                     ORDER BY created_at DESC \
+                     LIMIT ?"
+                )
+                .bind(tenant_id)
+                .bind(limit)
+                .fetch_all(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                for row in rows {
+                    if let Ok(record) = Self::parse_record_row(&row) {
+                        results.push(record);
+                    }
+                }
+            }
+        }
+        Ok(results)
+    }
+
     pub async fn semantic_search(
         &self,
         tenant_id: &str,
@@ -3969,5 +4020,128 @@ mod get_and_delete_tests {
             repo.get_by_id("keep_wrong_type").await.unwrap().is_some(),
             "Should have kept non-task-summary old record"
         );
+    }
+}
+
+#[cfg(test)]
+mod list_recent_tests {
+    use super::*;
+    use std::str::FromStr;
+
+    async fn setup_sqlite_repo() -> VectorRepository {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        VectorRepository::new_sqlite(pool)
+    }
+
+    #[tokio::test]
+    async fn test_list_recent() {
+        let repo = setup_sqlite_repo().await;
+
+        let now = chrono::Utc::now();
+        let earlier = now - chrono::Duration::hours(1);
+        let earliest = now - chrono::Duration::hours(2);
+
+        let rec_earliest = EmbeddingRecord {
+            id: "earliest".to_string(),
+            tenant_id: "t1".to_string(),
+            agent_id: "a1".to_string(),
+            content: "earliest".to_string(),
+            embedding: vec![0.1],
+            source_type: "NOTE".to_string(),
+            created_at: earliest,
+            last_referenced_at: earliest,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let rec_earlier = EmbeddingRecord {
+            id: "earlier".to_string(),
+            tenant_id: "t1".to_string(),
+            agent_id: "a1".to_string(),
+            content: "earlier".to_string(),
+            embedding: vec![0.2],
+            source_type: "NOTE".to_string(),
+            created_at: earlier,
+            last_referenced_at: earlier,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let rec_now = EmbeddingRecord {
+            id: "now".to_string(),
+            tenant_id: "t1".to_string(),
+            agent_id: "a1".to_string(),
+            content: "now".to_string(),
+            embedding: vec![0.3],
+            source_type: "NOTE".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        let rec_other_tenant = EmbeddingRecord {
+            id: "other".to_string(),
+            tenant_id: "t2".to_string(),
+            agent_id: "a1".to_string(),
+            content: "other".to_string(),
+            embedding: vec![0.4],
+            source_type: "NOTE".to_string(),
+            created_at: now + chrono::Duration::hours(1), // Future, but wrong tenant
+            last_referenced_at: now,
+            reference_count: 0,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&rec_earliest).await.unwrap();
+        repo.upsert(&rec_earlier).await.unwrap();
+        repo.upsert(&rec_now).await.unwrap();
+        repo.upsert(&rec_other_tenant).await.unwrap();
+
+        // 1. Test normal case, tenant isolation
+        let results = repo.list_recent("t1", 10).await.unwrap();
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].id, "now");
+        assert_eq!(results[1].id, "earlier");
+        assert_eq!(results[2].id, "earliest");
+
+        // 2. Test limit
+        let results_limited = repo.list_recent("t1", 2).await.unwrap();
+        assert_eq!(results_limited.len(), 2);
+        assert_eq!(results_limited[0].id, "now");
+        assert_eq!(results_limited[1].id, "earlier");
     }
 }
