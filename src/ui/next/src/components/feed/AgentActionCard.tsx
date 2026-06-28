@@ -456,7 +456,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     )
                   </span>
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-[8px] border border-gray-200 dark:border-gray-700">
+                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-[8px] border border-white/40 dark:border-white/10">
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Drafted Message:
                   </div>
@@ -847,11 +847,11 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </div>
           ) : (
             <>
-              <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg mb-3 border border-gray-200 dark:border-gray-700 backdrop-blur-[10px]">
+              <div className="p-3 bg-white/65 dark:bg-[#16161a]/70 rounded-lg mb-3 border border-white/40 dark:border-white/10 backdrop-blur-[30px] saturate-[210%]">
                 <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                   Audio Summary
                 </p>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 p-2 rounded border border-white/40 dark:border-white/10">
                   <span className="text-lg">▶️</span>
                   <span>
                     0:10 AI Summary (
@@ -1166,7 +1166,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 )
               </span>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-[8px] border border-gray-200 dark:border-gray-700">
+            <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-[8px] border border-white/40 dark:border-white/10">
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                 Drafted Message:
               </div>
