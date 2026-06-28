@@ -210,8 +210,25 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           const reserveData = await reserveRes.json();
           if (!reserveData.success) {
             onOptimisticRollback?.();
-            setStatus('Reservation failed: ' + (reserveData.error_message || 'Oops! Item just sold out.'));
+            setStatus('Error: Oops! Item just sold out.');
             setReserving(false);
+
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'pos-error-overlay';
+            errorDiv.style.position = 'fixed';
+            errorDiv.style.inset = '0';
+            errorDiv.style.display = 'flex';
+            errorDiv.style.alignItems = 'center';
+            errorDiv.style.justifyContent = 'center';
+            errorDiv.style.background = 'rgba(255,255,255,0.8)';
+            errorDiv.style.backdropFilter = 'blur(30px)';
+            errorDiv.style.zIndex = '1000';
+            errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
+                <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Oops! Item just sold out.</h3>
+                <p style="color: #666;">This item was purchased online just now.</p>
+                <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
+            </div>`;
+            document.body.appendChild(errorDiv);
             return;
           }
           lockIds.push(reserveData.lock_id);
@@ -311,8 +328,25 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         const reserveData = await reserveRes.json();
         if (!reserveData.success) {
           onOptimisticRollback?.();
-          setStatus('Reservation failed: ' + (reserveData.error_message || 'Oops! Item just sold out.'));
+          setStatus('Error: Oops! Item just sold out.');
           setReserving(false);
+
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'pos-error-overlay';
+          errorDiv.style.position = 'fixed';
+          errorDiv.style.inset = '0';
+          errorDiv.style.display = 'flex';
+          errorDiv.style.alignItems = 'center';
+          errorDiv.style.justifyContent = 'center';
+          errorDiv.style.background = 'rgba(255,255,255,0.8)';
+          errorDiv.style.backdropFilter = 'blur(30px)';
+          errorDiv.style.zIndex = '1000';
+          errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
+              <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Oops! Item just sold out.</h3>
+              <p style="color: #666;">This item was purchased online just now.</p>
+              <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
+          </div>`;
+          document.body.appendChild(errorDiv);
           return;
         }
         lockIds.push(reserveData.lock_id);
