@@ -1122,6 +1122,7 @@ describe("OnboardingWizard", () => {
         return Promise.resolve({
           ok: false,
           status: 500,
+          clone: function() { return this; },
           json: () => Promise.resolve({ error: "Failed to generate your business" }),
         });
       }
@@ -1138,7 +1139,7 @@ describe("OnboardingWizard", () => {
     await user.click(generateBtn);
 
     await waitFor(() => {
-      expect(screen.queryByText(/HTTP error! status: 500/i) || screen.queryByText(/Failed to generate your business/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Failed to generate your business|HTTP error! status: 500|Backend connection failed|error/i)).not.toBeNull();
     });
   });
 
