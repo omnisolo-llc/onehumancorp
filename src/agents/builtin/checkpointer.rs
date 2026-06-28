@@ -335,7 +335,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("push")
             .arg("--include-untracked")
             .arg("-m")
-            .arg(&format!("Auto-stash before restoring checkpoint {}", checkpoint_id))
+            .arg(format!("Auto-stash before restoring checkpoint {}", checkpoint_id))
             .current_dir(&self.repo_path)
             .output()
             .await
