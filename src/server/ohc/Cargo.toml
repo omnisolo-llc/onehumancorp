@@ -5,7 +5,7 @@ edition = "2024"
 build = "build.rs"
 
 [lib]
-path = "mod.rs"
+path = "src/lib.rs"
 
 [dependencies]
 prost = { workspace = true }

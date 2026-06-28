@@ -2,13 +2,13 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ohc.fullname" . }}-backend
+  name: {{ .Release.Name }}-backend
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app: {{ include "ohc.fullname" . }}-backend
+      app: {{ .Release.Name }}-backend
   policyTypes:
     - Ingress
     - Egress
@@ -19,7 +19,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ include "ohc.fullname" . }}-core
+              app: {{ .Release.Name }}-ohc-core
     - from:
         - namespaceSelector:
             matchLabels:
@@ -93,13 +93,13 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ohc.fullname" . }}-core
+  name: {{ .Release.Name }}-ohc-core
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app: {{ include "ohc.fullname" . }}-core
+      app: {{ .Release.Name }}-ohc-core
   policyTypes:
     - Ingress
     - Egress
@@ -152,13 +152,13 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ohc.fullname" . }}-chatwoot
+  name: {{ .Release.Name }}-chatwoot
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app: {{ include "ohc.fullname" . }}-chatwoot
+      app: {{ .Release.Name }}-chatwoot
   policyTypes:
     - Ingress
     - Egress
@@ -211,13 +211,13 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "ohc.fullname" . }}-powersync
+  name: {{ .Release.Name }}-powersync
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      app: {{ include "ohc.fullname" . }}-powersync
+      app: {{ .Release.Name }}-powersync
   policyTypes:
     - Ingress
     - Egress
@@ -288,19 +288,19 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ include "ohc.fullname" . }}-backend
+              app: {{ .Release.Name }}-backend
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ include "ohc.fullname" . }}-core
+              app: {{ .Release.Name }}-ohc-core
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ include "ohc.fullname" . }}-chatwoot
+              app: {{ .Release.Name }}-chatwoot
       ports:
         - protocol: TCP
           port: {{ .Values.valkey.service.port }}
@@ -340,25 +340,25 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ include "ohc.fullname" . }}-backend
+              app: {{ .Release.Name }}-backend
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ include "ohc.fullname" . }}-core
+              app: {{ .Release.Name }}-ohc-core
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ include "ohc.fullname" . }}-chatwoot
+              app: {{ .Release.Name }}-chatwoot
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app: {{ include "ohc.fullname" . }}-powersync
+              app: {{ .Release.Name }}-powersync
       ports:
         - protocol: TCP
           port: 5432

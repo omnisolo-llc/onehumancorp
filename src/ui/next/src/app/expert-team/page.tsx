@@ -62,14 +62,14 @@ export default function ExpertTeamPage() {
       </button>
 
       {error && (
-        <div className="mt-8 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">
+        <div className="mt-8 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 expert-error-content">
           <h3 className="font-bold mb-2">Quality Gate or Execution Error:</h3>
           <p>{error}</p>
         </div>
       )}
 
       {result && (
-        <div className="mt-8 p-6 bg-white border rounded-lg shadow-sm">
+        <div className="mt-8 p-6 bg-white border rounded-lg shadow-sm expert-output-content">
           <h2 className="text-xl font-bold mb-4 border-b pb-2">Final Delivered Output</h2>
           <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono overflow-auto max-h-[600px]">
             {result}

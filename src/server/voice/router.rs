@@ -166,6 +166,13 @@ mod tests {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
+
+        async fn provision_number(&self, _area_code: &str) -> Result<String, String> {
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            let last_four: u32 = rng.gen_range(1000..9999);
+            Ok(format!("+1555123{}", last_four))
+        }
     }
 
     struct ScriptedVoiceTurnPlanner {
