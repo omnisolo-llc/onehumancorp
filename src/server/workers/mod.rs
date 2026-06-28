@@ -20,3 +20,4 @@ pub mod subscription_replenishment_job;
 
 #[cfg(test)]
 mod invoice_followup_worker_test;
+pub mod proactive_operations_worker;
