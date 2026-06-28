@@ -106,7 +106,7 @@ export default function MyPlanPage() {
       <main className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         {/* Status Snapshot */}
-        <section className="app-card ohc-growth-card glass-card shadow-lg hover:shadow-2xl transition-all duration-300 p-6">
+        <section className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 p-6 rounded-2xl">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900 flex items-center gap-2">
@@ -141,7 +141,7 @@ export default function MyPlanPage() {
         </section>
 
         {/* Current Usage Section */}
-        <section className="app-card ohc-growth-card glass-panel shadow-lg hover:shadow-2xl transition-all duration-300 mt-4">
+        <section className="app-card ohc-growth-card glass-panel backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 mt-4 rounded-2xl overflow-hidden">
           <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4 border-b border-white/40 bg-transparent">
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
           </div>
