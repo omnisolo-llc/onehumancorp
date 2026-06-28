@@ -4,6 +4,7 @@ exports_files([
     "mod.rs",
     "engine.rs",
     "router.rs",
+    "twilio_integration.rs",
 ], visibility = ["//visibility:public"])
 
 rust_library(
@@ -18,6 +19,7 @@ rust_library(
         "//src/server:minimax",
         "//src/server/orchestration:server_orchestration",
         "//src/server/telemetry:server_telemetry",
+        "@crates//:axum",
         "@crates//:chrono",
         "@crates//:serde",
         "@crates//:serde_json",

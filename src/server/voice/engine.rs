@@ -19,6 +19,8 @@ pub struct CallSession {
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub status: CallStatus,
+    pub linked_task_id: Option<String>,
+    pub booking_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +67,8 @@ impl VoiceAIEdgeEngine {
             start_time: Utc::now(),
             end_time: None,
             status: CallStatus::InProgress,
+            linked_task_id: None,
+            booking_id: None,
         };
 
         let mut calls = self.active_calls.lock().await;

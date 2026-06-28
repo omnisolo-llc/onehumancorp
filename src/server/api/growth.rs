@@ -1015,7 +1015,7 @@ async fn handle_send_cart(
     // Fallback to "my-store" if tenant_id is not in request and not in token
     let tenant_id = req.tenant_id.or_else(|| claims.and_then(|c| c.organization_id.clone())).unwrap_or_else(|| "my-store".to_string());
 
-    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(state.pool.clone());
+    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: state.pool.clone(), store: crate::db::DbStore::Postgres }));
     let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
         id: uuid::Uuid::new_v4().to_string(),
         tenant_id,

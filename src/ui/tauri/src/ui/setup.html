@@ -132,7 +132,7 @@
           0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       textarea.glassmorphism, input.glassmorphism {
-        border-radius: 16px !important;
+        border-radius: 8px !important;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -1779,25 +1779,25 @@
         </div>
 
         <div class="work-context-cards" id="context-group">
-          <label class="context-card" data-testid="context-local">
+          <label tabindex="0" class="context-card" data-testid="context-local">
             <input type="radio" name="work_context" value="Local Service" />
             <div class="context-icon">🔧</div>
             <div class="context-title">Local Service</div>
             <div class="context-desc">Field work, repairs, home services</div>
           </label>
-          <label class="context-card" data-testid="context-storefront">
+          <label tabindex="0" class="context-card" data-testid="context-storefront">
             <input type="radio" name="work_context" value="Storefront" />
             <div class="context-icon">🏪</div>
             <div class="context-title">Storefront or Cafe</div>
             <div class="context-desc">Physical location with walk-ins</div>
           </label>
-          <label class="context-card" data-testid="context-creator">
+          <label tabindex="0" class="context-card" data-testid="context-creator">
             <input type="radio" name="work_context" value="Online Creator" />
             <div class="context-icon">💻</div>
             <div class="context-title">Online Creator / Tutor</div>
             <div class="context-desc">Digital goods, lessons, coaching</div>
           </label>
-          <label class="context-card" data-testid="context-agency">
+          <label tabindex="0" class="context-card" data-testid="context-agency">
             <input type="radio" name="work_context" value="Agency" />
             <div class="context-icon">🏢</div>
             <div class="context-title">Agency or Studio</div>
@@ -1945,19 +1945,19 @@
         </div>
 
         <div class="work-context-cards" id="assistant-team-cards">
-          <label class="context-card" data-testid="team-support">
+          <label tabindex="0" class="context-card" data-testid="team-support">
             <input type="radio" name="assistant-team" value="Customer Support" onchange="updateAssistantTeam()" />
             <div class="context-icon">🎧</div>
             <div class="context-title">Customer Support</div>
             <div class="context-desc">Handles inquiries and drafts replies.</div>
           </label>
-          <label class="context-card" data-testid="team-operations">
+          <label tabindex="0" class="context-card" data-testid="team-operations">
             <input type="radio" name="assistant-team" value="Operations Manager" onchange="updateAssistantTeam()" />
             <div class="context-icon">⚙️</div>
             <div class="context-title">Operations Manager</div>
             <div class="context-desc">Coordinates calendar and inventory.</div>
           </label>
-          <label class="context-card" data-testid="team-marketing">
+          <label tabindex="0" class="context-card" data-testid="team-marketing">
             <input type="radio" name="assistant-team" value="Marketing Specialist" onchange="updateAssistantTeam()" />
             <div class="context-icon">🚀</div>
             <div class="context-title">Marketing Specialist</div>
@@ -1985,7 +1985,7 @@
         </div>
 
         <div class="capability-toggles">
-          <label class="toggle-row">
+          <label tabindex="0" class="toggle-row">
             <div class="toggle-info">
               <span class="toggle-title">Draft Replies</span>
               <span class="toggle-desc"
@@ -2002,7 +2002,7 @@
               <span class="slider"></span>
             </div>
           </label>
-          <label class="toggle-row">
+          <label tabindex="0" class="toggle-row">
             <div class="toggle-info">
               <span class="toggle-title">Schedule Meetings</span>
               <span class="toggle-desc"
@@ -2019,7 +2019,7 @@
               <span class="slider"></span>
             </div>
           </label>
-          <label class="toggle-row">
+          <label tabindex="0" class="toggle-row">
             <div class="toggle-info">
               <span class="toggle-title">Manage Inventory</span>
               <span class="toggle-desc"
@@ -2307,7 +2307,7 @@
         </div>
 
         <div style="padding-top: 8px">
-          <label class="toggle-row" style="cursor: pointer">
+          <label tabindex="0" class="toggle-row" style="cursor: pointer">
             <div class="toggle-info">
               <span class="toggle-title">Allow AI to Auto-Respond</span>
             </div>
@@ -2839,12 +2839,19 @@
         // Merge from localStorage as fallback
         const stored = localStorage.getItem("onboardingState");
         if (stored) {
-          state = { ...state, ...JSON.parse(stored) };
+          const parsed = JSON.parse(stored);
+          state = { ...state, ...parsed };
+          if (parsed.businessName && !parsed.business_name) {
+            state.business_name = parsed.businessName;
+          }
         }
 
         // Merge backend state, taking priority
         if (loadedState && Object.keys(loadedState).length > 0) {
           state = { ...state, ...loadedState };
+          if (loadedState.businessName && !loadedState.business_name) {
+             state.business_name = loadedState.businessName;
+          }
           localStorage.setItem("onboardingState", JSON.stringify(state));
         }
 
@@ -3030,6 +3037,7 @@
       function saveCurrentState() {
         state.categories = inputs.categories.value;
         state.business_name = inputs.name.value;
+        state.businessName = inputs.name.value; // Sync for E2E
         state.tagline = inputs.tagline.value;
         state.assistant_name = inputs.assistant_name.value;
         state.assistant_tone = inputs.assistant_tone.value;
@@ -3321,6 +3329,8 @@
         if (selected) {
           document.getElementById('assistant-name').value = selected.value;
           state.assistant_name = selected.value;
+          document.querySelectorAll('#assistant-team-cards .context-card').forEach((el) => el.classList.remove("selected"));
+          selected.closest(".context-card").classList.add("selected");
         }
       }
 
@@ -3898,12 +3908,12 @@
           const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
           let loadingTextIdx = 0;
           generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
-          const loadingInterval = setInterval(() => {
+          window.generateStorefrontLoadingInterval = setInterval(() => {
             loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
             generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
           }, 3000);
 
-          generateStorefrontBtn.dataset.loadingInterval = loadingInterval;
+
           goToStep("step-loading");
 
           try {
@@ -3950,9 +3960,9 @@
             localStorage.removeItem("onboardingState");
             localStorage.setItem("has_onboarded", "true");
 
-            if (generateStorefrontBtn.dataset.loadingInterval) {
-                clearInterval(generateStorefrontBtn.dataset.loadingInterval);
-                delete generateStorefrontBtn.dataset.loadingInterval;
+            if (window.generateStorefrontLoadingInterval) {
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
             }
 
             setTimeout(() => {
@@ -3969,9 +3979,9 @@
             instantBioInputEl.classList.add("invalid-input");
             generateStorefrontBtn.disabled = false;
             delete generateStorefrontBtn.dataset.submitting;
-            if (generateStorefrontBtn.dataset.loadingInterval) {
-                clearInterval(generateStorefrontBtn.dataset.loadingInterval);
-                delete generateStorefrontBtn.dataset.loadingInterval;
+            if (window.generateStorefrontLoadingInterval) {
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
             }
             generateStorefrontBtn.innerHTML = "Next";
           }
@@ -4215,12 +4225,40 @@
       });
 
       document.addEventListener("DOMContentLoaded", () => {
+        // Add keyboard navigation for context cards
+        document.querySelectorAll(".context-card").forEach((card) => {
+          card.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              this.click();
+            }
+          });
+        });
+
+        // Add keyboard navigation for toggle rows
+        document.querySelectorAll(".toggle-row").forEach((row) => {
+          row.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              const checkbox = this.querySelector('input[type="checkbox"]');
+              if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+              }
+            }
+          });
+        });
+
         // Global Enter key support for all inputs within active step
         document.addEventListener("keydown", (e) => {
           if (
             e.key === "Enter" &&
             e.target.tagName !== "TEXTAREA" &&
-            e.target.tagName !== "BUTTON"
+            e.target.tagName !== "BUTTON" &&
+            !e.target.closest(".context-card") &&
+            !e.target.closest(".toggle-row")
           ) {
             const activeStep = document.querySelector(".step.active");
             if (activeStep) {

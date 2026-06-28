@@ -72,6 +72,8 @@ pub async fn twilio_voice_incoming_handler(
             start_time: chrono::Utc::now(),
             end_time: None,
             status: crate::voice::CallStatus::InProgress,
+            linked_task_id: None,
+            booking_id: None,
         };
         calls.push(session);
     }

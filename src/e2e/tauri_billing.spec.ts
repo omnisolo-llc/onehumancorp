@@ -52,4 +52,41 @@ test.describe('Tauri Billing & Pricing UI', () => {
 
     await expect(page.locator('button#btn-Starter')).toBeVisible();
   });
+
+  test('Pricing page allows downgrade to Free for paid users', async ({ page }) => {
+    // Mock the backend response to indicate the user is on the 'Starter' plan
+    await page.route('**/api/billing/my-plan', async (route) => {
+      const json = {
+        current_plan: 'Starter',
+        ai_actions_used: 10,
+        ai_actions_limit: 1000,
+        storage_used_bytes: 5000,
+        storage_limit_bytes: 5000000000,
+        next_bill_estimated: 2900
+      };
+      await route.fulfill({ json });
+    });
+
+    await page.goto(`/ui/dashboard.html`);
+
+    await page.evaluate(() => {
+      localStorage.setItem('ohc_active_tenant_id', 'e2e-tenant');
+      localStorage.setItem('token', 'e2e-dummy-token');
+    });
+
+    await page.goto(`/ui/pricing.html`);
+
+    await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
+
+    // Verify the Starter plan shows "Manage Plan"
+    const starterBtn = page.locator('button#btn-Starter');
+    await expect(starterBtn).toBeVisible();
+    await expect(starterBtn).toHaveText('Manage Plan');
+
+    // Verify the Free plan shows "Downgrade to Free" and is NOT disabled
+    const freeBtn = page.locator('button#btn-Free');
+    await expect(freeBtn).toBeVisible();
+    await expect(freeBtn).toHaveText('Downgrade to Free');
+    await expect(freeBtn).not.toBeDisabled();
+  });
 });

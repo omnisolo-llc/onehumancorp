@@ -31,7 +31,18 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
         .await?;
 
         if let Some((source, sender_id)) = row {
-            if source == "whatsapp" || source == "sms" {
+            if source == "whatsapp" {
+                let registry = crate::integrations::registry::IntegrationsRegistry::new();
+                let draft_reply_clone = draft_reply.to_string();
+                let sender_id_clone = sender_id.to_string();
+                tokio::spawn(async move {
+                    if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
+                        tracing::error!("Failed to send WhatsApp reply: {}", e);
+                    } else {
+                        tracing::info!("Successfully sent WhatsApp reply to {}", sender_id_clone);
+                    }
+                });
+            } else if source == "sms" {
                 let twilio_creds: Result<(String, String, String), sqlx::Error> = sqlx::query_as(
                     "SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id = 'twilio' AND tenant_id = $1 LIMIT 1"
                 )
@@ -55,20 +66,10 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
                     let draft_reply_clone = draft_reply.to_string();
 
                     tokio::spawn(async move {
-                        if source == "whatsapp" {
-                            let to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                            let from = if from_number.starts_with("whatsapp:") { from_number.clone() } else { format!("whatsapp:{}", from_number) };
-                            if let Err(e) = provider.send_whatsapp(&to, &from, &draft_reply_clone).await {
-                                tracing::error!("Failed to send WhatsApp reply: {}", e);
-                            } else {
-                                tracing::info!("Successfully sent WhatsApp reply to {}", to);
-                            }
+                        if let Err(e) = provider.send_sms(&sender_id, &from_number, &draft_reply_clone).await {
+                            tracing::error!("Failed to send SMS reply: {}", e);
                         } else {
-                            if let Err(e) = provider.send_sms(&sender_id, &from_number, &draft_reply_clone).await {
-                                tracing::error!("Failed to send SMS reply: {}", e);
-                            } else {
-                                tracing::info!("Successfully sent SMS reply to {}", sender_id);
-                            }
+                            tracing::info!("Successfully sent SMS reply to {}", sender_id);
                         }
                     });
                 }

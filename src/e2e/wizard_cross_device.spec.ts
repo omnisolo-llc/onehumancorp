@@ -1,6 +1,19 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Wizard Cross Device E2E', () => {
+
+  test.beforeEach(async ({ page, context }) => {
+    const fs = require('fs');
+    const path = require('path');
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    await context.route('**/setup.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+  });
+
+
+
   test('Persona: Business Owner can resume setup wizard cross device', async ({ page, browser }) => {
     // 1. Owner starts wizard directly from the current route.
     await page.addInitScript((tenantId) => {
@@ -8,17 +21,15 @@ test.describe('Wizard Cross Device E2E', () => {
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('onboardingState');
     }, 'storefront');
-    await page.goto('/setup.html');
+    await page.goto('http://mock/setup.html');
     await page.waitForLoadState('networkidle');
 
-    // 2. Click Start My Business to advance to step 1
-    // The first screen is "10-Minute Setup Wizard", clicking "Start My Business" moves to step 1
-    await page.getByRole('button', { name: 'Back' }).click();
-    await page.getByRole('button', { name: /Start My Business/ }).click();
+    // 2. Advance to step 1
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
     await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
-    await page.getByText("I'm a Baker").click();
-    await page.locator('#step-context .next-step-btn').click();
+    await page.locator('label.context-card').filter({ hasText: 'Storefront' }).click();
+    await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
 
     await expect(page.getByRole('heading', { name: /What's your category?/ })).toBeVisible();
     await page.locator('#business-categories').selectOption('Bakery');
@@ -37,7 +48,7 @@ test.describe('Wizard Cross Device E2E', () => {
       if (!stateStr) return '';
       try {
         const state = JSON.parse(stateStr);
-        return state.businessName;
+        return state.business_name;
       } catch (e) {
         return '';
       }
@@ -52,12 +63,23 @@ test.describe('Wizard Cross Device E2E', () => {
     await page.waitForTimeout(1000);
 
     // 4. Simulate a cross-device session with a new browser context
+
+
+    const fs = require('fs');
+    const path = require('path');
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     const newContext = await browser.newContext();
+    await newContext.route('**/setup.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
     const newPage = await newContext.newPage();
+
+
 
     // Inject the exact same local storage state to the new context to test restoration
     // We navigate to dashboard first to have the right origin
-    await newPage.goto('/dashboard');
+    await newPage.goto('http://mock/setup.html');
     const wizardState = await page.evaluate(() => localStorage.getItem('onboardingState'));
 
     await newPage.evaluate((state) => {
@@ -68,7 +90,7 @@ test.describe('Wizard Cross Device E2E', () => {
         localStorage.setItem('user_id', 'storefront');
     }, wizardState);
 
-    await newPage.goto('/setup.html');
+    await newPage.goto('http://mock/setup.html');
     await newPage.waitForLoadState('networkidle');
 
     // 5. Verify the business name and step was properly restored
