@@ -1422,53 +1422,84 @@ mod tests {
 mod additional_chaos_tests {
 
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_chaos_simulate_sql_sync_lag() {
-        let mut lag_simulated = false;
-        let mut recovered = false;
-
-        // Simulate a lagging replica
-        let lag_ms = 3000;
-        let timeout_ms = 2000;
-
-        if lag_ms > timeout_ms {
-            lag_simulated = true;
-            // The read should fail over or gracefully handle it
-            recovered = true;
-        }
-
-        assert!(lag_simulated);
-        assert!(recovered, "Must fail-safe when sync lag causes timeout");
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect_lazy(&uri).unwrap();
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(sqlite_pool),
+        });
+        let res: Result<(), String> = db.execute_with_retry("sync_query", || {
+            let fut = async {
+                tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+                Ok(())
+            };
+            Box::pin(fut)
+        }).await;
+        assert!(res.is_err(), "Must fail-safe when sync lag causes timeout");
     }
 
     #[tokio::test]
     async fn test_degradation_mobile_latency() {
+        use axum::http::StatusCode;
+        use axum::response::IntoResponse;
+
         let backend_latency = std::time::Duration::from_millis(2500);
         let max_allowed = std::time::Duration::from_millis(2000);
 
-        let mut read_cached = false;
-        let mut write_queued = false;
-
-        if backend_latency > max_allowed {
-            read_cached = true;
-            write_queued = true;
+        async fn mobile_handler(latency: std::time::Duration, max: std::time::Duration) -> impl IntoResponse {
+            if latency > max {
+                (StatusCode::OK, [("X-Degraded-Mode", "true")], "Cached Data")
+            } else {
+                (StatusCode::OK, [("X-Degraded-Mode", "false")], "Live Data")
+            }
         }
 
-        assert!(read_cached, "Reads must use cached data on high latency");
-        assert!(write_queued, "Writes must queue locally on high latency");
+        let response = mobile_handler(backend_latency, max_allowed).await.into_response();
+        assert_eq!(response.headers().get("X-Degraded-Mode").unwrap().to_str().unwrap(), "true");
     }
 
     #[tokio::test]
     async fn test_chaos_exhaust_cpu_memory() {
-        // Since we can't truly exhaust CI resources without breaking the test runner,
-        // we simulate the system state and ensure the load-shedding circuit triggers.
-        let mut load_shedding_active = false;
-        let cpu_utilization = 95.0; // Simulated
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(5).connect(&uri).await.unwrap();
 
-        if cpu_utilization > 90.0 {
-            load_shedding_active = true;
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenants (
+                id TEXT PRIMARY KEY,
+                plan_tier TEXT NOT NULL
+            );"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenant_ai_budgets (
+                tenant_id TEXT,
+                year_month TEXT,
+                actions_used INTEGER DEFAULT 0,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (tenant_id, year_month)
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        });
+
+        let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(db);
+        let tenant_id = "tenant_exhaustion_test";
+        sqlx::query("INSERT INTO tenants (id, plan_tier) VALUES (?, 'starter')")
+            .bind(tenant_id)
+            .execute(&pool).await.unwrap();
+
+        for _ in 0..25 {
+            let _ = throttler.check_and_consume_budget(tenant_id, 20).await.unwrap();
         }
 
-        assert!(load_shedding_active, "Must drop non-critical background jobs under extreme load");
+        let shed = throttler.check_and_consume_budget(tenant_id, 20).await.unwrap();
+        assert!(!shed, "Must drop non-critical background jobs under extreme load");
     }
 }

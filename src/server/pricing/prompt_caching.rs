@@ -179,6 +179,36 @@ impl PromptCache {
             return String::new();
         }
 
+        // Token Efficiency Optimization: Remove markdown image/link URLs as they cost tokens but rarely help context.
+        // E.g., [text](https://...) -> [text]
+        let mut optimized_context = std::borrow::Cow::Borrowed(context);
+        if context.contains("](") {
+            let mut result = String::with_capacity(context.len());
+            let mut chars = context.char_indices().peekable();
+            let mut in_url = false;
+
+            while let Some((i, c)) = chars.next() {
+                if !in_url && c == ']' {
+                    result.push(c);
+                    if let Some(&(_, '(')) = chars.peek() {
+                        let rest = &context[i + 2..];
+                        if rest.starts_with("http://") || rest.starts_with("https://") {
+                            in_url = true;
+                            chars.next(); // Skip '('
+                        }
+                    }
+                } else if in_url && c == ')' {
+                    in_url = false;
+                } else if !in_url {
+                    result.push(c);
+                }
+            }
+            if result.len() != context.len() {
+                optimized_context = std::borrow::Cow::Owned(result);
+            }
+        }
+        let context = &*optimized_context;
+
         let max_chars = max_tokens * 4; // Fast heuristic assuming 4 chars per token
 
         let mut char_count = 0;
@@ -453,5 +483,16 @@ mod tests {
         // The text has 19 chars.
         let res = PromptCache::truncate_context(text, 2);
         assert_eq!(res, "こんにちは世界！..."); // 8 chars + "..."
+    }
+
+    #[test]
+    fn test_truncate_context_strips_urls() {
+        let text = "Check out this [link](https://example.com/very/long/url/that/wastes/tokens) for more info.";
+        // Without stripping URL, length is 90 chars.
+        // With stripping, it becomes "Check out this [link] for more info." -> 36 chars.
+        // If max_tokens = 10, max_chars = 40.
+        // If URL is not stripped, it will truncate. If stripped, it fits fully.
+        let res = PromptCache::truncate_context(text, 10);
+        assert_eq!(res, "Check out this [link] for more info.");
     }
 }

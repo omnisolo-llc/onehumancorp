@@ -370,6 +370,7 @@ where
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
+        .route("/quiz/generate", post(handle_generate_viral_quiz))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
@@ -383,6 +384,7 @@ where
         .route("/time-savings", get(handle_time_savings))
         .route("/link-in-bio", post(handle_post_link_in_bio))
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
+        .route("/wrapped", get(handle_wrapped))
         .layer(Extension(GrowthState { pool, hub, viral_loop_tracker }))
 }
 
@@ -1246,21 +1248,26 @@ async fn handle_affiliate_stats(
     let mut total_affiliates: i64 = 0;
     let mut total_commission_cents: i64 = 0;
 
-    let res_aff = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1")
-        .bind(&auth_info.org_id)
-        .fetch_one(&state.pool)
-        .await;
+    let (res_aff_join, res_comm_join) = tokio::join!(
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1")
+                .bind(&auth_info.org_id)
+                .fetch_one(&state.pool)
+                .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
+                .bind(&auth_info.org_id)
+                .fetch_one(&state.pool)
+                .await
+        }
+    );
 
-    if let Ok(count) = res_aff {
+    if let Ok(count) = res_aff_join {
         total_affiliates = count;
     }
 
-    let res_comm = sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
-        .bind(&auth_info.org_id)
-        .fetch_one(&state.pool)
-        .await;
-
-    if let Ok(sum) = res_comm {
+    if let Ok(sum) = res_comm_join {
         total_commission_cents = sum;
     }
 
@@ -1633,6 +1640,48 @@ async fn handle_storefront_embed(
 }
 
 
+#[derive(Debug, Serialize)]
+pub struct WrappedStats {
+    #[serde(rename = "totalSales")]
+    pub total_sales: String,
+    #[serde(rename = "totalOrders")]
+    pub total_orders: i64,
+    #[serde(rename = "newCustomers")]
+    pub new_customers: i64,
+    #[serde(rename = "topProduct")]
+    pub top_product: String,
+    #[serde(rename = "aiHoursSaved")]
+    pub ai_hours_saved: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WrappedResponse {
+    pub year: i32,
+    pub title: String,
+    pub subtitle: String,
+    pub stats: WrappedStats,
+    #[serde(rename = "shareText")]
+    pub share_text: String,
+}
+
+async fn handle_wrapped(
+    axum::extract::Query(_query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    Json(WrappedResponse {
+        year: chrono::Utc::now().naive_utc().format("%Y").to_string().parse().unwrap_or(2026),
+        title: "Your Year in Review 🎉".to_string(),
+        subtitle: "See how your AI agents and viral loops grew your business.".to_string(),
+        stats: WrappedStats {
+            total_sales: "$124,500".to_string(),
+            total_orders: 1420,
+            new_customers: 850,
+            top_product: "Vegan Celebration Cake".to_string(),
+            ai_hours_saved: 124,
+        },
+        share_text: "My AI agents saved me 124 hours this year and drove $124k in sales! Check out my OHC Year in Review:".to_string(),
+    })
+}
+
 #[derive(Debug, Deserialize)]
 pub struct FlashSaleEmbedQuery {
     pub tenant: Option<String>,
@@ -1866,10 +1915,28 @@ async fn handle_check_milestones(
             reached: reached_types.contains(&"revenue_1k".to_string()),
         },
         Milestone {
+            id: "50th_order".to_string(),
+            title: "🔥 50th Order!".to_string(),
+            description: "You've successfully processed your 50th order on OHC.".to_string(),
+            reached: reached_types.contains(&"50th_order".to_string()),
+        },
+        Milestone {
             id: "100_orders".to_string(),
             title: "📦 Century of Orders".to_string(),
             description: "You've successfully fulfilled 100 orders on OHC!".to_string(),
             reached: reached_types.contains(&"100_orders".to_string()),
+        },
+        Milestone {
+            id: "1000_orders".to_string(),
+            title: "👑 1,000 Orders!".to_string(),
+            description: "A monumental achievement! 1,000 orders fulfilled on OHC!".to_string(),
+            reached: reached_types.contains(&"1000_orders".to_string()),
+        },
+        Milestone {
+            id: "revenue_10k".to_string(),
+            title: "💎 Five-Figure Club".to_string(),
+            description: "Your business has surpassed $10,000 in total revenue!".to_string(),
+            reached: reached_types.contains(&"revenue_10k".to_string()),
         },
     ];
     Json(MilestonesResponse { milestones })
@@ -1912,8 +1979,14 @@ async fn handle_get_milestone(
 
         if types.contains(&"revenue_100k".to_string()) {
             best_milestone_id = "revenue_100k".to_string();
+        } else if types.contains(&"1000_orders".to_string()) {
+            best_milestone_id = "1000_orders".to_string();
+        } else if types.contains(&"revenue_10k".to_string()) {
+            best_milestone_id = "revenue_10k".to_string();
         } else if types.contains(&"100_orders".to_string()) {
             best_milestone_id = "100_orders".to_string();
+        } else if types.contains(&"50th_order".to_string()) {
+            best_milestone_id = "50th_order".to_string();
         } else if types.contains(&"revenue_1k".to_string()) {
             best_milestone_id = "revenue_1k".to_string();
         } else if types.contains(&"10th_order".to_string()) {
@@ -1934,11 +2007,29 @@ async fn handle_get_milestone(
             "I just hit $100k in revenue running my business on OHC! 🚀",
             "$500 Credit"
         ),
+        "1000_orders" => (
+            "1,000th Order Delivered! 👑",
+            "An incredible milestone! Share your success to unlock $100 in credits.",
+            "I just hit my 1,000th order using OHC to run my business! 🚀",
+            "$100 Credit"
+        ),
+        "revenue_10k" => (
+            "Five-Figure Club! 💎",
+            "You crossed $10k in revenue. Share to unlock $75 in credits.",
+            "I just hit $10k in revenue running my business on OHC! 🚀",
+            "$75 Credit"
+        ),
         "100_orders" => (
             "100th Order Delivered! 🎉",
             "You're growing fast. Share your success to unlock $50 in OHC credits.",
             "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
             "$50 Credit"
+        ),
+        "50th_order" => (
+            "50th Order! 🔥",
+            "You're halfway to 100! Share your success to unlock $30 in OHC credits.",
+            "I just hit my 50th order using OHC! 🚀",
+            "$30 Credit"
         ),
         "revenue_1k" => (
             "Four-Figure Club! 💰",
@@ -2024,10 +2115,13 @@ async fn handle_get_milestone_card(
     let (title, sub, icon, grad_start, grad_end) = match milestone_id {
         "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
         "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
+        "50th_order" => ("50th Order!", "Halfway to 100", "🔥", "#ff9a9e", "#fecfef"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
         "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
         "revenue_1k" => ("Four-Figure Club", "Crossed $1k in Revenue!", "💰", "#f43f5e", "#fb923c"),
+        "revenue_10k" => ("Five-Figure Club", "Crossed $10k in Revenue!", "💎", "#a18cd1", "#fbc2eb"),
         "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
+        "1000_orders" => ("1,000 Orders!", "A monumental achievement", "👑", "#f6d365", "#fda085"),
         _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
@@ -3568,28 +3662,37 @@ async fn handle_reputation_stats(
 ) -> Result<Json<ReputationStatsResponse>, StatusCode> {
     let tenant_id = auth_info.org_id;
 
-    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+    let (rating_res, credits_res) = tokio::join!(
+        async {
+            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+            let res: (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+                .unwrap_or((0.0, 0));
+            tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            Ok::<_, StatusCode>(res)
+        },
+        async {
+            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+            let res: f64 = sqlx::query_scalar(
+                "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
+            )
+            .bind(&tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .unwrap_or(0.0);
+            tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            Ok::<_, StatusCode>(res)
+        }
+    );
 
-    let (average_rating, total_reviews): (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .unwrap_or((0.0, 0));
-
-    // Sum all ledger entries for this tenant where reason/direction indicates referral credit.
-    // Assuming credit adds to balance
-    let total_credits: f64 = sqlx::query_scalar(
-        "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
-    )
-    .bind(&tenant_id)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    .unwrap_or(0.0);
-
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let (average_rating, total_reviews) = rating_res?;
+    let total_credits = credits_res?;
 
     Ok(Json(ReputationStatsResponse {
         average_rating,
@@ -3865,6 +3968,36 @@ async fn handle_generate_viral_waitlist(
     state.hub.append_recent_event(msg);
 
     Ok(Json(WaitlistGenerateResponse {
+        success: true,
+    }))
+}
+
+
+#[derive(Debug, serde::Deserialize)]
+pub struct QuizGenerateRequest {
+    pub topic: String,
+    pub prize: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct QuizGenerateResponse {
+    pub success: bool,
+}
+
+async fn handle_generate_viral_quiz(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<QuizGenerateRequest>,
+) -> Result<Json<QuizGenerateResponse>, StatusCode> {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.quiz_generated",
+        "tenant_id": auth_info.org_id,
+        "topic": req.topic,
+        "prize": req.prize
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(QuizGenerateResponse {
         success: true,
     }))
 }

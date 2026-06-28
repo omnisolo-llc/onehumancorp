@@ -848,33 +848,32 @@ impl VectorRepository {
                             .await
                             .map_err(|e| e.to_string())?;
 
-                        let mut records_in_tenant: Vec<MinimalRecord> =
-                            Vec::with_capacity(rows.len());
-                        for row in rows {
-                            let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
-                                String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
-                                    .unwrap_or_default()
-                            });
-                            let mut embedding: Vec<f32> =
-                                serde_json::from_str(&emb_str).unwrap_or_default();
+                        let records: Vec<MinimalRecord> = rows
+                            .into_iter()
+                            .map(|row| {
+                                let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
+                                    String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                        .unwrap_or_default()
+                                });
+                                let mut embedding: Vec<f32> =
+                                    serde_json::from_str(&emb_str).unwrap_or_default();
 
-                            // Precompute L2 normalization to speed up the O(N^2) loop
-                            let norm: f32 = embedding.iter().map(|&x| x * x).sum::<f32>().sqrt();
-                            if norm > 0.0 {
-                                for v in embedding.iter_mut() {
-                                    *v /= norm;
+                                // Precompute L2 normalization to speed up the O(N^2) loop
+                                let norm: f32 =
+                                    embedding.iter().map(|&x| x * x).sum::<f32>().sqrt();
+                                if norm > 0.0 {
+                                    for v in embedding.iter_mut() {
+                                        *v /= norm;
+                                    }
                                 }
-                            }
 
-                            let record = MinimalRecord {
-                                id: row.get("id"),
-                                tenant_id: row.get("tenant_id"),
-                                embedding,
-                            };
-                            records_in_tenant.push(record);
-                        }
-
-                        let records = records_in_tenant;
+                                MinimalRecord {
+                                    id: row.get("id"),
+                                    tenant_id: row.get("tenant_id"),
+                                    embedding,
+                                }
+                            })
+                            .collect();
 
                         for i in 0..records.len() {
                             for j in (i + 1)..records.len() {
@@ -3756,3 +3755,199 @@ mod reliability_score_tests {
     }
 }
 // Consolidated Memory: Auto-resolves by recency, reliability, and override.
+
+#[cfg(test)]
+mod get_and_delete_tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_get_by_id_and_delete() {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+
+        let record = EmbeddingRecord {
+            id: "test_id_1".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "test content".to_string(),
+            embedding: vec![0.5, 0.5, 0.5],
+            source_type: "NOTES".to_string(),
+            created_at: chrono::Utc::now(),
+            last_referenced_at: chrono::Utc::now(),
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // Initially should be None
+        let result = repo.get_by_id("test_id_1").await.unwrap();
+        assert!(result.is_none());
+
+        // After upsert, should be retrieved
+        repo.upsert(&record).await.unwrap();
+        let retrieved = repo.get_by_id("test_id_1").await.unwrap().expect("Record should exist");
+        assert_eq!(retrieved.id, "test_id_1");
+        assert_eq!(retrieved.content, "test content");
+
+        // After delete, should be None
+        repo.delete("test_id_1").await.unwrap();
+        let after_delete = repo.get_by_id("test_id_1").await.unwrap();
+        assert!(after_delete.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_prune_stale_logic() {
+        let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
+
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = VectorRepository::new_sqlite(pool);
+        let now = chrono::Utc::now();
+        let old_time = now - chrono::Duration::days(200);
+        let threshold_time = now - chrono::Duration::days(180);
+
+        // 1. Should be pruned (stale task summary)
+        let prune_stale = EmbeddingRecord {
+            id: "prune_stale".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old stuff".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1, // < 5
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // 2. Should NOT be pruned (has owner override)
+        let keep_override = EmbeddingRecord {
+            id: "keep_override".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old stuff with override".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: true,
+            metadata: None,
+        };
+
+        // 3. Should NOT be pruned (high reference count)
+        let keep_ref_count = EmbeddingRecord {
+            id: "keep_ref_count".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old popular stuff".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "TASK_SUMMARY".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 10, // >= 5
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        // 4. Should be pruned (low reliability score)
+        let prune_unreliable = EmbeddingRecord {
+            id: "prune_unreliable".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "recent unreliable stuff".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTES".to_string(),
+            created_at: now,
+            last_referenced_at: now,
+            reference_count: 10,
+            reliability_score: 10, // < 20
+            owner_override: false,
+            metadata: None,
+        };
+
+        // 5. Should NOT be pruned (wrong source type for time check)
+        let keep_wrong_type = EmbeddingRecord {
+            id: "keep_wrong_type".to_string(),
+            tenant_id: "org1".to_string(),
+            agent_id: "agent1".to_string(),
+            content: "old note".to_string(),
+            embedding: vec![0.1; 10],
+            source_type: "NOTE".to_string(),
+            created_at: old_time,
+            last_referenced_at: old_time,
+            reference_count: 1,
+            reliability_score: 50,
+            owner_override: false,
+            metadata: None,
+        };
+
+        repo.upsert(&prune_stale).await.unwrap();
+        repo.upsert(&keep_override).await.unwrap();
+        repo.upsert(&keep_ref_count).await.unwrap();
+        repo.upsert(&prune_unreliable).await.unwrap();
+        repo.upsert(&keep_wrong_type).await.unwrap();
+
+        repo.prune_stale(threshold_time).await.unwrap();
+
+        assert!(repo.get_by_id("prune_stale").await.unwrap().is_none(), "Should have pruned stale task summary");
+        assert!(repo.get_by_id("prune_unreliable").await.unwrap().is_none(), "Should have pruned unreliable record");
+
+        assert!(repo.get_by_id("keep_override").await.unwrap().is_some(), "Should have kept override record");
+        assert!(repo.get_by_id("keep_ref_count").await.unwrap().is_some(), "Should have kept highly referenced record");
+        assert!(repo.get_by_id("keep_wrong_type").await.unwrap().is_some(), "Should have kept non-task-summary old record");
+    }
+}

@@ -255,10 +255,26 @@ impl PlanAndExecuteOrchestrator {
                 drop(st);
 
                 let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2)
-                    .await
-                    .map_err(|e| format!("Tool execution failed: {}", e))?;
+                    .await;
+
+                let final_res = match res {
+                    Ok(r) => r,
+                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                        ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg)
+                    }
+                    Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
+                        return Err(format!("USER_FIXABLE: {}", msg));
+                    }
+                    Err(ohc_builtin_agent_core::types::ToolError::Fatal(msg)) => {
+                        return Err(format!("Fatal tool error: {}", msg));
+                    }
+                    Err(ohc_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
+                        return Err(format!("Unexpected tool error: {}", msg));
+                    }
+                    Err(e) => return Err(format!("Tool execution failed: {}", e)),
+                };
                 let mut st = state.write().await;
-                LLMCompilerStateReducer::reduce(&mut st, task.task_id.clone(), res);
+                LLMCompilerStateReducer::reduce(&mut st, task.task_id.clone(), final_res);
             }
 
             tasks_to_run = remaining_tasks;

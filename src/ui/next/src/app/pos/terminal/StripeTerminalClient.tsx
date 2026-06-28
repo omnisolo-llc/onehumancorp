@@ -210,8 +210,25 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           const reserveData = await reserveRes.json();
           if (!reserveData.success) {
             onOptimisticRollback?.();
-            setStatus('Reservation failed: ' + (reserveData.error_message || 'Oops! Item just sold out.'));
+            setStatus('Error: Oops! Item just sold out.');
             setReserving(false);
+
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'pos-error-overlay';
+            errorDiv.style.position = 'fixed';
+            errorDiv.style.inset = '0';
+            errorDiv.style.display = 'flex';
+            errorDiv.style.alignItems = 'center';
+            errorDiv.style.justifyContent = 'center';
+            errorDiv.style.background = 'rgba(255,255,255,0.8)';
+            errorDiv.style.backdropFilter = 'blur(30px)';
+            errorDiv.style.zIndex = '1000';
+            errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
+                <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Oops! Item just sold out.</h3>
+                <p style="color: #666;">This item was purchased online just now.</p>
+                <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
+            </div>`;
+            document.body.appendChild(errorDiv);
             return;
           }
           lockIds.push(reserveData.lock_id);
@@ -311,8 +328,25 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         const reserveData = await reserveRes.json();
         if (!reserveData.success) {
           onOptimisticRollback?.();
-          setStatus('Reservation failed: ' + (reserveData.error_message || 'Oops! Item just sold out.'));
+          setStatus('Error: Oops! Item just sold out.');
           setReserving(false);
+
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'pos-error-overlay';
+          errorDiv.style.position = 'fixed';
+          errorDiv.style.inset = '0';
+          errorDiv.style.display = 'flex';
+          errorDiv.style.alignItems = 'center';
+          errorDiv.style.justifyContent = 'center';
+          errorDiv.style.background = 'rgba(255,255,255,0.8)';
+          errorDiv.style.backdropFilter = 'blur(30px)';
+          errorDiv.style.zIndex = '1000';
+          errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
+              <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Oops! Item just sold out.</h3>
+              <p style="color: #666;">This item was purchased online just now.</p>
+              <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
+          </div>`;
+          document.body.appendChild(errorDiv);
           return;
         }
         lockIds.push(reserveData.lock_id);
@@ -390,13 +424,13 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   };
 
   return (
-    <div id="pos-keypad" className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+    <div id="pos-keypad" className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50">
       <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
       <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 
       {pendingReconciliation.length > 0 && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-[30px] saturate-[210%] p-4">
-           <div className="bg-white/85 backdrop-blur-[40px] saturate-[210%] border border-white/40 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
+           <div className="bg-white/85 backdrop-blur-[40px] saturate-[210%] border border-white/50 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
              <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
              <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
              <ul className="space-y-2 mb-6">

@@ -619,6 +619,7 @@ impl AgentServiceImpl {
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_sona_patterns: false,
+            sona_patterns_path: None,
             agent_id: self.agent_id.clone(),
             max_workflow_cycles: None,
             model,
@@ -757,12 +758,12 @@ impl AgentServiceImpl {
             task_store,
             mailbox,
             working_dir,
-            memory_accessor,
+            memory_accessor.clone(),
             observation_store,
         );
 
         // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool());
+        tools.push(crate::tools::create_skill::create_skill_tool(memory_accessor));
 
         if !department.is_empty()
             && let Ok(dep) = Department::from_str(department)
@@ -1114,6 +1115,7 @@ impl AgentService for AgentServiceImpl {
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_sona_patterns: false,
+            sona_patterns_path: None,
                 agent_id: self.agent_id.clone(),
                 max_workflow_cycles: None,
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },

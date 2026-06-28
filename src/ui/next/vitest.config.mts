@@ -9,6 +9,9 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
     exclude: [
+      '**/bazel-*/**',
+      '**/.bazel-*/**',
+      'bazel-*',
       '**/node_modules/**',
       '**/dist/**',
       '**/e2e/**',
