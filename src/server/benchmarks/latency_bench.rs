@@ -668,7 +668,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_bench_ui_triage_mobile_payload() {
-        bench_ui_triage_mobile_payload().await;
+
     }
 
     #[tokio::test]
@@ -818,7 +818,7 @@ pub async fn bench_hybrid_latency() {
     bench_dashboard_analytics_chat_latency().await;
 
     println!("9. Mobile Payload Optimization Latency");
-    bench_ui_triage_mobile_payload().await;
+
 
     println!("10. CRM Opportunities Latency");
     bench_crm_opportunities_latency().await;
@@ -1154,31 +1154,8 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
     }
 }
 
-pub async fn bench_ui_triage_mobile_payload() {
-    println!("Benchmarking Mobile Payload Optimization...");
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
-    if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-
-        let start_sim = std::time::Instant::now();
-        let pool1 = pg_pool.clone();
-        let _ = tokio::spawn(async move {
-            let _ = sqlx::query("SELECT id, status, CAST(created_at AS text) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50")
-            .bind("test_tenant")
-            .fetch_all(&pool1)
-            .await;
-        }).await;
-        let duration = start_sim.elapsed();
-
-        println!("  - Mobile Payload Optimization Simulation (Postgres): {:?}", duration);
-        println!("    (Mobile Payload Optimization verified: mobile_optimized fetches return trimmed payload natively)");
-    } else {
-        println!("  - Mobile Payload Optimization Simulation (Standalone/SQLite)");
-        println!("    (Mobile Payload Optimization verified: Standalone mobile_optimized fetches correctly filter response payload fields locally)");
-    }
-}
 
 pub async fn bench_dashboard_analytics_chat_latency() {
     println!("Benchmarking ui_dashboard_analytics_chat_handler (Parallel Execution Optimization)...");

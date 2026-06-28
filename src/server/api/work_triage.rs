@@ -106,7 +106,8 @@ pub async fn get_daily_work_handler(
     Query(query): Query<UiTenantQuery>,
 ) -> axum::response::Response {
     let tenant_id = ui_tenant_id(&query);
-    let cache_key = format!("daily_work:{}", tenant_id);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let cache_key = format!("daily_work:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = DAILY_WORK_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -126,8 +127,8 @@ pub async fn get_daily_work_handler(
                     let t_bg1 = t_bg.clone();
                     let t_bg2 = t_bg.clone();
                     let (work_res, orders_res) = tokio::join!(
-                        sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind(&t_bg1).fetch_all(&pool1),
-                        sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5").bind(&t_bg2).fetch_all(&pool2)
+                        sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
+                        sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2)
                     );
                     work_res.map(|rows| {
                         use sqlx::Row;
@@ -160,8 +161,8 @@ pub async fn get_daily_work_handler(
                     let t_bg1 = t_bg.clone();
                     let t_bg2 = t_bg.clone();
                     let (work_res, orders_res) = tokio::join!(
-                        sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind(&t_bg1).fetch_all(&pool1),
-                        sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5").bind(&t_bg2).fetch_all(&pool2)
+                        sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
+                        sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2)
                     );
                     work_res.map(|rows| {
                         use sqlx::Row;
@@ -202,102 +203,105 @@ pub async fn get_daily_work_handler(
             };
             if let Ok(items) = res {
                 if let Some(c) = DAILY_WORK_CACHE.get() {
-                    let _ = c.set(&cache_key_bg, items, std::time::Duration::from_secs(10)).await;
+                    c.set(&cache_key_bg, items, std::time::Duration::from_secs(30)).await;
                 }
             }
         });
+
         return (axum::http::StatusCode::OK, Json(serde_json::json!({"items": cached}))).into_response();
     }
 
-    match &db.store {
+    let res = match &db.store {
         crate::db::DbStore::Postgres => {
             let pool1 = db.pool.clone();
             let pool2 = db.pool.clone();
-            let tenant_id1 = tenant_id.clone();
-            let tenant_id2 = tenant_id.clone();
+            let t_bg1 = tenant_id.clone();
+            let t_bg2 = tenant_id.clone();
             let (work_res, orders_res) = tokio::join!(
-                sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind(&tenant_id1).fetch_all(&pool1),
-                sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5").bind(&tenant_id2).fetch_all(&pool2)
+                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
+                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2)
             );
-
-            match work_res {
-                Ok(rows) => {
-                    use sqlx::Row;
-                    let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
-                        serde_json::json!({
-                            "id": r.get::<String, _>("id"),
-                            "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
-                            "intent": r.get::<String, _>("intent"),
-                            "customer_info": r.try_get::<Option<serde_json::Value>, _>("customer_info").ok().flatten(),
-                            "suggested_actions": r.try_get::<Option<serde_json::Value>, _>("suggested_actions").ok().flatten(),
-                            "status": r.get::<String, _>("status")
-                        })
-                    }).collect();
-                    if let Ok(orders) = orders_res {
-                        for o in orders {
-                            items.push(serde_json::json!({
-                                "id": o.try_get::<String, _>("id").unwrap_or_default(),
-                                "intent": "recent_order",
-                                "status": o.try_get::<String, _>("status").unwrap_or_default(),
-                                "suggested_actions": null,
-                            }));
-                        }
+            work_res.map(|rows| {
+                use sqlx::Row;
+                let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+                    serde_json::json!({
+                        "id": r.get::<String, _>("id"),
+                        "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
+                        "intent": r.get::<String, _>("intent"),
+                        "customer_info": r.try_get::<Option<serde_json::Value>, _>("customer_info").ok().flatten(),
+                        "suggested_actions": r.try_get::<Option<serde_json::Value>, _>("suggested_actions").ok().flatten(),
+                        "status": r.get::<String, _>("status")
+                    })
+                }).collect();
+                if let Ok(orders) = orders_res {
+                    for o in orders {
+                        items.push(serde_json::json!({
+                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                            "intent": "recent_order",
+                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                            "suggested_actions": null,
+                        }));
                     }
-                    let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
-                    (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
-                },
-                Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
-            }
+                }
+                items
+            })
         },
         crate::db::DbStore::Sqlite(pool) => {
             let pool1 = pool.clone();
             let pool2 = pool.clone();
-            let tenant_id1 = tenant_id.clone();
-            let tenant_id2 = tenant_id.clone();
+            let t_bg1 = tenant_id.clone();
+            let t_bg2 = tenant_id.clone();
             let (work_res, orders_res) = tokio::join!(
-                sqlx::query("SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind(&tenant_id1).fetch_all(&pool1),
-                sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5").bind(&tenant_id2).fetch_all(&pool2)
+                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
+                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2)
             );
+            work_res.map(|rows| {
+                use sqlx::Row;
+                let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+                    let customer_info_str: Option<String> = r.try_get("customer_info").ok();
+                    let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
 
-            match work_res {
-                Ok(rows) => {
-                    use sqlx::Row;
-                    let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
-                        let customer_info_str: Option<String> = r.try_get("customer_info").ok();
-                        let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
+                    let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
+                    let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s| serde_json::from_str(&s).ok());
 
-                        let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
-                        let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s| serde_json::from_str(&s).ok());
+                    let id: String = r.get("id");
+                    let signal_id: Option<String> = r.try_get("signal_id").ok().flatten();
+                    let intent: String = r.get("intent");
+                    let status: String = r.get("status");
 
-                        let id: String = r.get("id");
-                        let signal_id: Option<String> = r.try_get("signal_id").ok().flatten();
-                        let intent: String = r.get("intent");
-                        let status: String = r.get("status");
-
-                        serde_json::json!({
-                            "id": id,
-                            "signal_id": signal_id,
-                            "intent": intent,
-                            "customer_info": customer_info,
-                            "suggested_actions": suggested_actions,
-                            "status": status
-                        })
-                    }).collect();
-                    if let Ok(orders) = orders_res {
-                        for o in orders {
-                            items.push(serde_json::json!({
-                                "id": o.try_get::<String, _>("id").unwrap_or_default(),
-                                "intent": "recent_order",
-                                "status": o.try_get::<String, _>("status").unwrap_or_default(),
-                                "suggested_actions": null,
-                            }));
-                        }
+                    serde_json::json!({
+                        "id": id,
+                        "signal_id": signal_id,
+                        "intent": intent,
+                        "customer_info": customer_info,
+                        "suggested_actions": suggested_actions,
+                        "status": status
+                    })
+                }).collect();
+                if let Ok(orders) = orders_res {
+                    for o in orders {
+                        items.push(serde_json::json!({
+                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                            "intent": "recent_order",
+                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                            "suggested_actions": null,
+                        }));
                     }
-                    let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
-                    (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
-                },
-                Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response(),
-            }
+                }
+                items
+            })
+        }
+    };
+
+    match res {
+        Ok(items) => {
+            cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(30)).await;
+            (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
+        },
+        Err(e) => {
+            ::server_telemetry::record_error_signal("[bug] Failed to load daily work");
+            tracing::error!("Failed to load daily work: {:?}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
         }
     }
 }
