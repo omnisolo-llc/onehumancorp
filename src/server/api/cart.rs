@@ -231,7 +231,12 @@ pub async fn add_cart_item_handler(
 
     match reserve_result {
         Ok(res) if !res.success => {
-            return (axum::http::StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "Item is currently being checked out" }))).into_response();
+            let error_msg = if res.is_temporarily_reserved {
+                "Item is temporarily reserved by another customer. Please try again in a few moments."
+            } else {
+                "Item is currently sold out."
+            };
+            return (axum::http::StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": error_msg }))).into_response();
         },
         Err(e) => {
             tracing::error!("Inventory service error: {}", e);
