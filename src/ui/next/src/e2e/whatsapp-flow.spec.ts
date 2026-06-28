@@ -17,7 +17,7 @@ test.describe('WhatsApp Flow CUJ', () => {
     await whatsappCard.getByRole('button', { name: /Connect/i }).click();
 
     // 3. Mock the Meta embedded signup popover flow
-    await expect(page.getByRole('heading', { name: /Connect WhatsApp/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Connect WhatsApp Cloud API/i })).toBeVisible();
     await page.getByRole('button', { name: /Continue with Meta/i }).click();
 
     // After connecting, the status message should show connected
