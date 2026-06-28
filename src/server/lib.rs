@@ -3813,6 +3813,15 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
+                        let _ = crate::domain::action_router::dispatch_action(
+                            "ambassador_reply",
+                            &tenant_id,
+                            &serde_json::json!({
+                                "inbox_message_id": new_msg_id,
+                                "draft_reply": action_payload,
+                            }),
+                            &db.pool
+                        ).await;
                     } else if action_type == "SocialPostDraft" {
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
@@ -4064,6 +4073,15 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
+                        let _ = crate::domain::action_router::dispatch_action(
+                            "ambassador_reply",
+                            &tenant_id,
+                            &serde_json::json!({
+                                "inbox_message_id": new_msg_id,
+                                "draft_reply": action_payload,
+                            }),
+                            &db.pool
+                        ).await;
                     } else if action_type == "SocialPostDraft" {
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
