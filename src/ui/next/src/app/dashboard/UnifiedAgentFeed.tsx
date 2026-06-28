@@ -721,9 +721,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     <section
       id="triage-queue"
       className="app-panel mb-6 w-full overflow-hidden"
-      aria-label="Action Required"
+      aria-label="Unified Agent Feed"
     >
-      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">
+      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 ">
         Action Required
       </h2>
       {isOffline && (
@@ -865,7 +865,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-md font-semibold font-sans text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
+                  <h3 className="text-md font-semibold font-sans text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug break-words">
                     {(() => {
                       try {
                         const p =

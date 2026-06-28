@@ -15,6 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../../src/proto/delivery.proto",
         "../../../src/proto/docs.proto",
         "../../../src/proto/invoice.proto",
+        "../../../src/proto/inventory.proto",
         "../../../src/proto/ledger.proto",
         "../../../src/proto/model.proto",
         "../../../src/proto/skills.proto",
