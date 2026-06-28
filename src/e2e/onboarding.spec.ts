@@ -76,7 +76,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await startButton.click();
 
     // Jump straight to the name step to test validation
-    await page.evaluate(() => { (window as any).goToStep('step-name') });
+    await page.evaluate(() => { (window as any).goToStep('step-name', false) });
 
     const nextButton = page.locator('#step-name .next-step-btn');
     await nextButton.click();
@@ -101,7 +101,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await startButton.click();
 
     // Jump straight to the name step to test validation
-    await page.evaluate(() => { (window as any).goToStep('step-name') });
+    await page.evaluate(() => { (window as any).goToStep('step-name', false) });
 
     const nameInput = page.locator('#business-name');
     await nameInput.fill("ABC");
