@@ -1,118 +1,52 @@
 use axum::{
-    extract::Json,
-    response::IntoResponse,
+    extract::{Path, State, Query},
     http::StatusCode,
-    routing::post,
-    Router,
+    response::IntoResponse,
+    routing::{get, post},
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use sqlx::PgPool;
+use uuid::Uuid;
+use crate::common::auth_utils::{UiTenantQuery, ui_tenant_id};
 
-use ohc_builtin_agent::gpt_researcher::{GptResearcherManager, PlannerAgent, ExecutionAgent, ResearcherLlmClient};
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
-
-#[derive(Deserialize)]
-pub struct DraftRequest {
-    pub topic: String,
-}
-
-#[derive(Serialize)]
-pub struct DraftResponse {
-    pub proposal: String,
-}
-
-// Production-ready adapter that wraps the real LLM provider logic
-struct AdapterLlm {}
-
-#[async_trait::async_trait]
-impl ResearcherLlmClient for AdapterLlm {
-    async fn chat(
-        &self,
-        req: ChatRequest,
-    ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        // Build the prompt by combining system and user messages
-        let mut prompt = req.system.clone();
-        for msg in &req.messages {
-            prompt.push_str("\n\n");
-            prompt.push_str(&msg.content);
-        }
-
-        let is_test_mode =
-            cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
-
-        let response_text = if is_test_mode {
-            // Test mode override to ensure hermetic E2E runs without network flakiness or API costs
-            if prompt.contains("planner") {
-                r#"["Executive Summary", "Project Scope", "Budget and Timeline"]"#.to_string()
-            } else {
-                "Generated detail for the requested section. This covers the client requirements effectively.".to_string()
-            }
-        } else {
-            // Real LLM integration for production
-            match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-                Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY")
-                        .map_err(|_| "MINIMAX_API_KEY is required for minimax proposals".to_string())?;
-                    crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await?
-                }
-                _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await?,
-            }
-        };
-
-        Ok(ChatResponse {
-            message: Message::assistant(response_text),
-            usage: Usage::default(),
-            stop_reason: "stop".to_string(),
-            response_id: None,
-        })
-    }
+#[derive(Serialize, Deserialize)]
+pub struct Proposal {
+    pub id: Uuid,
+    pub tenant_id: String,
+    pub customer_id: Option<Uuid>,
+    pub status: String,
+    pub total_amount_cents: i64,
+    pub required_deposit_cents: i64,
+    pub checkout_url: Option<String>,
 }
 
 pub fn router<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
-    Router::new().route("/draft", post(draft_proposal))
+    Router::new()
+        .route("/", get(list_proposals))
 }
 
-async fn draft_proposal(Json(payload): Json<DraftRequest>) -> impl IntoResponse {
-    let llm = Arc::new(AdapterLlm {});
-    let planner = Arc::new(PlannerAgent::new(llm.clone(), "default-model".to_string()));
-    let executor = Arc::new(ExecutionAgent::new(llm.clone(), "default-model".to_string()));
-    let manager = GptResearcherManager::new(planner, executor);
+async fn list_proposals(
+    State(pool): State<PgPool>,
+    Query(query): Query<UiTenantQuery>,
+) -> impl IntoResponse {
+    let tenant_id = ui_tenant_id(&query);
+    let res = sqlx::query_as!(
+        Proposal,
+        "SELECT id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url FROM interactive_proposals WHERE tenant_id = $1",
+        tenant_id
+    )
+    .fetch_all(&pool)
+    .await;
 
-    match manager.conduct_research(&payload.topic).await {
-        Ok(proposal) => (StatusCode::OK, Json(DraftResponse { proposal })).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DraftResponse { proposal: e })).into_response(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use axum::body::Body;
-    use axum::http::Request;
-    use tower::ServiceExt;
-    use serde_json::json;
-
-    #[tokio::test]
-    async fn test_draft_proposal() {
-        let app = router::<()>();
-
-        // We will just let the test pass if the endpoint requires auth or fails internally due to missing db/keys.
-        // It's currently asserting OK but returns 500 without LLM keys.
-        let _response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/draft")
-                    .header("Content-Type", "application/json")
-                    .body(Body::from(json!({
-                        "topic": "test topic"
-                    }).to_string()))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
+    match res {
+        Ok(items) => (StatusCode::OK, Json(items)).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to list interactive proposals: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }

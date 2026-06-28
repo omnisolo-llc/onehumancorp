@@ -205,7 +205,60 @@ async fn draft_quote_agent(
 ) -> impl IntoResponse {
     let llm = Arc::new(AdapterLlm {});
 
-    let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing an estimate for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
+    let catalog_items_res = sqlx::query(
+        "SELECT name, description, base_price_cents FROM service_catalog WHERE tenant_id = $1"
+    )
+    .bind(&payload.tenant_id)
+    .fetch_all(&pool)
+    .await;
+
+    use sqlx::Row;
+    let mut catalog_context = String::new();
+    if let Ok(items) = catalog_items_res {
+        for item in items {
+            let name = item.get::<String, _>("name");
+            let desc = item.try_get::<Option<String>, _>("description").unwrap_or_default();
+            let base_price = item.get::<i64, _>("base_price_cents");
+
+            catalog_context.push_str(&format!(
+                "- {}: {} (Base Price: ${:.2})
+",
+                name,
+                desc.unwrap_or_default(),
+                base_price as f64 / 100.0
+            ));
+        }
+    }
+
+    let heuristic_items_res = sqlx::query(
+        "SELECT service_category, base_rate_cents FROM pricing_heuristics WHERE tenant_id = $1"
+    )
+    .bind(&payload.tenant_id)
+    .fetch_all(&pool)
+    .await;
+
+    if let Ok(items) = heuristic_items_res {
+        for item in items {
+            let cat = item.get::<String, _>("service_category");
+            let base_rate = item.get::<i64, _>("base_rate_cents");
+            catalog_context.push_str(&format!(
+                "- {} (Base Rate: ${:.2})
+",
+                cat,
+                base_rate as f64 / 100.0
+            ));
+        }
+    }
+
+    let mut system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing an estimate for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
+
+    if !catalog_context.is_empty() {
+        system_prompt.push_str("
+
+Here is the owner's Service Catalog and pricing heuristics. Cross-reference the customer's request with this catalog to generate accurate pricing:
+");
+        system_prompt.push_str(&catalog_context);
+    }
 
     let req = ChatRequest {
         model: "default-model".to_string(),
