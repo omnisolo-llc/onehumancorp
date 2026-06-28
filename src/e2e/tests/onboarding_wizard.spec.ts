@@ -36,4 +36,71 @@ test.describe('Onboarding Wizard Flow', () => {
 
     await expect(page.locator('#loading-title')).toContainText('Building Your Business...', { timeout: 15000 });
   });
+
+  test('successfully navigates through the wizard steps', async ({ page }) => {
+    await expect(page.locator('body')).toContainText('10-Minute Setup Wizard');
+
+    await page.getByTestId('next-step-btn').click();
+    await expect(page.locator('body')).toContainText('work context');
+
+    // Make a choice for context
+    await page.locator('input[value="field"]').click({ force: true });
+    await page.getByTestId('next-step-btn').nth(1).click();
+
+    await expect(page.locator('body')).toContainText('category');
+    await page.locator('#business-categories').selectOption('Other');
+    await page.getByTestId('next-step-btn').nth(2).click();
+
+    await expect(page.locator('body')).toContainText('name of your business');
+  });
+
+  test('prevents progression if categories input is empty', async ({ page }) => {
+    await expect(page.locator('body')).toContainText('10-Minute Setup Wizard');
+
+    await page.getByTestId('next-step-btn').click();
+    await page.locator('input[value="field"]').click({ force: true });
+    await page.getByTestId('next-step-btn').nth(1).click();
+
+    await expect(page.locator('body')).toContainText('category');
+    await page.getByTestId('next-step-btn').nth(2).click();
+
+    await expect(page.locator('#categories-error')).toBeVisible();
+    await expect(page.locator('#business-categories')).toHaveClass(/invalid-input/);
+  });
+
+  test('validates business name correctly', async ({ page }) => {
+    await expect(page.locator('body')).toContainText('10-Minute Setup Wizard');
+
+    await page.getByTestId('next-step-btn').click();
+    await page.locator('input[value="field"]').click({ force: true });
+    await page.getByTestId('next-step-btn').nth(1).click();
+
+    await page.locator('#business-categories').selectOption('Other');
+    await page.getByTestId('next-step-btn').nth(2).click();
+
+    await expect(page.locator('body')).toContainText('name of your business');
+
+    // empty submission
+    await page.getByTestId('next-step-btn').nth(3).click();
+    await expect(page.locator('#name-error')).toBeVisible();
+
+    // valid submission
+    await page.locator('#business-name').fill('My Awesome Business');
+    await page.getByTestId('next-step-btn').nth(3).click();
+    await expect(page.locator('body')).toContainText('Hire Your First Agent');
+  });
+
+  test('saves state to localStorage when clicking Save Draft', async ({ page }) => {
+    await expect(page.locator('body')).toContainText('10-Minute Setup Wizard');
+
+    await page.getByTestId('next-step-btn').click();
+    await page.locator('input[value="field"]').click({ force: true });
+
+    await page.getByTestId('save-draft-btn').nth(0).click();
+
+    // wait for localstorage to populate
+    await page.waitForTimeout(1000);
+    const storedData = await page.evaluate(() => window.localStorage.getItem('onboardingState'));
+    expect(storedData).toContain('field');
+  });
 });
