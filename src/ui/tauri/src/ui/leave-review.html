@@ -8,7 +8,7 @@
   <style>
     :root {
       --bg-color: #f9fafb;
-      --card-bg: #ffffff;
+      --card-bg: rgba(255, 255, 255, 0.65);
       --text-main: #111827;
       --text-muted: #6b7280;
       --accent: #4f46e5;
@@ -35,6 +35,8 @@
       max-width: 440px;
       width: 100%;
       background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
       border-radius: 16px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
       padding: 32px;
@@ -312,7 +314,17 @@
             Share this link with friends. They get 15% off, and you get 15% off when they buy! ⚡ Powered by OHC
           </p>
 
-          <div class="copy-group">
+
+          <div class="share-buttons" style="display: flex; gap: 8px; margin-top: 16px; justify-content: center;">
+            <a id="share-whatsapp" href="#" target="_blank" style="background: #25D366; color: white; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+              <span>Share on WhatsApp</span>
+            </a>
+            <a id="share-twitter" href="#" target="_blank" style="background: #000000; color: white; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+              <span>Share on X</span>
+            </a>
+          </div>
+
+          <div class="copy-group" style="margin-top: 16px;">
             <input type="text" class="copy-input" id="referral-link" readonly value="https://ohc.app/invite?ref=demo" />
             <button class="btn-copy" id="copy-btn">Copy</button>
           </div>
@@ -428,7 +440,14 @@
         if (currentRating >= 4) {
           highRatingContent.style.display = 'block';
           referralLinkInput.value = link;
+
+          const msg = encodeURIComponent("I just left a 5-star review! Get 15% off your next order: " + link);
+          document.getElementById('share-whatsapp').href = "https://wa.me/?text=" + msg;
+          document.getElementById('share-twitter').href = "https://twitter.com/intent/tweet?text=" + msg;
         } else {
+          lowRatingContent.style.display = 'block';
+        }
+      } else {
           lowRatingContent.style.display = 'block';
         }
       }

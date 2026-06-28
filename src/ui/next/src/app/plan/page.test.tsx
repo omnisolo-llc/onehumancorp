@@ -103,13 +103,42 @@ describe('MyPlanPage', () => {
       return { ok: true, json: async () => ({}) };
     });
 
+    let resolvePortal: any;
+    const portalPromise = new Promise((resolve) => {
+      resolvePortal = resolve;
+    });
+
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Starter' }),
+        };
+      }
+      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+        return portalPromise.then(() => ({
+          ok: true,
+          json: async () => ({ url: mockPortalUrl }),
+        }));
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
     await act(async () => {
       render(<MyPlanPage />);
     });
 
     const manageButton = screen.getByText('Manage Billing');
+
+    // Fire click but don't await the full act yet to check intermediate state
+    fireEvent.click(manageButton);
+
+    // Verify it changes to loading state
+    expect(screen.getByText('Redirecting...')).toBeDefined();
+
+    // Resolve the mock fetch promise
     await act(async () => {
-      fireEvent.click(manageButton);
+      resolvePortal();
     });
 
     await waitFor(() => {

@@ -101,9 +101,9 @@ impl PlanTier {
     pub fn base_price(&self) -> f64 {
         match self {
             PlanTier::Free => 0.0,
-            PlanTier::Starter => 9.0,
-            PlanTier::Pro => 29.0,
-            PlanTier::Business => 79.0,
+            PlanTier::Starter => 29.0,
+            PlanTier::Pro => 79.0,
+            PlanTier::Business => 299.0,
         }
     }
 
@@ -201,7 +201,12 @@ impl RedisRateLimiter {
         let mut conn = self.get_connection().await?;
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
         let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
-        Ok(used.unwrap_or(0))
+        let mut used_bytes = used.unwrap_or(0);
+        if used_bytes < 0 {
+            used_bytes = 0;
+            let _ : () = conn.set(&storage_key, 0).await.unwrap_or(());
+        }
+        Ok(used_bytes)
     }
 
     pub async fn set_tenant_tier(&self, tenant_id: &str, tier: PlanTier) -> Result<(), String> {
@@ -218,7 +223,7 @@ impl RedisRateLimiter {
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
 
-        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model);
+        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe
 
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
         let model_key = format!("tenant:{}:tokens_used:{}:{}", tenant_id, model, month_key);
@@ -417,12 +422,17 @@ impl RedisRateLimiter {
 
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
-        let total_storage: i64 = if delta_bytes == 0 {
+        let mut total_storage: i64 = if delta_bytes == 0 {
             let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
             used.unwrap_or(0)
         } else {
             conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?
         };
+
+        if total_storage < 0 {
+            let _ : () = conn.set(&storage_key, 0).await.unwrap_or(());
+            total_storage = 0;
+        }
 
         if let Some(store) = &self.telemetry_store
             && delta_bytes > 0 {
@@ -496,9 +506,9 @@ mod tests {
         assert_eq!(PlanTier::Business.max_products(), None);
 
         assert_eq!(PlanTier::Free.base_price(), 0.0);
-        assert_eq!(PlanTier::Starter.base_price(), 9.0);
-        assert_eq!(PlanTier::Pro.base_price(), 29.0);
-        assert_eq!(PlanTier::Business.base_price(), 79.0);
+        assert_eq!(PlanTier::Starter.base_price(), 29.0);
+        assert_eq!(PlanTier::Pro.base_price(), 79.0);
+        assert_eq!(PlanTier::Business.base_price(), 299.0);
     }
 
     #[test]

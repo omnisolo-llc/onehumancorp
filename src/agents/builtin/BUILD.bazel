@@ -82,6 +82,7 @@ rust_library(
         "mesh/mod.rs",
         "mesh/transport.rs",
         "observability.rs",
+        "perplexity.rs",
         "observation_masking.rs",
         "omni_context.rs",
         "output_parser.rs",
@@ -98,6 +99,7 @@ rust_library(
         "registry.rs",
         "ruflo.rs",
         "openhands.rs",
+        "openhands_runner.rs",
         "goose/mod.rs",
         "guardrails/mod.rs",
         "guardrails/anthropic_hooks.rs",
@@ -338,6 +340,7 @@ exports_files([
     "sandbox/mod.rs",
     "sandbox/manager.rs",
     "sandbox/session.rs",
+        "sandbox/multi_backend.rs",
 ])
 
 rust_test(

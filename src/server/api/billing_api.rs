@@ -158,7 +158,8 @@ pub async fn create_billing_portal_session_handler(
         }
     } else {
         // Fallback if Stripe config is missing
-        Ok(Json(CreateBillingPortalSessionResponse { url: "https://example.com/pricing".to_string() }))
+        let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string());
+        Ok(Json(CreateBillingPortalSessionResponse { url: format!("{}/pricing.html", base_url) }))
     }
 }
 
@@ -182,9 +183,9 @@ pub async fn create_checkout_session_handler(
 
     if let Some(tier) = &req.tier {
         amount_usd = match tier.to_lowercase().as_str() {
-            "starter" => 9.0,
-            "pro" => 29.0,
-            "business" => 79.0,
+            "starter" => 29.0,
+            "pro" => 79.0,
+            "business" => 299.0,
             _ => return Err(StatusCode::BAD_REQUEST),
         };
         item_name = tier.clone();

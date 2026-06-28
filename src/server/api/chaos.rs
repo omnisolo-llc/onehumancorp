@@ -23,38 +23,31 @@ pub async fn get_chaos_report_handler(
     let mut histograms = vec![];
     let mut errors = vec![];
 
-    // Query real telemetry stats
-    if let Ok(rows) = sqlx::query("SELECT value FROM telemetry_buffer WHERE metric_name = 'api_latency' ORDER BY timestamp DESC LIMIT 20")
-        .fetch_all(&pool).await
-    {
+    if let Ok(rows) = sqlx::query("SELECT value FROM telemetry_buffer WHERE metric_name = 'api_latency' ORDER BY timestamp DESC LIMIT 20").fetch_all(&pool).await {
         for row in rows {
             let val: f64 = row.try_get("value").unwrap_or(0.0);
             histograms.push(val as i32);
         }
     }
 
-    if let Ok(rows) = sqlx::query("SELECT value FROM telemetry_buffer WHERE metric_name = 'error_rate' ORDER BY timestamp DESC LIMIT 20")
-        .fetch_all(&pool).await
-    {
+    if let Ok(rows) = sqlx::query("SELECT value FROM telemetry_buffer WHERE metric_name = 'error_rate' ORDER BY timestamp DESC LIMIT 20").fetch_all(&pool).await {
         for row in rows {
             let val: f64 = row.try_get("value").unwrap_or(0.0);
             errors.push(val as f32);
         }
     }
 
-    if histograms.is_empty() {
-        histograms = vec![45, 55, 65, 80, 120, 180, 250];
-    }
+    let latency_p99_cloud = sqlx::query_scalar::<_, f64>("SELECT value FROM telemetry_buffer WHERE metric_name = 'api_latency' AND labels_json LIKE '%\"mode\":\"cloud\"%' ORDER BY value DESC LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.01 AS INTEGER) FROM telemetry_buffer WHERE metric_name = 'api_latency' AND labels_json LIKE '%\"mode\":\"cloud\"%')").fetch_optional(&pool).await.unwrap_or(None).map(|v| format!("{:.0}ms", v)).unwrap_or_else(|| "N/A".to_string());
 
-    if errors.is_empty() {
-        errors = vec![0.01, 0.02, 0.05, 0.1, 0.03, 0.01, 0.00];
-    }
+    let latency_p99_standalone = sqlx::query_scalar::<_, f64>("SELECT value FROM telemetry_buffer WHERE metric_name = 'api_latency' AND labels_json LIKE '%\"mode\":\"standalone\"%' ORDER BY value DESC LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.01 AS INTEGER) FROM telemetry_buffer WHERE metric_name = 'api_latency' AND labels_json LIKE '%\"mode\":\"standalone\"%')").fetch_optional(&pool).await.unwrap_or(None).map(|v| format!("{:.0}ms", v)).unwrap_or_else(|| "N/A".to_string());
+
+    let error_rate_llm_outage = sqlx::query_scalar::<_, f64>("SELECT value FROM telemetry_buffer WHERE metric_name = 'error_rate_llm_outage' ORDER BY timestamp DESC LIMIT 1").fetch_optional(&pool).await.unwrap_or(None).map(|v| format!("{:.1}% (Handled via Graceful Pause)", v * 100.0)).unwrap_or_else(|| "N/A".to_string());
 
     Json(ChaosReportResponse {
         latency_histograms: histograms,
         error_rate: errors,
-        latency_p99_cloud: "124ms".to_string(),
-        latency_p99_standalone: "89ms".to_string(),
-        error_rate_llm_outage: "0% (Handled via Graceful Pause)".to_string(),
+        latency_p99_cloud,
+        latency_p99_standalone,
+        error_rate_llm_outage,
     })
 }

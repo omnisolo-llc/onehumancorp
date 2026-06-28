@@ -253,30 +253,6 @@ message ConversationalCheckoutSession {
   int64 expires_at_unix = 8;
 }
 
-message ReserveInventoryRequest {
-  string tenant_id = 1;
-  string product_id = 2;
-  int32 quantity = 3;
-  int32 ttl_seconds = 4;
-}
-
-message ReserveInventoryResponse {
-  bool success = 1;
-  string lock_id = 2;
-  string error_message = 3;
-}
-
-message CommitInventoryRequest {
-  string tenant_id = 1;
-  string product_id = 2;
-  int32 quantity = 3;
-  string lock_id = 4;
-}
-
-message CommitInventoryResponse {
-  bool success = 1;
-  string error_message = 2;
-}
 
 // POS Engine messages
 message PosOfflineTransaction {
@@ -342,10 +318,6 @@ service PosService {
   rpc EndTerminalSession(EndTerminalSessionRequest) returns (EndTerminalSessionResponse);
 }
 
-service InventorySyncService {
-  rpc ReserveInventory(ReserveInventoryRequest) returns (ReserveInventoryResponse);
-  rpc CommitInventory(CommitInventoryRequest) returns (CommitInventoryResponse);
-}
 
 message SyncCalendarRequest {
   string tenant_id = 1;
@@ -367,6 +339,8 @@ message CreateQuoteRequest {
   string customer_id = 2;
   repeated QuoteLineItem line_items = 3;
   int64 required_deposit = 4;
+  optional string service_id = 5;
+  optional string proposed_slot_id = 6;
 }
 
 message FetchQuoteRequest {
@@ -380,6 +354,8 @@ message QuoteResponse {
   int64 total_amount_cents = 4;
   int64 required_deposit = 5;
   repeated QuoteLineItem line_items = 6;
+  optional string service_id = 7;
+  optional string proposed_slot_id = 8;
 }
 
 message BookingResource {

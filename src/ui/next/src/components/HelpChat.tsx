@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
+import { WalkthroughTarget } from "./Walkthrough";
 
 type Message = {
   id: string;
@@ -171,25 +172,27 @@ export function HelpChat() {
       {/* Floating Button */}
       <div className="fixed bottom-24 right-6 z-[9999] pointer-events-auto">
         {!isOpen && (
-          <button
-            id="ai-chat-trigger"
-            onClick={() => setIsOpen(true)}
-            className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
-            aria-label="Open help chat"
-            aria-expanded={isOpen}
-            aria-controls="ai-chat-interface"
-          >
-            <span className="text-xl">✨</span>
-            <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">
-              Ask anything
-            </span>
-          </button>
+          <WalkthroughTarget id="ai-chat-trigger">
+            <button
+              id="ai-chat-trigger-btn"
+              onClick={() => setIsOpen(true)}
+              className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
+              aria-label="Open help chat"
+              aria-expanded={isOpen}
+              aria-controls="ai-chat-interface"
+            >
+              <span className="text-xl">✨</span>
+              <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">
+                Ask anything
+              </span>
+            </button>
+          </WalkthroughTarget>
         )}
       </div>
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] pointer-events-auto bg-white/80 dark:bg-black/60 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-full max-w-[350px] pointer-events-auto bg-white/80 dark:bg-black/60 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"

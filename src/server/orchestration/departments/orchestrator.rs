@@ -139,6 +139,10 @@ impl DepartmentOrchestrator {
         self.db.clone()
     }
 
+    pub fn mesh(&self) -> Arc<dyn TeammateMesh> {
+        self.mesh.clone()
+    }
+
     pub fn new(db: Arc<crate::db::DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
         let memory_repo = match &db.store {
             DbStore::Postgres => Arc::new(VectorRepository::new(db.pool.clone())),
@@ -300,7 +304,85 @@ impl DepartmentOrchestrator {
 
     }
 
-    pub async fn execute_action(
+
+    pub async fn soft_lock_booking_slot(&self, tenant_id: &str, service_id: &str, _suggested_time_str: &str, ttl: std::time::Duration) -> Result<Option<String>, String> {
+        // Attempt to parse time or default to next day if natural language (simplified for now)
+        let start_time = if let Ok(parsed) = chrono::DateTime::parse_from_rfc3339(_suggested_time_str) {
+            parsed.with_timezone(&chrono::Utc)
+        } else {
+            // Fallback for demo parsing: Assume next day at 2PM UTC
+            let now = chrono::Utc::now();
+            now.date_naive().and_hms_opt(14, 0, 0).unwrap().and_utc() + chrono::Duration::days(1)
+        };
+        let end_time = start_time + chrono::Duration::hours(1);
+
+        let time_id = format!("{}_{}", start_time.timestamp(), service_id);
+
+        let lock_acquired = self.mesh.acquire_lock(&time_id, "sales_agent", ttl.as_secs()).await.unwrap_or(false);
+
+        if lock_acquired {
+            let slot_id = uuid::Uuid::new_v4().to_string();
+            match &self.db.store {
+                crate::db::DbStore::Postgres => {
+                    let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+                    sqlx::query(
+                        "INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'soft_locked')"
+                    )
+                    .bind(&slot_id)
+                    .bind(tenant_id)
+                    .bind(service_id)
+                    .bind(start_time)
+                    .bind(end_time)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                    tx.commit().await.map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query(
+                        "INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES (?, ?, ?, ?, ?, 'soft_locked')"
+                    )
+                    .bind(&slot_id)
+                    .bind(tenant_id)
+                    .bind(service_id)
+                    .bind(start_time)
+                    .bind(end_time)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+            }
+            Ok(Some(slot_id))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub async fn confirm_booking_slot(&self, tenant_id: &str, slot_id: &str) -> Result<(), String> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+                sqlx::query("UPDATE booking_slots SET status = 'booked' WHERE id = $1")
+                    .bind(slot_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query("UPDATE booking_slots SET status = 'booked' WHERE id = ? AND tenant_id = ?")
+                    .bind(slot_id)
+                    .bind(tenant_id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(())
+    }
+pub async fn execute_action(
         &self,
         department: DepartmentType,
         description: String,
@@ -930,6 +1012,114 @@ impl DepartmentOrchestrator {
                 let payload_to_use = edited_payload.as_ref().or(original_payload.as_ref());
 
                 if let Some(payload) = payload_to_use {
+
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("field_service_quote") {
+                        let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let deposit_amount = payload.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let total_amount_cents = (price * 100.0) as i64;
+                        let quote_id = uuid::Uuid::new_v4().to_string();
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let service_id = payload.get("service").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
+                        let start_time = payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                        let end_time = payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                        let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
+                        let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
+                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id, (deposit_amount as f64) / 100.0, None, None).await.unwrap_or_default();
+
+                        if let DbStore::Postgres = &self.db.store {
+                            // Convert string times to DateTime
+                            let st = chrono::DateTime::parse_from_rfc3339(start_time).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now());
+                            let et = chrono::DateTime::parse_from_rfc3339(end_time).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::hours(1));
+
+                            // Insert booking with pending_payment to wait for customer confirmation
+                            let booking_id = uuid::Uuid::new_v4().to_string();
+                            let _ = sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending_payment')")
+                                .bind(&booking_id)
+                                .bind(tenant_id)
+                                .bind(uuid::Uuid::parse_str(&customer_id).ok())
+                                .bind(&service_id)
+                                .bind(st)
+                                .bind(et)
+                                .execute(&self.db.pool)
+                                .await;
+
+                            // Update availability blocks to ensure no double bookings globally
+                            let _ = sqlx::query("UPDATE availability_blocks SET is_available = false WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4")
+                                .bind(tenant_id)
+                                .bind(&service_id)
+                                .bind(st)
+                                .bind(et)
+                                .execute(&self.db.pool)
+                                .await;
+
+                            // Insert quote/proposal
+                            let _ = sqlx::query("INSERT INTO interactive_proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, 'Sent', $4, $5, $6)")
+                                .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
+                                .bind(tenant_id)
+                                .bind(uuid::Uuid::parse_str(&customer_id).ok())
+                                .bind(total_amount_cents)
+                                .bind(deposit_amount)
+                                .bind(&stripe_link)
+                                .execute(&self.db.pool)
+                                .await;
+                        }
+                    }
+
+
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("field_service_quote") {
+                        let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let deposit_amount = payload.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let total_amount_cents = (price * 100.0) as i64;
+                        let quote_id = uuid::Uuid::new_v4().to_string();
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let service_id = payload.get("service").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
+                        let start_time = payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                        let end_time = payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                        let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
+                        let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
+                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id, (deposit_amount as f64) / 100.0, None, None).await.unwrap_or_default();
+
+                        if let DbStore::Postgres = &self.db.store {
+                            // Convert string times to DateTime
+                            let st = chrono::DateTime::parse_from_rfc3339(start_time).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now());
+                            let et = chrono::DateTime::parse_from_rfc3339(end_time).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::hours(1));
+
+                            // Insert booking with pending_payment to wait for customer confirmation
+                            let booking_id = uuid::Uuid::new_v4().to_string();
+                            let _ = sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending_payment')")
+                                .bind(&booking_id)
+                                .bind(tenant_id)
+                                .bind(uuid::Uuid::parse_str(&customer_id).ok())
+                                .bind(&service_id)
+                                .bind(st)
+                                .bind(et)
+                                .execute(&self.db.pool)
+                                .await;
+
+                            // Update availability blocks to ensure no double bookings globally
+                            let _ = sqlx::query("UPDATE availability_blocks SET is_available = false WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4")
+                                .bind(tenant_id)
+                                .bind(&service_id)
+                                .bind(st)
+                                .bind(et)
+                                .execute(&self.db.pool)
+                                .await;
+
+                            // Insert quote/proposal
+                            let _ = sqlx::query("INSERT INTO interactive_proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, 'Sent', $4, $5, $6)")
+                                .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
+                                .bind(tenant_id)
+                                .bind(uuid::Uuid::parse_str(&customer_id).ok())
+                                .bind(total_amount_cents)
+                                .bind(deposit_amount)
+                                .bind(&stripe_link)
+                                .execute(&self.db.pool)
+                                .await;
+                        }
+                    }
+
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let deposit_amount = (price * 0.20) as i64 * 100;
@@ -957,7 +1147,7 @@ impl DepartmentOrchestrator {
                         let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
                         if let DbStore::Postgres = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
@@ -1031,7 +1221,7 @@ impl DepartmentOrchestrator {
                                 }
                             }
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                            if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount_cents, required_deposit_cents, expires_at, stripe_payment_link) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
@@ -1860,7 +2050,7 @@ impl DepartmentOrchestrator {
     pub async fn get_order(&self, tenant_id: &str, order_id: &str) -> Result<Option<(String, f64)>, String> {
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                let row = sqlx::query("SELECT customer_id, total_amount FROM orders WHERE tenant_id = $1 AND id = $2")
+                let row = sqlx::query("SELECT customer_id, total_amount_cents FROM orders WHERE tenant_id = $1 AND id = $2")
                     .bind(tenant_id)
                     .bind(order_id)
                     .fetch_optional(&self.db.pool)
@@ -1868,13 +2058,13 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
-                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
+                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount_cents"))))
                 } else {
                     Ok(None)
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT customer_id, total_amount FROM orders WHERE tenant_id = ? AND id = ?")
+                let row = sqlx::query("SELECT customer_id, total_amount_cents FROM orders WHERE tenant_id = ? AND id = ?")
                     .bind(tenant_id)
                     .bind(order_id)
                     .fetch_optional(pool)
@@ -1882,7 +2072,7 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
-                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount"))))
+                    Ok(Some((r.get("customer_id"), r.get::<f64, _>("total_amount_cents"))))
                 } else {
                     Ok(None)
                 }
@@ -1890,11 +2080,11 @@ impl DepartmentOrchestrator {
         }
     }
 
-    pub async fn get_service_by_name_like(&self, tenant_id: &str, name: &str) -> Result<Option<(String, f64)>, String> {
+    pub async fn get_service_by_name_like(&self, tenant_id: &str, name: &str) -> Result<Option<(String, f64, String)>, String> {
         let pattern = format!("%{}%", name);
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                let row = sqlx::query("SELECT name, CAST(price AS DOUBLE PRECISION) as price_f64 FROM services WHERE tenant_id = $1 AND name ILIKE $2 LIMIT 1")
+                let row = sqlx::query("SELECT id, name, CAST(price AS DOUBLE PRECISION) as price_f64 FROM services WHERE tenant_id = $1 AND name ILIKE $2 LIMIT 1")
                     .bind(tenant_id)
                     .bind(&pattern)
                     .fetch_optional(&self.db.pool)
@@ -1902,15 +2092,16 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
+                    let id: String = r.get("id");
                     let n: String = r.get("name");
                     let p: f64 = r.get("price_f64");
-                    Ok(Some((n, p)))
+                    Ok(Some((n, p, id)))
                 } else {
                     Ok(None)
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let row = sqlx::query("SELECT name, CAST(price AS REAL) as price_f64 FROM services WHERE tenant_id = ? AND name LIKE ? LIMIT 1")
+                let row = sqlx::query("SELECT id, name, CAST(price AS REAL) as price_f64 FROM services WHERE tenant_id = ? AND name LIKE ? LIMIT 1")
                     .bind(tenant_id)
                     .bind(&pattern)
                     .fetch_optional(pool)
@@ -1918,9 +2109,10 @@ impl DepartmentOrchestrator {
                     .map_err(|e| e.to_string())?;
                 if let Some(r) = row {
                     use sqlx::Row;
+                    let id: String = r.get("id");
                     let n: String = r.get("name");
                     let p: f64 = r.get("price_f64");
-                    Ok(Some((n, p)))
+                    Ok(Some((n, p, id)))
                 } else {
                     Ok(None)
                 }

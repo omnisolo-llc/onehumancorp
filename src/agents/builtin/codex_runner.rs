@@ -181,11 +181,17 @@ pub struct JsonRpcError {
 
 pub struct AppServer {
     pub runner: Arc<Runner>,
+    pub marketplace: Arc<crate::tools::marketplace::MarketplaceClient>,
 }
 
 impl AppServer {
     pub fn new(runner: Arc<Runner>) -> Self {
-        Self { runner }
+        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(crate::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string())))));
+        Self { runner, marketplace }
+    }
+
+    pub fn new_with_marketplace(runner: Arc<Runner>, marketplace: Arc<crate::tools::marketplace::MarketplaceClient>) -> Self {
+        Self { runner, marketplace }
     }
 
     pub async fn handle_request(&self, req_str: &str) -> String {
@@ -262,13 +268,12 @@ impl AppServer {
             };
             return serde_json::to_string(&json_resp).unwrap_or_default();
         } else if req.method == "am_search_agents" {
-            let marketplace = crate::tools::marketplace::MarketplaceClient::new(Box::new(crate::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string()))));
             let query = req
                 .params
                 .get("query")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            let agents = marketplace.search(query).await;
+            let agents = self.marketplace.search(query).await;
             let resp = match agents {
                 Ok(agents) => JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
@@ -290,13 +295,12 @@ impl AppServer {
             };
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_fetch_agent" {
-            let marketplace = crate::tools::marketplace::MarketplaceClient::new(Box::new(crate::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string()))));
             let agent_id = req
                 .params
                 .get("agent_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            let result = marketplace.fetch_agent(agent_id).await;
+            let result = self.marketplace.fetch_agent(agent_id).await;
             let resp = match result {
                 Ok(agent) => JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
@@ -318,17 +322,41 @@ impl AppServer {
             };
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
-            let response_obj = JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                id: req.id.clone(),
-                result: None,
-                error: Some(JsonRpcError {
-                    code: -32601,
-                    message: "am_publish_agent is not supported in the new marketplace yet.".to_string(),
-                }),
-                meta: None,
+            let name = req.params.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let description = req.params.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let author = req.params.get("role").and_then(|v| v.as_str()).unwrap_or("").to_string(); // mapping role to author
+
+            let new_agent = crate::tools::marketplace::MarketplaceAgent {
+                id: "".to_string(),
+                name,
+                description,
+                author,
+                version: "1.0.0".to_string(),
+                endpoint: "http://localhost".to_string(),
             };
-            return serde_json::to_string(&response_obj).unwrap_or_default();
+
+            let published = self.marketplace.publish_agent(new_agent).await;
+
+            let resp = match published {
+                Ok(agent) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id.clone(),
+                    result: serde_json::to_value(agent).ok(),
+                    error: None,
+                    meta: None,
+                },
+                Err(e) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id.clone(),
+                    result: None,
+                    error: Some(JsonRpcError {
+                        code: -32602,
+                        message: e,
+                    }),
+                    meta: None,
+                },
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "ap_execute_step" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let task_id = req
@@ -1132,7 +1160,8 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Arc::new(Runner::new(agent));
-        let app_server = AppServer::new(runner);
+        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(crate::tools::marketplace::test_utils::MockMarketplaceProvider)));
+        let app_server = AppServer::new_with_marketplace(runner, marketplace);
 
         let req_json = r#"{"jsonrpc": "2.0", "id": "1", "method": "run_agent", "params": {"message": "hello"}}"#;
         let resp_json = app_server.handle_request(req_json).await;
@@ -1251,16 +1280,19 @@ mod tests {
         let req_json_am_search = r#"{"jsonrpc": "2.0", "id": "13", "method": "am_search_agents", "params": {"query": "Rust"}}"#;
         let resp_json_am_search = app_server.handle_request(req_json_am_search).await;
         let resp_am_search: JsonRpcResponse = serde_json::from_str(&resp_json_am_search).unwrap();
-        // Skip assertion due to HTTP test failure in local environment. We only test standard methods in tests instead of HTTP providers.
+        assert!(resp_am_search.error.is_none());
 
         // Test Agent Marketplace am_fetch_agent method
-        let req_json_am_fetch = r#"{"jsonrpc": "2.0", "id": "14", "method": "am_fetch_agent", "params": {"agent_id": "Senior Rust Developer"}}"#;
-        let _resp_json_am_fetch = app_server.handle_request(req_json_am_fetch).await;
+        let req_json_am_fetch = r#"{"jsonrpc": "2.0", "id": "14", "method": "am_fetch_agent", "params": {"agent_id": "agent-1"}}"#;
+        let resp_json_am_fetch = app_server.handle_request(req_json_am_fetch).await;
+        let resp_am_fetch: JsonRpcResponse = serde_json::from_str(&resp_json_am_fetch).unwrap();
+        assert!(resp_am_fetch.error.is_none());
+
         // Test Agent Marketplace am_publish_agent method
         let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "role": "Tester", "system_prompt": "Test"}}"#;
         let resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
         let resp_am_publish: JsonRpcResponse = serde_json::from_str(&resp_json_am_publish).unwrap();
-        assert!(resp_am_publish.error.is_some());
+        assert!(resp_am_publish.error.is_none());
 
         // Test Agent Protocol ap_execute_step method
         let req_json_ap_execute = format!(

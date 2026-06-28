@@ -31,9 +31,9 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     expect(activityTabBox?.width).toBeGreaterThanOrEqual(44);
     expect(activityTabBox?.height).toBeGreaterThanOrEqual(44);
 
-    // Check action cards if they appear (mock data might be empty so we wait to see if any buttons exist or the "All caught up!" state shows)
+    // Check action cards if they appear (mock data might be empty so we wait to see if any buttons exist or the "No items need your attention right now." state shows)
     const approveButtons = page.locator('button:has-text("Approve")');
-    const caughtUpText = page.locator('text=All caught up!');
+    const caughtUpText = page.locator('text=No items need your attention right now');
 
     // Wait for either the list to load items or show the empty state
     await Promise.race([

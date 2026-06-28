@@ -27,7 +27,7 @@ where
         .route("/workspaces", get(list_workspaces).post(create_workspace))
         .route("/workspaces/{id}", get(get_workspace))
         .route("/tasks", get(list_tasks).post(create_task))
-        .route("/tasks/{id}", get(get_task))
+        .route("/tasks/{id}", get(get_task).patch(mutate_task))
         .route("/tasks/{id}/messages", get(list_messages).post(create_message))
         .route("/tasks/{id}/artifacts", get(list_artifacts).post(create_artifact))
         .route("/tasks/{id}/file_changes", get(list_file_changes).post(create_file_change))
@@ -188,12 +188,18 @@ async fn list_workspaces(
 
     let workspaces = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, NULL as default_work_dir, NULL as default_model,
+                        strftime('%s', created_at) as c_unix,
+                        strftime('%s', updated_at) as u_unix
+                 FROM assistant_workspaces WHERE tenant_id = ?"
+            } else {
                 "SELECT id, name, default_work_dir, default_model, 
                         strftime('%s', created_at) as c_unix, 
                         strftime('%s', updated_at) as u_unix 
                  FROM assistant_workspaces WHERE tenant_id = ?"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .fetch_all(pool)
             .await
@@ -213,12 +219,18 @@ async fn list_workspaces(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, NULL::text as default_work_dir, NULL::text as default_model,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix
+                 FROM assistant_workspaces"
+            } else {
                 "SELECT id, name, default_work_dir, default_model, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix, 
                         EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix 
                  FROM assistant_workspaces"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -236,14 +248,7 @@ async fn list_workspaces(
         }
     };
 
-    let mut workspaces = workspaces.map_err(|e: (StatusCode, String)| e)?;
-
-    if mobile_optimized {
-        for w in workspaces.iter_mut() {
-            w.default_work_dir = None;
-            w.default_model = None;
-        }
-    }
+    let workspaces = workspaces.map_err(|e: (StatusCode, String)| e)?;
 
     Ok(Json(workspaces))
 }
@@ -371,12 +376,19 @@ async fn list_tasks(
 
     let tasks = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, workspace_id, title, '' as prompt, status, mode, permission_profile, NULL as model_config, current_step, archived,
+                        strftime('%s', created_at) as c_unix,
+                        strftime('%s', updated_at) as u_unix
+                 FROM assistant_tasks WHERE tenant_id = ?"
+            } else {
                 "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived, 
                         strftime('%s', created_at) as c_unix, 
                         strftime('%s', updated_at) as u_unix 
                  FROM assistant_tasks WHERE tenant_id = ?"
-            )
+            };
+
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .fetch_all(pool)
             .await
@@ -402,12 +414,19 @@ async fn list_tasks(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, workspace_id, title, '' as prompt, status, mode, permission_profile, NULL as model_config, current_step, archived,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix
+                 FROM assistant_tasks"
+            } else {
                 "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix, 
                         EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix 
                  FROM assistant_tasks"
-            )
+            };
+
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -431,14 +450,7 @@ async fn list_tasks(
         }
     };
 
-    let mut tasks = tasks.map_err(|e: (StatusCode, String)| e)?;
-
-    if mobile_optimized {
-        for t in tasks.iter_mut() {
-            t.prompt = String::new();
-            t.model_config_json = None;
-        }
-    }
+    let tasks = tasks.map_err(|e: (StatusCode, String)| e)?;
 
     Ok(Json(tasks))
 }
@@ -536,6 +548,173 @@ async fn create_task(
     Ok(Json(task))
 }
 
+async fn mutate_task(
+    Extension(db): Extension<Arc<DB>>,
+    Extension(claims): Extension<Claims>,
+    Path(id): Path<String>,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
+    let action = payload.get("action").and_then(|a| a.as_str()).unwrap_or("");
+
+    match &db.store {
+        DbStore::Sqlite(pool) => {
+            if action == "stop" {
+                sqlx::query("UPDATE assistant_tasks SET status = 'blocked', current_step = 'Stopped by user', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                    .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "resume" {
+                sqlx::query("UPDATE assistant_tasks SET status = 'running', current_step = 'Resumed and preparing next step', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                    .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "archive" {
+                sqlx::query("UPDATE assistant_tasks SET status = 'archived', current_step = 'Archived', archived = 1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                    .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "unarchive" {
+                sqlx::query("UPDATE assistant_tasks SET status = 'completed', current_step = 'Restored to active task list', archived = 0, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                    .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "rename" || action == "rename_archived" {
+                let title = payload.get("title").and_then(|t| t.as_str()).unwrap_or("");
+                sqlx::query("UPDATE assistant_tasks SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                    .bind(title).bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "save_to_workspace" {
+                let workspace = payload.get("workspace").and_then(|w| w.as_str()).unwrap_or("");
+                sqlx::query("UPDATE assistant_tasks SET workspace_id = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                    .bind(workspace).bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "approve_changes" {
+                sqlx::query("UPDATE assistant_file_changes SET approval_status = 'approved' WHERE tenant_id = ? AND task_id = ?")
+                    .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "hard_delete" {
+                let mut tx = pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = ? AND task_id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_artifacts WHERE tenant_id = ? AND task_id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_file_changes WHERE tenant_id = ? AND task_id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_tasks WHERE tenant_id = ? AND id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                return Ok(Json(serde_json::json!({ "deletedTask": { "id": id } })));
+            } else if action == "pin" || action == "unpin" {
+                // Ignore pin/unpin for now or implement if needed
+            } else {
+                return Err((StatusCode::BAD_REQUEST, "Unsupported action".to_string()));
+            }
+        }
+        DbStore::Postgres => {
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+            if action == "stop" {
+                sqlx::query("UPDATE assistant_tasks SET status = 'blocked', current_step = 'Stopped by user', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
+                    .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "resume" {
+                sqlx::query("UPDATE assistant_tasks SET status = 'running', current_step = 'Resumed and preparing next step', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
+                    .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "archive" {
+                sqlx::query("UPDATE assistant_tasks SET status = 'archived', current_step = 'Archived', archived = true, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
+                    .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "unarchive" {
+                sqlx::query("UPDATE assistant_tasks SET status = 'completed', current_step = 'Restored to active task list', archived = false, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
+                    .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "rename" || action == "rename_archived" {
+                let title = payload.get("title").and_then(|t| t.as_str()).unwrap_or("");
+                sqlx::query("UPDATE assistant_tasks SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2 AND id = $3")
+                    .bind(title).bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "save_to_workspace" {
+                let workspace = payload.get("workspace").and_then(|w| w.as_str()).unwrap_or("");
+                sqlx::query("UPDATE assistant_tasks SET workspace_id = $1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2 AND id = $3")
+                    .bind(workspace).bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "approve_changes" {
+                sqlx::query("UPDATE assistant_file_changes SET approval_status = 'approved' WHERE tenant_id = $1 AND task_id = $2")
+                    .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            } else if action == "hard_delete" {
+                sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_artifacts WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_file_changes WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_tasks WHERE tenant_id = $1 AND id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                return Ok(Json(serde_json::json!({ "deletedTask": { "id": id } })));
+            } else if action == "pin" || action == "unpin" {
+                // Ignore pin/unpin for now or implement if needed
+            } else {
+                return Err((StatusCode::BAD_REQUEST, "Unsupported action".to_string()));
+            }
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        }
+    }
+
+    // Fetch the updated task
+    match &db.store {
+        DbStore::Sqlite(pool) => {
+            let row = sqlx::query(
+                "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived,
+                        strftime('%s', created_at) as c_unix,
+                        strftime('%s', updated_at) as u_unix
+                 FROM assistant_tasks WHERE tenant_id = ? AND id = ?"
+            )
+            .bind(&tenant_id)
+            .bind(&id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+            if let Some(row) = row {
+                let task = Task {
+                    id: row.get("id"),
+                    workspace_id: row.get("workspace_id"),
+                    title: row.get("title"),
+                    prompt: row.get("prompt"),
+                    status: row.get("status"),
+                    mode: row.get("mode"),
+                    permission_profile: row.get("permission_profile"),
+                    model_config_json: row.get::<Option<String>, _>("model_config").and_then(|s| serde_json::from_str(&s).ok()),
+                    current_step: row.get("current_step"),
+                    archived: row.get::<i32, _>("archived") != 0,
+                    created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+                    updated_at_unix: row.get::<Option<String>, _>("u_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+                };
+                Ok(Json(serde_json::to_value(task).unwrap_or(serde_json::json!({}))))
+            } else {
+                Err((StatusCode::NOT_FOUND, "Task not found".to_string()))
+            }
+        }
+        DbStore::Postgres => {
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+            let row = sqlx::query(
+                "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
+                 FROM assistant_tasks WHERE tenant_id = $1 AND id = $2"
+            )
+            .bind(&tenant_id)
+            .bind(&id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+            if let Some(row) = row {
+                let task = Task {
+                    id: row.get("id"),
+                    workspace_id: row.get("workspace_id"),
+                    title: row.get("title"),
+                    prompt: row.get("prompt"),
+                    status: row.get("status"),
+                    mode: row.get("mode"),
+                    permission_profile: row.get("permission_profile"),
+                    model_config_json: row.get("model_config"),
+                    current_step: row.get("current_step"),
+                    archived: row.get("archived"),
+                    created_at_unix: row.get::<Option<i64>, _>("c_unix").unwrap_or(0),
+                    updated_at_unix: row.get::<Option<i64>, _>("u_unix").unwrap_or(0),
+                };
+                Ok(Json(serde_json::to_value(task).unwrap_or(serde_json::json!({}))))
+            } else {
+                Err((StatusCode::NOT_FOUND, "Task not found".to_string()))
+            }
+        }
+    }
+}
+
 async fn get_task(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
@@ -623,13 +802,19 @@ async fn list_messages(
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let mut messages = match &db.store {
+    let messages = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, role, content, NULL as tool_metadata,
+                        strftime('%s', created_at) as c_unix
+                 FROM assistant_messages WHERE tenant_id = ? AND task_id = ? ORDER BY created_at ASC"
+            } else {
                 "SELECT id, task_id, role, content, tool_metadata, 
                         strftime('%s', created_at) as c_unix 
                  FROM assistant_messages WHERE tenant_id = ? AND task_id = ? ORDER BY created_at ASC"
-            )
+            };
+
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .bind(&task_id)
             .fetch_all(pool)
@@ -650,11 +835,17 @@ async fn list_messages(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, role, content, NULL::text as tool_metadata,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix
+                 FROM assistant_messages WHERE task_id = $1 ORDER BY created_at ASC"
+            } else {
                 "SELECT id, task_id, role, content, tool_metadata, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix 
                  FROM assistant_messages WHERE task_id = $1 ORDER BY created_at ASC"
-            )
+            };
+
+            let rows = sqlx::query(query_str)
             .bind(&task_id)
             .fetch_all(&mut *tx)
             .await
@@ -672,14 +863,6 @@ async fn list_messages(
             Ok(list)
         }
     }?;
-
-    if mobile_optimized {
-        for m in messages.iter_mut() {
-            // For mobile, maybe we don't need tool_metadata_json or full content if not requested
-            // but let's clear tool_metadata_json
-            m.tool_metadata_json = None;
-        }
-    }
 
     Ok(Json(messages))
 }
@@ -743,13 +926,18 @@ async fn list_artifacts(
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let mut artifacts = match &db.store {
+    let artifacts = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, type, filename, '' as path, mime_type, size, preview_ref,
+                        strftime('%s', created_at) as c_unix
+                 FROM assistant_artifacts WHERE tenant_id = ? AND task_id = ?"
+            } else {
                 "SELECT id, task_id, type, filename, path, mime_type, size, preview_ref, 
                         strftime('%s', created_at) as c_unix 
                  FROM assistant_artifacts WHERE tenant_id = ? AND task_id = ?"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .bind(&task_id)
             .fetch_all(pool)
@@ -773,11 +961,16 @@ async fn list_artifacts(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, type, filename, '' as path, mime_type, size, preview_ref,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix
+                 FROM assistant_artifacts WHERE task_id = $1"
+            } else {
                 "SELECT id, task_id, type, filename, path, mime_type, size, preview_ref, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix 
                  FROM assistant_artifacts WHERE task_id = $1"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&task_id)
             .fetch_all(&mut *tx)
             .await
@@ -798,12 +991,6 @@ async fn list_artifacts(
             Ok(list)
         }
     }?;
-
-    if mobile_optimized {
-        for a in artifacts.iter_mut() {
-            a.path = String::new();
-        }
-    }
 
     Ok(Json(artifacts))
 }
@@ -873,13 +1060,18 @@ async fn list_file_changes(
     let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let mut file_changes = match &db.store {
+    let file_changes = match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, path, change_type, NULL as summary, approval_status,
+                        strftime('%s', created_at) as c_unix
+                 FROM assistant_file_changes WHERE tenant_id = ? AND task_id = ?"
+            } else {
                 "SELECT id, task_id, path, change_type, summary, approval_status, 
                         strftime('%s', created_at) as c_unix 
                  FROM assistant_file_changes WHERE tenant_id = ? AND task_id = ?"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&tenant_id)
             .bind(&task_id)
             .fetch_all(pool)
@@ -901,11 +1093,16 @@ async fn list_file_changes(
             let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, task_id, path, change_type, NULL::text as summary, approval_status,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix
+                 FROM assistant_file_changes WHERE task_id = $1"
+            } else {
                 "SELECT id, task_id, path, change_type, summary, approval_status, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix 
                  FROM assistant_file_changes WHERE task_id = $1"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(&task_id)
             .fetch_all(&mut *tx)
             .await
@@ -924,12 +1121,6 @@ async fn list_file_changes(
             Ok(list)
         }
     }?;
-
-    if mobile_optimized {
-        for f in file_changes.iter_mut() {
-            f.summary = None;
-        }
-    }
 
     Ok(Json(file_changes))
 }
@@ -993,12 +1184,7 @@ async fn list_memory(
 ) -> Result<Json<AssistantMemoryListResponse>, (StatusCode, String)> {
     let tenant_id = tenant_id_from(&claims);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let mut memories = fetch_memory_records(db.as_ref(), &tenant_id).await?;
-    if mobile_optimized {
-        for m in memories.iter_mut() {
-            m.content = String::new();
-        }
-    }
+    let memories = fetch_memory_records(db.as_ref(), &tenant_id, mobile_optimized).await?;
     Ok(Json(AssistantMemoryListResponse { memories }))
 }
 
@@ -1118,7 +1304,7 @@ async fn mutate_memory(
         _ => return Err((StatusCode::BAD_REQUEST, "unsupported memory action".to_string())),
     }
 
-    let memories = fetch_memory_records(db.as_ref(), &tenant_id).await?;
+    let memories = fetch_memory_records(db.as_ref(), &tenant_id, false).await?;
     Ok(Json(AssistantMemoryListResponse { memories }))
 }
 
@@ -1129,13 +1315,7 @@ async fn list_skills(
 ) -> Result<Json<AssistantSkillListResponse>, (StatusCode, String)> {
     let tenant_id = tenant_id_from(&claims);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let mut skills = fetch_skill_records(db.as_ref(), &tenant_id).await?;
-    if mobile_optimized {
-        for s in skills.iter_mut() {
-            s.description = None;
-            s.config = None;
-        }
-    }
+    let skills = fetch_skill_records(db.as_ref(), &tenant_id, mobile_optimized).await?;
     Ok(Json(AssistantSkillListResponse { skills }))
 }
 
@@ -1281,7 +1461,7 @@ async fn mutate_skill(
         _ => return Err((StatusCode::BAD_REQUEST, "unsupported skill action".to_string())),
     }
 
-    let skills = fetch_skill_records(db.as_ref(), &tenant_id).await?;
+    let skills = fetch_skill_records(db.as_ref(), &tenant_id, false).await?;
     Ok(Json(AssistantSkillListResponse { skills }))
 }
 
@@ -1292,12 +1472,7 @@ async fn list_connectors(
 ) -> Result<Json<AssistantConnectorListResponse>, (StatusCode, String)> {
     let tenant_id = tenant_id_from(&claims);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let mut connectors = fetch_connector_records(db.as_ref(), &tenant_id).await?;
-    if mobile_optimized {
-        for c in connectors.iter_mut() {
-            c.config = None;
-        }
-    }
+    let connectors = fetch_connector_records(db.as_ref(), &tenant_id, mobile_optimized).await?;
     Ok(Json(AssistantConnectorListResponse { connectors }))
 }
 
@@ -1415,24 +1590,33 @@ async fn mutate_connector(
         _ => return Err((StatusCode::BAD_REQUEST, "unsupported connector action".to_string())),
     }
 
-    let connectors = fetch_connector_records(db.as_ref(), &tenant_id).await?;
+    let connectors = fetch_connector_records(db.as_ref(), &tenant_id, false).await?;
     Ok(Json(AssistantConnectorListResponse { connectors }))
 }
 
 async fn fetch_memory_records(
     db: &DB,
     tenant_id: &str,
+    mobile_optimized: bool,
 ) -> Result<Vec<AssistantMemoryRecord>, (StatusCode, String)> {
     match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, '' as content, scope, source, enabled,
+                        strftime('%s', created_at) AS c_unix,
+                        strftime('%s', updated_at) AS u_unix
+                 FROM assistant_memory_records
+                 WHERE tenant_id = ?
+                 ORDER BY updated_at DESC, created_at DESC, id ASC"
+            } else {
                 "SELECT id, content, scope, source, enabled,
                         strftime('%s', created_at) AS c_unix,
                         strftime('%s', updated_at) AS u_unix
                  FROM assistant_memory_records
                  WHERE tenant_id = ?
                  ORDER BY updated_at DESC, created_at DESC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(pool)
             .await
@@ -1463,13 +1647,20 @@ async fn fetch_memory_records(
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, '' as content, scope, source, enabled,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
+                 FROM assistant_memory_records
+                 ORDER BY updated_at DESC, created_at DESC, id ASC"
+            } else {
                 "SELECT id, content, scope, source, enabled,
                         EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
                         EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
                  FROM assistant_memory_records
                  ORDER BY updated_at DESC, created_at DESC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1494,17 +1685,26 @@ async fn fetch_memory_records(
 async fn fetch_skill_records(
     db: &DB,
     tenant_id: &str,
+    mobile_optimized: bool,
 ) -> Result<Vec<AssistantSkillRecord>, (StatusCode, String)> {
     match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, category, source, status, version, NULL as description, NULL as config,
+                        strftime('%s', created_at) AS c_unix,
+                        strftime('%s', updated_at) AS u_unix
+                 FROM assistant_skills
+                 WHERE tenant_id = ?
+                 ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
+            } else {
                 "SELECT id, name, category, source, status, version, description, config,
                         strftime('%s', created_at) AS c_unix,
                         strftime('%s', updated_at) AS u_unix
                  FROM assistant_skills
                  WHERE tenant_id = ?
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(pool)
             .await
@@ -1540,13 +1740,20 @@ async fn fetch_skill_records(
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, category, source, status, version, NULL::text as description, NULL::jsonb as config,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
+                 FROM assistant_skills
+                 ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
+            } else {
                 "SELECT id, name, category, source, status, version, description, config,
                         EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
                         EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
                  FROM assistant_skills
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1574,17 +1781,26 @@ async fn fetch_skill_records(
 async fn fetch_connector_records(
     db: &DB,
     tenant_id: &str,
+    mobile_optimized: bool,
 ) -> Result<Vec<AssistantConnectorRecord>, (StatusCode, String)> {
     match &db.store {
         DbStore::Sqlite(pool) => {
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, kind, status, oauth, NULL as config, last_error,
+                        strftime('%s', created_at) AS c_unix,
+                        strftime('%s', updated_at) AS u_unix
+                 FROM assistant_connectors
+                 WHERE tenant_id = ?
+                 ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
+            } else {
                 "SELECT id, name, kind, status, oauth, config, last_error,
                         strftime('%s', created_at) AS c_unix,
                         strftime('%s', updated_at) AS u_unix
                  FROM assistant_connectors
                  WHERE tenant_id = ?
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .bind(tenant_id)
             .fetch_all(pool)
             .await
@@ -1619,13 +1835,20 @@ async fn fetch_connector_records(
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let rows = sqlx::query(
+            let query_str = if mobile_optimized {
+                "SELECT id, name, kind, status, oauth, NULL::jsonb as config, last_error,
+                        EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
+                        EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
+                 FROM assistant_connectors
+                 ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
+            } else {
                 "SELECT id, name, kind, status, oauth, config, last_error,
                         EXTRACT(EPOCH FROM created_at)::BIGINT AS c_unix,
                         EXTRACT(EPOCH FROM updated_at)::BIGINT AS u_unix
                  FROM assistant_connectors
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
-            )
+            };
+            let rows = sqlx::query(query_str)
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1821,5 +2044,59 @@ mod real_feature_state_tests {
         let (_, listed) = request_json(db, "GET", "/connectors", json!({})).await;
         assert_eq!(listed["connectors"][0]["name"], "Real Connector");
         assert_eq!(listed["connectors"][0]["status"], "disconnected");
+    }
+
+    #[tokio::test]
+    async fn task_mutations_use_database() {
+        let db = test_db().await;
+
+        // 1. Create a task via POST /tasks
+        let task_id = "test-task-1".to_string();
+        let (status, _created) = request_json(db.clone(), "POST", "/tasks", json!({
+            "id": task_id,
+            "workspace_id": "test-ws",
+            "title": "Test Task",
+            "prompt": "Do something",
+            "status": "running",
+            "permission_profile": "Guarded",
+            "archived": false,
+            "created_at_unix": 0,
+            "updated_at_unix": 0
+        })).await;
+        assert_eq!(status, StatusCode::OK);
+
+        // 2. Archive the task via PATCH /tasks/{id}
+        let (status, archived) = request_json(db.clone(), "PATCH", &format!("/tasks/{}", task_id), json!({
+            "action": "archive"
+        })).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(archived["status"], "archived");
+        assert_eq!(archived["archived"], true);
+
+        // 3. Rename the task
+        let (_, renamed) = request_json(db.clone(), "PATCH", &format!("/tasks/{}", task_id), json!({
+            "action": "rename",
+            "title": "Renamed Task"
+        })).await;
+        assert_eq!(renamed["title"], "Renamed Task");
+
+        // 4. Hard delete
+        let (status, deleted) = request_json(db.clone(), "PATCH", &format!("/tasks/{}", task_id), json!({
+            "action": "hard_delete"
+        })).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(deleted["deletedTask"]["id"], task_id);
+
+        // Verify it's gone by checking the DB directly to avoid text response panic in request_json
+        match &db.store {
+            DbStore::Sqlite(pool) => {
+                let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM assistant_tasks WHERE id = ?").bind(&task_id).fetch_one(pool).await.unwrap();
+                assert_eq!(count.0, 0);
+            }
+            DbStore::Postgres => {
+                let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM assistant_tasks WHERE id = $1").bind(&task_id).fetch_one(&db.pool).await.unwrap();
+                assert_eq!(count.0, 0);
+            }
+        }
     }
 }

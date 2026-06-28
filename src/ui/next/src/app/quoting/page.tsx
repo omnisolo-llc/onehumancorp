@@ -64,7 +64,7 @@ function QuotingContent() {
     const totalAmountCents = lineItems.reduce((sum: number, item: any) => sum + (item.unit_price_cents * item.quantity), 0);
 
     const updatePayload = {
-      total_amount: totalAmountCents,
+      total_amount_cents: totalAmountCents,
       line_items: lineItems.map(item => ({
         description: item.description,
         unit_price_cents: item.unit_price_cents,

@@ -2,25 +2,30 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Zero-Click Onboarding to Agent Feed', () => {
   test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
-    // Navigate to the zero-click-builder route
-    await page.goto('/zero-click-builder');
+    // Navigate to the setup route
+    await page.goto('/setup.html');
 
-    // Wait for Setup Assistant's first message to appear
-    await expect(page.locator('text=What kind of business do you want to build')).toBeVisible();
+    // Make sure we're on a mobile viewport
+    await page.setViewportSize({ width: 375, height: 812 });
 
-    // The chat input might be a standard input field
-    const chatInput = page.getByPlaceholder('Type your message...');
+    // Click Conversational Setup
+    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    await expect(conversationalSetupBtn).toBeVisible();
+    await conversationalSetupBtn.click();
+
+    // Wait for chat input to be visible
+    const chatInput = page.locator('#chat-input');
     await expect(chatInput).toBeVisible();
 
-    // Type a simple sentence and press Enter (or find the submit button)
+    // Type a simple sentence and press Enter
     await chatInput.fill('I run a mobile dog grooming service in Austin');
     await chatInput.press('Enter');
 
-    // Wait for the "Building Your Business..." or final state
-    await expect(page.locator('text=Your business is live!')).toBeVisible({ timeout: 15000 });
+    // In the actual app, wait for the summary card to appear
+    await expect(page.locator('text=Ready to Launch')).toBeVisible({ timeout: 30000 });
 
-    // The Launch store button should be available
-    const launchBtn = page.getByRole('button', { name: /Launch My Store/i });
+    // Click Approve & Publish
+    const launchBtn = page.getByTestId('approve-publish-btn');
     await expect(launchBtn).toBeVisible();
     await launchBtn.click();
 
@@ -30,13 +35,104 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     // Verify the feed renders properly after onboarding
     await expect(page.locator('text=Feed')).toBeVisible({ timeout: 10000 });
 
-    // Verify layout meets mobile viewport requirements (375px width, no horizontal scroll)
-    await page.setViewportSize({ width: 375, height: 812 });
-
     // Check horizontal scroll by verifying document width equals window innerWidth
     const hasHorizontalScroll = await page.evaluate(() => {
         return document.documentElement.scrollWidth > window.innerWidth;
     });
     expect(hasHorizontalScroll).toBeFalsy();
+  });
+
+  test('Conversational Setup prevents empty submissions', async ({ page }) => {
+    await page.goto('/setup.html');
+
+    // Click Conversational Setup
+    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    await expect(conversationalSetupBtn).toBeVisible();
+    await conversationalSetupBtn.click();
+
+    // Ensure input is empty and send
+    const chatInput = page.locator('#chat-input');
+    await expect(chatInput).toBeVisible();
+    await chatInput.fill('');
+    await page.locator('#chat-send-btn').click();
+
+    // Message shouldn't appear in chat history
+    const userMessages = page.locator('.chat-message.user');
+    await expect(userMessages).toHaveCount(0);
+  });
+
+  test('Conversational Setup opens image upload input when toggled', async ({ page }) => {
+    await page.goto('/setup.html');
+
+    // Click Conversational Setup
+    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    await expect(conversationalSetupBtn).toBeVisible();
+    await conversationalSetupBtn.click();
+
+    // The image container should be hidden by default
+    const imageContainer = page.locator('#chat-image-container');
+    await expect(imageContainer).toBeHidden();
+
+    // Click the toggle button
+    const uploadBtn = page.locator('#chat-upload-btn');
+    await uploadBtn.click();
+
+    // Image container should now be visible
+    await expect(imageContainer).toBeVisible();
+  });
+
+  test('Conversational Setup maintains history after reload', async ({ page }) => {
+    await page.goto('/setup.html');
+
+    // Start conversational flow
+    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    await expect(conversationalSetupBtn).toBeVisible();
+    await conversationalSetupBtn.click();
+
+    // Type a message
+    const chatInput = page.locator('#chat-input');
+    await expect(chatInput).toBeVisible();
+    await chatInput.fill('This is a test message to ensure history persistence.');
+    await page.locator('#chat-send-btn').click();
+
+    // Wait for the message to appear
+    const userMessages = page.locator('.chat-message.user');
+    await expect(userMessages).toHaveCount(1);
+
+    // Ensure draft save occurs
+    await page.waitForTimeout(1000);
+
+    // Reload page
+    await page.reload();
+
+    // The step and chat history should have persisted
+    await expect(page.locator('#step-chat')).toBeVisible();
+    await expect(page.locator('.chat-message.user').first()).toContainText('This is a test message to ensure history persistence.');
+  });
+
+  test('Conversational Setup renders user messages correctly', async ({ page }) => {
+    await page.goto('/setup.html');
+
+    // Start conversational flow
+    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' }).first();
+    await expect(conversationalSetupBtn).toBeVisible();
+    await conversationalSetupBtn.click();
+
+    // Type a message
+    const chatInput = page.locator('#chat-input');
+    await expect(chatInput).toBeVisible();
+    await chatInput.fill('Testing chat bubble formatting');
+    await page.locator('#chat-send-btn').click();
+
+    // Check message wrapper layout
+    const lastUserMessage = page.locator('.chat-message.user').last();
+    await expect(lastUserMessage).toBeVisible();
+
+    const senderTitle = lastUserMessage.locator('.chat-sender');
+    await expect(senderTitle).toHaveText('You');
+
+    const bubbleContent = lastUserMessage.locator('.chat-bubble');
+    await expect(bubbleContent).toHaveText('Testing chat bubble formatting');
+
   });
 });
