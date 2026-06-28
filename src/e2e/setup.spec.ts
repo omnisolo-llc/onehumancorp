@@ -38,12 +38,22 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.getByTestId('assistant-tone').selectOption('Friendly');
     await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
     // Admin step
+    await page.getByTestId('admin-name').fill('Admin Name');
+    await page.getByTestId('admin-name').fill('Admin Name');
     await page.getByTestId('admin-email').fill('admin@testbakery.local');
     await page.getByTestId('admin-password').fill('SuperSecretPassword123');
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
     // Offer step
     await page.getByTestId('first-offer').fill('Chocolate Cake');
-    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-domain"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-location"]').click();
+
+    // Location step
+    await page.getByTestId('location-input').fill('Portland, OR');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-target-audience"]').click();
+
+    // Target Audience step
+    await page.getByTestId('target-audience').fill('Local families');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-domain"]').click();
     // Domain step
     await page.getByTestId('domain-name').fill('test-bakery');
     await page.locator('[data-testid="next-step-btn"][data-next="step-template"]').click();
@@ -219,3 +229,5 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
     });
   });
+
+});
