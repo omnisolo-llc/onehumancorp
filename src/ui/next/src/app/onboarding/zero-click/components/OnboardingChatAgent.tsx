@@ -146,15 +146,15 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[210%] border border-white/40 dark:border-white/10 rounded-2xl overflow-hidden shadow-xl w-full max-w-2xl mx-auto">
+    <div className="flex flex-col h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden shadow-xl w-full max-w-2xl mx-auto">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3 bg-white/50 dark:bg-black/50">
+      <div className="p-4 border-b border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex items-center gap-3 bg-transparent">
         <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xl">
           ✨
         </div>
         <div>
-          <h3 className="font-bold text-gray-900 dark:text-white">OHC Setup Assistant</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Usually replies instantly</p>
+          <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">OHC Setup Assistant</h3>
+          <p className="text-xs text-[#424245] dark:text-[#A1A1A6]">Usually replies instantly</p>
         </div>
       </div>
 
@@ -164,8 +164,8 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
               msg.role === 'user'
-                ? 'bg-indigo-600 text-white rounded-br-sm'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-sm border border-gray-200 dark:border-gray-700'
+                ? 'bg-[#0066FF] text-white rounded-br-sm shadow-[0_4px_14px_0_rgba(0,102,255,0.39)]'
+                : 'bg-gray-100 dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-bl-sm border border-gray-200 dark:border-gray-700'
             }`}>
               {msg.content}
             </div>
@@ -174,7 +174,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-sm px-4 py-3 border border-gray-200 dark:border-gray-700 flex gap-1 items-center">
+            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] rounded-2xl rounded-bl-sm px-4 py-3 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex gap-1 items-center">
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
@@ -187,9 +187,9 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
       {/* Provisioning Overlay */}
       {isProvisioning && (
-        <div className="absolute inset-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-[10px] flex flex-col items-center justify-center rounded-2xl">
-          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-6"></div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 animate-pulse">
+        <div className="absolute inset-0 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[10px] flex flex-col items-center justify-center rounded-2xl">
+          <div className="w-16 h-16 border-4 border-[#0066FF]/20 border-t-[#0066FF] rounded-full animate-spin mb-6"></div>
+          <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 animate-pulse">
             Building Your Business...
           </h3>
           <p className="text-sm text-gray-500 font-medium">Provisioning workspace, products, and agents.</p>
@@ -197,7 +197,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
       )}
 
       {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-black/50">
+      <div className="p-4 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] bg-transparent">
         {messages.length === 1 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {predefinedChips.map((chip, idx) => (
@@ -208,7 +208,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
                   // Optional: auto send after setting
                   // setTimeout(() => handleSend(), 0);
                 }}
-                className="text-xs font-medium px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 transition-colors border border-gray-200 dark:border-gray-700"
+                className="text-xs font-medium min-h-[44px] px-4 py-2 flex items-center justify-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] rounded-full text-[#1D1D1F] dark:text-[#F5F5F7] transition-colors border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
               >
                 {chip}
               </button>
@@ -223,12 +223,12 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading || isProvisioning}
             placeholder="e.g. I am a home baker in Austin selling custom vegan cakes."
-            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full py-3 pl-4 pr-12 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full py-3.5 pl-4 pr-12 min-h-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={!input.trim() || isLoading || isProvisioning}
-            className="absolute right-2 w-8 h-8 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-full transition-colors"
+            className="absolute right-1 top-1.5 w-10 h-10 flex items-center justify-center bg-[#0066FF] hover:bg-[#005bb5] disabled:bg-gray-400 text-white rounded-full transition-colors"
           >
             <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
