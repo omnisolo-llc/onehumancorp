@@ -157,7 +157,7 @@ export default function MyPlanPage() {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                           <div
-                              className="bg-indigo-500 h-3 rounded-full transition-all duration-500"
+                              className={`${data?.ai_actions_limit && ((data?.ai_actions_used || 0) >= data.ai_actions_limit) ? 'bg-amber-500' : 'bg-indigo-500'} h-3 rounded-full transition-all duration-500`}
                               style={{ width: data?.ai_actions_limit ? `${Math.min(100, ((data?.ai_actions_used || 0) / data.ai_actions_limit) * 100)}%` : '5%' }}>
                           </div>
                       </div>
@@ -173,7 +173,7 @@ export default function MyPlanPage() {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                           <div
-                              className="bg-[#0066FF] h-3 rounded-full transition-all duration-500"
+                              className={`${data?.storage_limit_bytes && ((data?.storage_used_bytes || 0) >= data.storage_limit_bytes) ? 'bg-amber-500' : 'bg-[#0066FF]'} h-3 rounded-full transition-all duration-500`}
                               style={{ width: data?.storage_limit_bytes ? `${Math.min(100, ((data?.storage_used_bytes || 0) / data.storage_limit_bytes) * 100)}%` : '5%' }}>
                           </div>
                       </div>

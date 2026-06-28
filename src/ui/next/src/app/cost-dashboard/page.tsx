@@ -195,7 +195,7 @@ export default function CostDashboardPage() {
                               </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                              <div className={`h-2.5 rounded-full ${myPlanData.storage_used_bytes >= myPlanData.storage_limit_bytes ? 'bg-red-600' : 'bg-[#0071E3]'}`} style={{ width: `${Math.min(100, Math.max(0, (myPlanData.storage_used_bytes / myPlanData.storage_limit_bytes) * 100))}%` }}></div>
+                              <div className={`h-2.5 rounded-full ${myPlanData.storage_used_bytes >= myPlanData.storage_limit_bytes ? 'bg-amber-500' : 'bg-[#0071E3]'}`} style={{ width: `${Math.min(100, Math.max(0, (myPlanData.storage_used_bytes / myPlanData.storage_limit_bytes) * 100))}%` }}></div>
                           </div>
                       </div>
                   )}

@@ -268,7 +268,7 @@
             <button class="btn-outline" id="download-invoice-btn" style="margin-top: 12px;">Download Invoice</button>
             <button class="btn-outline" id="cancel-subscription-btn" style="margin-top: 12px; color: red; border-color: red;">Cancel Subscription</button>
             <div id="plan-message" style="margin-top: 12px; font-weight: 500; font-size: 14px; color: #34C759; display: none;"></div>
-            <div id="usage-warning-message" style="color: #FF3B30; font-size: 13px; margin-top: 8px; display: none;"></div>
+            <div id="usage-warning-message" style="color: #FF9500; font-size: 13px; margin-top: 8px; display: none;"></div>
           </div>
 
           <!-- Cost Dashboard Widget -->
@@ -405,8 +405,8 @@
                     const bar = document.getElementById('ai-actions-bar');
                     bar.style.width = pct + '%';
                     if (pct >= 100) {
-                        bar.style.backgroundColor = '#FF3B30';
-                        warningMessage = "You have reached your AI action limit. Consider upgrading to keep momentum.";
+                        bar.style.backgroundColor = '#FF9500';
+                        warningMessage = "You've hit your tier's soft limit of AI actions this month. Keep your business growing with a plan upgrade!";
                     } else if (pct >= 90) {
                         bar.style.backgroundColor = '#FF9500';
                         warningMessage = "You are approaching your AI action limit. Consider upgrading to keep momentum.";
@@ -423,8 +423,8 @@
                     const bar = document.getElementById('storage-bar');
                     bar.style.width = pct + '%';
                     if (pct >= 100) {
-                        bar.style.backgroundColor = '#FF3B30';
-                        if (!warningMessage) warningMessage = "You have reached your storage limit. Consider upgrading your plan.";
+                        bar.style.backgroundColor = '#FF9500';
+                        if (!warningMessage) warningMessage = "You've reached your tier's soft limit for storage. Keep your business running smoothly with a plan upgrade!";
                     } else if (pct >= 90) {
                         bar.style.backgroundColor = '#FF9500';
                         if (!warningMessage) warningMessage = "You are approaching your storage limit. Consider upgrading your plan.";
