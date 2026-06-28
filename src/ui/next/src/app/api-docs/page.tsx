@@ -28,7 +28,7 @@ export default function ApiDocsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[30px] saturate-[210%] font-inter flex flex-col items-center">
+    <div className="min-h-screen bg-[#F5F5F7]/80 dark:bg-black/90 p-8 backdrop-blur-[30px] saturate-[210%] font-inter flex flex-col items-center transition-colors">
       <style dangerouslySetInnerHTML={{__html: `
         .swagger-ui { background: white; border-radius: 12px; padding: 24px; width: 100%; box-sizing: border-box; }
         .swagger-ui .wrapper { width: 100%; max-width: 100vw; overflow-x: hidden; padding: 0 10px; box-sizing: border-box; }
@@ -46,8 +46,25 @@ export default function ApiDocsPage() {
         </div>
       </div>
       {mounted && loading && (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div>
+        <div className="w-full max-w-6xl flex flex-col h-full bg-white/40 dark:bg-black/40 backdrop-blur-[60px] saturate-[250%] rounded-2xl p-4 sm:p-6 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.15)] border border-white/60 dark:border-white/10 transition-all">
+          <div className="animate-pulse space-y-8">
+            <div className="h-12 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-1/3"></div>
+            <div className="h-8 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-1/4"></div>
+            <div className="space-y-4">
+                <div className="h-24 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-full"></div>
+                <div className="h-24 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-full"></div>
+                <div className="h-24 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-full"></div>
+            </div>
+            <div className="space-y-4 pt-8">
+                <div className="h-8 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-1/4"></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="h-32 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-full"></div>
+                    <div className="h-32 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-full"></div>
+                    <div className="h-32 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-full"></div>
+                    <div className="h-32 bg-gray-200/50 dark:bg-gray-800/50 rounded-xl w-full"></div>
+                </div>
+            </div>
+          </div>
         </div>
       )}
       {mounted && !loading && spec && (

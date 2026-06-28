@@ -10,6 +10,7 @@ export default function HelpCenterPage() {
   const [videos, setVideos] = useState<{id: number, title: string, duration: string, video_url: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -20,12 +21,17 @@ export default function HelpCenterPage() {
 
   useEffect(() => {
     const url = debouncedSearchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(debouncedSearchQuery.trim())}` : '/api/help';
+    setIsLoading(true);
     fetch(url)
       .then(res => res.json())
-      .then(data => setArticles(Array.isArray(data) ? data : []))
+      .then(data => {
+        setArticles(Array.isArray(data) ? data : []);
+        setIsLoading(false);
+      })
       .catch((err) => {
         console.error(err);
         setArticles([]);
+        setIsLoading(false);
       });
   }, [debouncedSearchQuery]);
 
@@ -47,7 +53,7 @@ export default function HelpCenterPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] py-6 sm:py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-black/90 py-6 sm:py-12 px-4 sm:px-6 lg:px-8 font-inter transition-colors">
       <div className="max-w-4xl mx-auto">
         <h1 data-testid="help-center-title" className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 sm:mb-8 text-center tracking-tight">In-App Help Center</h1>
 
@@ -66,7 +72,24 @@ export default function HelpCenterPage() {
           </div>
         </div>
 
-        {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-10 sm:space-y-12 animate-pulse">
+            <div className="flex flex-col">
+               <div className="h-8 bg-gray-200/50 dark:bg-gray-800/50 rounded w-1/4 mb-6"></div>
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="h-[140px] bg-white/50 dark:bg-gray-800/50 rounded-3xl"></div>
+                  <div className="h-[140px] bg-white/50 dark:bg-gray-800/50 rounded-3xl"></div>
+               </div>
+            </div>
+            <div className="flex flex-col pt-8">
+               <div className="h-8 bg-gray-200/50 dark:bg-gray-800/50 rounded w-1/4 mb-6"></div>
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="h-[140px] bg-white/50 dark:bg-gray-800/50 rounded-3xl"></div>
+                  <div className="h-[140px] bg-white/50 dark:bg-gray-800/50 rounded-3xl"></div>
+               </div>
+            </div>
+          </div>
+        ) : filteredArticles.length === 0 && filteredVideos.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 backdrop-blur-xl saturate-[210%] bg-white/80 dark:bg-black/50 border border-white/50 dark:border-white/20 shadow-2xl rounded-3xl min-h-[300px] w-full max-w-[400px] mx-auto transition-all">
             <svg className="w-16 h-16 max-w-[64px] max-h-[64px] text-gray-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
