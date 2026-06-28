@@ -147,14 +147,38 @@ pub mod test_utils {
             if query == "error" {
                 return Err("Mock error".to_string());
             }
-            Ok(vec![MarketplaceAgent {
-                id: "agent-1".to_string(),
-                name: "Data Analyst".to_string(),
-                description: "Analyzes CSV files and generates charts.".to_string(),
-                author: "AutoGPT".to_string(),
-                version: "1.0.0".to_string(),
-                endpoint: "https://marketplace.example.com/agents/agent-1".to_string(),
-            }])
+            let mut results = vec![
+                MarketplaceAgent {
+                    id: "agent-1".to_string(),
+                    name: "Data Analyst".to_string(),
+                    description: "Analyzes CSV files and generates charts.".to_string(),
+                    author: "AutoGPT".to_string(),
+                    version: "1.0.0".to_string(),
+                    endpoint: "https://marketplace.example.com/agents/agent-1".to_string(),
+                },
+                MarketplaceAgent {
+                    id: "agent-2".to_string(),
+                    name: "Senior Rust Developer".to_string(),
+                    description: "Writes highly optimized Rust code.".to_string(),
+                    author: "AutoGPT".to_string(),
+                    version: "1.0.0".to_string(),
+                    endpoint: "https://marketplace.example.com/agents/agent-2".to_string(),
+                },
+                MarketplaceAgent {
+                    id: "agent-3".to_string(),
+                    name: "Technical Writer".to_string(),
+                    description: "Writes comprehensive documentation.".to_string(),
+                    author: "AutoGPT".to_string(),
+                    version: "1.0.0".to_string(),
+                    endpoint: "https://marketplace.example.com/agents/agent-3".to_string(),
+                }
+            ];
+
+            if !query.is_empty() {
+                let q_lower = query.to_lowercase();
+                results.retain(|a| a.name.to_lowercase().contains(&q_lower) || a.description.to_lowercase().contains(&q_lower));
+            }
+            Ok(results)
         }
 
         async fn fetch_agent(&self, agent_id: &str) -> Result<MarketplaceAgent, String> {
@@ -166,6 +190,24 @@ pub mod test_utils {
                     author: "AutoGPT".to_string(),
                     version: "1.0.0".to_string(),
                     endpoint: "https://marketplace.example.com/agents/agent-1".to_string(),
+                })
+            } else if agent_id == "agent-2" {
+                Ok(MarketplaceAgent {
+                    id: "agent-2".to_string(),
+                    name: "Senior Rust Developer".to_string(),
+                    description: "Writes highly optimized Rust code.".to_string(),
+                    author: "AutoGPT".to_string(),
+                    version: "1.0.0".to_string(),
+                    endpoint: "https://marketplace.example.com/agents/agent-2".to_string(),
+                })
+            } else if agent_id == "agent-3" {
+                Ok(MarketplaceAgent {
+                    id: "agent-3".to_string(),
+                    name: "Technical Writer".to_string(),
+                    description: "Writes comprehensive documentation.".to_string(),
+                    author: "AutoGPT".to_string(),
+                    version: "1.0.0".to_string(),
+                    endpoint: "https://marketplace.example.com/agents/agent-3".to_string(),
                 })
             } else {
                 Err("Not found".to_string())
