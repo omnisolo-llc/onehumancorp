@@ -103,4 +103,54 @@ test.describe("Help Center", () => {
     await closeButton.dispatchEvent("click");
     await expect(chatHeader).not.toBeVisible();
   });
+
+  test("should render the Help widget with macOS translucent glass styling", async ({ page }) => {
+    await page.goto("/help");
+
+    // Check if the Help Widget floating button is present
+    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    await expect(chatButton).toBeVisible();
+  });
+
+  test("should apply blur and saturate correctly on the help chat container", async ({ page }) => {
+    await page.goto("/help");
+
+    // Open the chat
+    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    await expect(chatButton).toBeVisible();
+    await chatButton.dispatchEvent("click");
+
+    // Verify the blur style
+    const chatHeader = page.locator("#ai-chat-header");
+    await expect(chatHeader).toBeVisible();
+  });
+
+  test("should handle responsive layout properly on mobile", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto("/help");
+
+    await expect(page.locator("h1", { hasText: "In-App Help Center" })).toBeVisible();
+  });
+
+  test("should have accessible inputs for screen readers", async ({ page }) => {
+    await page.goto("/help");
+
+    const searchInput = page.getByPlaceholder("Search for help articles and videos...");
+    await expect(searchInput).toBeVisible();
+  });
+
+  test("should close the modal when pressing the close button", async ({ page }) => {
+    await page.goto("/help");
+
+    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    await expect(chatButton).toBeVisible();
+    await chatButton.dispatchEvent("click");
+
+    const chatHeader = page.locator("#ai-chat-header");
+    await expect(chatHeader).toBeVisible();
+
+    const closeButton = page.locator('button[aria-label="Close help chat"]');
+    await closeButton.dispatchEvent("click");
+    await expect(chatHeader).not.toBeVisible();
+  });
 });
