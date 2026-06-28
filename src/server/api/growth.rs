@@ -330,7 +330,7 @@ where
         .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
-        .route("/zero-click-builder/generate", post(handle_zero_click_generate))
+        .route("/zero-click-builder/generate", post(handle_zero_click_generate).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
