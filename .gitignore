@@ -133,3 +133,7 @@ dummy_*
 .next/
 /*.patch
 *.pid
+src/ui/next/test-results/
+src/ui/tauri/next_out/
+src/ui/tauri/src/ui/
+src/ui/tauri/tauri_out/
