@@ -39,11 +39,16 @@ impl OpenHandsCore {
                 *state = format!("running: {}", task_clone);
                 Ok::<String, String>(format!("completed: {}", task_clone))
             })
-        }).join().unwrap()
+        })
+        .join()
+        .unwrap()
     }
 
     /// Streamed execution mode (returns chunks)
-    pub async fn run_streamed(&self, task: &str) -> Result<tokio::sync::mpsc::Receiver<String>, String> {
+    pub async fn run_streamed(
+        &self,
+        task: &str,
+    ) -> Result<tokio::sync::mpsc::Receiver<String>, String> {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
         let task_clone = task.to_string();
 

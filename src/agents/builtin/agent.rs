@@ -989,15 +989,16 @@ impl Agent {
             }
 
             // Master Catalog B.4: Context Management (Preventing Context Rot): Compaction
-            if cfg.enable_context_compaction
-                && turn_input_tokens > cfg.compaction_threshold_tokens
+            if cfg.enable_context_compaction && turn_input_tokens > cfg.compaction_threshold_tokens
             {
                 match crate::compaction::compact_context(&messages, &cfg.model, &self.llm).await {
                     Ok(compacted) => {
                         messages = compacted;
                     }
                     Err(e) => {
-                        on_event(AgentEvent::TaskError { error: format!("Context compaction failed: {}", e) });
+                        on_event(AgentEvent::TaskError {
+                            error: format!("Context compaction failed: {}", e),
+                        });
                     }
                 }
             }
@@ -3181,21 +3182,30 @@ impl Agent {
         let mut dynamic_sona_matcher = self.sona_matcher.clone();
         if cfg.enable_sona_patterns && dynamic_sona_matcher.is_none() {
             if let Some(path_str) = &cfg.sona_patterns_path {
-                if let Ok(loaded) = crate::sona_patterns::PatternMatcher::load_from_disk(path_str).await {
+                if let Ok(loaded) =
+                    crate::sona_patterns::PatternMatcher::load_from_disk(path_str).await
+                {
                     dynamic_sona_matcher = Some(Arc::new(tokio::sync::Mutex::new(loaded)));
                 } else {
-                    dynamic_sona_matcher = Some(Arc::new(tokio::sync::Mutex::new(crate::sona_patterns::PatternMatcher::new())));
+                    dynamic_sona_matcher = Some(Arc::new(tokio::sync::Mutex::new(
+                        crate::sona_patterns::PatternMatcher::new(),
+                    )));
                 }
             }
         }
 
-        if cfg.long_term_memory.is_some() || (cfg.enable_sona_patterns && self.sona_matcher.is_none()) {
+        if cfg.long_term_memory.is_some()
+            || (cfg.enable_sona_patterns && self.sona_matcher.is_none())
+        {
             owned_agent = Agent {
                 event_stream: None,
                 llm: self.llm.clone(),
                 tools: self.tools.clone(),
                 progress: self.progress.clone(),
-                memory_store: cfg.long_term_memory.clone().or_else(|| self.memory_store.clone()),
+                memory_store: cfg
+                    .long_term_memory
+                    .clone()
+                    .or_else(|| self.memory_store.clone()),
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
                 native_env: self.native_env.clone(),
@@ -4666,12 +4676,16 @@ impl Agent {
             if final_cfg.enable_context_compaction
                 && turn_input_tokens > final_cfg.compaction_threshold_tokens
             {
-                match crate::compaction::compact_context(&messages, &final_cfg.model, &self.llm).await {
+                match crate::compaction::compact_context(&messages, &final_cfg.model, &self.llm)
+                    .await
+                {
                     Ok(compacted) => {
                         messages = compacted;
                     }
                     Err(e) => {
-                        on_event(AgentEvent::TaskError { error: format!("Context compaction failed: {}", e) });
+                        on_event(AgentEvent::TaskError {
+                            error: format!("Context compaction failed: {}", e),
+                        });
                     }
                 }
             }
@@ -11253,7 +11267,8 @@ mod fail_fast_tests {
             async fn chat(
                 &self,
                 _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
+            {
                 let mut c = self.call_count.lock().await;
                 *c += 1;
 
@@ -11293,7 +11308,10 @@ mod fail_fast_tests {
         struct MockReadOnlyExecutor;
         #[async_trait::async_trait]
         impl ohc_builtin_agent_tools::ToolExecutor for MockReadOnlyExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+            async fn execute(
+                &self,
+                _args: serde_json::Value,
+            ) -> Result<String, crate::types::ToolError> {
                 Ok("read".to_string())
             }
         }
@@ -11307,7 +11325,9 @@ mod fail_fast_tests {
         };
 
         let mut agent = Agent::new(client, vec![tool]);
-        agent.sona_matcher = Some(Arc::new(tokio::sync::Mutex::new(crate::sona_patterns::PatternMatcher::new())));
+        agent.sona_matcher = Some(Arc::new(tokio::sync::Mutex::new(
+            crate::sona_patterns::PatternMatcher::new(),
+        )));
 
         let mut cfg = AgentRunConfig::default();
         cfg.enable_sona_patterns = true;
@@ -11322,7 +11342,9 @@ mod fail_fast_tests {
         assert!(res.is_ok());
 
         // Now check if a pattern was recorded and saved
-        let loaded_matcher = crate::sona_patterns::PatternMatcher::load_from_disk(&sona_path_str).await.unwrap();
+        let loaded_matcher = crate::sona_patterns::PatternMatcher::load_from_disk(&sona_path_str)
+            .await
+            .unwrap();
         let _patterns = loaded_matcher.get_patterns();
 
         // Second run, we should see the SONA prompt injected
@@ -11333,7 +11355,8 @@ mod fail_fast_tests {
             async fn chat(
                 &self,
                 _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
+            {
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("Done processing immediately."),
                     usage: crate::types::Usage::default(),

@@ -1,5 +1,5 @@
-pub mod compaction;
 pub mod claude_subagents;
+pub mod compaction;
 pub mod omni_context;
 pub mod plugins;
 pub mod scalable_multi_agent;
@@ -30,8 +30,8 @@ pub use ohc_builtin_agent_core::*;
 pub mod agent;
 pub mod human_in_loop;
 pub mod observability;
-pub mod perplexity;
 pub mod observation_masking;
+pub mod perplexity;
 pub mod tools_gating;
 pub mod verification_loops;
 

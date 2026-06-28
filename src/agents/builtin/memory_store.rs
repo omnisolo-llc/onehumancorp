@@ -851,10 +851,11 @@ impl VectorRepository {
                         let records: Vec<MinimalRecord> = rows
                             .into_iter()
                             .map(|row| {
-                                let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
-                                    String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
-                                        .unwrap_or_default()
-                                });
+                                let emb_str: String =
+                                    row.try_get("embedding").unwrap_or_else(|_| {
+                                        String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
+                                            .unwrap_or_default()
+                                    });
                                 let mut embedding: Vec<f32> =
                                     serde_json::from_str(&emb_str).unwrap_or_default();
 
@@ -3812,7 +3813,11 @@ mod get_and_delete_tests {
 
         // After upsert, should be retrieved
         repo.upsert(&record).await.unwrap();
-        let retrieved = repo.get_by_id("test_id_1").await.unwrap().expect("Record should exist");
+        let retrieved = repo
+            .get_by_id("test_id_1")
+            .await
+            .unwrap()
+            .expect("Record should exist");
         assert_eq!(retrieved.id, "test_id_1");
         assert_eq!(retrieved.content, "test content");
 
@@ -3943,11 +3948,26 @@ mod get_and_delete_tests {
 
         repo.prune_stale(threshold_time).await.unwrap();
 
-        assert!(repo.get_by_id("prune_stale").await.unwrap().is_none(), "Should have pruned stale task summary");
-        assert!(repo.get_by_id("prune_unreliable").await.unwrap().is_none(), "Should have pruned unreliable record");
+        assert!(
+            repo.get_by_id("prune_stale").await.unwrap().is_none(),
+            "Should have pruned stale task summary"
+        );
+        assert!(
+            repo.get_by_id("prune_unreliable").await.unwrap().is_none(),
+            "Should have pruned unreliable record"
+        );
 
-        assert!(repo.get_by_id("keep_override").await.unwrap().is_some(), "Should have kept override record");
-        assert!(repo.get_by_id("keep_ref_count").await.unwrap().is_some(), "Should have kept highly referenced record");
-        assert!(repo.get_by_id("keep_wrong_type").await.unwrap().is_some(), "Should have kept non-task-summary old record");
+        assert!(
+            repo.get_by_id("keep_override").await.unwrap().is_some(),
+            "Should have kept override record"
+        );
+        assert!(
+            repo.get_by_id("keep_ref_count").await.unwrap().is_some(),
+            "Should have kept highly referenced record"
+        );
+        assert!(
+            repo.get_by_id("keep_wrong_type").await.unwrap().is_some(),
+            "Should have kept non-task-summary old record"
+        );
     }
 }

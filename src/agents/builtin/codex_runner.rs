@@ -186,12 +186,26 @@ pub struct AppServer {
 
 impl AppServer {
     pub fn new(runner: Arc<Runner>) -> Self {
-        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(crate::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string())))));
-        Self { runner, marketplace }
+        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(
+            crate::tools::marketplace::HttpMarketplaceProvider::new(
+                &std::env::var("AGENT_MARKETPLACE_URL")
+                    .unwrap_or_else(|_| "https://marketplace.example.com".to_string()),
+            ),
+        )));
+        Self {
+            runner,
+            marketplace,
+        }
     }
 
-    pub fn new_with_marketplace(runner: Arc<Runner>, marketplace: Arc<crate::tools::marketplace::MarketplaceClient>) -> Self {
-        Self { runner, marketplace }
+    pub fn new_with_marketplace(
+        runner: Arc<Runner>,
+        marketplace: Arc<crate::tools::marketplace::MarketplaceClient>,
+    ) -> Self {
+        Self {
+            runner,
+            marketplace,
+        }
     }
 
     pub async fn handle_request(&self, req_str: &str) -> String {
@@ -322,9 +336,24 @@ impl AppServer {
             };
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
-            let name = req.params.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let description = req.params.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let author = req.params.get("role").and_then(|v| v.as_str()).unwrap_or("").to_string(); // mapping role to author
+            let name = req
+                .params
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let description = req
+                .params
+                .get("description")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let author = req
+                .params
+                .get("role")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(); // mapping role to author
 
             let new_agent = crate::tools::marketplace::MarketplaceAgent {
                 id: "".to_string(),
@@ -1160,7 +1189,9 @@ mod tests {
         });
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Arc::new(Runner::new(agent));
-        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(crate::tools::marketplace::test_utils::MockMarketplaceProvider)));
+        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(
+            crate::tools::marketplace::test_utils::MockMarketplaceProvider,
+        )));
         let app_server = AppServer::new_with_marketplace(runner, marketplace);
 
         let req_json = r#"{"jsonrpc": "2.0", "id": "1", "method": "run_agent", "params": {"message": "hello"}}"#;
