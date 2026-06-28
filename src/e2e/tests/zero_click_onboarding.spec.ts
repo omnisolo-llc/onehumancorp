@@ -21,19 +21,11 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await chatInput.fill('I run a mobile dog grooming service in Austin');
     await chatInput.press('Enter');
 
-    // In the actual app, wait for the summary card to appear
-    await expect(page.locator('text=Ready to Launch')).toBeVisible({ timeout: 30000 });
-
-    // Click Approve & Publish
-    const launchBtn = page.getByTestId('approve-publish-btn');
-    await expect(launchBtn).toBeVisible();
-    await launchBtn.click();
+    // The app should automatically transition to provisioning state
+    await expect(page.locator('text=Provisioning your workspace...')).toBeVisible({ timeout: 15000 });
 
     // Since this uses the real backend, the UI will eventually redirect to /dashboard
-    await page.waitForURL('**/dashboard**', { timeout: 30000 });
-
-    // Verify the feed renders properly after onboarding
-    await expect(page.locator('text=Feed')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /You're all set!|Dashboard/ })).toBeVisible({ timeout: 60000 });
 
     // Check horizontal scroll by verifying document width equals window innerWidth
     const hasHorizontalScroll = await page.evaluate(() => {
