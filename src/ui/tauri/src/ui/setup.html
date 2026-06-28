@@ -2839,12 +2839,19 @@
         // Merge from localStorage as fallback
         const stored = localStorage.getItem("onboardingState");
         if (stored) {
-          state = { ...state, ...JSON.parse(stored) };
+          const parsed = JSON.parse(stored);
+          state = { ...state, ...parsed };
+          if (parsed.businessName && !parsed.business_name) {
+            state.business_name = parsed.businessName;
+          }
         }
 
         // Merge backend state, taking priority
         if (loadedState && Object.keys(loadedState).length > 0) {
           state = { ...state, ...loadedState };
+          if (loadedState.businessName && !loadedState.business_name) {
+             state.business_name = loadedState.businessName;
+          }
           localStorage.setItem("onboardingState", JSON.stringify(state));
         }
 
@@ -3030,6 +3037,7 @@
       function saveCurrentState() {
         state.categories = inputs.categories.value;
         state.business_name = inputs.name.value;
+        state.businessName = inputs.name.value; // Sync for E2E
         state.tagline = inputs.tagline.value;
         state.assistant_name = inputs.assistant_name.value;
         state.assistant_tone = inputs.assistant_tone.value;
