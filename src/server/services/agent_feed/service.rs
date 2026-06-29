@@ -38,12 +38,11 @@ impl AgentFeedService {
             _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
         }?;
 
-        let mut proposed_action = serde_json::json!({});
-        if let Ok(parsed) = serde_json::from_str::<Value>(&llm_res) {
-             proposed_action = parsed;
+        let proposed_action = if let Ok(parsed) = serde_json::from_str::<Value>(&llm_res) {
+             parsed
         } else {
-             proposed_action = serde_json::json!({"draft_action": llm_res, "intent": "unknown"});
-        }
+             serde_json::json!({"draft_action": llm_res, "intent": "unknown"})
+        };
 
         let item = AgentFeedItem {
             id: Uuid::new_v4().to_string(),

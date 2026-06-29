@@ -1,4 +1,5 @@
-use sqlx::{PgPool, FromRow};
+use sqlx::FromRow;
+use sqlx::PgPool;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};

@@ -48,7 +48,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   setEditQuoteScope,
   handleDecision,
 }) => {
-  if ((approval.proposed_action || approval.context_payload)?.feature_type === "shift_reassignment") {
+  const actionPayload = approval.proposed_action || approval.context_payload || {};
+  if (actionPayload?.feature_type === "shift_reassignment") {
     return (
       <ShiftReassignmentCard
         approval={approval}
@@ -61,7 +62,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   return (
     <div
       key={approval.id}
-      className="glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal"
+      className="glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-300 hover:bg-white/80 dark:hover:bg-gray-800/80 overflow-hidden break-words whitespace-normal"
       data-testid={`triage-card-${approval.id}`}
     >
       <div className="flex flex-col gap-1">
@@ -87,7 +88,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           )}
         </div>
         <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1 tracking-wide break-words">
-          {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" ?
+          {actionPayload?.feature_type === "ambassador_reply" ?
             "Action Required: Approve Reply"
             : ((approval as any).description ||
             approval.context_payload?.description ||
@@ -96,25 +97,25 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             approval.proposed_action?.action_type ||
             approval.event_source)}
         </h3>
-        {((approval.proposed_action || approval.context_payload)?.context ||
-          (approval.proposed_action || approval.context_payload)
+        {(actionPayload?.context ||
+          actionPayload
             ?.remaining_stock !== undefined ||
-          (approval.proposed_action || approval.context_payload)
+          actionPayload
             ?.feature_type === "quote_draft" ||
-          (approval.proposed_action || approval.context_payload)
+          actionPayload
             ?.feature_type === "social_post_draft" ||
-          (approval.proposed_action || approval.context_payload)
+          actionPayload
             ?.feature_type === "ambassador_reply" ||
-          (approval.proposed_action || approval.context_payload)
+          actionPayload
             ?.feature_type === "incident_resolution" ||
-          (approval.proposed_action || approval.context_payload)
+          actionPayload
             ?.feature_type === "booking_draft" ||
-          (approval.proposed_action || approval.context_payload)
+          actionPayload
             ?.feature_type === "instagram_dm" ||
-          (approval.proposed_action || approval.context_payload)
+          actionPayload
             ?.feature_type === "subscription_replenishment") && (
           <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "incident_resolution" && (
               <div
                 className="mb-4 p-4 rounded-[16px] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3"
@@ -137,13 +138,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   CRITICAL INCIDENT
                 </div>
                 <p className="text-gray-700 dark:text-gray-300 text-sm break-words">
-                  {(approval.proposed_action || approval.context_payload)
+                  {actionPayload
                     ?.description ||
                     "An operational issue requires immediate attention."}
                 </p>
               </div>
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "onboarding_welcome" && (
               <div
                 className="mb-4 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
@@ -172,15 +173,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </p>
               </div>
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "instagram_dm" && (
               <InstagramDMCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} onDismiss={() => handleDecision(approval.id, false, undefined, approval.event_source)} />
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "ambassador_reply" && (
               <AmbassadorReplyCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} onDismiss={() => handleDecision(approval.id, false, undefined, approval.event_source)} />
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "review" && (
               <ReviewFeedCard
                  review={approval.context_payload?.review}
@@ -193,7 +194,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                  }}
                />
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "order" && (
               <div className="mb-4 p-4 rounded-[16px] bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-yellow-600 font-semibold text-sm">
@@ -209,7 +210,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "triage" && (
               <div className="mb-4 p-4 rounded-[16px] bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm">
@@ -225,7 +226,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             )}
-                        {(approval.proposed_action || approval.context_payload)
+                        {actionPayload
               ?.feature_type === "proactive_ops" && (
               <div className="mb-4 p-4 rounded-[16px] bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 flex flex-col gap-3 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-[#FF9500]"></div>
@@ -246,7 +247,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "task" && (
               <div className="mb-4 p-4 rounded-[16px] bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-purple-600 font-semibold text-sm">
@@ -262,7 +263,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "autonomous_booking_quote" && (
               <div
                 className="mb-4 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
@@ -283,7 +284,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     />
                   </svg>
                   Draft quote and propose schedule for{" "}
-                  {(approval.proposed_action || approval.context_payload).service || "Emergency Handyman Service"}
+                  {actionPayload.service || "Emergency Handyman Service"}
                 </div>
 
                 {editingId === approval.id ? (
@@ -294,7 +295,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       <div className="flex flex-col gap-2">
                         <div className="text-sm text-gray-500 font-semibold">Proposed Schedule</div>
                         <div className="flex flex-wrap gap-2">
-                          {((approval.proposed_action || approval.context_payload).proposed_slots || []).map((slot: any, idx: number) => {
+                          {(actionPayload.proposed_slots || []).map((slot: any, idx: number) => {
                             const timeStr = slot.start_time ? new Date(slot.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false}) : "14:00";
                             return (
                               <button key={idx} className="px-3 py-1.5 rounded-lg border border-[#0066FF] text-[#0066FF] bg-[#0066FF]/10 text-sm font-medium">
@@ -302,7 +303,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                               </button>
                             );
                           })}
-                          {!((approval.proposed_action || approval.context_payload).proposed_slots?.length) && (
+                          {!(actionPayload.proposed_slots?.length) && (
                             <button className="px-3 py-1.5 rounded-lg border border-[#0066FF] text-[#0066FF] bg-[#0066FF]/10 text-sm font-medium">
                               14:00
                             </button>
@@ -313,7 +314,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-3 rounded-lg mt-2">
                         <span className="text-sm text-gray-500">Total Price</span>
                         <span className="font-bold text-lg text-gray-900 dark:text-gray-100" data-testid="modal-quote-total">
-                          ${Number((approval.proposed_action || approval.context_payload).suggested_price || 180).toFixed(2)}
+                          ${Number(actionPayload.suggested_price || 180).toFixed(2)}
                         </span>
                       </div>
 
@@ -359,7 +360,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 )}
               </div>
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "quote_draft" && (
               <div
                 className="mb-4 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
@@ -380,13 +381,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     />
                   </svg>
                   Draft Quote:{" "}
-                  {(approval.proposed_action || approval.context_payload)
+                  {actionPayload
                     .service || "Plumbing Fix"}{" "}
                   for Customer
                 </div>
                 <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium break-words">
                   {
-                    (approval.proposed_action || approval.context_payload)
+                    actionPayload
                       .customer_inquiry
                   }
                 </div>
@@ -402,7 +403,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
                         $
                         {
-                          (approval.proposed_action || approval.context_payload)
+                          actionPayload
                             .suggested_price
                         }
                       </span>
@@ -413,7 +414,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       </span>
                       <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
                         {
-                          (approval.proposed_action || approval.context_payload)
+                          actionPayload
                             .scope
                         }
                       </span>
@@ -424,7 +425,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       </span>
                       <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
                         {
-                          (approval.proposed_action || approval.context_payload)
+                          actionPayload
                             .suggested_time
                         }
                       </span>
@@ -433,7 +434,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             )}
-            {(approval.proposed_action || approval.context_payload)
+            {actionPayload
               ?.feature_type === "newsletter_draft" ? (
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center text-sm">
@@ -453,7 +454,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </div>
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100 leading-snug">
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .subject
                     }
                   </p>
@@ -467,14 +468,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   <p className="text-sm text-gray-700 dark:text-gray-300 italic line-clamp-3 leading-snug">
                     "
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .content_preview
                     }
                     "
                   </p>
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+            ) : actionPayload
                 ?.feature_type === "social_post_draft" ? (
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center text-sm">
@@ -492,16 +493,16 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </div>
                   <div className="text-xs text-gray-700 dark:text-gray-300 italic line-clamp-3">
                     "
-                    {(approval.proposed_action || approval.context_payload)
+                    {actionPayload
                       .instagram ||
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .tiktok ||
                       "Check out our new product!"}
                     "
                   </div>
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+            ) : actionPayload
                 ?.feature_type === "subscription_replenishment" ? (
               <div className="flex flex-col gap-2">
                 <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -512,7 +513,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     "Based on this customer's order history and the estimated consumption rate, they are due for a replenishment. Would you like me to generate a personalized checkout link and draft an email suggesting they refill?"}
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+            ) : actionPayload
                 ?.feature_type === "supply_order" ? (
               <>
                 <div className="flex justify-between items-center text-sm mb-1">
@@ -524,7 +525,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     data-testid="supply-order-stock"
                   >
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .remaining_stock
                     }{" "}
                     units
@@ -536,7 +537,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </span>
                   <span className="font-semibold text-gray-800 dark:text-gray-200">
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .est_runout_days
                     }{" "}
                     days
@@ -551,7 +552,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     data-testid="supply-order-quantity"
                   >
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .suggested_reorder_quantity
                     }{" "}
                     Units
@@ -563,12 +564,12 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </span>
                   <span className="font-semibold text-gray-800 dark:text-gray-200">
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .vendor_name
                     }{" "}
                     (
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .vendor_contact
                     }
                     )
@@ -581,14 +582,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   <div className="text-sm text-gray-800 dark:text-gray-200 italic font-medium">
                     "
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .draft_message
                     }
                     "
                   </div>
                 </div>
               </>
-            ) : (approval.proposed_action || approval.context_payload)
+            ) : actionPayload
                 ?.feature_type === "stockout_restock_and_price" ? (
               <>
                 <div className="flex justify-between items-center text-sm mb-1">
@@ -598,7 +599,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
                     $
                     {Number(
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .old_price,
                     ).toFixed(2)}
                   </span>
@@ -613,7 +614,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   >
                     $
                     {Number(
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .new_price,
                     ).toFixed(2)}
                   </span>
@@ -627,7 +628,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     data-testid="stockout-reorder"
                   >
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .suggested_reorder_quantity
                     }{" "}
                     Units
@@ -635,7 +636,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
                 <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mt-2">
                   {
-                    (approval.proposed_action || approval.context_payload)
+                    actionPayload
                       .message
                   }
                 </div>
@@ -688,7 +689,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)?.context
+        ) : actionPayload?.context
                 ?.smart_pricing === true ? (
               <>
                 <div className="flex justify-between items-center text-sm mb-1">
@@ -698,7 +699,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
                     $
                     {Number(
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .context.old_price,
                     ).toFixed(2)}
                   </span>
@@ -713,7 +714,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   >
                     $
                     {Number(
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .context.new_price,
                     ).toFixed(2)}
                   </span>
@@ -727,13 +728,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     data-testid="smart-pricing-sales-projection"
                   >
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .context.sales_projection
                     }
                   </span>
                 </div>
               </>
-            ) : (approval.proposed_action || approval.context_payload)
+            ) : actionPayload
                 ?.feature_type === "incident_resolution" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
@@ -743,7 +744,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
                     {
                       (
-                        (approval.proposed_action || approval.context_payload)
+                        actionPayload
                           .actions || []
                       ).length
                     }{" "}
@@ -752,7 +753,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
                 <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
                 {(
-                  (approval.proposed_action || approval.context_payload)
+                  actionPayload
                     .actions || []
                 ).map((action: any, idx: number) => (
                   <div key={idx} className="flex flex-col mb-2">
@@ -765,7 +766,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </div>
                 ))}
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+            ) : actionPayload
                 ?.feature_type === "ambassador_reply" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
@@ -773,7 +774,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     Context:
                   </span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {(approval.proposed_action || approval.context_payload)
+                    {actionPayload
                       .source || "Message"}
                   </span>
                 </div>
@@ -783,13 +784,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mt-1">
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .generated_response
                     }
                   </span>
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+            ) : actionPayload
                 ?.feature_type === "quote_draft" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
@@ -797,7 +798,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     Context:
                   </span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {(approval.proposed_action || approval.context_payload)
+                    {actionPayload
                       .customer_inquiry || "Client Inquiry"}
                   </span>
                 </div>
@@ -806,9 +807,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     Scope:
                   </span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {(approval.proposed_action || approval.context_payload)
+                    {actionPayload
                       .scope ||
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .service}
                   </span>
                 </div>
@@ -817,7 +818,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     Timeline:
                   </span>
                   <span className="font-semibold text-gray-900 dark:text-gray-100">
-                    {(approval.proposed_action || approval.context_payload)
+                    {actionPayload
                       .suggested_time || "TBD"}
                   </span>
                 </div>
@@ -828,9 +829,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   <span className="font-semibold text-green-600 dark:text-green-400">
                     $
                     {Number(
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         .suggested_price ||
-                        (approval.proposed_action || approval.context_payload)
+                        actionPayload
                           .price ||
                         0,
                     ).toFixed(2)}
@@ -839,13 +840,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             ) : (
               <>
-                {(approval.proposed_action || approval.context_payload)?.context
+                {actionPayload?.context
                   ?.weekly_health_report === true ? (
                   <div className="flex flex-col gap-2">
                     <div className="text-sm text-gray-700 dark:text-gray-300">
                       <span className="font-semibold">Summary:</span>{" "}
                       {
-                        (approval.proposed_action || approval.context_payload)
+                        actionPayload
                           .context.summary
                       }
                     </div>
@@ -854,14 +855,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                         Suggestion:
                       </span>{" "}
                       {
-                        (approval.proposed_action || approval.context_payload)
+                        actionPayload
                           .context.actionable_suggestion
                       }
                     </div>
                   </div>
                 ) : (
                   <>
-                    {(approval.proposed_action || approval.context_payload)
+                    {actionPayload
                       ?.context?.abandoned_carts_count !== undefined && (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-500 dark:text-gray-400">
@@ -877,7 +878,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                         </span>
                       </div>
                     )}
-                    {(approval.proposed_action || approval.context_payload)
+                    {actionPayload
                       ?.context?.potential_revenue !== undefined && (
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-500 dark:text-gray-400">
@@ -894,7 +895,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                         </span>
                       </div>
                     )}
-                    {(approval.proposed_action || approval.context_payload)
+                    {actionPayload
                       ?.remaining_stock !== undefined && (
                       <div className="flex flex-col gap-2">
                         <div className="flex justify-between items-center text-sm">
@@ -947,7 +948,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
       </div>
 
       <div className="flex flex-col gap-3 w-full mt-2">
-        {(approval.proposed_action || approval.context_payload)
+        {actionPayload
           ?.feature_type === "onboarding_welcome" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <a
@@ -974,7 +975,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "booking_draft" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
@@ -1022,7 +1023,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   <span>
                     0:10 AI Summary (
                     {
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         ?.caller_phone
                     }
                     )
@@ -1049,7 +1050,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   onClick={() => {
                     setEditingId(approval.id);
                     setEditContent(
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         ?.summary || "",
                     );
                   }}
@@ -1077,7 +1078,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             </>
           )
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "incident_resolution" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1111,7 +1112,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "subscription_replenishment" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1144,7 +1145,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "subscription_replenishment" ? (
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center">
@@ -1156,7 +1157,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               <span className="font-medium">1-Click Repurchase Link</span>
             </div>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "supply_order" ? (
           <>
             <button
@@ -1179,7 +1180,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 onClick={() => {
                   setEditingId(approval.id);
                   setEditContent(
-                    (approval.proposed_action || approval.context_payload)
+                    actionPayload
                       .draft_message,
                   );
                 }}
@@ -1206,7 +1207,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
             </div>
           </>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "newsletter_draft" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1238,7 +1239,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Skip this week
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "social_post_draft" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1272,7 +1273,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "supply_order" ? (
           <>
             <div className="flex justify-between items-center text-sm mb-1">
@@ -1284,7 +1285,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 data-testid="supply-order-stock"
               >
                 {
-                  (approval.proposed_action || approval.context_payload)
+                  actionPayload
                     .remaining_stock
                 }{" "}
                 units
@@ -1296,7 +1297,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </span>
               <span className="font-semibold text-gray-800 dark:text-gray-200">
                 {
-                  (approval.proposed_action || approval.context_payload)
+                  actionPayload
                     .est_runout_days
                 }{" "}
                 days
@@ -1311,7 +1312,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 data-testid="supply-order-quantity"
               >
                 {
-                  (approval.proposed_action || approval.context_payload)
+                  actionPayload
                     .suggested_reorder_quantity
                 }{" "}
                 Units
@@ -1321,12 +1322,12 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               <span className="text-gray-500 dark:text-gray-400">Vendor:</span>
               <span className="font-semibold text-gray-800 dark:text-gray-200">
                 {
-                  (approval.proposed_action || approval.context_payload)
+                  actionPayload
                     .vendor_name
                 }{" "}
                 (
                 {
-                  (approval.proposed_action || approval.context_payload)
+                  actionPayload
                     .vendor_contact
                 }
                 )
@@ -1339,14 +1340,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               <div className="text-sm text-gray-800 dark:text-gray-200 italic font-medium">
                 "
                 {
-                  (approval.proposed_action || approval.context_payload)
+                  actionPayload
                     .draft_message
                 }
                 "
               </div>
             </div>
           </>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "stockout_restock_and_price" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1380,18 +1381,18 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : ((approval.proposed_action || approval.context_payload)
+        ) : (actionPayload
             ?.feature_type === "review" ||
-            (approval.proposed_action || approval.context_payload)
+            actionPayload
             ?.feature_type === "order" ||
-            (approval.proposed_action || approval.context_payload)
+            actionPayload
             ?.feature_type === "triage" ||
-            (approval.proposed_action || approval.context_payload)
+            actionPayload
             ?.feature_type === "task" ||
-            (approval.proposed_action || approval.context_payload)
+            actionPayload
             ?.feature_type === "proactive_ops") ? (
            null
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "ambassador_reply" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
@@ -1449,9 +1450,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 onClick={() => {
                   setEditingId(approval.id);
                   setEditContent(
-                    (approval.proposed_action || approval.context_payload)
+                    actionPayload
                       ?.generated_response ||
-                      (approval.proposed_action || approval.context_payload)
+                      actionPayload
                         ?.draft_reply ||
                       "",
                   );
@@ -1479,7 +1480,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
             </div>
           )
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "quote_draft" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
@@ -1555,7 +1556,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
               <button
                 onClick={() => {
-                  window.location.href = `/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`;
+                  window.location.href = `/quoting?id=${actionPayload?.quote_id || approval.id}`;
                 }}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit Draft"
@@ -1565,7 +1566,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
             </div>
           )
-        ) : (approval.proposed_action || approval.context_payload)?.context
+        ) : actionPayload?.context
             ?.smart_pricing === true ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1599,7 +1600,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)?.context
+        ) : actionPayload?.context
             ?.weekly_health_report === true ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1633,7 +1634,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.remaining_stock !== undefined ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1667,7 +1668,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+        ) : actionPayload
             ?.feature_type === "quote_draft" ? (
           <>
             <button
@@ -1687,7 +1688,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </button>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <a
-                href={`/quotes/${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
+                href={`/quotes/${actionPayload?.quote_id || approval.id}`}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Edit Draft"
                 data-testid="edit-proposal"
@@ -1768,9 +1769,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 onClick={() => {
                   setEditingId(approval.id);
                   const textToEdit =
-                    (approval.proposed_action || approval.context_payload)
+                    actionPayload
                       ?.generated_response ||
-                    (approval.proposed_action || approval.context_payload)
+                    actionPayload
                       ?.draft_reply ||
                     approval.context_payload?.description ||
                     approval.proposed_action?.message ||

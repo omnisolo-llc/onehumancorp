@@ -502,9 +502,9 @@ Image provided: ${instantImageUrl}`;
       updateState({ businessDescription: bio });
       updateState({ categories: intakeData.categories || ['physical'] });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '0.00' });
-      updateState({ location: intakeData.location || 'Local' });
-      updateState({ targetAudience: intakeData.target_audience || 'General' });
+      updateState({ firstProductPrice: (intakeData.initial_products?.[0]?.price || '0.00').toString() });
+      updateState({ location: (intakeData as any).location || 'Local' });
+      updateState({ targetAudience: (intakeData as any).target_audience || 'General' });
       updateState({ adminName: intakeData.business_name || 'Admin' });
       updateState({ domainChoice: 'subdomain' });
       updateState({ websiteTemplate: 'auto' });
@@ -534,11 +534,11 @@ Image provided: ${instantImageUrl}`;
           admin_password: defaultAdminPassword,
           website_template: 'auto',
           first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
-          first_product_price: intakeData.initial_products?.[0]?.price || '0.00',
+          first_product_price: (intakeData.initial_products?.[0]?.price || '0.00').toString(),
           domain_choice: 'subdomain',
           price_type: 'fixed',
-          location: intakeData.location || 'Local',
-          target_audience: intakeData.target_audience || 'General',
+          location: (intakeData as any).location || 'Local',
+          target_audience: (intakeData as any).target_audience || 'General',
           ai_agents: [],
           ai_auto_respond: true,
           initial_products: intakeData.initial_products || []
