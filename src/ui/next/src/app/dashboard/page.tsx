@@ -350,6 +350,7 @@ export default function Dashboard() {
       subtitle="Network-style command center for your store operations."
       statusItems={statusItems}
       actions={[
+        { label: "Sell In Person", href: "/pos/terminal" },
         { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
         { label: "New Product", href: "/products/new", primary: true },
       ]}
