@@ -516,25 +516,15 @@ mod security_tests {
 
         let repo = PgUserRepository::new(pool.clone());
 
-        // Since we can't reliably override the global `is_multitenant_mode()` inline here
-        // without unsafe/mocking because it returns a reference to a static OnceLock, we simulate the query generation logic.
+        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+            let is_multitenant = is_multitenant_mode();
+            let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+            assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
-        // Cloud multitenant mode should NOT allow bypassing.
-        let old_val = std::env::var("OHC_MULTITENANT").ok();
-        unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
-        let is_multitenant = is_multitenant_mode();
-        let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-
-        // Ensure the condition strictly evaluates to false when multitenant is true.
-        assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
-
-        let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err(), "Must reject system id");
-        if let Some(ref val) = old_val {
-            unsafe { std::env::set_var("OHC_MULTITENANT", val); }
-        } else {
-            unsafe { std::env::remove_var("OHC_MULTITENANT"); }
-        }
+            let res = repo.get_by_id("dummy_id", "system").await;
+            assert!(res.is_err(), "Must reject system id in multitenant mode");
+            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
+        }).await;
     }
 
     #[tokio::test]
