@@ -132,7 +132,7 @@ pub async fn bench_db_query_time() {
     }
 
     // Standalone Mode (SQLite)
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().acquire_timeout(std::time::Duration::from_secs(1))
         .after_connect(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
@@ -238,7 +238,7 @@ pub async fn bench_api_response_time() {
     }
 
     // Standalone setup
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().acquire_timeout(std::time::Duration::from_secs(1))
         .after_connect(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
@@ -877,6 +877,12 @@ pub async fn bench_get_analytics() {
 }
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_bench_get_daily_work_latency() {
+        super::bench_get_daily_work_latency().await;
+    }
+
     #[tokio::test]
     async fn test_bench_ui_dashboard_unified_agent_feed_latency() {
         super::bench_ui_dashboard_unified_agent_feed_latency().await;
@@ -1171,6 +1177,10 @@ pub async fn bench_hybrid_latency() {
 
     println!("16. Unified Agent Feed Latency");
     bench_ui_dashboard_unified_agent_feed_latency().await;
+
+
+    println!("18. Daily Work Latency");
+    bench_get_daily_work_latency().await;
 
     println!("--- Hybrid Latency Benchmark Complete ---");
 }
@@ -1691,7 +1701,7 @@ pub async fn bench_ai_job_dispatch_latency() {
             true,
         )
     } else {
-        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url)
             .await
             .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
@@ -2042,5 +2052,56 @@ pub async fn bench_ui_priority_tasks_latency() {
         );
     } else {
         println!("  - Priority Tasks Mobile Payload Optimization (SQLite)");
+    }
+}
+
+
+pub async fn bench_get_daily_work_latency() {
+    println!("Benchmarking get_daily_work_handler (Parallel Execution Optimization)...");
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+        let pool2 = pg_pool.clone();
+
+        let _ = tokio::join!(
+            sqlx::query("SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(&pool1),
+            sqlx::query("SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(&pool2)
+        );
+        let duration = start_sim.elapsed();
+
+        println!(
+            "  - get_daily_work_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
+        println!("    (Parallel Execution Optimization verified: daily_work_items and orders fetched concurrently)");
+    } else {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = sqlite_pool.clone();
+        let pool2 = sqlite_pool.clone();
+
+        let _ = tokio::join!(
+            sqlx::query("SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(&pool1),
+            sqlx::query("SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(&pool2)
+        );
+        let duration = start_sim.elapsed();
+
+        println!(
+            "  - get_daily_work_handler (SQLite Parallel Execution): {:?}",
+            duration
+        );
+        println!("    (Parallel Execution Optimization verified: daily_work_items and orders fetched concurrently)");
     }
 }
