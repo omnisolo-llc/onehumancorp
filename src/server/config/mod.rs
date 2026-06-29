@@ -204,14 +204,14 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                         #[cfg(unix)] builder.mode(0o700);
                         let _ = builder.create(parent);
                     }
-                match OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .create(true)
-                    .truncate(false)
-                    .mode(0o600)
-                    .open(db_path)
-                {
+                let mut opts = OpenOptions::new();
+                opts.read(true).write(true).create(true).truncate(false).mode(0o600);
+                #[cfg(target_os = "linux")]
+                opts.custom_flags(0x00020000); // O_NOFOLLOW
+                #[cfg(target_os = "macos")]
+                opts.custom_flags(0x0100); // O_NOFOLLOW
+
+                match opts.open(db_path) {
                     Ok(file) => {
                         if let Ok(metadata) = file.metadata() {
                             let mut perms = metadata.permissions();
