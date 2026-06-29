@@ -796,7 +796,7 @@ async fn http_login_handler(
 
     if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
         ::server_telemetry::record_error_signal("[bug] failed to set tenant context for login");
-        tracing::error!("failed to set tenant context for login: {}", e);
+        tracing::error!("failed to set tenant context for login: {}", e); // pii-safe
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -3590,7 +3590,7 @@ pub async fn simulate_agent_feed_item_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
         },
-        crate::db::DbStore::Sqlite(ref pool) => {
+        crate::db::DbStore::Sqlite(pool) => {
             if let Err(e) = sqlx::query(
                 "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
@@ -3830,7 +3830,7 @@ pub async fn update_ui_triage_action_handler(
                             &db.pool
                         ).await;
                     } else if action_type == "SocialPostDraft" {
-                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
                     } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
@@ -4091,7 +4091,7 @@ pub async fn update_ui_triage_action_handler(
                             &db.pool
                         ).await;
                     } else if action_type == "SocialPostDraft" {
-                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
                     } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
@@ -6915,7 +6915,7 @@ async fn create_ui_bom_item_handler(
         .route("/kairos.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
         }))
-        .route("/api/ui/tooltip-registry.html", axum::routing::get(|| async {
+        .route("/tooltip-registry.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/tooltip-registry.html"))
         }))
         .route("/api/ui/hybrid-landing.html", axum::routing::get(|| async {

@@ -28,7 +28,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     }
 
     // Find the dynamic approval card (which we've mapped using data-testid or just looking for the buttons)
-    const approveBtn = page.getByTestId('approve-proposal').first();
+    const approveBtn = page.getByTestId('feed-approve-btn').first();
     const editBtn = page.getByTestId('edit-proposal').first();
 
     // In case there are no items to approve, we will skip the rest of the assertions safely.
@@ -60,7 +60,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Ensure we have some items
-    const approveBtn = page.getByTestId('approve-proposal').first();
+    const approveBtn = page.getByTestId('feed-approve-btn').first();
     const isVisible = await approveBtn.isVisible({ timeout: 15000 }).catch(() => false);
 
     if (isVisible) {
@@ -130,7 +130,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const approveBtn = page.getByTestId('approve-proposal').first();
+    const approveBtn = page.getByTestId('feed-approve-btn').first();
     const editBtn = page.getByTestId('edit-proposal').first();
 
     if (await editBtn.isVisible({ timeout: 10000 }).catch(() => false)) {

@@ -2,9 +2,20 @@ import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { InteractiveWalkthrough } from './Walkthrough';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 
 describe('Walkthrough Component', () => {
+  let originalEnv: string | undefined;
+
+  beforeAll(() => {
+    originalEnv = process.env.NEXT_PUBLIC_E2E;
+    process.env.NEXT_PUBLIC_E2E = 'false';
+  });
+
+  afterAll(() => {
+    process.env.NEXT_PUBLIC_E2E = originalEnv;
+  });
+
   let mockGetElementById: any;
 
   beforeEach(() => {
@@ -178,5 +189,54 @@ describe('Walkthrough Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Step 1')).toBeInTheDocument();
     });
+  });
+
+  it('renders correctly with different positions', async () => {
+    const handleClose = vi.fn();
+
+    // Test Top
+    const { rerender } = render(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'Top Step', content: 'content', position: 'top' },
+        ]}
+        isOpen={true}
+        onClose={handleClose}
+      />
+    );
+    await waitFor(() => {
+      expect(screen.getByText('Top Step')).toBeInTheDocument();
+    });
+    let bubble = screen.getByRole('dialog');
+
+    // Test Left
+    rerender(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'Left Step', content: 'content', position: 'left' },
+        ]}
+        isOpen={true}
+        onClose={handleClose}
+      />
+    );
+    await waitFor(() => {
+      expect(screen.getByText('Left Step')).toBeInTheDocument();
+    });
+    bubble = screen.getByRole('dialog');
+
+    // Test Right
+    rerender(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'Right Step', content: 'content', position: 'right' },
+        ]}
+        isOpen={true}
+        onClose={handleClose}
+      />
+    );
+    await waitFor(() => {
+      expect(screen.getByText('Right Step')).toBeInTheDocument();
+    });
+    bubble = screen.getByRole('dialog');
   });
 });

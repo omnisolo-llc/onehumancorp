@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div id="help-widget-advanced-links" style="display: none;">
                     <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
-                    <a href="/api/ui/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
+                    <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
                 </div>
             </div>
         </div>

@@ -179,9 +179,7 @@ impl Actor for ToolActor {
                     let tool = agent.tools.iter().find(|t| t.name == tc.name);
                     match tool {
                         Some(t) => {
-                            let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
-                                t, tc, 2,
-                            )
+                            let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(t, tc, 2, &crate::agent::AgentRunConfig::default())
                             .await;
                             match res {
                                 Ok(content) => {

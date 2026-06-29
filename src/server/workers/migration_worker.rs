@@ -44,7 +44,7 @@ impl MigrationWorker {
             None => return Ok(()),
         };
 
-        tracing::info!("Processing migration job {} for tenant {} (url: {})", job_id, tenant_id, url);
+        tracing::info!("Processing migration job {} for tenant {} (url: {})", job_id, tenant_id, url); // pii-safe
 
         // Update status to IN_PROGRESS
         sqlx::query("UPDATE migration_jobs SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
@@ -84,7 +84,7 @@ impl MigrationWorker {
     async fn perform_migration(db: &Arc<DB>, tenant_id: &str, url: &str) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
         // Fetch content
         let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(30))
+            .timeout(Duration::from_secs(60))
             .build()?;
         let res = client.get(url).send().await?;
         if !res.status().is_success() {

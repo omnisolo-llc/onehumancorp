@@ -27,14 +27,14 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [tooltips, setTooltips] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    let mounted = true;
-    fetch("/api/tooltips")
+    const abortController = new AbortController();
+    fetch("/api/tooltips", { signal: abortController.signal })
       .then(r => {
         if (!r.ok) throw new Error("Failed to load tooltips");
         return r.json();
       })
       .then(data => {
-        if (mounted && data && typeof data === 'object' && !Array.isArray(data)) {
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
           const safeTooltips = Object.fromEntries(
             Object.entries(data).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
           );
@@ -42,8 +42,12 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           window.OHC_TOOLTIPS = safeTooltips;
         }
       })
-      .catch(() => {});
-    return () => { mounted = false; };
+      .catch((e) => {
+        if (e.name !== 'AbortError') {
+          console.error('Failed to load tooltips', e);
+        }
+      });
+    return () => { abortController.abort(); };
   }, []);
 
   const [windowWidth, setWindowWidth] = useState(1000);
