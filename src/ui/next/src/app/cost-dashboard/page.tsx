@@ -174,11 +174,11 @@ export default function CostDashboardPage() {
                   </div>
                   <div className="p-4 app-card ohc-growth-card glass-card">
                       <h3 className="text-sm font-medium text-gray-500">AI actions used this month</h3>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null && myPlanData.ai_actions_limit > 0 ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 app-card ohc-growth-card glass-card">
                       <h3 className="text-sm font-medium text-gray-500">Storage used</h3>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{formatStorage(myPlanData?.storage_used_bytes || 0)} <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${formatStorage(myPlanData.storage_limit_bytes)}` : '/ Unlimited'}</span></p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{formatStorage(myPlanData?.storage_used_bytes || 0)} <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null && myPlanData.storage_limit_bytes > 0 ? `/ ${formatStorage(myPlanData.storage_limit_bytes)}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 app-card ohc-growth-card glass-card">
                       <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill:</h3>
