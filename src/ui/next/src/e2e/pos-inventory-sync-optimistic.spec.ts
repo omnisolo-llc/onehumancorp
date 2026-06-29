@@ -238,7 +238,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
       await page.context().setOffline(true);
 
       // Verify offline mode indicator
-      await expect(page.getByText('Offline - Changes will sync later')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText('Offline - Syncing later')).toBeVisible({ timeout: 5000 });
 
       // Click the "Charge" button to open cart drawer
       const collectBtn = page.locator('button', { hasText: /Charge/i }).first();
