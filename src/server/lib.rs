@@ -3590,7 +3590,7 @@ pub async fn simulate_agent_feed_item_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
         },
-        crate::db::DbStore::Sqlite(ref pool) => {
+        crate::db::DbStore::Sqlite(pool) => {
             if let Err(e) = sqlx::query(
                 "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
@@ -6915,7 +6915,7 @@ async fn create_ui_bom_item_handler(
         .route("/kairos.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
         }))
-        .route("/api/ui/tooltip-registry.html", axum::routing::get(|| async {
+        .route("/tooltip-registry.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/tooltip-registry.html"))
         }))
         .route("/api/ui/hybrid-landing.html", axum::routing::get(|| async {

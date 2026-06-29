@@ -512,30 +512,27 @@ impl DashboardService for MyDashboardService {
 
 
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
-        for m in _meetings.iter() {
-            let mut transcript = Vec::new();
-            if !req.mobile_optimized {
-                for msg in &m.transcript {
-                    transcript.push(::server_ohc::agent::AgentMessage {
-                        id: msg.id.clone(),
-                        from_agent_id: msg.from_agent.clone(),
-                        to_agent_id: msg.to_agent.clone(),
-                        message_type: msg.r#type.clone(),
-                        content: msg.content.clone(),
-                        meeting_id: m.id.clone(),
-                        occurred_at_unix: msg.occurred_at_unix,
-                    });
-                }
-            }
-            out_meetings.push(::server_ohc::app::MeetingRoom {
+        let final_meetings = _meetings.iter().map(|m| {
+            let transcript = if req.mobile_optimized {
+                Vec::new()
+            } else {
+                m.transcript.iter().map(|msg| ::server_ohc::agent::AgentMessage {
+                    id: msg.id.clone(),
+                    from_agent_id: msg.from_agent.clone(),
+                    to_agent_id: msg.to_agent.clone(),
+                    message_type: msg.r#type.clone(),
+                    content: msg.content.clone(),
+                    meeting_id: m.id.clone(),
+                    occurred_at_unix: msg.occurred_at_unix,
+                }).collect()
+            };
+
+            ::server_ohc::app::MeetingRoom {
                 id: m.id.clone(),
                 participants: m.participants.clone(),
                 transcript,
-            });
-        }
-
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
+            }
+        }).collect::<Vec<_>>();
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
         if req.mobile_optimized { final_statuses.clear(); }
