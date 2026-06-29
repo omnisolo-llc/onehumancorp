@@ -456,7 +456,7 @@
         // List
         const listEl = document.getElementById("triage-list");
         if (items.length === 0) {
-          listEl.innerHTML = `<div class="app-empty">No items need your attention right now. Great job!</div>`;
+          listEl.innerHTML = `<div class="app-empty" data-testid="triage-feed-empty">All caught up!</div>`;
         } else {
           listEl.innerHTML = items.map(item => {
             const displaySource = item.customer_info?.name ? item.customer_info.name : (item.intent || "Unknown Source");
