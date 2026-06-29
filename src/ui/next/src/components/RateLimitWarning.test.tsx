@@ -11,7 +11,12 @@ describe('RateLimitWarning', () => {
   beforeEach(async () => {
     originalFetch = global.fetch;
     // Mock fetch for tests BEFORE importing
-    global.fetch = vi.fn().mockResolvedValue(new Response());
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/tooltips') {
+        return Promise.resolve(new Response(JSON.stringify({ "test-id": "Tooltip text" })));
+      }
+      return Promise.resolve(new Response('{}'));
+    });
 
     // Use vitest's vi.resetModules to ensure fresh evaluation
     vi.resetModules();
