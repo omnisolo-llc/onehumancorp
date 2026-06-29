@@ -377,20 +377,33 @@ impl InventoryService {
         quantity: i32,
         lock_id: &str,
     ) -> Result<CommitResult, String> {
-        let lock_key = Self::get_lock_key(tenant_id, product_id);
-
-        let current_lock_id: Option<String> = self.locker.get_lock_id(&lock_key).await;
-
-        if let Some(cid) = current_lock_id {
-            if cid != lock_id && !lock_id.is_empty() {
+        let mut all_match = true;
+        let mut valid_indices = Vec::new();
+        let mut lock_id_base = "";
+        let parts: Vec<&str> = lock_id.split(':').collect();
+        if parts.len() == 2 {
+            lock_id_base = parts[0];
+            let indices: Vec<&str> = parts[1].split(',').collect();
+            for idx in indices {
+                let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
+                let current_lock_id = self.locker.get_lock_id(&lock_key).await;
+                if current_lock_id != Some(lock_id_base.to_string()) {
+                    all_match = false;
+                    break;
+                }
+                valid_indices.push(idx);
+            }
+            if !all_match {
                 return Ok(CommitResult {
                     success: false,
                     error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
                 });
             }
+            for idx in valid_indices {
+                let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
+                self.locker.clear(&lock_key).await;
+            }
         }
-
-        self.locker.clear(&lock_key).await;
 
         let pool = crate::db::get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
@@ -399,7 +412,14 @@ impl InventoryService {
             .await
             .map_err(|e| e.to_string())?;
 
-        // Try to commit from locked quantity first
+        // Enforce row-level locking for final commit
+        let _ = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+            .bind(product_id)
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
         let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
             .bind(quantity)
             .bind(product_id)
@@ -637,13 +657,13 @@ mod tests {
         let tenant_id = "test_inventory_tenant";
         let product_id = "test_product_concurrent";
 
-        let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product', 10, 10) ON CONFLICT DO NOTHING")
+        let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product', 1, 1) ON CONFLICT DO NOTHING")
             .bind(product_id)
             .bind(tenant_id)
             .execute(&pool)
             .await;
 
-        let _ = sqlx::query("UPDATE products SET inventory_count = 10, available_quantity = 10, locked_quantity = 0 WHERE id = $1 AND tenant_id = $2")
+        let _ = sqlx::query("UPDATE products SET inventory_count = 1, available_quantity = 1, locked_quantity = 0 WHERE id = $1 AND tenant_id = $2")
             .bind(product_id)
             .bind(tenant_id)
             .execute(&pool)
