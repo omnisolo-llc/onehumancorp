@@ -40,13 +40,14 @@ pub async fn parse_inquiry_to_proposal(tenant_id: &str, customer_id: Uuid, _inqu
 
     // Create sample line item
     sqlx::query(
-        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, FALSE, NOW(), NOW())"
+        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, FALSE, NOW(), NOW(), $6)"
     )
     .bind(Uuid::new_v4())
     .bind(proposal_id)
     .bind("Custom Service Base Fee")
     .bind(15000)
     .bind(1)
+    .bind(tenant_id.clone())
     .execute(pool)
     .await?;
 
