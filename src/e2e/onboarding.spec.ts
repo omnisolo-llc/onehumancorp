@@ -19,7 +19,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.waitForLoadState('domcontentloaded');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.getByTestId('next-step-btn').first();
+    // Click manual configuration
+    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' });
     await startButton.click();
 
     // Context Card Flow starts in step-context in Tauri
@@ -57,7 +58,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.getByTestId('next-step-btn').first();
+    // Click manual configuration
+    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' });
     await startButton.click();
 
     const contextCard = page.locator('.context-card').first();
@@ -72,7 +74,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.getByTestId('next-step-btn').first();
+    // Click manual configuration
+    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' });
     await startButton.click();
 
     // Jump straight to the name step to test validation
@@ -97,7 +100,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const startButton = page.getByTestId('next-step-btn').first();
+    // Click manual configuration
+    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' });
     await startButton.click();
 
     // Jump straight to the name step to test validation
@@ -158,11 +162,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
-    await expect(instantBuildButton).toBeVisible();
-    await instantBuildButton.click();
-
-    await expect(page.locator('#step-instant')).toBeVisible();
+    // Instant Build is now the initial screen
 
     const bioInput = page.locator('#instant-bio');
     await expect(bioInput).toBeVisible();
@@ -179,8 +179,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   test('Instant Build image URL is submitted and correctly mapped to state', async ({ page }) => {
     await page.goto('/setup.html');
-    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
-    await instantBuildButton.click();
+    // Instant Build is now the initial screen
 
     const bioInput = page.locator('#instant-bio');
     await bioInput.fill("Test business description.");
@@ -193,8 +192,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   test('Instant Build image URL can be empty and successfully launches', async ({ page }) => {
     await page.goto('/setup.html');
-    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
-    await instantBuildButton.click();
+    // Instant Build is now the initial screen
 
     const bioInput = page.locator('#instant-bio');
     await bioInput.fill("Test business description without image.");
@@ -211,9 +209,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const setupScreen = page.locator('.container');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
-    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
-    await expect(instantBuildButton).toBeVisible();
-    await instantBuildButton.click();
+    // Instant Build is now the initial screen
 
     const bioInput = page.locator('#instant-bio');
     await bioInput.fill("fail network request");
@@ -233,8 +229,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   // Test 3: Verifies empty input behavior
   test('Instant Build prevents submission when the input is empty', async ({ page }) => {
     await page.goto('/setup.html');
-    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
-    await instantBuildButton.click();
+    // Instant Build is now the initial screen
 
     const generateButton = page.locator('#generate-storefront-btn');
     await expect(generateButton).toBeDisabled();
@@ -250,8 +245,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   // Test 4: Smart defaults fallback on partial info
   test('Instant Build handles partial information appropriately by falling back to smart defaults', async ({ page }) => {
     await page.goto('/setup.html');
-    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
-    await instantBuildButton.click();
+    // Instant Build is now the initial screen
 
     const bioInput = page.locator('#instant-bio');
     // Only provide a generic description
@@ -276,8 +270,8 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const containerBox = await container.boundingBox();
     expect(containerBox?.width).toBeLessThanOrEqual(375);
 
-    // Click Start My Business
-    const startMyBusinessButton = page.locator('button', { hasText: 'Start My Business' }).first();
+    // Click Step-by-Step Setup
+    const startMyBusinessButton = page.locator('button', { hasText: 'Step-by-Step Setup' }).first();
     await startMyBusinessButton.click();
 
     // Check .context-card
@@ -300,8 +294,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/setup.html');
 
-    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' }).first();
-    await instantBuildButton.click();
+    // Instant Build is now the initial screen
 
     const bioInput = page.locator('#instant-bio');
     const box = await bioInput.boundingBox();
