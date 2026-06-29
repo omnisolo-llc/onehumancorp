@@ -8,11 +8,11 @@ pub struct InvalidationEvent {
     pub tags: Vec<String>,
 }
 
-pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
+pub async fn start_edge_caching_coordinator(pool: sqlx::PgPool) {
     let redis_url = match std::env::var("REDIS_URL") {
         Ok(url) => url,
         Err(_) => {
-            warn!("REDIS_URL not set, Cache Invalidator Service will not start.");
+            warn!("REDIS_URL not set, Edge Caching Coordinator Service will not start.");
             return;
         }
     };
@@ -20,7 +20,7 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
     let client = match redis::Client::open(redis_url.clone()) {
         Ok(c) => c,
         Err(e) => {
-            error!("Failed to create Redis client for Cache Invalidator: {}", e);
+            error!("Failed to create Redis client for Edge Caching Coordinator: {}", e);
             return;
         }
     };
@@ -38,7 +38,7 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
         return;
     }
 
-    info!("Cache Invalidator Service started, listening on cache_invalidation_events");
+    info!("Edge Caching Coordinator Service started, listening on cache_invalidation_events");
 
     let mut stream = pubsub_conn.on_message();
 
@@ -63,8 +63,8 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                     info!("Invalidating cache for tag: {}", tag);
                     if tag.starts_with("tenant-id:") {
                         tenant_id_str = Some(tag.trim_start_matches("tenant-id:").to_string());
-                    } else if tag.starts_with("entity:product:") {
-                        product_id_str = Some(tag.trim_start_matches("entity:product:").to_string());
+                    } else if tag.starts_with("tenant-product:") {
+                        product_id_str = Some(tag.trim_start_matches("tenant-product:").to_string());
                     }
                     edge_cache.invalidate_by_tag(tag).await;
                 }
@@ -99,19 +99,19 @@ mod tests {
     use std::time::Duration;
 
     #[tokio::test]
-    async fn test_cache_invalidator_event_parsing() {
-        let payload = r#"{"event": "inventory.updated", "tags": ["tenant-id:123", "entity:product:456"]}"#;
+    async fn test_edge_caching_coordinator_event_parsing() {
+        let payload = r#"{"event": "inventory.updated", "tags": ["tenant-id:123", "tenant-product:456"]}"#;
         let event: Result<InvalidationEvent, _> = serde_json::from_str(payload);
         assert!(event.is_ok());
         let event = event.unwrap();
         assert_eq!(event.event, "inventory.updated");
         assert_eq!(event.tags.len(), 2);
         assert_eq!(event.tags[0], "tenant-id:123");
-        assert_eq!(event.tags[1], "entity:product:456");
+        assert_eq!(event.tags[1], "tenant-product:456");
     }
 
     #[tokio::test]
-    async fn test_cache_invalidator_cache_invalidation() {
+    async fn test_edge_caching_coordinator_cache_invalidation() {
         // Here we test just the logic applied in the stream loop.
         let edge_cache = crate::builder::edge::get_edge_cache();
 

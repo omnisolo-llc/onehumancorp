@@ -475,7 +475,7 @@ pub mod services {
     pub mod pos;
     pub mod collective;
     pub mod inventory_sync;
-    pub mod cache_invalidator;
+    pub mod edge_caching_coordinator;
     pub mod inventory;
     pub mod agent_feed;
     pub mod customer_memory_graph;
@@ -7088,7 +7088,7 @@ async fn create_ui_bom_item_handler(
     // Start Cache Invalidator Service
     let invalidator_pool = db.pool.clone();
     tokio::spawn(async move {
-        crate::services::cache_invalidator::start_cache_invalidator(invalidator_pool).await;
+        crate::services::edge_caching_coordinator::start_edge_caching_coordinator(invalidator_pool).await;
     });
 
     // Start Temp File Cleanup Background Task

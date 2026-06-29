@@ -5,7 +5,7 @@ pub mod growth;
 pub mod onboarding;
 pub mod sync;
 pub mod chat;
-    pub mod cache_invalidator;
+    pub mod edge_caching_coordinator;
 pub mod b2b;
 pub mod integration;
 pub mod ops;

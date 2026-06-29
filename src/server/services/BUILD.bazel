@@ -5,7 +5,7 @@ exports_files(
     [
         "booking.rs",
         "mod.rs",
-        "cache_invalidator.rs",
+        "edge_caching_coordinator.rs",
         "wizard.rs",
         "quoting/mod.rs",
         "inventory_sync.rs",
@@ -23,7 +23,7 @@ rust_library(
         "bazel_lib.rs",
         "booking.rs",
         "mod.rs",
-        "cache_invalidator.rs",
+        "edge_caching_coordinator.rs",
         "wizard.rs",
         "quoting/mod.rs",
         "inventory_sync.rs",

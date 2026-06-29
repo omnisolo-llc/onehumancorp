@@ -345,7 +345,7 @@ pub async fn regenerate_cache(
                         let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00");
                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
-                            tags.push(format!("entity:product:{}", pid));
+                            tags.push(format!("tenant-product:{}", pid));
                             html.push_str(&format!(
                                 "<div class=\"product-card\">
 <div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div><div class=\"product-price font-outfit\">{}</div><div class=\"inventory-status\"><!-- INVENTORY_STATUS_{} --></div></div>

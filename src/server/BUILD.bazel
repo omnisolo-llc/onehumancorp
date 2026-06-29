@@ -240,7 +240,7 @@ SERVER_RS_SRCS = [
     "//src/server/services:inventory/service.rs",
     "//src/server/services:customer_memory_graph/mod.rs",
     "//src/server/services:customer_memory_graph/service.rs",
-    "//src/server/services:cache_invalidator.rs",
+    "//src/server/services:edge_caching_coordinator.rs",
     "//src/server/services:wizard.rs",
     "//src/server/services/agent:department/mod.rs",
     "//src/server/services/agent:department/service.rs",
