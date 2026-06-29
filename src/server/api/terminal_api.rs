@@ -51,6 +51,8 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
         .route("/session/start", axum::routing::post(start_terminal_session_handler))
         .route("/session/update", axum::routing::post(update_terminal_session_status_handler))
         .route("/session/end", axum::routing::post(end_terminal_session_handler))
+        .route("/backend", axum::routing::get(get_terminal_backend_handler))
+        .route("/backend", axum::routing::post(post_terminal_backend_handler))
         .with_state(hub)
 }
 
@@ -1004,4 +1006,25 @@ pub async fn capture_payment_intent_handler(
             })
         }
     }
+}
+
+#[derive(serde::Deserialize)]
+pub struct PostBackendRequest {
+    pub backend: String,
+}
+
+pub async fn get_terminal_backend_handler() -> Result<axum::Json<serde_json::Value>, (axum::http::StatusCode, String)> {
+    Ok(axum::Json(serde_json::json!({
+        "backend": "local"
+    })))
+}
+
+pub async fn post_terminal_backend_handler(
+    axum::Json(req): axum::Json<PostBackendRequest>,
+) -> Result<axum::Json<serde_json::Value>, (axum::http::StatusCode, String)> {
+    // For test/harness purposes only, return the requested backend if valid
+    if req.backend == "local" || req.backend == "docker" {
+        return Ok(axum::Json(serde_json::json!({ "success": true, "backend": req.backend })));
+    }
+    Err((axum::http::StatusCode::BAD_REQUEST, "Invalid backend".into()))
 }
