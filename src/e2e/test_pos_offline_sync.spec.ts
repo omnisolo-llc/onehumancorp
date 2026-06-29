@@ -469,5 +469,5 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // The backend should return BAD_REQUEST or a specific error message about being locked
     expect(addItemRes.ok()).toBeFalsy();
     const errorJson = await addItemRes.json();
-    expect(errorJson.error).toContain('checked out');
+    expect(errorJson.error).toContain('Item is currently being checked out');
   });
