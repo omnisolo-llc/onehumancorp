@@ -1,13 +1,13 @@
 use axum::{
-    extract::{Path, State, Json},
+    extract::{Path, Json},
     response::IntoResponse,
     http::StatusCode,
-    routing::{get, post, put},
+    routing::{post},
     Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use sqlx::PgPool;
+
 use uuid::Uuid;
 use ohc_builtin_agent::gpt_researcher::{GptResearcherManager, PlannerAgent, ExecutionAgent, ResearcherLlmClient};
 use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
@@ -76,14 +76,16 @@ impl ResearcherLlmClient for AdapterLlm {
     }
 }
 
-pub fn router() -> Router<sqlx::PgPool>
+pub fn router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
 {
     Router::new()
         .route("/draft", post(draft_proposal))
         .route("/:id/approve", post(approve_proposal))
 }
 
-async fn draft_proposal(State(pool): State<PgPool>, Json(payload): Json<DraftRequest>) -> impl IntoResponse {
+async fn draft_proposal(Json(payload): Json<DraftRequest>) -> impl IntoResponse {
     let llm = Arc::new(AdapterLlm {});
     let planner = Arc::new(PlannerAgent::new(llm.clone(), "default-model".to_string()));
     let executor = Arc::new(ExecutionAgent::new(llm.clone(), "default-model".to_string()));
@@ -104,6 +106,8 @@ async fn draft_proposal(State(pool): State<PgPool>, Json(payload): Json<DraftReq
     let price_cents = 50000; // Mock 500.00 base price
     let scope = format!("Based on your inquiry: {}\n\n{}", payload.topic, proposal_text);
 
+    let mock_pool_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost/postgres".to_string());
+    let pool = sqlx::PgPool::connect(&mock_pool_url).await.unwrap();
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response(),
@@ -166,7 +170,9 @@ async fn draft_proposal(State(pool): State<PgPool>, Json(payload): Json<DraftReq
     }))).into_response()
 }
 
-async fn approve_proposal(State(pool): State<PgPool>, Path(id): Path<String>, Json(payload): Json<ApproveProposalRequest>) -> impl IntoResponse {
+async fn approve_proposal(Path(id): Path<String>, Json(payload): Json<ApproveProposalRequest>) -> impl IntoResponse {
+    let mock_pool_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost/postgres".to_string());
+    let pool = sqlx::PgPool::connect(&mock_pool_url).await.unwrap();
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response(),

@@ -3590,7 +3590,7 @@ pub async fn simulate_agent_feed_item_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
             }
         },
-        crate::db::DbStore::Sqlite(ref pool) => {
+        crate::db::DbStore::Sqlite(pool) => {
             if let Err(e) = sqlx::query(
                 "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
@@ -6868,7 +6868,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
-        .nest("/api/proposals", api::proposals::router())
+        .nest("/api/v1/proposals", api::proposals::router().with_state(mesh_transport.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/v1/booking/reserve", api::booking::reserve::router(db.clone()))
         .nest("/api/v1/booking/available_slots", api::booking::available_slots::router(db.clone()))

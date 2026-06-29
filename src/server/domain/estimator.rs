@@ -47,7 +47,7 @@ pub async fn parse_inquiry_to_proposal(tenant_id: &str, customer_id: Uuid, _inqu
     .bind("Custom Service Base Fee")
     .bind(15000)
     .bind(1)
-    .bind(tenant_id.clone())
+    .bind(tenant_id)
     .execute(pool)
     .await?;
 
