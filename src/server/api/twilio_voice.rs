@@ -146,6 +146,12 @@ pub async fn twilio_voice_status_handler(
             .and_then(|a| a.details.get("deposit_link").and_then(|v| v.as_str()))
             .unwrap_or("https://pay.ohc.com/deposit/voice")
             .to_string();
+
+        let order_link = session_actions.iter()
+            .find(|a| a.intent_type == "ORDER_FOOD")
+            .and_then(|a| a.details.get("order_link").and_then(|v| v.as_str()))
+            .unwrap_or("https://pay.ohc.com/store/voice")
+            .to_string();
         drop(actions);
 
         let transcripts = state.voice_engine.transcripts.lock().await;

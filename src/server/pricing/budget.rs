@@ -39,7 +39,7 @@ impl BudgetManager {
         }
 
         if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            tracing::info!("💰 Miser telemetry: Recording budget spend for tenant {}", tid);
+            tracing::info!("💰 Miser telemetry: Recording budget spend for tenant {}", tid); // pii-safe
         }
 
         let final_current_bits = self.current.fetch_update(
