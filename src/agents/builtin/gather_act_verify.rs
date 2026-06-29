@@ -228,7 +228,7 @@ impl GatherActVerifyHarness {
 
                                 let tool_opt = current_tools.iter().find(|t| t.name == tc.name);
                                 let tr = if let Some(tool) = tool_opt {
-                                    match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2).await {
+                                    match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2, &config).await {
                                         Ok(res) => ohc_builtin_agent_core::types::ToolResult {
                                             tool_call_id: tc.id.clone(),
                                             content: res.clone(),
@@ -285,7 +285,7 @@ impl GatherActVerifyHarness {
 
                             let tool_opt = current_tools.iter().find(|t| t.name == tc.name);
                             let tr = if let Some(tool) = tool_opt {
-                                match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2).await {
+                                match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2, &config).await {
                                     Ok(res) => ohc_builtin_agent_core::types::ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content: res.clone(),

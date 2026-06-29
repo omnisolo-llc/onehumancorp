@@ -1,4 +1,3 @@
-mod tool_executor_engine;
 
 
 
@@ -6,7 +5,8 @@ mod tool_executor_engine;
 #[cfg(test)]
 mod tests {
 
-    use crate::tool_executor_engine::ToolExecutionEngine;
+    use ohc_builtin_agent::tool_executor_engine::ToolExecutionEngine;
+use ohc_builtin_agent::agent::AgentRunConfig;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
     use ohc_builtin_agent_tools::{Tool, ToolExecutor};
     use serde_json::json;
@@ -62,7 +62,7 @@ mod tests {
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
         });
 
 
@@ -93,7 +93,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
 
         assert!(res.is_ok());
         assert_eq!(res.expect("Expected string in test"), "success");
@@ -122,7 +122,7 @@ mod tests {
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
         });
 
 
@@ -154,7 +154,7 @@ mod tests {
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
         });
 
 
@@ -206,7 +206,7 @@ mod tests {
         };
 
         // Execute via the engine
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
 
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -237,7 +237,7 @@ mod tests {
         };
 
         // We simulate the pydantic loop which returns the recoverable error directly
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         assert!(res.as_ref().expect_err("Expected error in test").to_string().contains("Validation Error (Pydantic-first tool schema)"));
         match res.expect_err("Expected error in test") {
@@ -265,7 +265,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2, &AgentRunConfig::default()).await;
 
         // Ensure the engine correctly bubbles up the exact recoverable error back to the orchestration loop
         assert!(res.is_err());
@@ -295,7 +295,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => assert_eq!(msg, "parse error"),
@@ -321,7 +321,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::UserFixable(msg) => assert_eq!(msg, "ask user"),
@@ -347,7 +347,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::Fatal(msg) => assert_eq!(msg, "fatal error"),
@@ -373,7 +373,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::Unexpected(msg) => assert_eq!(msg, "unexpected error"),
@@ -399,7 +399,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::HandoffRequested(msg) => assert_eq!(msg, "agent_2"),
@@ -429,7 +429,7 @@ mod tests {
 
         // Pass max_retries = 5, but it should be clamped to 2
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 5).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 5, &AgentRunConfig::default()).await
         });
 
 
@@ -447,7 +447,8 @@ mod tests {
 
 #[cfg(test)]
 mod additional_transient_tests {
-    use crate::tool_executor_engine::ToolExecutionEngine;
+    use ohc_builtin_agent::tool_executor_engine::ToolExecutionEngine;
+use ohc_builtin_agent::agent::AgentRunConfig;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
     use ohc_builtin_agent_tools::{Tool, ToolExecutor};
     use serde_json::json;
@@ -492,7 +493,7 @@ mod additional_transient_tests {
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
         });
 
 
@@ -525,7 +526,7 @@ mod additional_transient_tests {
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
         });
         let res = handle.await.expect("Expected string in test");
         assert!(res.is_ok());

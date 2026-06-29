@@ -345,8 +345,9 @@ exports_files([
 
 rust_test(
     name = "tool_executor_engine_tests",
-    srcs = ["tool_executor_engine_tests.rs", "tool_executor_engine.rs"],
+    srcs = ["tool_executor_engine_tests.rs"],
     deps = [
+        ":ohc_builtin_agent_lib",
         "//src/agents/builtin:core",
         "//src/agents/builtin/tools:tools",
         "@crates//:tokio",
