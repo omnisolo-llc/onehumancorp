@@ -30,8 +30,8 @@ test.describe('Setup Wizard 375px Flow', () => {
         const initialStep = page.locator('#step-initial');
         await expect(initialStep).toBeVisible();
 
-        // Click Start My Business
-        await page.getByTestId('next-step-btn').first().click();
+        // Click Step-by-Step Setup
+        await page.locator('button:has-text("Step-by-Step Setup")').click();
 
         // Step Context
         const stepContext = page.locator('#step-context');

@@ -3982,15 +3982,6 @@
         });
       }
 
-
-      const instantBioInputEl2 = document.getElementById("instant-bio");
-      const generateStorefrontBtn2 = document.getElementById("generate-storefront-btn");
-      if (instantBioInputEl2 && generateStorefrontBtn2) {
-        instantBioInputEl2.addEventListener("input", (e) => {
-          generateStorefrontBtn2.disabled = e.target.value.trim().length === 0;
-        });
-      }
-
       if (generateStorefrontBtn) {
         generateStorefrontBtn.addEventListener("click", async (e) => {
           e.preventDefault();
