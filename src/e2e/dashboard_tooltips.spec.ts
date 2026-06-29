@@ -1,19 +1,8 @@
-import { test, expect } from '@playwright/test';
-import { setupAuthenticatedUser } from './utils/auth';
+import { test, expect } from './fixtures';
 
 test.describe('Dashboard Tooltips', () => {
-  let ctx: any;
 
-  test.beforeEach(async ({ browser }) => {
-    ctx = await setupAuthenticatedUser(browser, 'dashboard_tooltips_user', 'password');
-  });
-
-  test.afterEach(async () => {
-    await ctx.context.close();
-  });
-
-  test('hovering over dashboard widgets shows correct tooltips', async () => {
-    const page = ctx.page;
+  test('hovering over dashboard widgets shows correct tooltips', async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 

@@ -1,9 +1,7 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
-import { OHC_BASE_URL } from './global-setup';
+import { test, expect } from './fixtures';
 
 test.describe('Zero-Click Universal Multi-Currency Payout Ledger', () => {
-  test('Leo receives a weekly payout summary combining USD and EUR earnings', async ({ request, adminPage }) => {
+  test('Leo receives a weekly payout summary combining USD and EUR earnings', async ({ request, page }) => {
     // We use the real E2E environment without intercepting the network, ensuring
     // the ledger events and DB rows are created properly from the webhook endpoint.
 
@@ -45,22 +43,22 @@ test.describe('Zero-Click Universal Multi-Currency Payout Ledger', () => {
     // If the API requires signatures, the e2e test environment might bypass it or we need a specific mock.
     // Given the prompt "ZERO mock data in UI code", we push this to the DB via the real API if possible.
 
-    await request.post(`${OHC_BASE_URL}/api/webhooks/stripe`, {
+    await request.post(`/api/webhooks/stripe`, {
         data: usdPayload
     });
 
-    await request.post(`${OHC_BASE_URL}/api/webhooks/stripe`, {
+    await request.post(`/api/webhooks/stripe`, {
         data: eurPayload
     });
 
     // Give the backend a moment to process the async tasks and insert the Feed Items
-    await adminPage.waitForTimeout(2000);
+    await page.waitForTimeout(2000);
 
     // Wait for the payout summary card to appear
     // We will navigate to the dashboard using the normal UI flow
-    await adminPage.goto(`${OHC_BASE_URL}/ui/dashboard.html`);
+    await page.goto(`/dashboard`);
 
-    const payoutCard = adminPage.locator('[data-testid="payout-summary-card"]');
+    const payoutCard = page.locator('[data-testid="payout-summary-card"]');
     await expect(payoutCard.first()).toBeVisible({ timeout: 10000 });
 
     // Assert the content matches the expected output
