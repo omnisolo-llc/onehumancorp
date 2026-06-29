@@ -48,6 +48,107 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   setEditQuoteScope,
   handleDecision,
 }) => {
+  if (approval.event_source === "proposal") {
+    return (
+      <div
+        className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-5 shadow-sm opacity-90 relative"
+        data-testid="feed-proposal-card"
+      >
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold font-outfit uppercase tracking-wider text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-[8px]">
+            PROPOSAL DRAFTED
+          </span>
+          <span className="text-xs text-gray-500 font-sans">
+            {new Date(approval.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+        <h3 className="text-lg font-semibold font-sans text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 leading-snug break-words">
+          {approval.proposed_action?.title || "Custom Project Proposal"}
+        </h3>
+
+        {editingId === approval.id ? (
+          <div className="mt-3 flex flex-col gap-3">
+            <textarea
+              className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm outline-none resize-none"
+              rows={4}
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              placeholder="Edit Scope"
+              data-testid="edit-proposal-scope"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  handleDecision(
+                    approval.id,
+                    true,
+                    editContent,
+                    approval.event_source,
+                  );
+                  setEditingId(null);
+                }}
+                className="flex-1 min-h-[44px] rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC]"
+                data-testid="save-proposal"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditingId(null)}
+                className="flex-1 min-h-[44px] rounded-[8px] border border-gray-300 dark:border-gray-600 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-[8px] text-sm text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-wrap break-words">
+              <span className="font-semibold block mb-1">Scope:</span>
+              {approval.proposed_action?.scope || "N/A"}
+            </div>
+
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-[8px] text-sm text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-wrap break-words">
+              <span className="font-semibold block mb-1">Price:</span>
+              ${(approval.proposed_action?.price_cents / 100).toFixed(2) || "0.00"}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => handleDecision(approval.id, true, undefined, approval.event_source)}
+                className="w-full min-h-[44px] bg-green-500 text-white font-medium rounded-[8px] shadow-sm hover:bg-green-600"
+                data-testid="approve-proposal"
+              >
+                Approve & Send
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setEditingId(approval.id);
+                    setEditContent(approval.proposed_action?.scope || "");
+                  }}
+                  className="flex-1 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-[8px] text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+                  data-testid="edit-proposal-btn"
+                >
+                  Edit Scope
+                </button>
+                <button
+                  onClick={() => handleDecision(approval.id, false, undefined, approval.event_source)}
+                  className="flex-1 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-[8px] text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800"
+                  data-testid="reject-proposal"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   if ((approval.proposed_action || approval.context_payload)?.feature_type === "shift_reassignment") {
     return (
       <ShiftReassignmentCard
