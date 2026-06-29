@@ -6,7 +6,7 @@ test.describe('Unified Agent Feed Additional Regression Tests', () => {
   test('feed container layout does not overflow mobile viewport', async ({ page }) => {
     test.setTimeout(180000);
     await page.goto('/dashboard');
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('h1#dashboard-title').first()).toBeAttached({ timeout: 25000 });
 
     // We expect the body not to scroll horizontally
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
@@ -15,7 +15,7 @@ test.describe('Unified Agent Feed Additional Regression Tests', () => {
 
   test('action center header is properly hidden on mobile', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('h1#dashboard-title').first()).toBeHidden();
 
     // action center is replaced by command center but they wanted it hidden on mobile
   });
@@ -24,14 +24,14 @@ test.describe('Unified Agent Feed Additional Regression Tests', () => {
     // Override to desktop
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto('/dashboard');
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('h1#dashboard-title').first()).toBeVisible({ timeout: 25000 });
 
     // action center is replaced by command center
   });
 
   test('feed elements are rendered with flex direction column for mobile', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('h1#dashboard-title').first()).toBeAttached({ timeout: 25000 });
 
     // Assuming .app-list-item or similar holds feed items, or glassmorphism
     const feedContainer = page.locator('#unified-agent-feed-section').first();
@@ -43,7 +43,7 @@ test.describe('Unified Agent Feed Additional Regression Tests', () => {
 
   test('buttons have minimum 44px touch targets', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('h1#dashboard-title').first()).toBeAttached({ timeout: 25000 });
 
     const buttons = page.locator('section[aria-label="Unified Agent Feed"] button');
     const buttonCount = await buttons.count();

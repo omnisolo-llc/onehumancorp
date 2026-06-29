@@ -310,7 +310,7 @@ export default function OnboardingWizard() {
       updateState({ businessType: intakeData.business_type || 'Online Store' });
       updateState({ businessName: intakeData.business_name || 'My Business' });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '10.00' });
+      updateState({ firstProductPrice: String(intakeData.initial_products?.[0]?.price || '10.00') });
       if (intakeData.initial_products) {
           localStorage.setItem('onboarding_initial_products', JSON.stringify(intakeData.initial_products));
       }
@@ -331,7 +331,7 @@ export default function OnboardingWizard() {
         step: 2,
         aiAgents: newAgents,
         firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-        firstProductPrice: intakeData.initial_products?.[0]?.price || "10.00"
+        firstProductPrice: String(intakeData.initial_products?.[0]?.price || "10.00")
       }); // Go to review step
     } catch (err: any) {
       console.error(err);
@@ -384,7 +384,7 @@ export default function OnboardingWizard() {
         updateState({ businessDescription: newHistory.map(m => m.content).join(" ") });
         updateState({ categories: intakeData.categories || ["physical"] });
         updateState({ firstProductName: intakeData.initial_products?.[0]?.name || "First Product" });
-        updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00" });
+        updateState({ firstProductPrice: String(intakeData.initial_products?.[0]?.price || "0.00") });
         updateState({ location: intakeData.location || "" });
         updateState({ targetAudience: intakeData.target_audience || "" });
 
@@ -393,7 +393,7 @@ export default function OnboardingWizard() {
           updateState({ step: 3 }); syncStateToBackend({
             step: 3,
             firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-            firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00"
+            firstProductPrice: String(intakeData.initial_products?.[0]?.price || "0.00")
           });
           updateState({ isLoading: false });
           return;
@@ -502,7 +502,7 @@ Image provided: ${instantImageUrl}`;
       updateState({ businessDescription: bio });
       updateState({ categories: intakeData.categories || ['physical'] });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '0.00' });
+      updateState({ firstProductPrice: String(intakeData.initial_products?.[0]?.price || '0.00') });
       updateState({ location: intakeData.location || 'Local' });
       updateState({ targetAudience: intakeData.target_audience || 'General' });
       updateState({ adminName: intakeData.business_name || 'Admin' });
