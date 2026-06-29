@@ -17,6 +17,7 @@ export default function VisualWorkflowPage() {
     if (type === "Llm") data = { prompt_template: "Translate to French: {{input_var}}" };
     if (type === "Input") data = { name: "input_var" };
     if (type === "Output") data = {};
+    if (type === "HumanInLoop") data = { prompt_template: "Please approve this text: {{input_var}}" };
 
     setNodes([...nodes, { id, type, data }]);
   };
@@ -88,6 +89,12 @@ export default function VisualWorkflowPage() {
             onClick={() => addNode("Output")}
           >
             + Add Output Node
+          </button>
+          <button
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg shadow-sm transition-all min-h-[44px] font-medium"
+            onClick={() => addNode("HumanInLoop")}
+          >
+            + Add Human-In-Loop Node
           </button>
 
           <button
