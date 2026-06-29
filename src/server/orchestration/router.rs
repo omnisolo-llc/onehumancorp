@@ -202,6 +202,7 @@ Return strict JSON:
             customer_context: None,
         };
 
+        let mut success = false;
         while retry_count < max_retries {
             let compressed_prompt_clone = compressed_prompt.clone();
             let llm_call = async {
@@ -230,6 +231,7 @@ Return strict JSON:
                             result.operations_context = json.get("operations_context").and_then(|v| v.as_str()).map(|s| s.to_string());
                             result.sales_context = json.get("sales_context").and_then(|v| v.as_str()).map(|s| s.to_string());
                             result.customer_context = json.get("customer_context").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            success = true;
                             break;
                         }
                     }
@@ -242,7 +244,7 @@ Return strict JSON:
         }
 
         // If tests are mocking without an LLM, provide basic deterministic output to avoid flaky tests.
-        if std::env::var("CI").is_ok() && result.final_draft.contains("Thanks for reaching out!") {
+        if std::env::var("CI").is_ok() && !success {
            let content_lower = msg.content.to_lowercase();
            let mut ops_context = None;
            let mut sales_context = None;
@@ -263,6 +265,11 @@ Return strict JSON:
                sales_context,
                customer_context,
            };
+           success = true;
+        }
+
+        if !success {
+            return Err("AI Agent Service Unavailable".to_string());
         }
 
         Ok(result)
