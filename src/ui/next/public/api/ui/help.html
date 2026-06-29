@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
     style.textContent = `
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(20px) saturate(210%);
             -webkit-backdrop-filter: blur(20px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         @media (prefers-color-scheme: dark) {
             .ohc-tooltip {
-                background: rgba(22, 22, 26, 0.85);
+                background: rgba(22, 22, 26, 0.7);
                 border-color: rgba(255, 255, 255, 0.1);
                 color: #f5f5f7;
             }
@@ -513,7 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
             height: 500px;
             max-height: calc(100vh - 120px);
             max-width: calc(100vw - 40px);
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         @media (prefers-color-scheme: dark) {
             #ohc-help-chat-overlay {
-                background: rgba(22, 22, 26, 0.85);
+                background: rgba(22, 22, 26, 0.7);
                 border-color: rgba(255, 255, 255, 0.1);
             }
             #ohc-help-chat-header, #ohc-help-input-area {
@@ -715,6 +715,12 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(res => res.json())
         .then(data => {
             aiMsg.textContent = data.reply || data.response || "Sorry, I could not process that.";
+            if (data.link && data.link.url) {
+                const linkEl = document.createElement("a");
+                linkEl.href = data.link.url;
+                linkEl.textContent = data.link.title || "Read the full article →";
+                aiMsg.appendChild(linkEl);
+            }
             messages.scrollTop = messages.scrollHeight;
         })
         .catch(err => {
