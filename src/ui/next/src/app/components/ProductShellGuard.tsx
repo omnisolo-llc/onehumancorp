@@ -114,6 +114,7 @@ const titleOverrides: Record<string, string> = {
   "/promoter": "Promoter",
   "/proposal-generator": "Proposal Generator",
   "/quoting": "Quoting",
+  "/anthropic-guardrails": "Anthropic Guardrails",
   "/ralph-loop": "Ralph Loop",
   "/referrals": "Referrals",
   "/review-campaigns": "Review Campaigns",
