@@ -25,7 +25,33 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ohc_zero_click_chat');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.length > 0) {
+            setMessages(parsed);
+          }
+        } catch (e) {
+          console.error("Failed to parse chat history");
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isMounted && typeof window !== 'undefined') {
+      localStorage.setItem('ohc_zero_click_chat', JSON.stringify(messages));
+    }
+  }, [messages, isMounted]);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
@@ -53,10 +79,15 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     setIsProvisioning(true);
 
     try {
+      const payload: { prompt: string; image_url?: string } = { prompt: userMessage.content };
+      if (imageUrl) {
+        payload.image_url = imageUrl;
+      }
+
       const response = await fetch('/api/v1/onboarding/start_zero_click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userMessage.content }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error('Failed to generate business');
@@ -146,7 +177,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden shadow-xl w-full max-w-2xl mx-auto">
+    <div id="step-chat" className="flex flex-col h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden shadow-xl w-full max-w-2xl mx-auto">
       {/* Header */}
       <div className="p-4 border-b border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex items-center gap-3 bg-transparent">
         <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xl">
@@ -161,13 +192,18 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
       {/* Chat Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[300px] max-h-[500px]">
         {messages.map((msg, idx) => (
-          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={idx} className={`chat-message ${msg.role} flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
               msg.role === 'user'
                 ? 'bg-[#0066FF] text-white rounded-br-sm shadow-[0_4px_14px_0_rgba(0,102,255,0.39)]'
                 : 'bg-gray-100 dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-bl-sm border border-gray-200 dark:border-gray-700'
             }`}>
-              {msg.content}
+              <div className="chat-sender text-xs font-bold mb-1 opacity-70">
+                {msg.role === 'user' ? 'You' : 'Assistant'}
+              </div>
+              <div className="chat-bubble">
+                {msg.content}
+              </div>
             </div>
           </div>
         ))}
@@ -216,24 +252,58 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
           </div>
         )}
 
-        <form onSubmit={handleSend} className="relative flex items-center">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={isLoading || isProvisioning}
-            placeholder="e.g. I am a home baker in Austin selling custom vegan cakes."
-            className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full py-3.5 pl-4 pr-12 min-h-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-          />
+        {showImageUpload && (
+          <div id="chat-image-container" className="mb-4 p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Upload a photo of your work</p>
+            <input
+              type="file"
+              accept="image/*"
+              className="text-sm"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setImageUrl(reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                } else {
+                  setImageUrl(null);
+                }
+              }}
+            />
+          </div>
+        )}
+        <form onSubmit={handleSend} className="relative flex items-center gap-2">
           <button
-            type="submit"
-            disabled={!input.trim() || isLoading || isProvisioning}
-            className="absolute right-1 top-1.5 w-10 h-10 flex items-center justify-center bg-[#0066FF] hover:bg-[#005bb5] disabled:bg-gray-400 text-white rounded-full transition-colors"
+            type="button"
+            id="chat-upload-btn"
+            onClick={() => setShowImageUpload(!showImageUpload)}
+            className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
-            <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
             </svg>
           </button>
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={isLoading || isProvisioning}
+              placeholder="e.g. I am a home baker in Austin selling custom vegan cakes."
+              className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full py-3.5 pl-4 pr-12 min-h-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading || isProvisioning}
+              className="absolute right-1 top-1.5 w-10 h-10 flex items-center justify-center bg-[#0066FF] hover:bg-[#005bb5] disabled:bg-gray-400 text-white rounded-full transition-colors"
+            >
+              <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+              </svg>
+            </button>
+          </div>
         </form>
       </div>
     </div>

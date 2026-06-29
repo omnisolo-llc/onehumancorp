@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Zero-Click Onboarding to Agent Feed', () => {
-  test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
+  test('Persona: Maya completes zero-click onboarding and approves welcome action on mobile', async ({ page }) => {
     // Navigate to the setup route
     await page.goto('/onboarding/zero-click');
 
@@ -18,7 +18,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await expect(chatInput).toBeVisible();
 
     // Type a simple sentence and press Enter
-    await chatInput.fill('I run a mobile dog grooming service in Austin');
+    await chatInput.fill('I am Maya, a home baker in Austin selling custom vegan cakes');
     await chatInput.press('Enter');
 
     // The app should automatically transition to provisioning state

@@ -384,7 +384,7 @@ export default function OnboardingWizard() {
         updateState({ businessDescription: newHistory.map(m => m.content).join(" ") });
         updateState({ categories: intakeData.categories || ["physical"] });
         updateState({ firstProductName: intakeData.initial_products?.[0]?.name || "First Product" });
-        updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00" });
+        updateState({ firstProductPrice: String(intakeData.initial_products?.[0]?.price || "0.00") });
         updateState({ location: intakeData.location || "" });
         updateState({ targetAudience: intakeData.target_audience || "" });
 
@@ -393,7 +393,7 @@ export default function OnboardingWizard() {
           updateState({ step: 3 }); syncStateToBackend({
             step: 3,
             firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-            firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00"
+            firstProductPrice: String(intakeData.initial_products?.[0]?.price || "0.00")
           });
           updateState({ isLoading: false });
           return;
@@ -417,7 +417,7 @@ export default function OnboardingWizard() {
             admin_password: adminPassword,
             website_template: "auto",
             first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
-            first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
+            first_product_price: String(intakeData.initial_products?.[0]?.price || "0.00"),
             domain_choice: "subdomain",
             price_type: "fixed",
             location: intakeData.location || "",
@@ -483,7 +483,7 @@ Image provided: ${instantImageUrl}`;
         },
         body: JSON.stringify({ description: combinedInput, image_url: instantImageUrl })
       });
-      let intakeData: { business_name?: string, business_type?: string, categories?: string[], initial_products?: { name: string, price: number }[], error?: string } = {};
+      let intakeData: { business_name?: string, business_type?: string, categories?: string[], initial_products?: { name: string, price: number }[], error?: string, location?: string, target_audience?: string } = {};
       try {
           if (!intakeRes.ok) {
              throw new Error(`Failed to generate storefront: ${intakeRes.status}`);
@@ -502,7 +502,7 @@ Image provided: ${instantImageUrl}`;
       updateState({ businessDescription: bio });
       updateState({ categories: intakeData.categories || ['physical'] });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '0.00' });
+      updateState({ firstProductPrice: String(intakeData.initial_products?.[0]?.price || '0.00') });
       updateState({ location: intakeData.location || 'Local' });
       updateState({ targetAudience: intakeData.target_audience || 'General' });
       updateState({ adminName: intakeData.business_name || 'Admin' });
