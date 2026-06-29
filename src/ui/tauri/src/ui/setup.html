@@ -1176,6 +1176,8 @@
       .glassmorphism.panel {
         border-radius: 16px;
       }
+          #instant-bio { min-height: 44px !important; box-sizing: border-box; }
+      .context-card { min-height: 44px !important; box-sizing: border-box; }
     </style>
 
     <style>
@@ -1283,6 +1285,8 @@
           box-shadow: 0 0 0 1px #0066ff;
         }
       }
+          #instant-bio { min-height: 44px !important; box-sizing: border-box; }
+      .context-card { min-height: 44px !important; box-sizing: border-box; }
     </style>
   </head>
   <body>
@@ -3900,6 +3904,24 @@
         chatSendBtn.addEventListener("click", sendChatMessage);
       }
 
+
+      const instantBioInputEl2 = document.getElementById("instant-bio");
+      const generateStorefrontBtn2 = document.getElementById("generate-storefront-btn");
+      if (instantBioInputEl2 && generateStorefrontBtn2) {
+        instantBioInputEl2.addEventListener("input", (e) => {
+          generateStorefrontBtn2.disabled = e.target.value.trim().length === 0;
+        });
+      }
+
+
+      const instantBioInputEl2 = document.getElementById("instant-bio");
+      const generateStorefrontBtn2 = document.getElementById("generate-storefront-btn");
+      if (instantBioInputEl2 && generateStorefrontBtn2) {
+        instantBioInputEl2.addEventListener("input", (e) => {
+          generateStorefrontBtn2.disabled = e.target.value.trim().length === 0;
+        });
+      }
+
       if (generateStorefrontBtn) {
         generateStorefrontBtn.addEventListener("click", async (e) => {
           e.preventDefault();
@@ -3936,6 +3958,58 @@
           goToStep("step-loading");
 
           try {
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              const data = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+              if (!data) throw new Error("Empty response");
+
+              const startReq = {
+                business_type: data.business_type || "Other",
+                company_name: data.business_name || "My Store",
+                company_description: bioInput,
+                selling_categories: data.categories || ["Other"],
+                payment_pref: "online",
+                admin_email: "e2e-admin-user@example.com",
+                admin_name: "Owner",
+                admin_password: "password123",
+                website_template: "Modern",
+                first_product_name: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : "First Offer",
+                first_product_price: data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].price : "0.00",
+                domain_choice: "subdomain",
+                price_type: "fixed",
+                location: data.location || "Global",
+                target_audience: data.target_audience || "Everyone",
+                initial_products: data.initial_products || [],
+                ai_agents: [],
+                ai_auto_respond: false,
+                deposit_percentage: data.deposit_percentage,
+                lead_time_days: data.lead_time_days
+              };
+
+              const startData = await window.__TAURI__.core.invoke("start_onboarding", { req: startReq });
+
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+              if (startData && startData.user_id) {
+                localStorage.setItem("user_id", startData.user_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              if (window.generateStorefrontLoadingInterval) {
+                  clearInterval(window.generateStorefrontLoadingInterval);
+                  delete window.generateStorefrontLoadingInterval;
+              }
+
+              setTimeout(() => {
+                window.location.href = "success.html";
+              }, 1500);
+              return;
+            }
+
             const backendUrl =
               window.location.protocol === "file:" ||
               ["1420", "3000", "8081"].includes(window.location.port)
@@ -4617,6 +4691,8 @@
       .ohc-tooltip.visible {
         opacity: 1;
       }
+          #instant-bio { min-height: 44px !important; box-sizing: border-box; }
+      .context-card { min-height: 44px !important; box-sizing: border-box; }
     </style>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
