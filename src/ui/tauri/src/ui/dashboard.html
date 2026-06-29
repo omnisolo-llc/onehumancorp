@@ -1721,7 +1721,7 @@
         }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
+          const res = await fetch(`/api/v2/unified-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
@@ -2362,25 +2362,15 @@ window.handleTriageAction = async function(id, state) {
           let method;
           let bodyPayload;
 
-          if (isAgentFeed) {
-             url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
-             method = 'PUT';
-             let finalState = 'APPROVED';
-             if (typeof state === 'boolean') {
-                 finalState = state ? 'APPROVED' : 'DISMISSED';
-             } else {
-                 finalState = state === 'APPROVED' ? 'APPROVED' : 'DISMISSED';
-             }
-             bodyPayload = { state: finalState };
-          } else {
-             url = `/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId)}`;
+          url = `/api/v2/unified-feed/action`;
              method = 'POST';
+             let isApproved = false;
              if (typeof state === 'boolean') {
-                 bodyPayload = { triage_item_id: id, approved: state };
+                 isApproved = state;
              } else {
-                 bodyPayload = { triage_item_id: id, approved: state === 'APPROVED' };
+                 isApproved = state === 'APPROVED';
              }
-          }
+             bodyPayload = { id, action: isApproved ? 'approve' : 'dismiss' };
 
           const res = await fetch(url, {
             method: method,

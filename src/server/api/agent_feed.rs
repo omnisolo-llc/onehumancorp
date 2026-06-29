@@ -465,3 +465,76 @@ mod tests {
         }
     }
 }
+
+pub async fn list_v2_feed_items(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+
+    let items = match crate::load_ui_agent_feed_from_db(&db, &tenant_id, mobile_optimized).await {
+        Ok(items) => items,
+        Err(sqlx::Error::RowNotFound) => vec![],
+        Err(e) => {
+            tracing::error!("Failed to fetch unified feed items: {:?}", e);
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response();
+        }
+    };
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "items": items }))).into_response()
+}
+
+#[derive(serde::Deserialize)]
+pub struct V2ActionRequest {
+    pub id: String,
+    pub event_source: Option<String>,
+    pub action: String, // "approve" or "dismiss"
+    pub modified_content: Option<String>,
+}
+
+use serde::Deserialize;
+
+pub async fn v2_action(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    axum::Json(payload): axum::Json<V2ActionRequest>,
+) -> impl axum::response::IntoResponse {
+    let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
+
+    let approved = payload.action.to_lowercase() == "approve";
+    let state = if approved { "APPROVED" } else { "DISMISSED" };
+
+    // Attempt agent feed
+    let repo = AgentFeedRepository::new(db.clone());
+    if let Ok(Some(_)) = repo.get(&tenant_id, &payload.id).await {
+        if let Err(e) = repo.update_state(&tenant_id, &payload.id, state).await {
+            tracing::error!("Failed to update v2 agent feed item state: {}", e);
+            return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+
+        let _ = crate::domain::agent_approvals::sync_legacy_approval_status(&tenant_id, &payload.id, state, &db.pool).await;
+
+        let cache = get_agent_feed_cache();
+        let tag = format!("agent_feed_tenant:{}", tenant_id);
+        let _ = cache.invalidate_by_tag(&tag).await;
+
+        return (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true }))).into_response();
+    }
+
+    // Legacy fallback
+    let _ = sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3")
+        .bind(if approved { "resolved" } else { "dismissed" })
+        .bind(&payload.id)
+        .bind(&tenant_id)
+        .execute(&db.pool).await;
+
+    let _ = sqlx::query("UPDATE triage_proposed_actions SET status = $1 WHERE triage_item_id = $2 AND tenant_id = $3")
+        .bind(if approved { "approved" } else { "dismissed" })
+        .bind(&payload.id)
+        .bind(&tenant_id)
+        .execute(&db.pool).await;
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true }))).into_response()
+}

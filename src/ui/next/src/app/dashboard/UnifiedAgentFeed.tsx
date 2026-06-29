@@ -196,7 +196,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
         if (!unifiedData) {
           const unifiedRes = await fetch(
-            `/api/agent-feed?tenant_id=${tenant}`,
+            `/api/v2/unified-feed?tenant_id=${tenant}`,
             {
               headers: {
                 "x-tenant-id": tenant,
@@ -641,15 +641,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     }
 
     const tenant = tenantId();
-    const res = await fetch(`/api/agent-feed/${id}`, {
-      method: "PUT",
+    const res = await fetch(`/api/v2/unified-feed/action`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-tenant-id": tenant,
         "x-user-id": "default",
       },
       body: JSON.stringify({
-        state: approved ? "APPROVED" : "DISMISSED",
+        id,
+        event_source,
+        action: approved ? "approve" : "dismiss",
         modified_content,
       }),
     });
@@ -687,7 +689,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       // Revert optimistic update gracefully by refetching
       const tenant = tenantId();
       try {
-        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+        const refreshRes = await fetch(`/api/v2/unified-feed?tenant_id=${tenant}`, {
           headers: { "x-tenant-id": tenant, "x-user-id": "default" },
         });
         if (refreshRes.ok) {

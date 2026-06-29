@@ -6448,6 +6448,7 @@ async fn create_ui_bom_item_handler(
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
+        // Deprecated
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
@@ -6859,6 +6860,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
+        .route("/api/v2/unified-feed", axum::routing::get(api::agent_feed::list_v2_feed_items).with_state(db.clone()))
+        .route("/api/v2/unified-feed/action", axum::routing::post(api::agent_feed::v2_action).with_state(db.clone()))
         .nest("/api/sync", api::sync_gateway::router())
         .nest("/api/ohc_job_queue", api::ohc_job_queue::handler::router())
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
