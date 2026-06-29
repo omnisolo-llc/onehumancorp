@@ -1117,6 +1117,9 @@ describe("OnboardingWizard", () => {
   it("Instant Build: displays error when API fails", async () => {
     const user = userEvent.setup({ delay: null });
 
+    const originalConsoleError = console.error;
+    console.error = vi.fn(); // Suppress expected error log
+
     global.fetch = vi.fn().mockImplementation((url) => {
       if (typeof url === "string" && url.includes("/api/onboarding/intake")) {
         return Promise.resolve({
@@ -1141,6 +1144,8 @@ describe("OnboardingWizard", () => {
     await waitFor(() => {
       expect(screen.queryByText(/Failed to generate storefront: 500|Failed to generate your business|Backend connection failed|error/i)).not.toBeNull();
     });
+
+    console.error = originalConsoleError;
   });
 
   it("allows skipping setup and opens the assistant", async () => {
