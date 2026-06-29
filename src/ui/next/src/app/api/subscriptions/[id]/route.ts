@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
     const tenantId = req.headers.get('x-tenant-id') || 'default';
     const authHeader = req.headers.get('authorization');
@@ -12,7 +13,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
 
     try {
-        const res = await fetch(`${backendUrl}/api/subscriptions/${params.id}`, {
+        const res = await fetch(`${backendUrl}/api/subscriptions/${id}`, {
             method: 'GET',
             headers,
         });

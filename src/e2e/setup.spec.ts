@@ -32,18 +32,25 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
     // Name step
     await page.getByTestId('business-name').fill('Test Bakery');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-location"]').click();
+    // Location step
+    await page.getByTestId('location-input').fill('123 Main St, Anytown');
     await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
     // Assistant step
     await page.getByTestId('team-support').click();
     await page.getByTestId('assistant-tone').selectOption('Friendly');
     await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
     // Admin step
+    await page.getByTestId('admin-name').fill('Admin Name');
     await page.getByTestId('admin-email').fill('admin@testbakery.local');
     await page.getByTestId('admin-password').fill('SuperSecretPassword123');
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
     // Offer step
     await page.getByTestId('first-offer').fill('Chocolate Cake');
-    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-domain"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-target-audience"]').click();
+    // Target Audience step
+    await page.getByTestId('target-audience').fill('Local families');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-domain"]').click();
     // Domain step
     await page.getByTestId('domain-name').fill('test-bakery');
     await page.locator('[data-testid="next-step-btn"][data-next="step-template"]').click();
@@ -119,12 +126,15 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
     // Name step - Trigger auto-save
     await page.getByTestId('business-name').fill('AutoSave Bakery');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-location"]').click();
+    // Location step
+    await page.getByTestId('location-input').fill('123 AutoSave St, Anytown');
     // Wait for debounce and localstorage to be populated
     await page.waitForTimeout(600);
     // Reload page
     await page.reload();
-    // Wait for the state to be reloaded (it jumps to step 3 since it was saved)
-    await expect(page.getByTestId('business-name')).toHaveValue('AutoSave Bakery');
+    // Wait for the state to be reloaded
+    await expect(page.getByTestId('location-input')).toHaveValue('123 AutoSave St, Anytown');
     });
   test('should show submit error if start fails', async ({ page }) => {
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
