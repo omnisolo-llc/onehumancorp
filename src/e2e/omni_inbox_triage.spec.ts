@@ -20,7 +20,7 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         expect(response.ok()).toBeTruthy();
 
         // Step 3: Navigate to Work Triage UI
-        await page.goto('/api/ui/triage.html');
+        await page.goto('/inbox');
 
         // Wait for feed to load
         await expect(page.getByTestId(/triage-card-/).first()).toBeVisible();
@@ -65,7 +65,7 @@ test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
         });
         expect(response.ok()).toBeTruthy();
 
-        await page.goto('/api/ui/triage.html');
+        await page.goto('/inbox');
         const sourceText = await page.locator('[data-testid^="triage-card-"] .font-outfit').first().textContent();
         expect(sourceText).toContain('Email');
 

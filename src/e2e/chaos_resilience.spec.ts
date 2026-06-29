@@ -81,7 +81,7 @@ test.describe("Chaos Engineering Validation - Triage Resilience", () => {
     });
 
     // Navigate to triage page
-    await page.goto('/api/ui/triage.html');
+    await page.goto('/inbox');
 
     // UI should not crash. Instead, it should show an error message or empty state.
     // The specific error message caught in UI is "Failed to load triage items from the database" or the fallback e?.message
