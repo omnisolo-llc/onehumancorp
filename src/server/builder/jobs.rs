@@ -41,60 +41,70 @@ async fn execute_publish_site_job(
         .map_err(|e| e.to_string())?;
 
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-    let minimax = crate::minimax::MinimaxClient::new(api_key);
+    let minimax = std::sync::Arc::new(crate::minimax::MinimaxClient::new(api_key));
 
-    for page in &pages {
-        let blocks = super::db::list_blocks(pool, tenant_id, page.id)
-            .await
-            .map_err(|e| e.to_string())?;
+    let mut tasks = Vec::new();
+    for page in pages.into_iter() {
+        let pool_clone = pool.clone();
+        let minimax_clone = minimax.clone();
+        let tenant_id_clone = tenant_id.clone();
+        tasks.push(tokio::spawn(async move {
+            let blocks = super::db::list_blocks(&pool_clone, tenant_id_clone, page.id)
+                .await
+                .map_err(|e| e.to_string())?;
 
-        let should_generate_seo = page.seo_metadata.get("name").is_none() || page.seo_metadata.as_object().map(|o| o.is_empty()).unwrap_or(true);
+            let should_generate_seo = page.seo_metadata.get("name").is_none() || page.seo_metadata.as_object().map(|o| o.is_empty()).unwrap_or(true);
 
-        if should_generate_seo {
-            info!("Generating SEO metadata for page {}...", page.id);
-            let mut block_texts = Vec::new();
-            for b in &blocks {
-                if let Some(headline) = b.content.get("headline").and_then(|v| v.as_str()) {
-                    block_texts.push(headline.to_string());
+            if should_generate_seo {
+                info!("Generating SEO metadata for page {}...", page.id);
+                let mut block_texts = Vec::new();
+                for b in &blocks {
+                    if let Some(headline) = b.content.get("headline").and_then(|v| v.as_str()) {
+                        block_texts.push(headline.to_string());
+                    }
+                    if let Some(desc) = b.content.get("description").and_then(|v| v.as_str()) {
+                        block_texts.push(desc.to_string());
+                    }
                 }
-                if let Some(desc) = b.content.get("description").and_then(|v| v.as_str()) {
-                    block_texts.push(desc.to_string());
+
+                let prompt = format!("You are an expert SEO AI. Based on the following page content, generate a JSON object with SEO metadata for Generative Engine Optimization (GEO). The JSON must include 'name' (title), 'keywords', and a rich 'description' acting as a natural language summary optimized for AI search engines like ChatGPT and Gemini. Only return the JSON object. Content: {}", block_texts.join(" "));
+
+                let mut attempts = 0;
+                let mut ai_call_succeeded = false;
+                let mut ai_res = String::new();
+                while attempts < 3 {
+                    match tokio::time::timeout(std::time::Duration::from_secs(60), minimax_clone.reason(&prompt)).await {
+                        Ok(Ok(res)) => {
+                            ai_res = res;
+                            ai_call_succeeded = true;
+                            break;
+                        },
+                        _ => {
+                            attempts += 1;
+                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                        }
+                    }
                 }
-            }
 
-            let prompt = format!("You are an expert SEO AI. Based on the following page content, generate a JSON object with SEO metadata for Generative Engine Optimization (GEO). The JSON must include 'name' (title), 'keywords', and a rich 'description' acting as a natural language summary optimized for AI search engines like ChatGPT and Gemini. Only return the JSON object. Content: {}", block_texts.join(" "));
+                if ai_call_succeeded {
+                    let cleaned = ai_res.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+                    if let Ok(mut seo_json) = serde_json::from_str::<serde_json::Value>(cleaned) {
+                        if seo_json.get("@context").is_none() {
+                            seo_json["@context"] = serde_json::Value::String("https://schema.org".to_string());
+                            seo_json["@type"] = serde_json::Value::String("LocalBusiness".to_string());
+                        }
 
-            let mut attempts = 0;
-            let mut ai_call_succeeded = false;
-            let mut ai_res = String::new();
-            while attempts < 3 {
-                match tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await {
-                    Ok(Ok(res)) => {
-                        ai_res = res;
-                        ai_call_succeeded = true;
-                        break;
-                    },
-                    _ => {
-                        attempts += 1;
-                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                        super::db::update_page_seo_metadata(&pool_clone, tenant_id_clone, page.id, seo_json)
+                            .await
+                            .map_err(|e| e.to_string())?;
                     }
                 }
             }
-
-            if ai_call_succeeded {
-                let cleaned = ai_res.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
-                if let Ok(mut seo_json) = serde_json::from_str::<serde_json::Value>(cleaned) {
-                    if seo_json.get("@context").is_none() {
-                        seo_json["@context"] = serde_json::Value::String("https://schema.org".to_string());
-                        seo_json["@type"] = serde_json::Value::String("LocalBusiness".to_string());
-                    }
-
-                    super::db::update_page_seo_metadata(pool, tenant_id, page.id, seo_json)
-                        .await
-                        .map_err(|e| e.to_string())?;
-                }
-            }
-        }
+            Ok::<(), String>(())
+        }));
+    }
+    for task in tasks {
+        let _ = task.await;
     }
 
     let mut conn = super::db::acquire_tenant_conn(pool, tenant_id)
