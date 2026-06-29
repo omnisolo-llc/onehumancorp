@@ -1289,11 +1289,13 @@ impl Agent {
                             let tool_clone = tool.clone();
                             let tc_clone = tc.clone();
 
+                            let cfg_for_async = cfg.clone();
                             let fut = async move {
                                 let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                                     &tool_clone,
                                     &tc_clone,
-                                    max_retries
+                                    max_retries,
+                                    &cfg_for_async
                                 ).await;
                                 (i, tc_clone, res)
                             };
@@ -1449,7 +1451,8 @@ impl Agent {
                             let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                                 tool,
                                 tc,
-                                cfg.max_retries
+                                cfg.max_retries,
+                                cfg
                             ).await;
 
                             match res {
@@ -1851,7 +1854,8 @@ impl Agent {
                             let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                                 tool,
                                 &tc_clone,
-                                max_retries
+                                max_retries,
+                                &cfg_arc_clone
                             ).await;
                             (id, res)
                         } else {
@@ -1989,7 +1993,8 @@ impl Agent {
                         let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                             tool,
                             &tc,
-                            max_retries
+                            max_retries,
+                            &cfg_arc_node
                         ).await;
 
                         match final_res {
@@ -4963,6 +4968,7 @@ impl Agent {
             tool,
             &modified_tc,
             max_retries,
+            &crate::agent::AgentRunConfig::default(),
         )
         .await
     }
