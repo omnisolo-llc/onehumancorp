@@ -19,8 +19,14 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     // Assert creation success
     await expect(page.getByText('Product Published!')).toBeVisible({ timeout: 10000 });
 
-    // 2. Navigate to POS terminal path
-    await page.goto(`/pos.html`);
+    // 2. Start at dashboard to verify "Sell In Person" integration
+    await page.goto('/dashboard');
+
+    // Click "Sell In Person" to navigate to the POS terminal
+    await page.getByRole('link', { name: /Sell In Person/i }).click();
+
+    // Verify navigation
+    await expect(page).toHaveURL(/\/pos\/terminal/);
 
     // Unlock the terminal
     const pins = ['1', '2', '3', '4'];

@@ -531,7 +531,7 @@ export default function Dashboard() {
           </section>
         )}
 
-        <div className="mb-6">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[16px] hover:shadow-md transition-all group">
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 rounded-[16px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
@@ -542,6 +542,21 @@ export default function Dashboard() {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Open the dashboard task workspace for conversations, artifacts, and assistant actions.</p>
               </div>
               <div className="text-[#0f766e] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
+                →
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/pos/terminal" className="app-card block p-5 min-h-[44px] rounded-[16px] hover:shadow-md transition-all group border border-blue-500/20 bg-blue-50/10 dark:bg-blue-900/10">
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-[16px] bg-[#0066FF] flex items-center justify-center text-white text-xl shadow-sm shadow-blue-500/20">
+                <span aria-hidden="true">💳</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Sell In Person</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Use Tap-to-Pay to process in-store sales and automatically sync inventory.</p>
+              </div>
+              <div className="text-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
                 →
               </div>
             </div>
