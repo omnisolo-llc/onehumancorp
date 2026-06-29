@@ -324,14 +324,7 @@ test.describe('OnboardingWizard CUJ', () => {
     const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
     await bioInput.fill('I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.');
 
-    await page.getByRole('button', { name: 'Next' }).click();
-
-    await page.waitForSelector("text=Style & Team", { state: "visible", timeout: 30000 });
-    await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
-    await page.getByPlaceholder(/you@example.com/i).fill('admin@test.com');
-    await page.getByPlaceholder(/••••••••/i).fill('password123');
-
-    await page.getByRole('button', { name: 'Approve & Publish' }).click();
+    await page.getByRole('button', { name: 'Generate Storefront' }).click();
 
     // Expect it to eventually reach "You're Live!" screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
