@@ -491,10 +491,14 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn live_minimax_five_agent_workspace_collaborates() {
-        let workspace = minimax_agent_workspace_from_env()
-            .expect("MINIMAX_API_KEY must be set for the live Minimax workspace test")
+        let maybe_workspace = minimax_agent_workspace_from_env();
+        if maybe_workspace.is_err() {
+            tracing::info!("Skipping live_minimax_five_agent_workspace_collaborates: MINIMAX_API_KEY not set");
+            return;
+        }
+        let workspace = maybe_workspace.unwrap()
+
             .with_turn_delay(std::time::Duration::from_millis(
                 std::env::var("OHC_MINIMAX_SWARM_TURN_DELAY_MS")
                     .ok()
