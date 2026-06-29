@@ -310,7 +310,7 @@ export default function OnboardingWizard() {
       updateState({ businessType: intakeData.business_type || 'Online Store' });
       updateState({ businessName: intakeData.business_name || 'My Business' });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '10.00' });
+      updateState({ firstProductPrice: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || '10.00') });
       if (intakeData.initial_products) {
           localStorage.setItem('onboarding_initial_products', JSON.stringify(intakeData.initial_products));
       }
@@ -331,7 +331,7 @@ export default function OnboardingWizard() {
         step: 2,
         aiAgents: newAgents,
         firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-        firstProductPrice: intakeData.initial_products?.[0]?.price || "10.00"
+        firstProductPrice: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || "10.00")
       }); // Go to review step
     } catch (err: any) {
       console.error(err);
@@ -417,7 +417,7 @@ export default function OnboardingWizard() {
             admin_password: adminPassword,
             website_template: "auto",
             first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
-            first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
+            first_product_price: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || "0.00"),
             domain_choice: "subdomain",
             price_type: "fixed",
             location: intakeData.location || "",
@@ -483,7 +483,7 @@ Image provided: ${instantImageUrl}`;
         },
         body: JSON.stringify({ description: combinedInput, image_url: instantImageUrl })
       });
-      let intakeData: { business_name?: string, business_type?: string, categories?: string[], initial_products?: { name: string, price: number }[], error?: string } = {};
+      let intakeData: any = {};
       try {
           if (!intakeRes.ok) {
              throw new Error(`Failed to generate storefront: ${intakeRes.status}`);
@@ -502,7 +502,7 @@ Image provided: ${instantImageUrl}`;
       updateState({ businessDescription: bio });
       updateState({ categories: intakeData.categories || ['physical'] });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '0.00' });
+      updateState({ firstProductPrice: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || '0.00') });
       updateState({ location: intakeData.location || 'Local' });
       updateState({ targetAudience: intakeData.target_audience || 'General' });
       updateState({ adminName: intakeData.business_name || 'Admin' });
@@ -534,7 +534,7 @@ Image provided: ${instantImageUrl}`;
           admin_password: defaultAdminPassword,
           website_template: 'auto',
           first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
-          first_product_price: intakeData.initial_products?.[0]?.price || '0.00',
+          first_product_price: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || '0.00'),
           domain_choice: 'subdomain',
           price_type: 'fixed',
           location: intakeData.location || 'Local',
