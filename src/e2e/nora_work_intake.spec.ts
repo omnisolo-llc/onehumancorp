@@ -37,7 +37,7 @@ test.describe('Nora Work Intake Flow', () => {
     await expect(proposalCard).toContainText('Approve & Send Proposal');
 
     // Approve it
-    const approveButton = proposalCard.getByTestId('approve-proposal');
+    const approveButton = proposalCard.getByTestId('feed-approve-btn');
     await approveButton.click();
 
     // It should disappear from the feed

@@ -69,8 +69,8 @@ test.describe('Omnichannel Intake Agent feed card', () => {
     await expect(approvalCard.getByText('Hello, what is the status of my order?')).toBeVisible({ timeout: 15000 });
 
     // Approve the response
-    const approveBtn1 = approvalCard.locator('..').locator('..').locator('[data-testid="approve-proposal"]').first();
-    const approveBtn2 = approvalCard.locator('..').locator('[data-testid="approve-proposal"]').first();
+    const approveBtn1 = approvalCard.locator('..').locator('..').locator('[data-testid="feed-approve-btn"]').first();
+    const approveBtn2 = approvalCard.locator('..').locator('[data-testid="feed-approve-btn"]').first();
 
     await expect(approveBtn1.or(approveBtn2)).toBeVisible();
     const targetBtn = (await approveBtn1.isVisible()) ? approveBtn1 : approveBtn2;
