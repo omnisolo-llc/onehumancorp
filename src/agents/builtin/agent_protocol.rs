@@ -57,6 +57,7 @@ pub enum StepStatus {
     Created,
     Running,
     Completed,
+    Failed, // Added Failed status according to AutoGPT / agentprotocol.ai spec
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -297,7 +298,7 @@ impl AgentProtocolServer {
                     task_id: task_id.to_string(),
                     step_id: uuid::Uuid::new_v4().to_string(),
                     name: None,
-                    status: StepStatus::Completed, // Spec does not define Failed, using Completed for now
+                    status: StepStatus::Failed, // Using standard Failed status for errors
                     output: Some(format!("Error: {}", e)),
                     additional_output: None,
                     is_last: true,
@@ -539,7 +540,7 @@ mod tests {
         let resp_json = server.execute_step("task-123", req_json).await;
 
         let err_resp: Step = serde_json::from_value(resp_json).unwrap();
-        assert_eq!(err_resp.status, StepStatus::Completed);
+        assert_eq!(err_resp.status, StepStatus::Failed);
         assert!(err_resp.output.unwrap().contains("LLM execution failed"));
     }
 }
