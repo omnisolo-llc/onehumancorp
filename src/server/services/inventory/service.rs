@@ -13,6 +13,7 @@ pub trait InventoryLocker: Send + Sync {
     async fn release(&self, lock_key: &str, expected_lock_id: &str) -> bool;
     async fn get_lock_id(&self, lock_key: &str) -> Option<String>;
     async fn clear(&self, lock_key: &str);
+    async fn publish(&self, topic: &str, message: &str);
 }
 
 pub struct MemoryLocker {
@@ -61,6 +62,7 @@ impl InventoryLocker for MemoryLocker {
     async fn clear(&self, lock_key: &str) {
         self.locks.remove(lock_key);
     }
+    async fn publish(&self, _topic: &str, _message: &str) {}
 }
 
 pub struct RedisLocker {
@@ -119,6 +121,15 @@ impl InventoryLocker for RedisLocker {
     async fn clear(&self, lock_key: &str) {
         if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
             let _: () = redis::cmd("DEL").arg(lock_key).query_async(&mut conn).await.unwrap_or(());
+        }
+    }
+    async fn publish(&self, topic: &str, message: &str) {
+        if let Ok(mut conn) = self.client.get_multiplexed_async_connection().await {
+            let _: Result<(), _> = redis::cmd("PUBLISH")
+                .arg(topic)
+                .arg(message)
+                .query_async(&mut conn)
+                .await;
         }
     }
 }
@@ -292,19 +303,15 @@ impl InventoryService {
                     let _ = tx.commit().await;
 
                     // Publish to Redis Pub/Sub for Real-Time Sync
-                    if false {
-
-
-                // Also emit cache invalidation event for storefront
-                let _invalidation_topic = "cache_invalidation_events";
-                let _invalidation_payload = serde_json::json!({
-                    "event": "inventory.updated",
-                    "tags": [
-                        format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
-                    ]
-                }).to_string();
-                    }
+                    let invalidation_topic = "cache_invalidation_events";
+                    let invalidation_payload = serde_json::json!({
+                        "event": "inventory.updated",
+                        "tags": [
+                            format!("tenant-id:{}", tenant_id),
+                            format!("entity:product:{}", product_id)
+                        ]
+                    }).to_string();
+                    self.locker.publish(invalidation_topic, &invalidation_payload).await;
                 } else {
             self.locker.clear(&lock_key).await;
                     return Ok(ReserveResult {
@@ -545,21 +552,15 @@ impl InventoryService {
         tx.commit().await.map_err(|e| e.to_string())?;
 
         // Publish to Redis Pub/Sub for Real-Time Sync
-        if false {
-            if false {
-
-
-                // Also emit cache invalidation event for storefront
-                let _invalidation_topic = "cache_invalidation_events";
-                let _invalidation_payload = serde_json::json!({
-                    "event": "inventory.updated",
-                    "tags": [
-                        format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
-                    ]
-                }).to_string();
-            }
-        }
+        let invalidation_topic = "cache_invalidation_events";
+        let invalidation_payload = serde_json::json!({
+            "event": "inventory.updated",
+            "tags": [
+                format!("tenant-id:{}", tenant_id),
+                format!("entity:product:{}", product_id)
+            ]
+        }).to_string();
+        self.locker.publish(invalidation_topic, &invalidation_payload).await;
 
         Ok(CommitResult {
             success: true,
