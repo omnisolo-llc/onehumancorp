@@ -3379,7 +3379,7 @@ pub async fn handle_zero_click_generate(
         payment_pref: "online".to_string(),
         admin_email: if !auth_info.agent_id.is_empty() { auth_info.agent_id.clone() } else { format!("owner_{}@ohc.app", uuid::Uuid::new_v4().simple()) },
         admin_name: "Owner".to_string(),
-        admin_password: uuid::Uuid::new_v4().to_string(),
+        admin_password: format!("{}!", uuid::Uuid::new_v4().to_string()),
         website_template: "Modern".to_string(),
         first_product_name,
         first_product_price,
