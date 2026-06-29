@@ -3877,7 +3877,7 @@ pub async fn update_ui_triage_action_handler(
                                         let item_id = format!("item-{}", uuid::Uuid::new_v4());
 
                                         if let Err(e) = sqlx::query(
-                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
+                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
                                         )
                                         .bind(&item_id)
                                         .bind(&quote_id)
@@ -3885,6 +3885,7 @@ pub async fn update_ui_triage_action_handler(
                                         .bind(unit_price_cents)
                                         .bind(qty as i32)
                                         .bind(is_optional)
+                                        .bind(tenant_id.clone())
                                         .execute(&mut *tx)
                                         .await {
                                             tracing::error!("Failed to insert quote line item for quote {}: {:?}", quote_id, e);
@@ -4141,7 +4142,7 @@ pub async fn update_ui_triage_action_handler(
                                         let item_id = format!("item-{}", uuid::Uuid::new_v4());
 
                                         if let Err(e) = sqlx::query(
-                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)"
                                         )
                                         .bind(&item_id)
                                         .bind(&quote_id)
@@ -4149,6 +4150,7 @@ pub async fn update_ui_triage_action_handler(
                                         .bind(unit_price_cents)
                                         .bind(qty as i32)
                                         .bind(is_optional)
+                                        .bind(tenant_id.clone())
                                         .execute(&mut *tx)
                                         .await {
                                             tracing::error!("Failed to insert quote line item for quote {}: {:?}", quote_id, e);
@@ -6828,7 +6830,7 @@ async fn create_ui_bom_item_handler(
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
-        .nest("/api/billing", api::billing_api::router(hub.clone()))
+        .nest("/api/billing", api::billing_api::router(hub.clone()).layer(axum::middleware::from_fn(crate::auth::guest_auth_middleware)))
         .nest("/api/assistant", api::assistant::router(db.clone()))
         .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())).layer(axum::middleware::from_fn(crate::auth::guest_auth_middleware)))
         .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))
@@ -7086,7 +7088,7 @@ async fn create_ui_bom_item_handler(
     // Start Cache Invalidator Service
     let invalidator_pool = db.pool.clone();
     tokio::spawn(async move {
-        crate::services::cache_invalidator::start_cache_invalidator(invalidator_pool).await;
+        tokio::spawn(crate::services::cache_invalidator::start_cache_invalidator(invalidator_pool));
     });
 
     // Start Temp File Cleanup Background Task

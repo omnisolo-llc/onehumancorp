@@ -2517,12 +2517,16 @@ impl Agent {
             }
 
             read_only_futures.push(async move {
-                let mut retry_count = 0;
+                let mut retry_count = 0; // Keeping this around just to ensure we preserve the outer state, but removing unexpected retries
+                let mut llm_recoverable_count = 0;
                 let mut current_tc = tc_clone.clone();
                 loop {
                     match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
                         Err(crate::types::ToolError::Unexpected(msg)) => {
+                            break Ok(format!("Error executing planned step: Unexpected error: {}", msg));
+                        }
+                        Err(crate::types::ToolError::Transient(msg)) => {
                             if retry_count < max_retries {
                                 retry_count += 1;
                                 let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
@@ -2533,6 +2537,10 @@ impl Agent {
                             }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                            if llm_recoverable_count >= 2 {
+                                break Ok(format!("Error executing planned step: LLM-recoverable retries exhausted: {}", err_msg));
+                            }
+                            llm_recoverable_count += 1;
                             // Error Handling (Compounding Error Prevention): LLM-recoverable
                             // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                             let error_result = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(current_tc.id.clone(), &err_msg);
@@ -2643,6 +2651,7 @@ impl Agent {
             }
 
             let mut retry_count = 0;
+            let mut llm_recoverable_count = 0;
             let max_retries = cfg.max_retries;
             let mut current_tc = tc.clone();
             let result = loop {
@@ -2652,6 +2661,9 @@ impl Agent {
                 {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Unexpected(msg)) => {
+                        break format!("Error executing planned step: Unexpected error: {}", msg);
+                    }
+                    Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
                             retry_count += 1;
                             let backoff =
@@ -2666,6 +2678,10 @@ impl Agent {
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                        if llm_recoverable_count >= 2 {
+                            break format!("Error executing planned step: LLM-recoverable retries exhausted: {}", err_msg);
+                        }
+                        llm_recoverable_count += 1;
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         let error_result =

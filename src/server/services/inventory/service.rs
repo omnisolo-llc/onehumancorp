@@ -125,6 +125,7 @@ impl InventoryLocker for RedisLocker {
 
 pub struct InventoryService {
     locker: Box<dyn InventoryLocker>,
+    redis_client: Option<redis::Client>,
 }
 
 
@@ -150,12 +151,12 @@ pub struct CommitResult {
 
 impl InventoryService {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
-        let locker: Box<dyn InventoryLocker> = if let Some(client) = redis_client {
-            Box::new(RedisLocker::new(client))
+        let locker: Box<dyn InventoryLocker> = if let Some(ref client) = redis_client {
+            Box::new(RedisLocker::new(client.clone()))
         } else {
             Box::new(MemoryLocker::new())
         };
-        Self { locker }
+        Self { locker, redis_client }
     }
 
     // Redis Redlock pattern for distributed lock
@@ -223,7 +224,7 @@ impl InventoryService {
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
-                    error_message: "Oops! Item just sold out.".to_string(),
+                    error_message: "Item is currently being checked out.".to_string(),
                 });
             }
 
@@ -289,21 +290,19 @@ impl InventoryService {
                             });
                         }
                     }
-                    let _ = tx.commit().await;
-
-                    // Publish to Redis Pub/Sub for Real-Time Sync
-                    if false {
-
-
-                // Also emit cache invalidation event for storefront
-                let _invalidation_topic = "cache_invalidation_events";
-                let _invalidation_payload = serde_json::json!({
-                    "event": "inventory.updated",
-                    "tags": [
-                        format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
-                    ]
-                }).to_string();
+                    let _ = tx.commit().await;                    // Publish to Redis Pub/Sub for Real-Time Sync
+                    if let Some(client) = &self.redis_client {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let invalidation_topic = "cache_invalidation_events";
+                            let invalidation_payload = serde_json::json!({
+                                "event": "inventory.updated",
+                                "tags": [
+                                    format!("tenant-id:{}", tenant_id),
+                                    format!("entity:product:{}", product_id)
+                                ]
+                            }).to_string();
+                            let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                        }
                     }
                 } else {
             self.locker.clear(&lock_key).await;
@@ -377,20 +376,33 @@ impl InventoryService {
         quantity: i32,
         lock_id: &str,
     ) -> Result<CommitResult, String> {
-        let lock_key = Self::get_lock_key(tenant_id, product_id);
-
-        let current_lock_id: Option<String> = self.locker.get_lock_id(&lock_key).await;
-
-        if let Some(cid) = current_lock_id {
-            if cid != lock_id && !lock_id.is_empty() {
+        let mut all_match = true;
+        let mut valid_indices = Vec::new();
+        let mut lock_id_base = "";
+        let parts: Vec<&str> = lock_id.split(':').collect();
+        if parts.len() == 2 {
+            lock_id_base = parts[0];
+            let indices: Vec<&str> = parts[1].split(',').collect();
+            for idx in indices {
+                let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
+                let current_lock_id = self.locker.get_lock_id(&lock_key).await;
+                if current_lock_id != Some(lock_id_base.to_string()) {
+                    all_match = false;
+                    break;
+                }
+                valid_indices.push(idx);
+            }
+            if !all_match {
                 return Ok(CommitResult {
                     success: false,
                     error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
                 });
             }
+            for idx in valid_indices {
+                let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
+                self.locker.clear(&lock_key).await;
+            }
         }
-
-        self.locker.clear(&lock_key).await;
 
         let pool = crate::db::get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
@@ -399,7 +411,14 @@ impl InventoryService {
             .await
             .map_err(|e| e.to_string())?;
 
-        // Try to commit from locked quantity first
+        // Enforce row-level locking for final commit
+        let _ = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+            .bind(product_id)
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
         let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
             .bind(quantity)
             .bind(product_id)
@@ -542,22 +561,18 @@ impl InventoryService {
             }
         }
 
-        tx.commit().await.map_err(|e| e.to_string())?;
-
-        // Publish to Redis Pub/Sub for Real-Time Sync
-        if false {
-            if false {
-
-
-                // Also emit cache invalidation event for storefront
-                let _invalidation_topic = "cache_invalidation_events";
-                let _invalidation_payload = serde_json::json!({
+        tx.commit().await.map_err(|e| e.to_string())?;        // Publish to Redis Pub/Sub for Real-Time Sync
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let invalidation_topic = "cache_invalidation_events";
+                let invalidation_payload = serde_json::json!({
                     "event": "inventory.updated",
                     "tags": [
                         format!("tenant-id:{}", tenant_id),
                         format!("entity:product:{}", product_id)
                     ]
                 }).to_string();
+                let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
             }
         }
 
@@ -637,13 +652,13 @@ mod tests {
         let tenant_id = "test_inventory_tenant";
         let product_id = "test_product_concurrent";
 
-        let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product', 10, 10) ON CONFLICT DO NOTHING")
+        let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product', 1, 1) ON CONFLICT DO NOTHING")
             .bind(product_id)
             .bind(tenant_id)
             .execute(&pool)
             .await;
 
-        let _ = sqlx::query("UPDATE products SET inventory_count = 10, available_quantity = 10, locked_quantity = 0 WHERE id = $1 AND tenant_id = $2")
+        let _ = sqlx::query("UPDATE products SET inventory_count = 1, available_quantity = 1, locked_quantity = 0 WHERE id = $1 AND tenant_id = $2")
             .bind(product_id)
             .bind(tenant_id)
             .execute(&pool)
@@ -673,7 +688,7 @@ mod tests {
         if std::env::var("OHC_REDIS_URL").is_ok() {
             assert_eq!(success_count, 1, "Only one concurrent request should acquire the lock");
             let failed_res = if res1.success { res2 } else { res1 };
-            assert_eq!(failed_res.error_message, "Oops! Item just sold out.");
+            assert_eq!(failed_res.error_message, "Item is currently being checked out.");
         }
     }
 }
