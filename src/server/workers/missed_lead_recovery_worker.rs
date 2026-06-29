@@ -328,6 +328,8 @@ mod tests {
         if let DbStore::Sqlite(pool) = &db.store {
             sqlx::query("CREATE TABLE IF NOT EXISTS auto_reply_policies (id TEXT PRIMARY KEY, tenant_id TEXT, enabled BOOLEAN, delay_minutes INTEGER, tone_instructions TEXT)")
                 .execute(pool).await.unwrap();
+            sqlx::query("CREATE TABLE IF NOT EXISTS daily_work_items (id TEXT PRIMARY KEY, tenant_id TEXT, signal_id TEXT, intent TEXT, customer_info TEXT, suggested_actions TEXT, status TEXT, created_at TEXT, updated_at TEXT)")
+                .execute(pool).await.unwrap();
         }
         Some(Arc::new(db))
     }
