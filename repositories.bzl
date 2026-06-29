@@ -146,7 +146,7 @@ def go_repositories():
         name = "com_github_cncf_xds_go",
         build_file_generation = "on",
         importpath = "github.com/cncf/xds/go",
-        urls = ["https://github.com/cncf/xds/archive/e9ce68804cb4.tar.gz"],
+        urls = ["https://codeload.github.com/cncf/xds/tar.gz/e9ce68804cb4"],
         sum = "h1:Rjjh4E6iCUSW3n8E14lM6j1D0aRzDtdGk1iZ/g78A58=",
         version = "v0.0.0-20230607035331-e9ce68804cb4",
     )
