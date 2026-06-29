@@ -291,7 +291,7 @@ Your response:",
 
 
     pub async fn save_onboarding_state(&self, tenant_id: &str, user_id: &str, current_step: i32, state_json: &serde_json::Value) -> Result<(), String> {
-        tracing::debug!("Saving onboarding state for tenant: {}, user: {}", tenant_id, user_id);
+        tracing::debug!("Saving onboarding state for tenant: {}, user: {}", tenant_id, user_id); // pii-safe
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
