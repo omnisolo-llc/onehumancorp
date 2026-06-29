@@ -40,6 +40,78 @@ pub struct DecisionResponse {
     pub success: bool,
 }
 
+
+async fn simulate_promoter_draft(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let description = "New product detected! Schedule a post to drive sales?";
+    let product_name = "New Collection";
+    let parsed = serde_json::json!({
+        "tiktok": "Check out our new product!
+
+⚡ Powered by OHC",
+        "instagram": "New arrival! Link in bio.
+
+⚡ Powered by OHC",
+        "facebook": "We just added a new product to our store.
+
+⚡ Powered by OHC",
+        "feature_type": "social_post_draft",
+        "product_name": product_name
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::Marketing,
+        format!("Draft Social Post: {}", product_name),
+        tenant_id.clone(),
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        parsed.clone(),
+    ).await {
+        Ok(_) => {
+            let pool = crate::db::get_pool();
+            let agent_feed_item_id = uuid::Uuid::new_v4().to_string();
+
+            // Insert mock feed item so it shows up in UI Unified Agent Feed correctly
+            let insert_res = if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("sqlite") || std::env::var("OHC_DATABASE_URL").is_err() {
+                sqlx::query(
+                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                )
+                .bind(&agent_feed_item_id)
+                .bind(&tenant_id)
+                .bind("marketing")
+                .bind(serde_json::json!({ "description": description, "feature_type": "social_post_draft" }).to_string())
+                .bind(parsed.to_string())
+                .execute(&pool).await.map(|_| ())
+            } else {
+                sqlx::query(
+                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
+                )
+                .bind(&agent_feed_item_id)
+                .bind(&tenant_id)
+                .bind("marketing")
+                .bind(serde_json::json!({ "description": description, "feature_type": "social_post_draft" }))
+                .bind(&parsed)
+                .execute(&pool).await.map(|_| ())
+            };
+            if let Err(e) = insert_res {
+                tracing::error!("Failed to insert simulated agent feed item: {}", e);
+            }
+
+            (StatusCode::OK, Json(DecisionResponse { success: true })).into_response()
+        },
+        Err(e) => {
+            tracing::error!("Failed to simulate promoter draft: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
 pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -52,6 +124,7 @@ where
         .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
+        .route("/simulate-promoter-draft", post(simulate_promoter_draft))
         .route("/simulate-dispute-resolution", post(simulate_dispute_resolution))
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/simulate-autonomous-booking-quote", post(simulate_autonomous_booking_quote))

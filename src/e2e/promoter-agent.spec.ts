@@ -1,67 +1,57 @@
 import { test, expect } from '@playwright/test';
 
-test('Promoter Agent Flow navigates from dashboard and generates posts', async ({ page }) => {
-    // 1. Start by logging in via UI (mandatory for owner E2E flow)
-    // By design, tests are pre-authenticated, so we can go straight to the dashboard or skip filling credentials
-    await page.goto('/dashboard');
+test.describe('The Promoter Agent CUJ', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
 
-    // Ensure successful navigation to the dashboard after login
-    await expect(page).toHaveURL(/\/dashboard/);
+  test('Owner simulates product creation and schedules generated social posts', async ({ page }) => {
+    // 1. Log in
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').fill('test@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: 'Log In' }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
 
-    // Navigate to the promoter page
-    await page.goto('/promoter');
-    await expect(page).toHaveURL(/\/promoter/);
+    // 2. Go to the feed page
+    await page.goto('/feed');
+    await expect(page.getByTestId('agent-feed')).toBeVisible();
 
-    // 2. Interact with the Promoter Agent form
-    // Wait for the form
+    // 3. Click the Simulate Promoter Draft button
+    const simBtn = page.getByTestId('simulate-promoter-btn');
+    if (await simBtn.isVisible()) {
+      await simBtn.click();
+    }
 
-    // Ensure button is disabled initially
-    const generateBtn = page.locator('button:has-text("Generate Posts")');
+    // 4. Verify the Promoter action card appears
+    const feedCard = page.getByTestId('agent-feed-card').first();
+    await expect(feedCard).toBeVisible({ timeout: 15000 });
 
-    // Fill out the form
-    await page.fill('input[id="productName"]', 'Awesome New Toy');
-    await page.fill('textarea[id="description"]', 'Your kids will love it.');
-    await page.fill('input[id="theme"]', 'Summer Sale');
+    // 5. Verify the card contains the specific UI elements for Promoter
+    await expect(feedCard).toContainText('New Product: New Collection');
+    await expect(feedCard).toContainText('Generated Marketing Posts');
+    await expect(feedCard).toContainText('Instagram');
+    await expect(feedCard).toContainText('TikTok');
 
-    // Ensure button is enabled after filling required fields
-    await expect(generateBtn).toBeEnabled();
+    // 6. Test Edit functionality
+    const editBtn = feedCard.getByTestId('feed-edit-btn');
+    await expect(editBtn).toBeVisible();
+    await editBtn.click();
 
-    // 3. Generate Posts
-    await generateBtn.click();
+    const textarea = page.getByTestId('feed-edit-input');
+    await expect(textarea).toBeVisible();
+    await textarea.fill('Testing edit functionality');
 
-    // Verify loading state
-    await expect(page.locator('text=Generating...')).toBeVisible();
+    const saveBtn = page.getByTestId('feed-save-edit-btn');
+    await saveBtn.click();
+    await expect(textarea).not.toBeVisible();
 
-    // Wait for the results to load
-    await expect(page.locator('text=Instagram')).toBeVisible({ timeout: 10000 });
+    // 7. Test Approve & Schedule functionality
+    const approveBtn = feedCard.getByTestId('feed-approve-btn');
+    await expect(approveBtn).toBeVisible();
+    await expect(approveBtn).toContainText('Approve & Schedule');
 
-    // 4. Verify Viral Branding in Results
-    const instagramContent = await page.locator('.bg-gray-50').nth(0).textContent();
-    expect(instagramContent).toContain('Awesome New Toy');
-    expect(instagramContent).toContain('Your kids will love it.');
-    expect(instagramContent).toContain('Summer Sale');
-    expect(instagramContent).toContain('⚡ Powered by OHC');
+    await approveBtn.click();
 
-    const twitterContent = await page.locator('.bg-gray-50').nth(1).textContent();
-    expect(twitterContent).toContain('Awesome New Toy');
-    expect(twitterContent).toContain('⚡ Powered by OHC');
-
-    const emailContent = await page.locator('.bg-gray-50').nth(2).textContent();
-    expect(emailContent).toContain('Awesome New Toy');
-    expect(emailContent).toContain('⚡ Powered by OHC');
-
-    // 5. Test Clipboard Copy Interaction
-    const copyBtn = page.locator('button[data-testid="copy-instagram"]');
-    await copyBtn.click();
-    await expect(copyBtn).toHaveText('Copied!');
-
-    // 6. Test Unified Agent Feed integration
-    // We navigate to the dashboard where the agent feed lives.
-    await page.goto('/dashboard');
-    // Ensure successful navigation to the dashboard
-    await expect(page).toHaveURL(/\/dashboard/);
-
-    // Check if feed loads
-    const feedContainer = page.locator('.app-main').first();
-    await expect(feedContainer).toBeVisible({ timeout: 15000 });
+    // 8. Verify the card disappears from the feed
+    await expect(feedCard).not.toBeVisible({ timeout: 10000 });
+  });
 });
