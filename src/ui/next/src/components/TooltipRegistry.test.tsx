@@ -114,19 +114,21 @@ describe('TooltipRegistry', () => {
   });
 
   it('handles fetch errors gracefully', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockTooltipFetch.mockImplementationOnce(() => Promise.resolve({ ok: false, json: async () => ({}) }));
     await act(async () => {
       render(<TooltipProvider><div>Test</div></TooltipProvider>);
       await new Promise(r => setTimeout(r, 20));
     });
     expect(global.fetch).toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load tooltips', expect.any(Error));
+    consoleErrorSpy.mockRestore();
   });
 });
 
 describe('useTooltip Hook sync', () => {
   it('throws an error if used outside TooltipProvider', () => {
     const originalError = console.error;
-    console.error = vi.fn();
     const preventError = (e: any) => e.preventDefault();
     window.addEventListener('error', preventError);
 

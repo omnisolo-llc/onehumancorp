@@ -10,6 +10,12 @@ import userEvent from '@testing-library/user-event';
 describe('HelpCenterPage', () => {
   beforeEach(() => {
     global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/tooltips') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ "test-id": "Tooltip text" })
+        });
+      }
       if (url === '/api/help') {
         return Promise.resolve({
           json: () => Promise.resolve([
