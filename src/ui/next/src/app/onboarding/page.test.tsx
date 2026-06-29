@@ -1115,6 +1115,7 @@ describe("OnboardingWizard", () => {
   });
 
   it("Instant Build: displays error when API fails", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const user = userEvent.setup({ delay: null });
 
     global.fetch = vi.fn().mockImplementation((url) => {
@@ -1140,6 +1141,7 @@ describe("OnboardingWizard", () => {
 
     await waitFor(() => {
       expect(screen.queryByText(/Failed to generate your business|HTTP error! status: 500|Backend connection failed|error/i)).not.toBeNull();
+    consoleSpy.mockRestore();
     });
   });
 
