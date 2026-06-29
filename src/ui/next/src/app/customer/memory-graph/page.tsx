@@ -5,7 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import { PoweredByOHC } from '../../components/PoweredByOHC';
 import { FaInstagram, FaRegEnvelope, FaStore, FaCalendarCheck, FaGlobe, FaRobot } from 'react-icons/fa';
 
-export default function CustomerMemoryGraph() {
+export default function CustomerMemoryGraph() { return <React.Suspense fallback={<div>Loading...</div>}><CustomerMemoryGraphContent /></React.Suspense>; }
+
+function CustomerMemoryGraphContent() {
   const searchParams = useSearchParams();
   const customerId = searchParams.get('customerId') || 'default-customer-id';
   const tenantId = searchParams.get('tenantId') || 'default-tenant-id';
