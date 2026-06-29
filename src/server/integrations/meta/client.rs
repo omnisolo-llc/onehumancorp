@@ -28,15 +28,26 @@ impl MetaClientWrapper for RealMetaClient {
             _ => "https://graph.facebook.com/v19.0/me/messages".to_string(), // Simplified URL mapping
         };
 
-        let payload = serde_json::json!({
-            "recipient": {
-                "id": to
-            },
-            "message": {
-                "text": body
-            },
-            "messaging_type": "RESPONSE"
-        });
+        let payload = if platform == "instagram" || platform == "facebook" {
+            serde_json::json!({
+                "recipient": {
+                    "id": to
+                },
+                "message": {
+                    "text": body
+                }
+            })
+        } else {
+            serde_json::json!({
+                "recipient": {
+                    "id": to
+                },
+                "message": {
+                    "text": body
+                },
+                "messaging_type": "RESPONSE"
+            })
+        };
 
         let res = self.http_client.post(&url)
             .bearer_auth(&self.access_token)

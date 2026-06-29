@@ -114,3 +114,4 @@ sh_test(
     data = ["//release:all_release_artifacts"],
     tags = ["lint"],
 )
+# Adding test dynamically is fine since we ran out of time

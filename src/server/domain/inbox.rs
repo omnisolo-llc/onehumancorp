@@ -42,6 +42,41 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
                         tracing::info!("Successfully sent WhatsApp reply to {}", sender_id_clone);
                     }
                 });
+            } else if source == "instagram" || source == "facebook" {
+                let meta_creds: Result<String, sqlx::Error> = sqlx::query_scalar(
+                    "SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1"
+                )
+                .bind(tenant_id)
+                .fetch_optional(pool)
+                .await
+                .map(|opt| opt.unwrap_or_default());
+
+                if let Ok(api_token) = meta_creds {
+                    if !api_token.trim().is_empty() {
+                        let registry = crate::integrations::registry::IntegrationsRegistry::new();
+                        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+                            integration_id: "meta".to_string(),
+                            base_url: "".to_string(),
+                            bot_token: "".to_string(),
+                            chat_id: "".to_string(),
+                            webhook_url: "".to_string(),
+                            api_token: api_token.clone(),
+                            from_phone: "".to_string(),
+                        };
+                        let _ = registry.connect("meta", "", creds);
+
+                        let draft_reply_clone = draft_reply.to_string();
+                        let sender_id_clone = sender_id.to_string();
+                        let source_clone = source.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = registry.send_message("meta", &source_clone, &sender_id_clone, &draft_reply_clone).await {
+                                tracing::error!("Failed to send {} reply: {}", source_clone, e);
+                            } else {
+                                tracing::info!("Successfully sent {} reply to {}", source_clone, sender_id_clone);
+                            }
+                        });
+                    }
+                }
             } else if source == "sms" {
                 let twilio_creds: Result<(String, String, String), sqlx::Error> = sqlx::query_as(
                     "SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id = 'twilio' AND tenant_id = $1 LIMIT 1"
