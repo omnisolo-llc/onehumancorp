@@ -97,6 +97,8 @@ export default function FeedPage() {
   const startEditing = (item: FeedItem) => {
     setEditingId(item.id);
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+            const isPromoter = item.proposed_action?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft';
+            const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
     const textToEdit = isAmbassador ?
         (item.proposed_action || item.context_payload)?.generated_response || (item.proposed_action || item.context_payload)?.draft_reply :
         (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
@@ -108,6 +110,8 @@ export default function FeedPage() {
     if (!item) return;
 
     const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+            const isPromoter = item.proposed_action?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft';
+            const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
 
     const updatedProposed = {
         ...item.proposed_action,
@@ -197,6 +201,21 @@ export default function FeedPage() {
     }
   };
 
+
+  const simulatePromoterDraft = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-promoter-draft', { method: 'POST' });
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const simulateAmbassadorDraft = async () => {
     try {
       setLoading(true);
@@ -247,6 +266,8 @@ export default function FeedPage() {
           {items.map((item) => {
             const isProcessing = processingId === item.id;
             const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
+            const isPromoter = item.proposed_action?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft';
+            const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
             const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
             const isDisputeResolution = item.proposed_action?.feature_type === 'dispute_resolution' || item.context_payload?.feature_type === 'dispute_resolution';
             const disputePayload = isDisputeResolution ? (item.proposed_action || item.context_payload) : null;
@@ -272,6 +293,8 @@ export default function FeedPage() {
                     ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
                     : isAmbassador
                     ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
+                    : isPromoter
+                    ? `New Product: ${promoterPayload?.product_name || 'Marketing Draft'}`
                     : item.proposed_action?.action_type === 'Draft Quote'
                     ? `Drafted Estimate for ${item.context_payload?.customer_name || 'Customer'}`
                     : item.proposed_action?.action_type === 'Draft Follow-up'
@@ -303,7 +326,7 @@ export default function FeedPage() {
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                         data-testid="feed-save-edit-btn"
                       >
-                        {isAmbassador ? 'Save & Send' : 'Save'}
+                        {isAmbassador ? 'Save & Send' : isPromoter ? 'Save Draft' : 'Save'}
                       </button>
                       <button
                         onClick={cancelEdit}
@@ -347,7 +370,56 @@ export default function FeedPage() {
                           </div>
                         </div>
                       </div>
-                    ) : isAmbassador ? (
+
+                    ) : isPromoter ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
+                          <p className="text-[13px] text-indigo-700 dark:text-indigo-300 font-medium mb-1">Generated Marketing Posts</p>
+                          <p className="text-[11px] text-indigo-600/70 dark:text-indigo-400/70">Review the captions drafted for your new product. Select "Approve & Schedule" to push these to your linked channels.</p>
+                        </div>
+                        <div className="space-y-3 mt-2">
+                          <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">📱 Instagram</p>
+                            <p className="text-[12px] text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{promoterPayload?.instagram}</p>
+                          </div>
+                          <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">🎵 TikTok</p>
+                            <p className="text-[12px] text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{promoterPayload?.tiktok}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                  ) : isPromoter ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Schedule"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Approve & Schedule'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+) : isAmbassador ? (
                       <div className="flex flex-col gap-3">
                         <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                           <p className="text-[13px] text-gray-700 dark:text-gray-300 italic mb-1">"{ambassadorPayload.original_message}"</p>
@@ -409,7 +481,56 @@ export default function FeedPage() {
                         Dismiss
                       </button>
                     </div>
-                  ) : isAmbassador ? (
+
+                    ) : isPromoter ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
+                          <p className="text-[13px] text-indigo-700 dark:text-indigo-300 font-medium mb-1">Generated Marketing Posts</p>
+                          <p className="text-[11px] text-indigo-600/70 dark:text-indigo-400/70">Review the captions drafted for your new product. Select "Approve & Schedule" to push these to your linked channels.</p>
+                        </div>
+                        <div className="space-y-3 mt-2">
+                          <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">📱 Instagram</p>
+                            <p className="text-[12px] text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{promoterPayload?.instagram}</p>
+                          </div>
+                          <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">🎵 TikTok</p>
+                            <p className="text-[12px] text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{promoterPayload?.tiktok}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                  ) : isPromoter ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Schedule"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Approve & Schedule'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+) : isAmbassador ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleAction(item.id, 'APPROVED')}
@@ -482,6 +603,14 @@ export default function FeedPage() {
           >
             Simulate Ambassador Draft
           </button>
+          <button
+             onClick={simulatePromoterDraft}
+             data-testid="simulate-promoter-btn"
+             className="text-xs bg-[#E8F0FE] text-[#0066FF] border border-[#B3D1FF] px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Promoter
+          </button>
+
           <button
              onClick={simulateDisputeDraft}
              data-testid="simulate-dispute-btn"

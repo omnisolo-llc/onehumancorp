@@ -436,7 +436,7 @@ impl UserRepository for PgUserRepository {
         let _ = if should_bypass {
             sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = current_setting('app.current_tenant')::text").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         tx.commit().await.map_err(|e| e.to_string())?;

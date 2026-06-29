@@ -1061,7 +1061,7 @@ mod tests {
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a long-running hung AI operation that exceeds 60s
-            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+            std::future::pending::<()>().await;
             Ok::<(), String>(())
         }).await;
 
@@ -1434,7 +1434,7 @@ mod additional_chaos_tests {
         });
         let res: Result<(), String> = db.execute_with_retry("sync_query", || {
             let fut = async {
-                tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+                std::future::pending::<()>().await;
                 Ok(())
             };
             Box::pin(fut)

@@ -483,7 +483,19 @@ Image provided: ${instantImageUrl}`;
         },
         body: JSON.stringify({ description: combinedInput, image_url: instantImageUrl })
       });
-      const intakeData = await intakeRes.json();
+      let intakeData: { business_name?: string, business_type?: string, categories?: string[], initial_products?: { name: string, price: number }[], error?: string } = {};
+      try {
+          if (!intakeRes.ok) {
+             throw new Error(`Failed to generate storefront: ${intakeRes.status}`);
+          }
+          intakeData = await intakeRes.json();
+      } catch (e: unknown) {
+          const errorMessage = e instanceof Error ? e.message : 'Unknown error parsing response';
+          console.error(errorMessage);
+          updateState({ step: -1, error: errorMessage });
+          syncStateToBackend({ step: -1, error: errorMessage });
+          return;
+      }
 
       updateState({ businessName: intakeData.business_name || 'My Business' });
       updateState({ businessType: intakeData.business_type || 'Online Store' });
@@ -556,8 +568,7 @@ Image provided: ${instantImageUrl}`;
 
     } catch (err: any) {
       console.error(err);
-      updateState({ error: err.message || 'Backend connection failed. Please try again.' });
-      updateState({ step: -1 }); syncStateToBackend({ step: -1 });
+      updateState({ step: -1, error: err.message || 'Backend connection failed. Please try again.' }); syncStateToBackend({ step: -1 });
     } finally {
       updateState({ isLoading: false });
     }
