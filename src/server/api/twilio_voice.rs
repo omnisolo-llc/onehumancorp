@@ -139,11 +139,18 @@ pub async fn twilio_voice_status_handler(
         let actions = state.voice_engine.actions.lock().await;
         let session_actions: Vec<_> = actions.iter().filter(|a| a.session_id == call_sid).collect();
         let has_booking_intent = session_actions.iter().any(|a| a.intent_type == "BOOK_APPOINTMENT");
+        let has_order_intent = session_actions.iter().any(|a| a.intent_type == "ORDER_FOOD");
 
         let deposit_link = session_actions.iter()
             .find(|a| a.intent_type == "BOOK_APPOINTMENT")
             .and_then(|a| a.details.get("deposit_link").and_then(|v| v.as_str()))
             .unwrap_or("https://pay.ohc.com/deposit/voice")
+            .to_string();
+
+        let order_link = session_actions.iter()
+            .find(|a| a.intent_type == "ORDER_FOOD")
+            .and_then(|a| a.details.get("order_link").and_then(|v| v.as_str()))
+            .unwrap_or("https://pay.ohc.com/store/voice")
             .to_string();
         drop(actions);
 
@@ -237,6 +244,28 @@ pub async fn twilio_voice_status_handler(
                         "summary": summary,
                         "caller_phone": clean_caller,
                         "deposit_link": deposit_link,
+                    });
+                    task.proposed_content = Some(proposed_content.to_string());
+
+                    let _ = task_manager.insert_task(task);
+                }
+            }
+
+            if has_order_intent {
+                let task_manager = crate::tasks::TaskManager::with_db(state.db.clone());
+                let mission_id = uuid::Uuid::new_v4().to_string();
+
+                let title = format!("Voice Order Request from {}", clean_caller);
+                let priority = "P1".to_string();
+
+                if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary.clone(), priority) {
+                    task.approval_status = Some("PENDING".to_string());
+
+                    let proposed_content = serde_json::json!({
+                        "feature_type": "order_draft",
+                        "summary": summary,
+                        "caller_phone": clean_caller,
+                        "order_link": order_link,
                     });
                     task.proposed_content = Some(proposed_content.to_string());
 
