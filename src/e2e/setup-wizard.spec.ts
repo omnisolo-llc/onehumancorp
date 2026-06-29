@@ -38,6 +38,12 @@ test.describe('Setup Wizard 375px Flow', () => {
         await expect(stepContext).toBeVisible();
         await expect(stepContext).not.toHaveCSS('overflow-x', 'scroll'); // No horizontal scroll
 
+        const personaRow = page.locator('.persona-row');
+        await expect(personaRow).toHaveCSS('flex-direction', 'column');
+
+        const workContextCards = page.locator('#context-group');
+        await expect(workContextCards).toHaveCSS('flex-direction', 'column');
+
         // Click Storefront context card
         const storefrontCard = page.getByTestId('context-storefront');
         await expect(storefrontCard).toBeVisible();
