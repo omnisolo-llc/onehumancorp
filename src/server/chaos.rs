@@ -34,7 +34,7 @@ mod tests {
 
         let delegate_res = async {
             let mut tx = pool.begin().await?;
-            sip_db.delegate_mission_with_tx(&mut tx, "test_mission", "PENDING", "data", true, &None).await
+            sip_db.delegate_mission_with_tx(&mut tx, "test_mission", "PENDING", "data", true).await
         }.await;
         assert!(delegate_res.is_err(), "delegate_mission_with_tx should fail gracefully without panic");
 
@@ -1061,7 +1061,7 @@ mod tests {
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a long-running hung AI operation that exceeds 60s
-            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+            std::future::pending::<()>().await;
             Ok::<(), String>(())
         }).await;
 
@@ -1434,7 +1434,7 @@ mod additional_chaos_tests {
         });
         let res: Result<(), String> = db.execute_with_retry("sync_query", || {
             let fut = async {
-                tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+                std::future::pending::<()>().await;
                 Ok(())
             };
             Box::pin(fut)

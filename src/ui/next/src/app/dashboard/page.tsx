@@ -532,7 +532,7 @@ export default function Dashboard() {
           </section>
         )}
 
-        <div className="mb-6">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[16px] hover:shadow-md transition-all group">
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 rounded-[16px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
@@ -543,6 +543,21 @@ export default function Dashboard() {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Open the dashboard task workspace for conversations, artifacts, and assistant actions.</p>
               </div>
               <div className="text-[#0f766e] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
+                →
+              </div>
+            </div>
+          </Link>
+
+          <Link id="sell-in-person-btn" href="/pos/terminal" className="app-card block p-5 min-h-[44px] rounded-[16px] hover:shadow-md transition-all group bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100/50 dark:border-blue-800/30">
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-[16px] bg-[#0066FF] flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Sell In Person</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Tap-to-Pay, inventory sync, and cash sales.</p>
+              </div>
+              <div className="text-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
                 →
               </div>
             </div>
@@ -782,6 +797,15 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
             </Link>
 
+            <Link href="/pos/terminal" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📱</div>
+                <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Sell In Person</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Instantly collect payments with Tap-to-Pay and keep inventory synced.</p>
+            </Link>
+
             <Link href="/proposal-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
@@ -1007,6 +1031,17 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Pre-Order Waitlist</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Launch an omnichannel pre-order engine with tiered waitlist capabilities.</p>
+            </Link>
+            </WithTooltip>
+
+            <WithTooltip id="pos-tooltip" defaultText="Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync.">
+            <Link href="/pos/terminal" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💳</div>
+                <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Sell In Person</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Universal Mobile POS & Tap-to-Pay.</p>
             </Link>
             </WithTooltip>
 

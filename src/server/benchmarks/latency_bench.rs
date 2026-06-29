@@ -1038,7 +1038,7 @@ mod tests {
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a long-running hung AI operation that exceeds 60s
-            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+            std::future::pending::<()>().await;
             Ok::<(), String>(())
         })
         .await;

@@ -395,6 +395,7 @@ impl Store {
     }
 
     pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+        self.validate_org_id(&org_id)?;
         if username.is_empty() {
             return Err("username is required".to_string());
         }

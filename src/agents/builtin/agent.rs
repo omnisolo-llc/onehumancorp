@@ -8870,7 +8870,7 @@ mod tests {
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            std::future::pending::<()>().await;
             Ok::<(), String>(())
         })
         .await;
