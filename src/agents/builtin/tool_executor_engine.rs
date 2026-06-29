@@ -47,11 +47,12 @@ impl ToolExecutionEngine {
                         let jitter = rand::thread_rng().gen_range(0..100);
                         let backoff = Duration::from_millis((base_backoff as u64) + jitter);
                         warn!(
-                            "Transient error executing '{}', retrying {}/{} after {}ms...",
+                            "Transient error executing '{}', retrying {}/{} after {}ms... Error details: {}",
                             tool.name,
                             retry_count,
                             max_retries,
-                            backoff.as_millis()
+                            backoff.as_millis(),
+                            msg
                         );
                         tokio::time::sleep(backoff).await;
                         continue;
