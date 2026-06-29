@@ -1288,13 +1288,14 @@
   <body>
     <div class="container glassmorphism" id="form-container">
       <!-- Step 0: Initial Screen -->
+
       <div class="step active" id="step-initial">
         <div
           style="
             width: 64px;
             height: 64px;
             background: rgba(0, 102, 255, 0.1);
-            border-radius: 50%;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1315,90 +1316,27 @@
             />
           </svg>
         </div>
-        <h1>10-Minute Setup Wizard</h1>
-        <p>
-          Zero tech skills needed. We do the heavy lifting. Review and add any
-          extra details to help our AI generate the perfect store.
-        </p>
-
-        <div class="btn-group" style="margin-top: 32px">
-          <button
-            class="next-step-btn"
-            data-testid="next-step-btn"
-            data-next="step-context"
-          >
-            Start My Business
-          </button>
-          <button
-            type="button"
-            class="glassmorphism btn-instant-build"
-            onclick="
-              goToStep('step-instant');
-            "
-          >
-            <span id="instant-build-btn-text">Instant Build</span>
-          </button>
-          <button
-            type="button"
-            class="btn-secondary"
-            onclick="goToStep('step-chat')"
-            style="margin-top: 10px"
-          >
-            Conversational Setup
-          </button>
-        </div>
-      </div>
-
-      <!-- Step Instant: Instant Build -->
-      <div class="step" id="step-instant">
-        <button
-          onclick="goToStep('step-initial')"
-          style="
-            background: none;
-            border: none;
-            color: #0066ff;
-            padding: 0;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-bottom: 24px;
-            min-height: 44px;
-          "
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          Back
-        </button>
-
         <h1>Tell us about your business</h1>
-        <p>Our AI will handle the rest in 30 seconds.</p>
+        <p>
+          Type a quick description and our AI will build your entire workspace in seconds.
+        </p>
 
         <textarea
           id="instant-bio"
           data-testid="instant-bio"
           class="glassmorphism"
           placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
-          rows="6"
+          rows="4"
           style="resize: none; padding: 14px"
           enterkeyhint="next"
         ></textarea>
+
         <input
           type="url"
           id="instant-image-url"
           data-testid="instant-image-url"
           class="glassmorphism"
-          placeholder="Image URL (Optional)"
+          placeholder="Image URL (Optional - e.g. logo or storefront)"
           inputmode="url"
           autocomplete="url"
           enterkeyhint="next"
@@ -1409,22 +1347,47 @@
             border-radius: 8px;
           "
         />
-        <div
-          id="instant-error"
-          class="error-msg"
-          aria-live="polite"
-          style="margin-bottom: 20px"
-        ></div>
 
-        <div class="btn-group" style="margin-top: 24px">
+        <div id="instant-error" class="error-msg" aria-live="polite"></div>
+
+        <div class="btn-group" style="margin-top: 16px">
           <button
+            class="next-step-btn"
             id="generate-storefront-btn"
             data-testid="generate-storefront-btn"
+            style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);"
+            disabled
           >
-            Next
+            Generate My Workspace
+          </button>
+
+          <div style="margin-top: 24px; margin-bottom: 12px; font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display: flex; align-items: center; justify-content: center;">
+            <span style="flex-grow: 1; height: 1px; background: rgba(0,0,0,0.1); margin-right: 12px;"></span>
+            Or configure manually
+            <span style="flex-grow: 1; height: 1px; background: rgba(0,0,0,0.1); margin-left: 12px;"></span>
+          </div>
+
+          <button
+            type="button"
+            class="btn-secondary"
+            onclick="goToStep('step-chat')"
+            style="margin-bottom: 10px; width: 100%;"
+          >
+            Conversational Setup
+          </button>
+          <button
+            type="button"
+            class="btn-secondary next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-context"
+            style="width: 100%;"
+          >
+            Step-by-Step Setup
           </button>
         </div>
       </div>
+
+
 
       <div class="step" id="step-loading">
         <h1 id="loading-title">Building Your Business...</h1>
@@ -1452,9 +1415,14 @@
           "
         >
           <div
-            class="loading-step"
             id="step-provisioning"
-            style="display: flex; align-items: center; gap: 8px; opacity: 0.5"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              opacity: 0.5;
+              transition: opacity 0.3s;
+            "
           >
             <div
               class="loading-dot"
@@ -1465,12 +1433,17 @@
                 background: #ccc;
               "
             ></div>
-            Hiring your AI Workforce...
+            Provisioning Workspace
           </div>
           <div
-            class="loading-step"
             id="step-catalog"
-            style="display: flex; align-items: center; gap: 8px; opacity: 0.5"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              opacity: 0.5;
+              transition: opacity 0.3s;
+            "
           >
             <div
               class="loading-dot"
@@ -1481,12 +1454,17 @@
                 background: #ccc;
               "
             ></div>
-            Generating your product catalog...
+            Generating Catalog
           </div>
           <div
-            class="loading-step"
             id="step-storefront"
-            style="display: flex; align-items: center; gap: 8px; opacity: 0.5"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              opacity: 0.5;
+              transition: opacity 0.3s;
+            "
           >
             <div
               class="loading-dot"
@@ -1497,10 +1475,11 @@
                 background: #ccc;
               "
             ></div>
-            Setting up your Command Center...
+            Publishing Storefront
           </div>
         </div>
       </div>
+
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
