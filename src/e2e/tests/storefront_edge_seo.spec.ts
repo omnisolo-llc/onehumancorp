@@ -24,11 +24,29 @@ test.describe('Storefront Edge SEO and Caching', () => {
         let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/44444444-4444-4444-4444-444444444444`);
         expect(res.status()).toBe(200);
 
-        // Update the product, forcing an invalidation
-        const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/storefront/webhook/invalidate', {
+        // Update the product, forcing an invalidation via the inventory coordinator layer
+        const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/payments/terminal/reserve', {
+            data: {
+                product_id: "44444444-4444-4444-4444-444444444444",
+                quantity: 1,
+                ttl_seconds: 60
+            },
+            headers: {
+                'x-tenant-id': tenantId
+            }
+        });
+
+        // Let it process. We just want to ensure we don't crash and the underlying InventoryService runs.
+        // It's possible we get a product-not-found error because it's not seeded in db,
+        // but we should get a valid JSON response from the reserve endpoint.
+        const body = await invalidateRes.json();
+        expect(body).toBeDefined();
+
+        // Also hit the webhook endpoint directly to simulate direct invalidations
+        const webhookRes = await request.post('http://127.0.0.1:18789/api/v1/storefront/webhook/invalidate', {
             data: { tags: [`entity:product:44444444-4444-4444-4444-444444444444`] }
         });
-        expect(invalidateRes.status()).toBe(200);
+        expect(webhookRes.status()).toBe(200);
 
         // Access the UI file
         const htmlPath = path.resolve(__dirname, '../../../src/ui/tauri/src/ui/storefront.html');

@@ -9,7 +9,7 @@ pub struct InvalidationEvent {
 }
 
 pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
-    let redis_url = match std::env::var("REDIS_URL") {
+    let redis_url = match std::env::var("REDIS_URL").or_else(|_| std::env::var("OHC_REDIS_URL")) {
         Ok(url) => url,
         Err(_) => {
             warn!("REDIS_URL not set, Cache Invalidator Service will not start.");

@@ -125,6 +125,7 @@ impl InventoryLocker for RedisLocker {
 
 pub struct InventoryService {
     locker: Box<dyn InventoryLocker>,
+    redis_client: Option<redis::Client>,
 }
 
 
@@ -150,12 +151,12 @@ pub struct CommitResult {
 
 impl InventoryService {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
-        let locker: Box<dyn InventoryLocker> = if let Some(client) = redis_client {
+        let locker: Box<dyn InventoryLocker> = if let Some(client) = redis_client.clone() {
             Box::new(RedisLocker::new(client))
         } else {
             Box::new(MemoryLocker::new())
         };
-        Self { locker }
+        Self { locker, redis_client }
     }
 
     // Redis Redlock pattern for distributed lock
@@ -291,19 +292,24 @@ impl InventoryService {
                     }
                     let _ = tx.commit().await;
 
-                    // Publish to Redis Pub/Sub for Real-Time Sync
-                    if false {
+                    if let Some(client) = &self.redis_client {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let invalidation_topic = "cache_invalidation_events";
+                            let invalidation_payload = serde_json::json!({
+                                "event": "inventory.updated",
+                                "tags": [
+                                    format!("tenant-id:{}", tenant_id),
+                                    format!("entity:product:{}", product_id)
+                                ]
+                            }).to_string();
 
-
-                // Also emit cache invalidation event for storefront
-                let _invalidation_topic = "cache_invalidation_events";
-                let _invalidation_payload = serde_json::json!({
-                    "event": "inventory.updated",
-                    "tags": [
-                        format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
-                    ]
-                }).to_string();
+                            let _: () = redis::cmd("PUBLISH")
+                                .arg(invalidation_topic)
+                                .arg(invalidation_payload)
+                                .query_async(&mut conn)
+                                .await
+                                .unwrap_or(());
+                        }
                     }
                 } else {
             self.locker.clear(&lock_key).await;
@@ -544,20 +550,23 @@ impl InventoryService {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        // Publish to Redis Pub/Sub for Real-Time Sync
-        if false {
-            if false {
-
-
-                // Also emit cache invalidation event for storefront
-                let _invalidation_topic = "cache_invalidation_events";
-                let _invalidation_payload = serde_json::json!({
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let invalidation_topic = "cache_invalidation_events";
+                let invalidation_payload = serde_json::json!({
                     "event": "inventory.updated",
                     "tags": [
                         format!("tenant-id:{}", tenant_id),
                         format!("entity:product:{}", product_id)
                     ]
                 }).to_string();
+
+                let _: () = redis::cmd("PUBLISH")
+                    .arg(invalidation_topic)
+                    .arg(invalidation_payload)
+                    .query_async(&mut conn)
+                    .await
+                    .unwrap_or(());
             }
         }
 
