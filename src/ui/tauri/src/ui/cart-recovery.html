@@ -234,11 +234,11 @@
           const data = await response.json();
           cartCount = data.count || 0;
         } else {
-          // Fallback for tests if endpoint is not fully mocked
-          cartCount = 1;
+          // No mocked fallbacks
+          cartCount = 0;
         }
       } catch (e) {
-        cartCount = 1; // Fallback
+        cartCount = 0;
       }
 
       document.getElementById('cart-count').innerText = cartCount;
@@ -268,15 +268,15 @@
           const data = await response.json();
           message = data.message;
         } else {
-          // Fallback for E2E tests
-          message = `Hi ${name || 'there'},\n\nWe noticed you left some items worth ${value || 'a bit'} in your cart. Complete your purchase now and enjoy a 10% discount!`;
+          // Show error state on failure
+          message = "Failed to generate campaign draft.";
         }
 
         document.getElementById('draft-preview').innerText = `${message}\n\n⚡ Powered by OHC`;
-        document.getElementById('send-btn').disabled = false;
+        document.getElementById('send-btn').disabled = cartCount === 0;
       } catch (e) {
-        document.getElementById('draft-preview').innerText = `Hi ${name || 'there'},\n\nWe noticed you left some items worth ${value || 'a bit'} in your cart. Complete your purchase now and enjoy a 10% discount!\n\n⚡ Powered by OHC`;
-        document.getElementById('send-btn').disabled = false;
+        document.getElementById('draft-preview').innerText = "Failed to generate campaign draft.";
+        document.getElementById('send-btn').disabled = cartCount === 0;
       } finally {
         btn.innerText = 'Generate AI Campaign';
         btn.disabled = false;
