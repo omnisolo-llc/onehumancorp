@@ -28,7 +28,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
     if (targetElement) {
       // Scroll into view gently if needed
-      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetElement.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
 
       // We need a slight delay to let scrolling settle before measuring
       const timeoutId = setTimeout(() => {
