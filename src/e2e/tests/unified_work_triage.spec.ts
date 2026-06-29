@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('AI Unified Work Triage Architecture', () => {
     test('Simulate omnichannel webhook and verify it appears in owner triage feed', async ({ page, request }) => {
-        await page.goto('/login.html');
+        await page.goto('/login');
         await page.fill('#email', 'owner@example.com');
         await page.fill('#password', 'password');
         await page.click('#login-btn');
-        await page.waitForURL('/dashboard.html');
+        await page.waitForURL('/dashboard');
 
         const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'default');
 
