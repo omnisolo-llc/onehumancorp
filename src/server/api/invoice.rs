@@ -272,13 +272,17 @@ impl InvoiceService for InvoiceServiceImpl {
 
         use sqlx::Row;
 
-        let row = sqlx::query("SELECT * FROM invoices WHERE id = $1")
-            .bind(&req.invoice_id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        let items_rows = sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1")
+        let rows = sqlx::query(
+            "SELECT i.*,
+                    li.id as li_id,
+                    li.description as li_description,
+                    li.quantity as li_quantity,
+                    li.unit_price as li_unit_price,
+                    li.amount as li_amount
+             FROM invoices i
+             LEFT JOIN invoice_line_items li ON i.id = li.invoice_id
+             WHERE i.id = $1"
+        )
             .bind(&req.invoice_id)
             .fetch_all(&mut *tx)
             .await
@@ -286,15 +290,34 @@ impl InvoiceService for InvoiceServiceImpl {
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
+        if rows.is_empty() {
+            return Err(Status::not_found("Invoice not found"));
+        }
+
+        let row = &rows[0];
+
+        let mut items_rows = Vec::new();
+        for r in &rows {
+            if let Ok(li_id) = r.try_get::<Option<String>, _>("li_id") {
+                if li_id.is_some() {
+                    items_rows.push(r);
+                }
+            } else if let Ok(li_id_str) = r.try_get::<String, _>("li_id") {
+                if !li_id_str.is_empty() {
+                    items_rows.push(r);
+                }
+            }
+        }
+
         let mut line_items = Vec::new();
         for item_row in items_rows {
             line_items.push(InvoiceLineItem {
-                id: item_row.try_get("id").unwrap_or_default(),
-                invoice_id: item_row.try_get("invoice_id").unwrap_or_default(),
-                description: item_row.try_get("description").unwrap_or_default(),
-                quantity: item_row.try_get("quantity").unwrap_or_default(),
-                unit_price: item_row.try_get("unit_price").unwrap_or_default(),
-                amount: item_row.try_get("amount").unwrap_or_default(),
+                id: item_row.try_get("li_id").unwrap_or_default(),
+                invoice_id: req.invoice_id.clone(),
+                description: item_row.try_get("li_description").unwrap_or_default(),
+                quantity: item_row.try_get("li_quantity").unwrap_or_default(),
+                unit_price: item_row.try_get("li_unit_price").unwrap_or_default(),
+                amount: item_row.try_get("li_amount").unwrap_or_default(),
             });
         }
 
