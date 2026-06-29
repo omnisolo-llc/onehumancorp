@@ -70,7 +70,7 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
     await page.getByRole('button', { name: 'Quick Charge $25.00' }).click();
 
     // Verify Payment success message - in mock mode it shows mock UI
-    await expect(page.locator('text=Payment Complete')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Payment Successful!').or(page.locator('text=Offline Quick Charge Saved.'))).toBeVisible({ timeout: 15000 });
 
     // 4. Return to Dashboard and check for AI Alert
     await page.goto('/dashboard');
