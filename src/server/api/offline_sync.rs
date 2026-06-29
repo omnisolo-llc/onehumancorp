@@ -432,128 +432,148 @@ pub async fn sync_events_handler(
         ).into_response();
     }
 
-    let mut applied_count = 0;
-    let mut conflict_count = 0;
-
+    let mut futures = Vec::new();
     for event in payload.events {
-        let mut tx = match db.begin().await {
-            Ok(tx) => tx,
-            Err(e) => {
-                tracing::error!("Failed to begin transaction for sync event {}: {}", event.id, e);
-                continue;
-            }
-        };
+        let db_clone = db.clone();
+        let tenant_id_clone = tenant_id.clone();
+        futures.push(tokio::spawn(async move {
+            let mut tx = match db_clone.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction for sync event {}: {}", event.id, e);
+                    return ("failed", 1);
+                }
+            };
 
-        // Idempotency check
-        let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sync_events WHERE id = $1 AND tenant_id = $2")
-            .bind(&event.id)
-            .bind(&tenant_id)
-            .fetch_one(&mut *tx)
-            .await
-            .unwrap_or((0,));
-
-        if exists.0 > 0 {
-            let _ = tx.rollback().await;
-            continue; // Already processed
-        }
-
-        // Version checking against test_sync_entities (demonstrative entity)
-        let mut is_conflict = false;
-        let mut current_version = 1;
-
-        if event.entity_type == "test_sync_entity" {
-            let row_res: Result<(i64,), sqlx::Error> = sqlx::query_as("SELECT version FROM test_sync_entities WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
-                .bind(&event.entity_id)
-                .bind(&tenant_id)
+            // Idempotency check
+            let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sync_events WHERE id = $1 AND tenant_id = $2")
+                .bind(&event.id)
+                .bind(&tenant_id_clone)
                 .fetch_one(&mut *tx)
-                .await;
+                .await
+                .unwrap_or((0,));
 
-            match row_res {
-                Ok((ver,)) => {
-                    current_version = ver;
-                    if current_version > event.base_version {
-                        is_conflict = true;
+            if exists.0 > 0 {
+                let _ = tx.rollback().await;
+                return ("applied", 1); // Already processed
+            }
+
+            // Version checking against test_sync_entities (demonstrative entity)
+            let mut is_conflict = false;
+            let mut current_version = 1;
+
+            if event.entity_type == "test_sync_entity" {
+                let row_res: Result<(i64,), sqlx::Error> = sqlx::query_as("SELECT version FROM test_sync_entities WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                    .bind(&event.entity_id)
+                    .bind(&tenant_id_clone)
+                    .fetch_one(&mut *tx)
+                    .await;
+
+                match row_res {
+                    Ok((ver,)) => {
+                        current_version = ver;
+                        if current_version > event.base_version {
+                            is_conflict = true;
+                        }
+                    }
+                    Err(sqlx::Error::RowNotFound) => {
+                        // Entity does not exist, so version is essentially 1 (or 0)
+                        // Let's create it with version 1
+                        let _ = sqlx::query("INSERT INTO test_sync_entities (id, tenant_id, version) VALUES ($1, $2, 1)")
+                            .bind(&event.entity_id)
+                            .bind(&tenant_id_clone)
+                            .execute(&mut *tx)
+                            .await;
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to fetch test_sync_entities version for sync event {}: {}", event.id, e);
+                        let _ = tx.rollback().await;
+                        return ("failed", 1);
                     }
                 }
-                Err(sqlx::Error::RowNotFound) => {
-                    // Entity does not exist, so version is essentially 1 (or 0)
-                    // Let's create it with version 1
-                    let _ = sqlx::query("INSERT INTO test_sync_entities (id, tenant_id, version) VALUES ($1, $2, 1)")
+            }
+
+            if is_conflict {
+                let res1 = sqlx::query(
+                    "INSERT INTO sync_conflict_queue (id, tenant_id, event_id, entity_id, entity_type, base_version, current_version, payload) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(&event.id)
+                .bind(&event.entity_id)
+                .bind(&event.entity_type)
+                .bind(event.base_version)
+                .bind(current_version)
+                .bind(&event.payload)
+                .execute(&mut *tx)
+                .await;
+
+                let res2 = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'sync_conflict_alert', $3::jsonb, 'PENDING')"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(serde_json::json!({
+                    "event_id": event.id,
+                    "entity_id": event.entity_id,
+                    "entity_type": event.entity_type,
+                    "message": "A data synchronization conflict occurred and requires Operations review."
+                }).to_string())
+                .execute(&mut *tx)
+                .await;
+
+                if res1.is_ok() && res2.is_ok() {
+                    if tx.commit().await.is_ok() {
+                        return ("conflict", 1);
+                    }
+                } else {
+                    let _ = tx.rollback().await;
+                }
+                return ("failed", 1);
+            } else {
+                let res1 = sqlx::query(
+                    "INSERT INTO sync_events (id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4)"
+                )
+                .bind(&event.id)
+                .bind(&tenant_id_clone)
+                .bind(&event.action_type)
+                .bind(event.payload.to_string())
+                .execute(&mut *tx)
+                .await;
+
+                let mut res2 = Ok(sqlx::postgres::PgQueryResult::default());
+                if event.entity_type == "test_sync_entity" {
+                    res2 = sqlx::query("UPDATE test_sync_entities SET version = version + 1 WHERE id = $1 AND tenant_id = $2")
                         .bind(&event.entity_id)
-                        .bind(&tenant_id)
+                        .bind(&tenant_id_clone)
                         .execute(&mut *tx)
                         .await;
                 }
-                Err(e) => {
-                    tracing::error!("Failed to fetch test_sync_entities version for sync event {}: {}", event.id, e);
+
+                if res1.is_ok() && res2.is_ok() {
+                    if tx.commit().await.is_ok() {
+                        return ("applied", 1);
+                    }
+                } else {
                     let _ = tx.rollback().await;
-                    continue;
                 }
+                return ("failed", 1);
             }
-        }
+        }));
+    }
 
-        if is_conflict {
-            let res1 = sqlx::query(
-                "INSERT INTO sync_conflict_queue (id, tenant_id, event_id, entity_id, entity_type, base_version, current_version, payload) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
-            )
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind(&tenant_id)
-            .bind(&event.id)
-            .bind(&event.entity_id)
-            .bind(&event.entity_type)
-            .bind(event.base_version)
-            .bind(current_version)
-            .bind(&event.payload)
-            .execute(&mut *tx)
-            .await;
+    use futures::future::join_all;
+    let results = join_all(futures).await;
 
-            let res2 = sqlx::query(
-                "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'sync_conflict_alert', $3::jsonb, 'PENDING')"
-            )
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind(&tenant_id)
-            .bind(serde_json::json!({
-                "event_id": event.id,
-                "entity_id": event.entity_id,
-                "entity_type": event.entity_type,
-                "message": "A data synchronization conflict occurred and requires Operations review."
-            }).to_string())
-            .execute(&mut *tx)
-            .await;
+    let mut applied_count = 0;
+    let mut conflict_count = 0;
 
-            if res1.is_ok() && res2.is_ok() {
-                if tx.commit().await.is_ok() {
-                    conflict_count += 1;
-                }
-            } else {
-                let _ = tx.rollback().await;
-            }
-        } else {
-            let res1 = sqlx::query(
-                "INSERT INTO sync_events (id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4)"
-            )
-            .bind(&event.id)
-            .bind(&tenant_id)
-            .bind(&event.action_type)
-            .bind(event.payload.to_string())
-            .execute(&mut *tx)
-            .await;
-
-            let mut res2 = Ok(sqlx::postgres::PgQueryResult::default());
-            if event.entity_type == "test_sync_entity" {
-                res2 = sqlx::query("UPDATE test_sync_entities SET version = version + 1 WHERE id = $1 AND tenant_id = $2")
-                    .bind(&event.entity_id)
-                    .bind(&tenant_id)
-                    .execute(&mut *tx)
-                    .await;
-            }
-
-            if res1.is_ok() && res2.is_ok() {
-                if tx.commit().await.is_ok() {
-                    applied_count += 1;
-                }
-            } else {
-                let _ = tx.rollback().await;
+    for res in results {
+        if let Ok((status, count)) = res {
+            match status {
+                "applied" => applied_count += count,
+                "conflict" => conflict_count += count,
+                _ => {}
             }
         }
     }

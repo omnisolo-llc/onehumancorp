@@ -14,6 +14,17 @@ struct LlmJudgeArgs {
     task_description: String,
 }
 
+#[derive(Deserialize)]
+struct JudgeEvaluation {
+    status: String,
+    reason: String,
+    confidence: f32,
+    #[serde(default)]
+    missing_elements: Vec<String>,
+    #[serde(default)]
+    suggested_fixes: Vec<String>,
+}
+
 struct LlmJudgeExecutor {
     llm: Arc<dyn LlmClient>,
     model: String,
@@ -33,72 +44,48 @@ impl PydanticToolExecutor<LlmJudgeArgs> for LlmJudgeExecutor {
             model: self.model.clone(),
             system: "You are an expert LLM judge. Evaluate the output strictly. Provide your evaluation in structured JSON using the `structured_output` tool with fields `status` (APPROVE or REJECT), `reason`, `confidence` (float 0-1), `missing_elements` (list of strings), and `suggested_fixes` (list of strings).".to_string(),
             messages: vec![Message::user(prompt)],
-            tools: vec![ohc_builtin_agent_core::types::ToolDefinition {
-                name: "structured_output".to_string(),
-                description: "Submit the final evaluation structure".to_string(),
-                parameters: json!({
-                    "type": "object",
-                    "properties": {
-                        "data": {
-                            "type": "object",
-                            "properties": {
-                                "status": {"type": "string", "enum": ["APPROVE", "REJECT"]},
-                                "reason": {"type": "string"},
-                                "confidence": {"type": "number"},
-                                "missing_elements": {"type": "array", "items": {"type": "string"}},
-                                "suggested_fixes": {"type": "array", "items": {"type": "string"}}
-                            },
-                            "required": ["status", "reason", "confidence"]
-                        }
-                    },
-                    "required": ["data"]
-                })
-            }],
+            tools: vec![],
             max_tokens: 1024,
             temperature: 0.0,
         };
 
-        let result = self.llm.chat(req).await.map_err(|e| ToolError::Unexpected(format!("LLM API Error: {}", e)))?;
-
-        let mut eval_data: Option<serde_json::Value> = None;
-        for tc in &result.message.tool_calls {
-            if tc.name == "structured_output" {
-                if let Some(data) = tc.arguments.get("data") {
-                    eval_data = Some(data.clone());
-                }
+        struct ParserAdapter {
+            llm: Arc<dyn LlmClient>,
+        }
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_core::output_parser::LlmClientForParser for ParserAdapter {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.llm.chat(req).await
             }
         }
+        let parser_client = Arc::new(ParserAdapter {
+            llm: self.llm.clone(),
+        }) as Arc<dyn ohc_builtin_agent_core::output_parser::LlmClientForParser>;
 
-        if let Some(eval) = eval_data {
-            let status = eval.get("status").and_then(|v| v.as_str()).unwrap_or("REJECT");
-            let confidence = eval.get("confidence").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        match ohc_builtin_agent_core::output_parser::parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
+            Ok(eval) => {
+                if eval.status.to_uppercase() == "APPROVE" && eval.confidence >= 0.7 {
+                    Ok(json!({
+                        "status": "APPROVED",
+                        "message": "The LLM Judge approved the output."
+                    }).to_string())
+                } else {
+                    let mut err_msg = format!("LLM Judge REJECTED the output.\nReason: {}", eval.reason);
 
-            if status == "APPROVE" && confidence >= 0.7 {
-                Ok(json!({
-                    "status": "APPROVED",
-                    "message": "The LLM Judge approved the output."
-                }).to_string())
-            } else {
-                let reason = eval.get("reason").and_then(|v| v.as_str()).unwrap_or("No reason provided");
-                let mut err_msg = format!("LLM Judge REJECTED the output.\nReason: {}", reason);
-
-                if let Some(missing) = eval.get("missing_elements").and_then(|v| v.as_array()) {
-                    if !missing.is_empty() {
-                        let m_strs: Vec<String> = missing.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
-                        err_msg.push_str(&format!("\nMissing Elements: {}", m_strs.join(", ")));
+                    if !eval.missing_elements.is_empty() {
+                        err_msg.push_str(&format!("\nMissing Elements: {}", eval.missing_elements.join(", ")));
                     }
-                }
-                if let Some(fixes) = eval.get("suggested_fixes").and_then(|v| v.as_array()) {
-                    if !fixes.is_empty() {
-                        let f_strs: Vec<String> = fixes.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
-                        err_msg.push_str(&format!("\nSuggested Fixes:\n- {}", f_strs.join("\n- ")));
+                    if !eval.suggested_fixes.is_empty() {
+                        err_msg.push_str(&format!("\nSuggested Fixes:\n- {}", eval.suggested_fixes.join("\n- ")));
                     }
-                }
 
-                Err(ToolError::LlmRecoverable(err_msg))
+                    Err(ToolError::LlmRecoverable(err_msg))
+                }
             }
-        } else {
-            Err(ToolError::Unexpected("LLM Judge failed to return structured evaluation data.".to_string()))
+            Err(e) => Err(e),
         }
     }
 }
