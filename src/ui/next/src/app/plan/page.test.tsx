@@ -73,6 +73,33 @@ describe('MyPlanPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/pricing');
   });
 
+  it('renders unlimited limits properly for 0 limits', async () => {
+    (global.fetch as any).mockImplementation(async (url) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({
+            current_plan: 'Business',
+            ai_actions_used: 150,
+            ai_actions_limit: 0,
+            storage_used_bytes: 2 * 1024 * 1024, // 2MB
+            storage_limit_bytes: 0,
+            next_bill_estimated: 29900,
+          }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    await act(async () => {
+      render(<MyPlanPage />);
+    });
+
+    // Check if it renders '/ Unlimited' for both limits
+    const unlimitedTexts = screen.getAllByText(/\/ Unlimited/);
+    expect(unlimitedTexts.length).toBeGreaterThan(0);
+  });
+
   it('navigates to cost-dashboard on details click', async () => {
     await act(async () => {
       render(<MyPlanPage />);

@@ -302,8 +302,8 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(screen.getAllByText(/\/ < 1 MB/)[0]).toBeDefined();
-    expect(screen.getAllByText(/\/ < 1 MB/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ Unlimited/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ Unlimited/)[1]).toBeDefined();
   });
 
   test('renders unlimited limits properly', async () => {
