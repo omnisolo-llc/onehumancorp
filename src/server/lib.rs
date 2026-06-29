@@ -3082,6 +3082,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 pub struct TriageActionPayload {
     pub triage_item_id: String,
     pub approved: bool,
+    #[serde(default)]
+    pub edited_payload: Option<String>,
 }
 
 pub async fn create_ui_triage_item_handler(
@@ -3804,6 +3806,10 @@ pub async fn update_ui_triage_action_handler(
                             action_payload_opt = Some(row.try_get::<String, _>("draft_reply").unwrap_or_default());
                         }
                     }
+                }
+
+                if let Some(edited) = &payload.edited_payload {
+                    action_payload_opt = Some(edited.clone());
                 }
 
                 if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
