@@ -16,6 +16,7 @@ exports_files([
     "organization.proto",
     "skills.proto",
     "invoice.proto",
+    "inbox.proto",
 ], visibility = ["//visibility:public"])
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
@@ -29,6 +30,21 @@ proto_library(
 proto_rust_library(
     name = "hub",
     proto = ":hub_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Inbox ──────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "inbox_proto",
+    srcs = ["inbox.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "inbox",
+    proto = ":inbox_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
