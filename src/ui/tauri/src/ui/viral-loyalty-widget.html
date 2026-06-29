@@ -245,17 +245,24 @@
 
       try {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        let refId = tenantId;
 
-        // This simulates generating a program
-        const res = await fetch('/api/v1/growth/referrals/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
-            }
-        });
-        const data = await res.json();
-        const refId = data.referral_link ? data.referral_link.split('/').pop() : tenantId;
+        try {
+          // This simulates generating a program
+          const res = await fetch('/api/v1/growth/referrals/generate', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+              }
+          });
+          const data = await res.json();
+          if (data.referral_link) {
+              refId = data.referral_link.split('/').pop();
+          }
+        } catch (fetchErr) {
+            console.error("Error calling generate API, using fallback", fetchErr);
+        }
 
         // Show result
         const baseUrl = window.location.origin;
