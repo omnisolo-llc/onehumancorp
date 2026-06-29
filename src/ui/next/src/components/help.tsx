@@ -15,7 +15,7 @@ type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: s
 
 const helpTabs = [
   { id: "center", label: "Help" },
-  { id: "chat", label: "Ask AI" },
+  { id: "chat", label: "Ask anything" },
   { id: "videos", label: "Videos" },
   { id: "whatsnew", label: "New" }
 ] as const;
