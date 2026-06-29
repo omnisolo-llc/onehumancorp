@@ -140,11 +140,21 @@ pub async fn twilio_voice_status_handler(
         let session_actions: Vec<_> = actions.iter().filter(|a| a.session_id == call_sid).collect();
         let has_booking_intent = session_actions.iter().any(|a| a.intent_type == "BOOK_APPOINTMENT");
 
+        let has_order_food_intent = session_actions.iter().any(|a| a.intent_type == "ORDER_FOOD");
+
         let deposit_link = session_actions.iter()
             .find(|a| a.intent_type == "BOOK_APPOINTMENT")
             .and_then(|a| a.details.get("deposit_link").and_then(|v| v.as_str()))
             .unwrap_or("https://pay.ohc.com/deposit/voice")
             .to_string();
+
+        let link_to_send = if has_booking_intent {
+            deposit_link.clone()
+        } else if has_order_food_intent {
+            "https://pay.ohc.com/order/voice".to_string()
+        } else {
+            "".to_string()
+        };
         drop(actions);
 
         let transcripts = state.voice_engine.transcripts.lock().await;
@@ -222,21 +232,22 @@ pub async fn twilio_voice_status_handler(
                 tracing::error!("Failed to insert voice call transcript into omni_inbox_messages: {}", e);
             }
 
-            if has_booking_intent {
+            if has_booking_intent || has_order_food_intent {
                 let task_manager = crate::tasks::TaskManager::with_db(state.db.clone());
                 let mission_id = uuid::Uuid::new_v4().to_string();
 
-                let title = format!("Voice Booking Request from {}", clean_caller);
+                let title = if has_booking_intent { format!("Voice Booking Request from {}", clean_caller) } else { format!("Voice Order Handled for {}", clean_caller) };
                 let priority = "P1".to_string(); // Requires approval
 
                 if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary.clone(), priority) {
-                    task.approval_status = Some("PENDING".to_string());
+                    task.approval_status = if has_booking_intent { Some("PENDING".to_string()) } else { None };
+                    task.status = if has_order_food_intent { "COMPLETED".to_string() } else { "PENDING".to_string() };
 
                     let proposed_content = serde_json::json!({
-                        "feature_type": "booking_draft",
+                        "feature_type": if has_booking_intent { "booking_draft" } else { "order_food" },
                         "summary": summary,
                         "caller_phone": clean_caller,
-                        "deposit_link": deposit_link,
+                        "link_sent": link_to_send,
                     });
                     task.proposed_content = Some(proposed_content.to_string());
 
