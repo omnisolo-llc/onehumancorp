@@ -19,14 +19,14 @@ ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS business_milestones DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
-INSERT INTO tenants (id, name, industry, plan_tier, has_claimed_trial_extension)
+INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension)
 VALUES
-  ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter', false),
+  ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'Starter', false),
   ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro', false)
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
-    plan_tier = EXCLUDED.plan_tier,
+    tier = EXCLUDED.tier,
     has_claimed_trial_extension = EXCLUDED.has_claimed_trial_extension,
     updated_at = CURRENT_TIMESTAMP;
 
@@ -581,19 +581,18 @@ ON CONFLICT DO NOTHING;
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALUES
 ('ms_e2e_revenue_10k', 'e2e-milestone-tenant', 'revenue_10k', CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
-UPDATE tenants SET plan_tier = 'Starter' WHERE id = 'e2e-tenant';
-INSERT INTO tenants (id, name, industry, plan_tier, has_claimed_trial_extension)
+UPDATE tenants SET tier = 'Starter' WHERE id = 'e2e-tenant';
+INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension)
 VALUES
   ('e2e-tenant-free', 'OHC E2E Free Bakery', 'Food and beverage', 'Free', false),
   ('e2e-tenant-business', 'OHC E2E Business Bakery', 'Food and beverage', 'Business', false)
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
-    plan_tier = EXCLUDED.plan_tier,
+    tier = EXCLUDED.tier,
     has_claimed_trial_extension = EXCLUDED.has_claimed_trial_extension,
     updated_at = CURRENT_TIMESTAMP;
 
-UPDATE users SET tenant_id = 'e2e-tenant-free' WHERE id = 'e2e-admin-user';
 
 INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
 VALUES

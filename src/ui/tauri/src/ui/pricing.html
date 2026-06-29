@@ -318,7 +318,7 @@
         const token = localStorage.getItem('token');
         const headers = {};
         if (tenant) {
-            headers['x-ohc-tenant-id'] = tenant;
+            headers['x-tenant-id'] = tenant;
         }
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
@@ -372,7 +372,7 @@
           const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
           const token = localStorage.getItem('token');
           const headers = { 'Content-Type': 'application/json' };
-          if (tenant) { headers['x-ohc-tenant-id'] = tenant; }
+          if (tenant) { headers['x-tenant-id'] = tenant; }
           if (token) { headers['Authorization'] = `Bearer ${token}`; }
           const response = await fetch('/api/billing/create-billing-portal-session', {
             method: 'POST',
@@ -406,7 +406,7 @@
             'Content-Type': 'application/json'
           };
           if (tenant) {
-              headers['x-ohc-tenant-id'] = tenant;
+              headers['x-tenant-id'] = tenant;
           }
           if (token) {
               headers['Authorization'] = `Bearer ${token}`;

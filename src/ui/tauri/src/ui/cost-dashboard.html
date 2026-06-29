@@ -389,7 +389,7 @@
         const token = localStorage.getItem('token');
         const headers = {};
         if (tenant) {
-            headers['x-ohc-tenant-id'] = tenant;
+            headers['x-tenant-id'] = tenant;
         }
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
