@@ -31,7 +31,7 @@ pub struct LlmVoiceTurnPlanner;
 impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
     async fn plan_turn(&self, session_id: &str, user_text: &str) -> Result<VoiceTurnPlan, String> {
         let prompt = format!(
-            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, or GENERAL_HELP. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
+            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, GENERAL_HELP, ORDER_FOOD, or GENERAL_INQUIRY. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent, or if the caller wants to place an order (ORDER_FOOD), immediately offer to send them a secure ordering link via SMS and include the link (e.g., https://pay.ohc.com/store/voice) in the sms_body. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
         );
 
         let provider = std::env::var("OHC_VOICE_LLM_PROVIDER")
@@ -196,6 +196,14 @@ mod tests {
         assert_eq!(plan.intent_type.as_deref(), Some("BOOK_APPOINTMENT"));
         assert_eq!(plan.ai_response, "I sent the confirmation link.");
         assert_eq!(plan.sms_body.as_deref(), Some("Confirm here: https://ohc.example/confirm"));
+
+        let plan2 = parse_voice_turn_plan(
+            r#"{"intent_type":"ORDER_FOOD","ai_response":"I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!","sms_body":"Order here: https://pay.ohc.com/store/voice"}"#,
+        )
+        .unwrap();
+        assert_eq!(plan2.intent_type.as_deref(), Some("ORDER_FOOD"));
+        assert_eq!(plan2.ai_response, "I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!");
+        assert_eq!(plan2.sms_body.as_deref(), Some("Order here: https://pay.ohc.com/store/voice"));
     }
 
     #[tokio::test]
@@ -236,5 +244,35 @@ mod tests {
         assert_eq!(actions.len(), 2);
         assert_eq!(actions[0].intent_type, "CHECK_AVAILABILITY");
         assert_eq!(actions[1].intent_type, "BOOK_APPOINTMENT");
+    }
+
+    #[tokio::test]
+    async fn test_voice_context_router_ordering_flow() {
+        let engine = Arc::new(VoiceAIEdgeEngine::new());
+        let sent = Arc::new(AtomicUsize::new(0));
+        let mock_twilio = Arc::new(TwilioProvider::with_client(Arc::new(MockTwilioClient { sent_messages: sent.clone() })));
+        let planner = Arc::new(ScriptedVoiceTurnPlanner {
+            plans: tokio::sync::Mutex::new(vec![
+                VoiceTurnPlan {
+                    intent_type: Some("ORDER_FOOD".to_string()),
+                    ai_response: "I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!".to_string(),
+                    sms_body: Some("Order here: https://pay.ohc.com/store/voice".to_string()),
+                },
+            ]),
+        });
+
+        let router = VoiceContextRouter::with_planner(engine.clone(), mock_twilio, planner);
+        let session_id = engine.handle_incoming_call("merchant_456", "+1122334455").await;
+
+        let response = router.process_user_input(&session_id, "I want to place an order for pickup", "+0987654321").await;
+        assert!(response.contains("texting you a link"));
+
+        // Ensure SMS was sent
+        assert_eq!(sent.load(Ordering::SeqCst), 1);
+
+        // Ensure intent was logged
+        let actions = engine.actions.lock().await;
+        assert_eq!(actions.len(), 1);
+        assert_eq!(actions[0].intent_type, "ORDER_FOOD");
     }
 }

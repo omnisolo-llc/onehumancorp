@@ -193,6 +193,37 @@ export default function TriagePage() {
       )}
 
       <div className="flex flex-col gap-4 w-full max-w-full pb-20">
+        <div className="flex justify-end px-1">
+          <button
+            onClick={async () => {
+              setLoading(true);
+              try {
+                await fetch(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId())}`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    source: "SMS (Missed Call)",
+                    priority: "urgent",
+                    context: "Leaky pipe under sink, can you fix?",
+                    action_type: "Draft Reply",
+                    action_payload: "Hi! I am currently on a job but can fix this today. Can you send a photo of the leak?",
+                    customer_id: "Unknown Caller"
+                  }),
+                });
+                await loadItems();
+              } catch (err) {
+                console.error("Failed to simulate missed lead", err);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            data-testid="simulate-missed-lead-btn"
+            className="text-xs bg-[#0066FF]/10 text-[#0066FF] dark:text-[#3388FF] px-3 py-1.5 rounded-full font-medium hover:bg-[#0066FF]/20 transition-colors flex items-center gap-1 shadow-sm border border-[#0066FF]/20 min-h-[44px]"
+          >
+            <span>📱</span> Simulate Missed Call
+          </button>
+        </div>
+
         {error && <div className="app-empty">{error}</div>}
         {loading ? (
           <div className="p-6 space-y-4">

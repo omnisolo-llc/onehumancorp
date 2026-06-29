@@ -192,7 +192,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-full max-w-[350px] pointer-events-auto bg-white/70 dark:bg-white/10 backdrop-blur-[40px] saturate-[210%] border border-white/40 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[9999] w-full max-w-[350px] pointer-events-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
@@ -295,7 +295,7 @@ export function HelpChat() {
           {/* Input */}
           <form
             onSubmit={handleSend}
-            className="p-3 bg-white/70 dark:bg-white/10 backdrop-blur-[40px] saturate-[210%] border-t border-white/40 flex gap-2 items-center"
+            className="p-3 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border-t border-white/40 dark:border-white/10 flex gap-2 items-center"
           >
             <input
               id="ohc-help-input-area"
@@ -304,7 +304,7 @@ export function HelpChat() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask anything..."
               disabled={isLoading}
-              className="flex-1 bg-white/70 dark:bg-white/10 backdrop-blur-[40px] border border-white/40 rounded-[24px] px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-100/70"
+              className="flex-1 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] border border-white/40 dark:border-white/10 rounded-[24px] px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-100/70 text-gray-900 dark:text-gray-100"
             />
             <button
               type="submit"

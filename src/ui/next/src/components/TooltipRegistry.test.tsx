@@ -129,6 +129,7 @@ describe('TooltipRegistry', () => {
 describe('useTooltip Hook sync', () => {
   it('throws an error if used outside TooltipProvider', () => {
     const originalError = console.error;
+    console.error = vi.fn(); // Suppress the expected React error boundary log
     const preventError = (e: any) => e.preventDefault();
     window.addEventListener('error', preventError);
 
