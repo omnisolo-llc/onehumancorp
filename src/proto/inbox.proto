@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package ohc.inbox;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/inbox;inboxpb";
+
+message OmniMessage {
+    string id = 1;
+    string tenant_id = 2;
+    string source = 3;
+    string original_content = 4;
+    string translated_content = 5;
+    string source_language = 6;
+    string target_language = 7;
+    string draft_reply = 8;
+    string status = 9;
+    string sender_id = 10;
+    string customer_id = 11;
+    int64 created_at_unix = 12;
+    int64 updated_at_unix = 13;
+}
+
+message Conversation {
+    string id = 1;
+    string tenant_id = 2;
+    string customer_id = 3;
+    string channel = 4;
+    string status = 5;
+    int64 created_at_unix = 6;
+    int64 updated_at_unix = 7;
+}
+
+message FetchConversationsRequest {
+    string tenant_id = 1;
+}
+
+message FetchConversationsResponse {
+    repeated Conversation conversations = 1;
+}
+
+message FetchMessagesRequest {
+    string tenant_id = 1;
+    string conversation_id = 2;
+}
+
+message FetchMessagesResponse {
+    repeated OmniMessage messages = 1;
+}
