@@ -6915,7 +6915,7 @@ async fn create_ui_bom_item_handler(
         .route("/kairos.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/kairos.html"))
         }))
-        .route("/api/ui/tooltip-registry.html", axum::routing::get(|| async {
+        .route("/tooltip-registry.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/tooltip-registry.html"))
         }))
         .route("/api/ui/hybrid-landing.html", axum::routing::get(|| async {
