@@ -680,3 +680,8 @@ fn test_record_error_signal() {
             },
         );
 }
+#[test]
+fn test_categorize_stuck_error_signal() {
+    assert_eq!(::server_telemetry::categorize_error_signal("stuck item found"), "cleanup");
+    assert_eq!(::server_telemetry::categorize_error_signal("stagnant backlog item"), "cleanup");
+}
