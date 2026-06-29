@@ -32,6 +32,11 @@ export default function FieldOpsJobsPage() {
     null,
   );
 
+  const [voiceQuoteJobId, setVoiceQuoteJobId] = useState<string | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [draftingQuote, setDraftingQuote] = useState(false);
+  const [draftQuoteResult, setDraftQuoteResult] = useState<any | null>(null);
+
   useEffect(() => {
     setIsOffline(!navigator.onLine);
     const handleOnline = () => setIsOffline(false);
@@ -203,6 +208,34 @@ export default function FieldOpsJobsPage() {
     }
   };
 
+  const handleDraftVoiceQuote = async () => {
+    if (!voiceQuoteJobId || !voiceTranscript.trim()) return;
+
+    setDraftingQuote(true);
+    setDraftQuoteResult(null);
+    try {
+      const job = jobs.find(j => j.id === voiceQuoteJobId);
+      const res = await fetch("/api/quotes/draft_agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inquiry: voiceTranscript,
+          customer_id: job?.customer_id || "unknown",
+          tenant_id: "default"
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to draft quote");
+      const data = await res.json();
+      setDraftQuoteResult(data);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to draft quote.");
+    } finally {
+      setDraftingQuote(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4 bg-gray-50 min-h-screen flex items-center justify-center">
@@ -342,9 +375,19 @@ export default function FieldOpsJobsPage() {
 
             {job.status !== "Completed" && (
               <div className="p-5">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Service Notes & Potential Follow-ups
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Service Notes & Potential Follow-ups
+                  </label>
+                  <button
+                    onClick={() => setVoiceQuoteJobId(job.id)}
+                    className="w-10 h-10 rounded-full bg-[#0066FF]/10 text-[#0066FF] hover:bg-[#0066FF]/20 flex items-center justify-center transition-colors"
+                    title="Voice-to-Quote"
+                    data-testid={`voice-quote-btn-${job.id}`}
+                  >
+                    🎤
+                  </button>
+                </div>
                 <textarea
                   className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#0066FF] focus:border-transparent outline-none transition-shadow min-h-[80px]"
                   placeholder="E.g., Needs a replacement quote."
@@ -428,6 +471,89 @@ export default function FieldOpsJobsPage() {
           </div>
         ))}
       </div>
+
+      {/* Voice-to-Quote Modal */}
+      {voiceQuoteJobId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white/80 dark:bg-[#16161A]/80 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[24px] shadow-2xl p-6 w-full max-w-md flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold font-outfit text-gray-900 dark:text-white flex items-center gap-2">
+                <span>🎤</span> Voice-to-Quote
+              </h3>
+              <button
+                onClick={() => {
+                  setVoiceQuoteJobId(null);
+                  setDraftQuoteResult(null);
+                  setVoiceTranscript("");
+                }}
+                className="text-gray-500 hover:text-gray-800 dark:hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            {!draftQuoteResult ? (
+              <>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                  Speak your notes and the Sales Assistant will draft a professional quote. (Simulated)
+                </p>
+                <textarea
+                  data-testid="voice-transcript-input"
+                  className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#0066FF] outline-none min-h-[100px] mb-4 bg-white/50 dark:bg-black/20 text-gray-900 dark:text-white"
+                  placeholder="e.g. Needs 2 hours labor for pipe repair, $50 in parts..."
+                  value={voiceTranscript}
+                  onChange={e => setVoiceTranscript(e.target.value)}
+                />
+                <button
+                  data-testid="generate-quote-btn"
+                  onClick={handleDraftVoiceQuote}
+                  disabled={draftingQuote || !voiceTranscript.trim()}
+                  className="w-full bg-[#0066FF] text-white font-semibold py-3 rounded-[16px] disabled:opacity-50 min-h-[44px]"
+                >
+                  {draftingQuote ? "Drafting..." : "Generate Draft Quote"}
+                </button>
+              </>
+            ) : (
+              <div data-testid="draft-quote-result" className="flex flex-col gap-3">
+                <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 p-3 rounded-xl text-sm font-medium text-center">
+                  ✨ Draft Quote Ready
+                </div>
+
+                {draftQuoteResult.quote && (
+                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Calculated Total</p>
+                     <p className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                       ${((draftQuoteResult.quote.total_amount_cents || 0) / 100).toFixed(2)}
+                     </p>
+                     <div className="space-y-2">
+                       {draftQuoteResult.line_items?.map((item: any, i: number) => (
+                         <div key={i} className="flex justify-between text-sm">
+                           <span className="text-gray-700 dark:text-gray-300">{item.description} (x{item.quantity})</span>
+                           <span className="text-gray-900 dark:text-white font-medium">${((item.unit_price_cents || 0) / 100).toFixed(2)}</span>
+                         </div>
+                       ))}
+                     </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 mt-2">
+                   <button
+                     onClick={() => {
+                        setVoiceQuoteJobId(null);
+                        setDraftQuoteResult(null);
+                        setVoiceTranscript("");
+                     }}
+                     className="flex-1 bg-[#0066FF] text-white font-semibold py-3 rounded-[16px] min-h-[44px]"
+                   >
+                     Approve & Send
+                   </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
