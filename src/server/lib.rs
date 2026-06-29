@@ -6408,7 +6408,7 @@ async fn create_ui_bom_item_handler(
                 let merchant_phone = settings.voice_receptionist_number.clone().unwrap_or_default();
                 let session_id = voice_engine.handle_incoming_call("merchant_123", &caller_phone).await;
 
-                let reply = voice_router.process_user_input(&session_id, &user_text, &merchant_phone).await;
+                let reply = voice_router.process_user_input(&session_id, &user_text, &merchant_phone, "merchant_123").await;
 
                 voice_engine.end_call(&session_id).await;
 

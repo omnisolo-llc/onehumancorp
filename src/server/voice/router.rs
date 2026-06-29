@@ -22,16 +22,17 @@ pub struct VoiceTurnPlan {
 
 #[async_trait::async_trait]
 pub trait VoiceTurnPlanner: Send + Sync {
-    async fn plan_turn(&self, session_id: &str, user_text: &str) -> Result<VoiceTurnPlan, String>;
+    async fn plan_turn(&self, session_id: &str, user_text: &str, tenant_id: &str) -> Result<VoiceTurnPlan, String>;
 }
 
 pub struct LlmVoiceTurnPlanner;
 
 #[async_trait::async_trait]
 impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
-    async fn plan_turn(&self, session_id: &str, user_text: &str) -> Result<VoiceTurnPlan, String> {
+    async fn plan_turn(&self, session_id: &str, user_text: &str, tenant_id: &str) -> Result<VoiceTurnPlan, String> {
+        let storefront_link = format!("https://{}.ohc.example/order", tenant_id);
         let prompt = format!(
-            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, or GENERAL_HELP. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
+            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, ORDER_FOOD, or GENERAL_HELP. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent, or when the caller wants to order food (ORDER_FOOD) and you need to send them a secure link to place their order right now. If intent_type is ORDER_FOOD, the ai_response should politely explain that you are texting them a link to the online menu, and sms_body should contain the text with the link: {storefront_link}. If the caller speaks a language other than English, respond in their language but keep intent_type in English. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
         );
 
         let provider = std::env::var("OHC_VOICE_LLM_PROVIDER")
@@ -63,10 +64,10 @@ impl VoiceContextRouter {
         Self { engine, twilio, planner }
     }
 
-    pub async fn process_user_input(&self, session_id: &str, user_text: &str, merchant_phone: &str) -> String {
+    pub async fn process_user_input(&self, session_id: &str, user_text: &str, merchant_phone: &str, tenant_id: &str) -> String {
         self.engine.log_transcript(session_id, "USER", user_text).await;
 
-        let plan = match self.planner.plan_turn(session_id, user_text).await {
+        let plan = match self.planner.plan_turn(session_id, user_text, tenant_id).await {
             Ok(plan) => plan,
             Err(err) => {
                 ::server_telemetry::record_error_signal("[bug] VoiceContextRouter LLM planning failed");
@@ -181,7 +182,7 @@ mod tests {
 
     #[async_trait]
     impl VoiceTurnPlanner for ScriptedVoiceTurnPlanner {
-        async fn plan_turn(&self, _session_id: &str, _user_text: &str) -> Result<VoiceTurnPlan, String> {
+        async fn plan_turn(&self, _session_id: &str, _user_text: &str, _tenant_id: &str) -> Result<VoiceTurnPlan, String> {
             Ok(self.plans.lock().await.remove(0))
         }
     }
@@ -222,10 +223,10 @@ mod tests {
 
         let session_id = engine.handle_incoming_call("merchant_123", "+1234567890").await;
 
-        let response1 = router.process_user_input(&session_id, "Do you have an opening tomorrow?", "+0987654321").await;
+        let response1 = router.process_user_input(&session_id, "Do you have an opening tomorrow?", "+0987654321", "test_tenant").await;
         assert!(response1.contains("check availability"));
 
-        let response2 = router.process_user_input(&session_id, "Yes, please.", "+0987654321").await;
+        let response2 = router.process_user_input(&session_id, "Yes, please.", "+0987654321", "test_tenant").await;
         assert!(response2.contains("secure confirmation"));
 
         // Ensure SMS was sent

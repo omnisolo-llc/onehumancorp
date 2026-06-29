@@ -390,7 +390,7 @@ pub async fn twilio_voice_webhook_handler(
             let _ = orchestrator_clone.dispatch_event(event).await;
         });
 
-        state.voice_router.process_user_input(&session_id, &user_text, &to_number).await
+        state.voice_router.process_user_input(&session_id, &user_text, &to_number, &tenant_id).await
     } else {
         // New call
         let session_id = state.voice_engine.handle_incoming_call(&tenant_id, &sender_id).await;

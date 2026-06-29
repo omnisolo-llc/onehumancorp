@@ -109,8 +109,15 @@ pub async fn twilio_voice_gather_handler(
         return ([(axum::http::header::CONTENT_TYPE, "application/xml")], twiml.to_string()).into_response();
     }
 
+    let calls = state.voice_engine.active_calls.lock().await;
+    let tenant_id = calls.iter()
+        .find(|c| c.session_id == call_sid)
+        .map(|c| c.merchant_id.clone())
+        .unwrap_or_else(|| "test_tenant".to_string());
+    drop(calls);
+
     let voice_router = VoiceContextRouter::new(state.voice_engine.clone(), state.twilio.clone());
-    let ai_response = voice_router.process_user_input(&call_sid, &speech_result, &to_number).await;
+    let ai_response = voice_router.process_user_input(&call_sid, &speech_result, &to_number, &tenant_id).await;
 
     let twiml = format!(r#"<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -139,6 +146,7 @@ pub async fn twilio_voice_status_handler(
         let actions = state.voice_engine.actions.lock().await;
         let session_actions: Vec<_> = actions.iter().filter(|a| a.session_id == call_sid).collect();
         let has_booking_intent = session_actions.iter().any(|a| a.intent_type == "BOOK_APPOINTMENT");
+        let has_order_food_intent = session_actions.iter().any(|a| a.intent_type == "ORDER_FOOD");
 
         let deposit_link = session_actions.iter()
             .find(|a| a.intent_type == "BOOK_APPOINTMENT")
@@ -240,6 +248,19 @@ pub async fn twilio_voice_status_handler(
                     });
                     task.proposed_content = Some(proposed_content.to_string());
 
+                    let _ = task_manager.insert_task(task);
+                }
+            }
+
+            if has_order_food_intent {
+                let task_manager = crate::tasks::TaskManager::with_db(state.db.clone());
+                let mission_id = uuid::Uuid::new_v4().to_string();
+
+                let title = format!("Automated receptionist handled a call from {} and sent the ordering link.", clean_caller);
+                let priority = "P2".to_string(); // Informational
+
+                if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary.clone(), priority) {
+                    task.status = "COMPLETED".to_string();
                     let _ = task_manager.insert_task(task);
                 }
             }
