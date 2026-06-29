@@ -310,7 +310,7 @@ export default function OnboardingWizard() {
       updateState({ businessType: intakeData.business_type || 'Online Store' });
       updateState({ businessName: intakeData.business_name || 'My Business' });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '10.00' });
+      updateState({ firstProductPrice: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || '10.00') });
       if (intakeData.initial_products) {
           localStorage.setItem('onboarding_initial_products', JSON.stringify(intakeData.initial_products));
       }
@@ -331,7 +331,7 @@ export default function OnboardingWizard() {
         step: 2,
         aiAgents: newAgents,
         firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-        firstProductPrice: intakeData.initial_products?.[0]?.price || "10.00"
+        firstProductPrice: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || "10.00")
       }); // Go to review step
     } catch (err: any) {
       console.error(err);
@@ -417,7 +417,7 @@ export default function OnboardingWizard() {
             admin_password: adminPassword,
             website_template: "auto",
             first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
-            first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
+            first_product_price: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || "0.00"),
             domain_choice: "subdomain",
             price_type: "fixed",
             location: intakeData.location || "",
@@ -483,14 +483,26 @@ Image provided: ${instantImageUrl}`;
         },
         body: JSON.stringify({ description: combinedInput, image_url: instantImageUrl })
       });
-      const intakeData = await intakeRes.json();
+      let intakeData: any = {};
+      try {
+          if (!intakeRes.ok) {
+             throw new Error(`Failed to generate storefront: ${intakeRes.status}`);
+          }
+          intakeData = await intakeRes.json();
+      } catch (e: unknown) {
+          const errorMessage = e instanceof Error ? e.message : 'Unknown error parsing response';
+          console.error(errorMessage);
+          updateState({ step: -1, error: errorMessage });
+          syncStateToBackend({ step: -1, error: errorMessage });
+          return;
+      }
 
       updateState({ businessName: intakeData.business_name || 'My Business' });
       updateState({ businessType: intakeData.business_type || 'Online Store' });
       updateState({ businessDescription: bio });
       updateState({ categories: intakeData.categories || ['physical'] });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '0.00' });
+      updateState({ firstProductPrice: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || '0.00') });
       updateState({ location: intakeData.location || 'Local' });
       updateState({ targetAudience: intakeData.target_audience || 'General' });
       updateState({ adminName: intakeData.business_name || 'Admin' });
@@ -522,7 +534,7 @@ Image provided: ${instantImageUrl}`;
           admin_password: defaultAdminPassword,
           website_template: 'auto',
           first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
-          first_product_price: intakeData.initial_products?.[0]?.price || '0.00',
+          first_product_price: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || '0.00'),
           domain_choice: 'subdomain',
           price_type: 'fixed',
           location: intakeData.location || 'Local',
@@ -556,8 +568,7 @@ Image provided: ${instantImageUrl}`;
 
     } catch (err: any) {
       console.error(err);
-      updateState({ error: err.message || 'Backend connection failed. Please try again.' });
-      updateState({ step: -1 }); syncStateToBackend({ step: -1 });
+      updateState({ step: -1, error: err.message || 'Backend connection failed. Please try again.' }); syncStateToBackend({ step: -1 });
     } finally {
       updateState({ isLoading: false });
     }

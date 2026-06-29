@@ -1,0 +1,4897 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OHC Setup</title>
+    <style>
+      body {
+        font-family:
+          "Outfit",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        overflow-x: hidden;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        padding: 20px;
+        padding-bottom: 80px;
+        border-radius: 16px;
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        text-align: center;
+        width: 100%;
+        max-width: 480px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-sizing: border-box;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
+      /* OHC Premium Glassmorphism */
+      .glassmorphism {
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          border-radius: 16px;
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      h1 {
+        margin-top: 0;
+        color: #1d1d1f;
+        font-size: 24px;
+        font-weight: 700;
+      }
+      p {
+        color: #555555;
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+      select,
+      textarea,
+      input {
+        width: 100%;
+        padding: 14px;
+        min-height: 44px !important;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 16px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        transition:
+          border-color 0.2s,
+          background 0.2s,
+          box-shadow 0.2s;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        select,
+        textarea,
+        input {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #f5f5f7;
+        }
+      }
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: #0071e3;
+        background: rgba(255, 255, 255, 0.65);
+        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+      }
+      button,
+      input,
+      select,
+      textarea {
+        border-radius: 8px;
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
+      }
+      .glassmorphism {
+        border-radius: 16px !important;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      textarea.glassmorphism, input.glassmorphism {
+        border-radius: 8px !important;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      button {
+        min-width: 44px;
+        background-color: #0066ff;
+        color: white;
+        border: none;
+        padding: 14px 24px;
+        min-height: 44px !important;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+      }
+      button:hover {
+        background-color: #0052cc;
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+
+      .error-msg {
+        color: #ff3b30;
+        font-size: 12px;
+        margin-top: -15px;
+        margin-bottom: 15px;
+        display: none;
+        text-align: left;
+      }
+
+      .invalid-input {
+        background: rgba(255, 59, 48, 0.1) !important;
+        border-color: #ff3b30 !important;
+      }
+
+      .text-\[\#FF3B30\] {
+        color: #ff3b30 !important;
+      }
+      .border-\[\#FF3B30\] {
+        border-color: #ff3b30 !important;
+      }
+      .border-\[\#FF3B30\]\/30 {
+        border-color: rgba(255, 59, 48, 0.3) !important;
+        border-width: 1px !important;
+        border-style: solid !important;
+        border-radius: 16px;
+        padding: 10px !important;
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-5px);
+        }
+        75% {
+          transform: translateX(5px);
+        }
+      }
+      .animate-shake {
+        animation: shake 0.2s cubic-bezier(0.4, 0, 0.2, 1) 0s 2;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 8px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+
+      .capability-toggles {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 12px 16px;
+        border-radius: 16px;
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+      }
+      .toggle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .toggle-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
+      .toggle-desc {
+        font-size: 12px;
+        color: #555555;
+      }
+      /* iOS-style toggle switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.1);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 8px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      input:checked + .slider {
+        background-color: #34c759;
+      }
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+      @media (prefers-color-scheme: dark) {
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .context-card,
+        .toggle-row {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .context-card:hover {
+          background: rgba(22, 22, 26, 0.7);
+        }
+        .context-title,
+        .toggle-title {
+          color: #f5f5f7;
+        }
+        .context-desc,
+        .toggle-desc {
+          color: #a1a1a6;
+        }
+        .context-card.selected {
+          background: rgba(0, 102, 255, 0.2);
+          box-shadow: 0 0 0 1px #0066ff;
+        }
+        body {
+          background-color: #16161a;
+        }
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          box-shadow:
+            0 4px 6px -1px rgba(0, 0, 0, 0.1),
+            0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .glassmorphism {
+          border-radius: 16px;
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        h1 {
+          color: #f5f5f7;
+        }
+        p {
+          color: #a1a1a6;
+        }
+        input {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #f5f5f7;
+        }
+        input:focus,
+        textarea:focus,
+        select:focus {
+          border-color: #0071e3;
+          background: rgba(22, 22, 26, 0.7);
+        }
+      }
+
+      .stepper {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        position: relative;
+      }
+      .stepper::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.65);
+        z-index: 1;
+        transform: translateY(-50%);
+      }
+      .stepper-progress {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        height: 2px;
+        background: #0066ff;
+        z-index: 1;
+        transform: translateY(-50%);
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 0%;
+      }
+      .step-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.65);
+        border: 2px solid rgba(255, 255, 255, 0.65);
+        z-index: 2;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .btn-instant-build {
+        background: #0066ff;
+        color: white;
+        border: none;
+        min-height: 44px;
+        min-width: 44px;
+        margin-top: 10px;
+        cursor: pointer;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+        width: 100%;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn-instant-build:hover {
+        background: #0052cc;
+      }
+      .btn-instant-build:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Chat Bubble Styles */
+      .chat-message {
+        margin-bottom: 16px;
+        display: flex;
+        flex-direction: column;
+        max-width: 85%;
+        word-wrap: break-word;
+        animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .chat-message.assistant {
+        align-self: flex-start;
+      }
+      .chat-message.user {
+        align-self: flex-end;
+      }
+      .chat-bubble {
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-size: 14px;
+        line-height: 1.5;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+      .chat-message.assistant .chat-bubble {
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-bottom-left-radius: 4px;
+        color: #1d1d1f;
+      }
+      @media (prefers-color-scheme: dark) {
+        .chat-message.assistant .chat-bubble {
+          background: rgba(40, 40, 45, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #f5f5f7;
+        }
+      }
+      .chat-message.user .chat-bubble {
+        background: #0066ff;
+        border: 1px solid #0052cc;
+        border-bottom-right-radius: 4px;
+        color: white;
+      }
+      .chat-sender {
+        font-size: 11px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: #888;
+      }
+      .chat-message.assistant .chat-sender {
+        margin-left: 4px;
+      }
+      .chat-message.user .chat-sender {
+        margin-right: 4px;
+        text-align: right;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Chat Step Styles */
+      #chat-messages {
+        height: 300px;
+        overflow-y: auto;
+        padding: 16px;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .step-indicator.active {
+        background: #0066ff;
+        border-color: #0071e3;
+        transform: scale(1.3);
+        box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
+      }
+      .step-indicator.completed {
+        background: #34c759;
+        border-color: #34c759;
+      }
+
+      .capability-toggles {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 12px 16px;
+        border-radius: 16px;
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+      }
+      .toggle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .toggle-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
+      .toggle-desc {
+        font-size: 12px;
+        color: #555555;
+      }
+      /* iOS-style toggle switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.1);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 8px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      input:checked + .slider {
+        background-color: #34c759;
+      }
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+      @media (prefers-color-scheme: dark) {
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .context-card,
+        .toggle-row {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .context-card:hover {
+          background: rgba(22, 22, 26, 0.7);
+        }
+        .context-title,
+        .toggle-title {
+          color: #f5f5f7;
+        }
+        .context-desc,
+        .toggle-desc {
+          color: #a1a1a6;
+        }
+        .context-card.selected {
+          background: rgba(0, 102, 255, 0.2);
+          box-shadow: 0 0 0 1px #0066ff;
+        }
+        .stepper::before {
+          background: rgba(22, 22, 26, 0.7);
+        }
+        .stepper-progress {
+          position: absolute;
+          top: 50%;
+          left: 0;
+          height: 2px;
+          background: #0066ff;
+          z-index: 1;
+          transform: translateY(-50%);
+          transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          width: 0%;
+        }
+        .step-indicator {
+          background: rgba(22, 22, 26, 0.7);
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+      }
+
+      /* Multi-step logic */
+      .step {
+        display: none;
+        animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .step.active {
+        display: block;
+      }
+      @keyframes fadeIn {
+        0% {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      input,
+      select,
+      textarea {
+        color: #1d1d1f;
+        width: 100%;
+        padding: 14px;
+        min-height: 44px !important;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 16px;
+        background: rgba(255, 255, 255, 0.65);
+        font-family:
+          "Outfit",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        transition:
+          border-color 0.2s,
+          background 0.2s,
+          box-shadow 0.2s;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #0071e3;
+        background: rgba(255, 255, 255, 0.65);
+        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+      }
+
+      .work-context-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .context-card {
+        min-height: 44px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        min-height: 44px;
+      }
+      .context-card:hover {
+        background: rgba(255, 255, 255, 0.65);
+        transform: translateY(-2px);
+      }
+      .context-card.selected {
+        border-color: #0071e3;
+        background: rgba(0, 102, 255, 0.1);
+        box-shadow:
+          0 0 0 1px #0066ff,
+          0 4px 12px rgba(0, 102, 255, 0.15);
+      }
+      .context-card input[type="radio"] {
+        display: none;
+      }
+      .context-icon {
+        font-size: 24px;
+        margin-bottom: 4px;
+      }
+      .context-title {
+        font-weight: 600;
+        font-size: 15px;
+        color: #1d1d1f;
+      }
+      .context-desc {
+        font-size: 13px;
+        color: #555555;
+        line-height: 1.3;
+      }
+      .radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 20px;
+        text-align: left;
+      }
+      .radio-option {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 12px 16px;
+        min-height: 44px !important;
+        border-radius: 8px;
+        cursor: pointer;
+        transition:
+          border-color 0.2s,
+          background 0.2s,
+          box-shadow 0.2s;
+      }
+      .radio-option:hover {
+        background: rgba(255, 255, 255, 0.85);
+      }
+      .radio-option.selected {
+        border-color: #0066ff;
+        background: rgba(255, 255, 255, 0.65);
+        box-shadow: 0 0 0 1px #0066ff;
+      }
+      .radio-option input[type="radio"] {
+        display: none;
+      }
+      .radio-label {
+        font-weight: 500;
+        color: #1d1d1f;
+      }
+      .radio-desc {
+        font-size: 12px;
+        color: #555555;
+        margin-top: 2px;
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        color: #555555;
+        box-shadow: none;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        margin-top: 10px;
+        min-height: 44px !important;
+      }
+      .btn-secondary:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: #1d1d1f;
+      }
+      .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .persona-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding-bottom: 10px;
+      }
+      .persona-chip {
+        min-height: 44px;
+        min-width: 44px;
+        box-sizing: border-box;
+        min-height: 44px;
+        flex: 0 0 auto;
+        padding: 8px 16px;
+        min-height: 44px !important;
+        display: flex;
+        align-items: center;
+        border-radius: 8px;
+        background: rgba(0, 102, 255, 0.1);
+        color: #0066ff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+      }
+      .persona-chip:hover {
+        background: rgba(0, 102, 255, 0.2);
+      }
+      .persona-chip.selected {
+        background: #0066ff;
+        color: white;
+      }
+
+      .chat-bubble {
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 12px 16px;
+        border-radius: 16px;
+        border-bottom-left-radius: 4px;
+        font-size: 14px;
+        line-height: 1.4;
+        text-align: left;
+        margin-bottom: 20px;
+        color: #1d1d1f;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .capability-toggles {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 12px 16px;
+        border-radius: 16px;
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+      }
+      .toggle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .toggle-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
+      .toggle-desc {
+        font-size: 12px;
+        color: #555555;
+      }
+      /* iOS-style toggle switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.1);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 8px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      input:checked + .slider {
+        background-color: #34c759;
+      }
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+      @media (prefers-color-scheme: dark) {
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .context-card,
+        .toggle-row {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .context-card:hover {
+          background: rgba(22, 22, 26, 0.7);
+        }
+        .context-title,
+        .toggle-title {
+          color: #f5f5f7;
+        }
+        .context-desc,
+        .toggle-desc {
+          color: #a1a1a6;
+        }
+        .context-card.selected {
+          background: rgba(0, 102, 255, 0.2);
+          box-shadow: 0 0 0 1px #0066ff;
+        }
+        input,
+        select,
+        textarea {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #f5f5f7;
+        }
+        input:focus,
+        select:focus,
+        textarea:focus {
+          border-color: #0071e3;
+          background: rgba(22, 22, 26, 0.7);
+        }
+        .radio-option {
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .radio-option:hover {
+          background: rgba(40, 40, 45, 0.7);
+        }
+        .radio-option.selected {
+          border-color: #0066ff;
+          background: rgba(22, 22, 26, 0.7);
+          box-shadow: 0 0 0 1px #0066ff;
+        }
+        .radio-label {
+          color: #f5f5f7;
+        }
+        .btn-secondary {
+          border-color: rgba(255, 255, 255, 0.2);
+          color: #a1a1a6;
+        }
+        .btn-secondary:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+          color: #f5f5f7;
+        }
+        .chat-bubble {
+          background: rgba(22, 22, 26, 0.7);
+          color: #f5f5f7;
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 20px;
+          padding-bottom: 80px;
+          border-radius: 16px;
+          width: 100%;
+          border: none;
+        }
+        input,
+        select,
+        textarea,
+        button,
+        .radio-option,
+        .persona-chip {
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
+          min-height: 44px;
+          border-radius: 8px;
+          min-height: 44px !important;
+        }
+      }
+
+      @media (max-width: 414px) {
+        .container {
+          padding: 16px;
+          margin: 0;
+          width: 100vw;
+          max-width: 100vw;
+          box-sizing: border-box;
+          overflow-x: hidden;
+          height: auto;
+          max-height: 100vh;
+          border-radius: 16px;
+          overflow-y: auto;
+          border: none;
+        }
+        .context-card {
+          padding: 12px;
+          min-height: 44px;
+          border-radius: 8px;
+        }
+        .work-context-cards {
+          display: flex;
+          flex-direction: column;
+        }
+        .persona-row {
+          flex-direction: column;
+        }
+        .radio-group {
+          grid-template-columns: 1fr;
+        }
+        .stepper {
+          gap: 8px;
+          padding: 0 10px;
+        }
+        .step-indicator {
+          width: 10px;
+          height: 10px;
+        }
+        .radio-option {
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
+          padding: 8px 12px;
+          font-size: 14px;
+          border-radius: 8px;
+        }
+        button,
+        input,
+        select,
+        textarea {
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
+          border-radius: 8px;
+        }
+        h1 {
+          font-size: 20px;
+        }
+        p {
+          font-size: 13px;
+        }
+        .persona-chip {
+          min-height: 44px;
+          min-width: 44px;
+          box-sizing: border-box;
+          padding: 6px 12px;
+          font-size: 12px;
+          border-radius: 16px;
+        }
+      }
+
+      *:focus-visible {
+        outline: 3px solid #0066ff;
+        outline-offset: 2px;
+      }
+
+      /* OHC Mobile-First Non-Negotiable: Touch targets are at least 44x44px */
+      button,
+      input,
+      select,
+      textarea {
+        min-height: 44px;
+        min-width: 44px;
+      }
+
+      /* macOS-style scrollbar */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.3);
+        border: 2px solid transparent;
+        background-clip: padding-box;
+      }
+      @media (prefers-color-scheme: dark) {
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+      }
+
+      /* Base mobile-friendly touch targets and control styling */
+      input,
+      select,
+      button,
+      textarea {
+        min-height: 44px;
+        border-radius: 8px;
+      }
+
+      .context-card {
+        min-height: 44px;
+        border-radius: 16px;
+      }
+
+      .glassmorphism.container,
+      .glassmorphism.card,
+      .glassmorphism.panel {
+        border-radius: 16px;
+      }
+    </style>
+
+    <style>
+      .capability-toggles {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 12px 16px;
+        border-radius: 16px;
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+      }
+      .toggle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .toggle-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
+      .toggle-desc {
+        font-size: 12px;
+        color: #555555;
+      }
+      /* iOS-style toggle switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.1);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 8px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      input:checked + .slider {
+        background-color: #34c759;
+      }
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+      @media (prefers-color-scheme: dark) {
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .context-card,
+        .toggle-row {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .context-card:hover {
+          background: rgba(22, 22, 26, 0.7);
+        }
+        .context-title,
+        .toggle-title {
+          color: #f5f5f7;
+        }
+        .context-desc,
+        .toggle-desc {
+          color: #a1a1a6;
+        }
+        .context-card.selected {
+          background: rgba(0, 102, 255, 0.2);
+          box-shadow: 0 0 0 1px #0066ff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container glassmorphism" id="form-container">
+      <!-- Step 0: Initial Screen -->
+      <div class="step active" id="step-initial">
+        <div
+          style="
+            width: 64px;
+            height: 64px;
+            background: rgba(0, 102, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+          "
+        >
+          <svg
+            style="width: 32px; height: 32px; color: #0066ff"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z"
+            />
+          </svg>
+        </div>
+        <h1>10-Minute Setup Wizard</h1>
+        <p>
+          Zero tech skills needed. We do the heavy lifting. Review and add any
+          extra details to help our AI generate the perfect store.
+        </p>
+
+        <div class="btn-group" style="margin-top: 32px">
+          <button
+            class="next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-context"
+          >
+            Start My Business
+          </button>
+          <button
+            type="button"
+            class="glassmorphism btn-instant-build"
+            onclick="
+              goToStep('step-instant');
+            "
+          >
+            <span id="instant-build-btn-text">Instant Build</span>
+          </button>
+          <button
+            type="button"
+            class="btn-secondary"
+            onclick="goToStep('step-chat')"
+            style="margin-top: 10px"
+          >
+            Conversational Setup
+          </button>
+        </div>
+      </div>
+
+      <!-- Step Instant: Instant Build -->
+      <div class="step" id="step-instant">
+        <button
+          onclick="goToStep('step-initial')"
+          style="
+            background: none;
+            border: none;
+            color: #0066ff;
+            padding: 0;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 24px;
+            min-height: 44px;
+          "
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+          Back
+        </button>
+
+        <h1>Tell us about your business</h1>
+        <p>Our AI will handle the rest in 30 seconds.</p>
+
+        <textarea
+          id="instant-bio"
+          data-testid="instant-bio"
+          class="glassmorphism"
+          placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
+          rows="6"
+          style="resize: none; padding: 14px"
+          enterkeyhint="next"
+        ></textarea>
+        <input
+          type="url"
+          id="instant-image-url"
+          data-testid="instant-image-url"
+          class="glassmorphism"
+          placeholder="Image URL (Optional)"
+          inputmode="url"
+          autocomplete="url"
+          enterkeyhint="next"
+          style="
+            margin-bottom: 20px;
+            width: 100%;
+            min-height: 44px;
+            border-radius: 8px;
+          "
+        />
+        <div
+          id="instant-error"
+          class="error-msg"
+          aria-live="polite"
+          style="margin-bottom: 20px"
+        ></div>
+
+        <div class="btn-group" style="margin-top: 24px">
+          <button
+            id="generate-storefront-btn"
+            data-testid="generate-storefront-btn"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      <div class="step" id="step-loading">
+        <h1 id="loading-title">Building Your Business...</h1>
+        <p id="loading-msg">Please wait while we set up your workspace.</p>
+        <div
+          class="spinner"
+          style="
+            margin: 0 auto;
+            width: 40px;
+            height: 40px;
+            border-width: 4px;
+            border-top-color: #0066ff;
+          "
+        ></div>
+        <div
+          id="loading-steps"
+          style="
+            margin-top: 32px;
+            text-align: left;
+            font-size: 14px;
+            color: #555;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          "
+        >
+          <div
+            class="loading-step"
+            id="step-provisioning"
+            style="display: flex; align-items: center; gap: 8px; opacity: 0.5"
+          >
+            <div
+              class="loading-dot"
+              style="
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #ccc;
+              "
+            ></div>
+            Hiring your AI Workforce...
+          </div>
+          <div
+            class="loading-step"
+            id="step-catalog"
+            style="display: flex; align-items: center; gap: 8px; opacity: 0.5"
+          >
+            <div
+              class="loading-dot"
+              style="
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #ccc;
+              "
+            ></div>
+            Generating your product catalog...
+          </div>
+          <div
+            class="loading-step"
+            id="step-storefront"
+            style="display: flex; align-items: center; gap: 8px; opacity: 0.5"
+          >
+            <div
+              class="loading-dot"
+              style="
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #ccc;
+              "
+            ></div>
+            Setting up your Command Center...
+          </div>
+        </div>
+      </div>
+
+      <!-- Step Chat: Conversational Build -->
+      <div class="step" id="step-chat">
+        <button
+          onclick="goToStep('step-initial')"
+          style="
+            background: none;
+            border: none;
+            color: #0066ff;
+            padding: 0;
+            box-shadow: none;
+            width: auto;
+            font-size: 14px;
+            min-height: 44px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+          "
+        >
+          <svg
+            style="width: 16px; height: auto"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Back
+        </button>
+        <h1>Setup Assistant</h1>
+        <p>Talk to our AI to build your business.</p>
+
+        <div
+          id="chat-messages"
+          class="glassmorphism"
+          style="
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            gap: 4px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+          "
+        >
+          <div class="chat-message assistant">
+            <div class="chat-sender">Assistant</div>
+            <div class="chat-bubble">
+              What do you do? (e.g. I make custom vegan cakes in Austin)
+            </div>
+          </div>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+          "
+        >
+          <div id="chat-image-container" style="display: none; width: 100%">
+            <input
+              type="url"
+              id="chat-image-url"
+              data-testid="chat-image-url"
+              class="glassmorphism"
+              placeholder="Image URL (Optional)"
+              inputmode="url"
+              autocomplete="url"
+              enterkeyhint="next"
+              style="
+                margin-bottom: 0;
+                width: 100%;
+                min-height: 44px;
+                border-radius: 8px;
+              "
+            />
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <button
+              type="button"
+              id="chat-upload-btn"
+              class="glassmorphism"
+              style="
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                border-radius: 16px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 102, 255, 0.1);
+                color: #0066ff;
+              "
+              onclick="
+                document.getElementById('chat-image-container').style.display =
+                  document.getElementById('chat-image-container').style
+                    .display === 'none'
+                    ? 'block'
+                    : 'none'
+              "
+            >
+              <svg
+                style="width: 20px; height: 20px"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                ></path>
+              </svg>
+            </button>
+            <input
+              type="text"
+              id="chat-input"
+              data-testid="chat-input"
+              class="glassmorphism"
+              placeholder="Type a message..."
+              enterkeyhint="send"
+              style="
+                margin-bottom: 0;
+                flex-grow: 1;
+                min-height: 44px;
+                border-radius: 8px;
+              "
+            />
+            <button
+              id="chat-send-btn"
+              data-testid="chat-send-btn"
+              class="glassmorphism"
+              style="
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                border-radius: 8px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #0066ff;
+                color: white;
+              "
+            >
+              <svg
+                style="width: 20px; height: 20px"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                ></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" id="step-approval">
+        <button
+          onclick="goToStep('step-chat')"
+          style="
+            background: none;
+            border: none;
+            color: #0066ff;
+            padding: 0;
+            box-shadow: none;
+            width: auto;
+            font-size: 14px;
+            min-height: 44px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+          "
+        >
+          <svg
+            style="width: 16px; height: auto"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Back
+        </button>
+        <h1>Ready to Launch</h1>
+        <p>Your business is ready to be created.</p>
+
+        <div
+          id="approval-details"
+          class="glassmorphism"
+          style="
+            text-align: left;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 16px;
+          "
+        ></div>
+
+        <div class="btn-group">
+          <button id="approve-publish-btn" data-testid="approve-publish-btn">
+            Approve & Publish
+          </button>
+        </div>
+      </div>
+
+      <div
+        class="stepper"
+        id="stepper-indicator"
+        style="display: none"
+        role="progressbar"
+        aria-label="Setup progress"
+        aria-valuemin="0"
+        aria-valuemax="8"
+      >
+        <div class="stepper-progress" id="stepper-progress"></div>
+        <div class="step-indicator active" data-step="step-context"></div>
+        <div class="step-indicator" data-step="step-categories"></div>
+        <div class="step-indicator" data-step="step-name"></div>
+        <div class="step-indicator" data-step="step-assistant"></div>
+        <div class="step-indicator" data-step="step-admin"></div>
+        <div class="step-indicator" data-step="step-offer"></div>
+        <div class="step-indicator" data-step="step-domain"></div>
+        <div class="step-indicator" data-step="step-template"></div>
+      </div>
+      <div
+        id="draft-saved-msg"
+        style="
+          display: none;
+          color: #34c759;
+          font-weight: bold;
+          margin-bottom: 15px;
+        "
+      >
+        Draft Saved!
+      </div>
+
+      <!-- Step 1: Work Context -->
+      <div class="step" id="step-context">
+        <h1>How do you work?</h1>
+        <p>Choose a quick-start or select how you work.</p>
+
+        <div class="persona-row">
+          <div
+            class="persona-chip"
+            onclick="applyPersona('Baker', event)"
+            data-testid="persona-baker"
+          >
+            I'm a Baker
+          </div>
+          <div
+            class="persona-chip"
+            onclick="applyPersona('Handyman', event)"
+            data-testid="persona-handyman"
+          >
+            I'm a Handyman
+          </div>
+          <div
+            class="persona-chip"
+            onclick="applyPersona('Boutique', event)"
+            data-testid="persona-boutique"
+          >
+            I'm a Boutique Owner
+          </div>
+          <div
+            class="persona-chip"
+            onclick="applyPersona('Tutor', event)"
+            data-testid="persona-tutor"
+          >
+            I'm a Tutor
+          </div>
+        </div>
+
+        <div class="work-context-cards" id="context-group">
+          <label tabindex="0" class="context-card" data-testid="context-local">
+            <input type="radio" name="work_context" value="Local Service" />
+            <div class="context-icon">🔧</div>
+            <div class="context-title">Local Service</div>
+            <div class="context-desc">Field work, repairs, home services</div>
+          </label>
+          <label tabindex="0" class="context-card" data-testid="context-storefront">
+            <input type="radio" name="work_context" value="Storefront" />
+            <div class="context-icon">🏪</div>
+            <div class="context-title">Storefront or Cafe</div>
+            <div class="context-desc">Physical location with walk-ins</div>
+          </label>
+          <label tabindex="0" class="context-card" data-testid="context-creator">
+            <input type="radio" name="work_context" value="Online Creator" />
+            <div class="context-icon">💻</div>
+            <div class="context-title">Online Creator / Tutor</div>
+            <div class="context-desc">Digital goods, lessons, coaching</div>
+          </label>
+          <label tabindex="0" class="context-card" data-testid="context-agency">
+            <input type="radio" name="work_context" value="Agency" />
+            <div class="context-icon">🏢</div>
+            <div class="context-title">Agency or Studio</div>
+            <div class="context-desc">Client projects, contractors</div>
+          </label>
+        </div>
+        <div id="context-error" class="error-msg" aria-live="polite">
+          Please select an option.
+        </div>
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-categories"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Categories -->
+      <div class="step" id="step-categories">
+        <h1>What's your category?</h1>
+        <p>e.g. Baking, Plumbing, Design</p>
+        <select
+          id="business-categories"
+          data-testid="business-categories"
+          class="glassmorphism"
+        >
+          <option value="" disabled selected>Select a category...</option>
+        </select>
+        <div id="categories-error" class="error-msg" aria-live="polite">
+          Please enter a category.
+        </div>
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-name"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-context"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Business Name and Tagline -->
+      <div class="step" id="step-name">
+        <h1>What's the name of your business?</h1>
+        <p>We'll use this to set up your workspace.</p>
+        <input
+          type="text"
+          id="business-name"
+          data-testid="business-name"
+          class="glassmorphism"
+          placeholder="e.g. Maya's Custom Cakes"
+          inputmode="text"
+          autocomplete="organization"
+          autocapitalize="words"
+          enterkeyhint="next"
+        />
+        <div id="name-error" class="error-msg" aria-live="polite">
+          Business Name is required.
+        </div>
+
+        <input
+          type="text"
+          id="business-tagline"
+          data-testid="business-tagline"
+          class="glassmorphism"
+          placeholder="Tagline (optional)"
+          inputmode="text"
+          autocomplete="off"
+          enterkeyhint="next"
+        />
+
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-assistant"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-categories"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 4: Assistant Setup -->
+      <div class="step" id="step-assistant">
+        <h1>Set up your Assistant</h1>
+        <p>Choose an AI agent team and set their tone.</p>
+
+        <div class="chat-bubble" id="assistant-intro">
+          "Hi! I'll be your partner in growing this business. What kind of team do you need, and how should we talk?"
+        </div>
+
+        <div class="work-context-cards" id="assistant-team-cards">
+          <label tabindex="0" class="context-card" data-testid="team-support">
+            <input type="radio" name="assistant-team" value="Customer Support" onchange="updateAssistantTeam()" />
+            <div class="context-icon">🎧</div>
+            <div class="context-title">Customer Support</div>
+            <div class="context-desc">Handles inquiries and drafts replies.</div>
+          </label>
+          <label tabindex="0" class="context-card" data-testid="team-operations">
+            <input type="radio" name="assistant-team" value="Operations Manager" onchange="updateAssistantTeam()" />
+            <div class="context-icon">⚙️</div>
+            <div class="context-title">Operations Manager</div>
+            <div class="context-desc">Coordinates calendar and inventory.</div>
+          </label>
+          <label tabindex="0" class="context-card" data-testid="team-marketing">
+            <input type="radio" name="assistant-team" value="Marketing Specialist" onchange="updateAssistantTeam()" />
+            <div class="context-icon">🚀</div>
+            <div class="context-title">Marketing Specialist</div>
+            <div class="context-desc">Creates offers and promos.</div>
+          </label>
+        </div>
+        <input type="hidden" id="assistant-name" data-testid="assistant-name" value="" />
+        <div id="assistant-name-error" class="error-msg" aria-live="polite">
+          Please select an AI agent team.
+        </div>
+
+        <select
+          id="assistant-tone"
+          data-testid="assistant-tone"
+          class="glassmorphism"
+          style="margin-bottom: 0"
+        >
+          <option value="" disabled selected>Select a tone</option>
+          <option value="Professional">Professional</option>
+          <option value="Friendly">Friendly</option>
+          <option value="Concise">Concise</option>
+        </select>
+        <div id="tone-error" class="error-msg" aria-live="polite">
+          Please select a tone.
+        </div>
+
+        <div class="capability-toggles">
+          <label tabindex="0" class="toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-title">Draft Replies</span>
+              <span class="toggle-desc"
+                >Automatically draft responses to customer inquiries</span
+              >
+            </div>
+            <div class="switch">
+              <input
+                type="checkbox"
+                id="cap-draft"
+                data-testid="cap-draft"
+                checked
+              />
+              <span class="slider"></span>
+            </div>
+          </label>
+          <label tabindex="0" class="toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-title">Schedule Meetings</span>
+              <span class="toggle-desc"
+                >Allow assistant to coordinate your calendar</span
+              >
+            </div>
+            <div class="switch">
+              <input
+                type="checkbox"
+                id="cap-schedule"
+                data-testid="cap-schedule"
+                checked
+              />
+              <span class="slider"></span>
+            </div>
+          </label>
+          <label tabindex="0" class="toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-title">Manage Inventory</span>
+              <span class="toggle-desc"
+                >Keep track of stock and alert when low</span
+              >
+            </div>
+            <div class="switch">
+              <input
+                type="checkbox"
+                id="cap-inventory"
+                data-testid="cap-inventory"
+              />
+              <span class="slider"></span>
+            </div>
+          </label>
+        </div>
+
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-admin"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-name"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 5: Admin Setup -->
+      <div class="step" id="step-admin">
+        <h1>Admin Credentials</h1>
+        <p>Set up your login details.</p>
+
+        <input
+          type="text"
+          id="admin-name"
+          data-testid="admin-name"
+          class="glassmorphism"
+          placeholder="Your Name (e.g. Maya)"
+          inputmode="text"
+          autocomplete="name"
+          enterkeyhint="next"
+        />
+        <div id="admin-name-error" class="error-msg" aria-live="polite">
+          Please enter your name.
+        </div>
+
+        <input
+          type="email"
+          id="admin-email"
+          data-testid="admin-email"
+          class="glassmorphism"
+          placeholder="admin@mybusiness.com"
+          inputmode="email"
+          autocomplete="email"
+          enterkeyhint="next"
+        />
+        <div id="email-error" class="error-msg" aria-live="polite">
+          Please enter a valid email address.
+        </div>
+
+        <div
+          style="
+            position: relative;
+            width: 100%;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+          "
+        >
+          <input
+            type="password"
+            id="admin-password"
+            data-testid="admin-password"
+            class="glassmorphism"
+            placeholder="Password (min 8 chars)"
+            autocomplete="new-password"
+            enterkeyhint="next"
+            style="padding-right: 44px !important; margin-bottom: 0; flex: 1"
+          />
+          <button
+            type="button"
+            id="toggle-password-visibility"
+            aria-label="Toggle password visibility"
+            title="Toggle password visibility"
+            style="
+              position: absolute;
+              right: 0;
+              height: 100%;
+              width: 44px;
+              background: none;
+              border: none;
+              cursor: pointer;
+              padding: 0;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #555;
+              box-shadow: none;
+              min-width: auto !important;
+              min-height: auto !important;
+              z-index: 10;
+            "
+          >
+            <svg
+              id="eye-icon-show"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg
+              id="eye-icon-hide"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="display: none"
+            >
+              <path
+                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+              ></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          </button>
+        </div>
+        <div id="password-error" class="error-msg" aria-live="polite">
+          Password must be at least 8 characters and contain a number.
+        </div>
+
+        <div
+          style="
+            border-top: 1px solid rgba(255, 255, 255, 0.4);
+            margin-top: 24px;
+            padding-top: 16px;
+            text-align: left;
+          "
+        >
+          <label
+            style="
+              display: block;
+              font-size: 12px;
+              font-weight: 600;
+              color: #1d1d1f;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 8px;
+            "
+            >Auto-Configured AI Departments</label
+          >
+          <p style="font-size: 12px; color: #555; margin-bottom: 8px">
+            Here are the AI departments we've configured for you.
+          </p>
+          <div
+            style="
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px;
+              margin-bottom: 16px;
+            "
+            id="ai-agents-container"
+          >
+            <div
+              class="agent-badge"
+              style="
+                padding: 6px 12px;
+                border-radius: 8px;
+                border: 1px solid #34c759;
+                background: rgba(52, 199, 89, 0.1);
+                color: #34c759;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 14px;
+                font-weight: 600;
+              "
+            >
+              <svg
+                style="width: 14px; height: 14px"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              The Manager
+            </div>
+            <div
+              class="agent-badge"
+              style="
+                padding: 6px 12px;
+                border-radius: 8px;
+                border: 1px solid #34c759;
+                background: rgba(52, 199, 89, 0.1);
+                color: #34c759;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 14px;
+                font-weight: 600;
+              "
+            >
+              <svg
+                style="width: 14px; height: 14px"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              The Promoter
+            </div>
+            <div
+              class="agent-badge"
+              style="
+                padding: 6px 12px;
+                border-radius: 8px;
+                border: 1px solid #34c759;
+                background: rgba(52, 199, 89, 0.1);
+                color: #34c759;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 14px;
+                font-weight: 600;
+              "
+            >
+              <svg
+                style="width: 14px; height: 14px"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              The Salesperson
+            </div>
+          </div>
+        </div>
+
+        <div style="padding-top: 8px">
+          <label tabindex="0" class="toggle-row" style="cursor: pointer">
+            <div class="toggle-info">
+              <span class="toggle-title">Allow AI to Auto-Respond</span>
+            </div>
+            <div class="switch">
+              <input
+                type="checkbox"
+                id="ai-auto-respond"
+                data-testid="ai-auto-respond"
+                checked
+              />
+              <span class="slider"></span>
+            </div>
+          </label>
+        </div>
+
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-offer"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-assistant"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step What you sell -->
+      <div class="step" id="step-offer">
+        <h1>What do you sell?</h1>
+        <p>This will be used to generate your initial product catalog.</p>
+        <textarea
+          id="first-offer"
+          data-testid="first-offer"
+          class="glassmorphism"
+          placeholder="e.g. I bake custom vegan cakes"
+          inputmode="text"
+          autocomplete="off"
+          enterkeyhint="next"
+          style="min-height: 128px !important;"
+        ></textarea>
+        <div id="offer-error" class="error-msg" aria-live="polite">
+          Please tell us what you sell.
+        </div>
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-location"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-admin"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step Location -->
+      <div class="step" id="step-location">
+        <h1>Where are you located?</h1>
+        <p>This helps us set up your shipping and tax settings.</p>
+        <input
+          type="text"
+          id="location-input"
+          data-testid="location-input"
+          class="glassmorphism"
+          placeholder="e.g. Portland, OR"
+          inputmode="text"
+          autocomplete="off"
+          enterkeyhint="next"
+        />
+        <div id="location-error" class="error-msg" aria-live="polite">
+          Please tell us your location.
+        </div>
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-target-audience"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-location"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step Target Audience -->
+      <div class="step" id="step-target-audience">
+        <h1>Who is your target audience?</h1>
+        <p>We'll adapt the site's tone and layout to appeal to them.</p>
+        <input
+          type="text"
+          id="target-audience"
+          data-testid="target-audience"
+          class="glassmorphism"
+          placeholder="e.g. Local families, Tech startups"
+          inputmode="text"
+          autocomplete="off"
+          enterkeyhint="next"
+        />
+        <div id="target-audience-error" class="error-msg" aria-live="polite">
+          Please tell us your target audience.
+        </div>
+        <div class="btn-group">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-domain"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-location"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 7: Domain -->
+      <div class="step" id="step-domain">
+        <h1>Where will your business live?</h1>
+        <p>Choose your workspace domain</p>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          "
+        >
+          <input
+            type="text"
+            id="domain-name"
+            data-testid="domain-name"
+            class="glassmorphism"
+            placeholder="e.g. my-business"
+            inputmode="url"
+            autocomplete="off"
+            autocapitalize="none"
+            autocorrect="off"
+            enterkeyhint="done"
+            style="margin-bottom: 0; text-align: right; padding-right: 4px"
+          />
+          <span
+            style="
+              font-size: 18px;
+              font-weight: 500;
+              color: #1d1d1f;
+              opacity: 0.8;
+            "
+            >.ohc.app</span
+          >
+        </div>
+        <div
+          id="domain-error"
+          class="error-msg"
+          aria-live="polite"
+          style="margin-top: 10px"
+        >
+          Please enter a valid domain.
+        </div>
+        <div class="btn-group" style="margin-top: 20px">
+          <button
+            class="next-step-btn"
+            aria-label="Next Step"
+            title="Next Step"
+            data-testid="next-step-btn"
+            data-next="step-template"
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-offer"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 8: Template -->
+      <div class="step" id="step-template">
+        <h1>Template Selection</h1>
+        <p>Choose a look for your workspace</p>
+        <select
+          id="template-selection"
+          data-testid="template-selection"
+          class="glassmorphism"
+        >
+          <option value="" disabled selected>Select a template...</option>
+          <option value="Modern">Modern</option>
+          <option value="Classic">Classic</option>
+          <option value="Playful">Playful</option>
+        </select>
+        <div id="template-error" class="error-msg" aria-live="polite">
+          Please select a template.
+        </div>
+
+        <div class="btn-group">
+          <div id="submit-error" class="error-msg" aria-live="polite"></div>
+          <button
+            id="finish-btn"
+            data-testid="finish-btn"
+            aria-label="Launch Store"
+            title="Launch Store"
+          >
+            Launch Store
+          </button>
+          <button
+            type="button"
+            class="btn-secondary save-draft-btn"
+            aria-label="Save Draft"
+            title="Save Draft"
+            data-testid="save-draft-btn"
+          >
+            Save Draft
+          </button>
+          <button
+            class="btn-secondary prev-step-btn"
+            aria-label="Previous Step"
+            title="Previous Step"
+            data-testid="prev-step-btn"
+            data-prev="step-domain"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    </div>
+    <script>
+      const container = document.getElementById("form-container");
+
+      function applyPersona(persona, event) {
+        document
+          .querySelectorAll(".persona-chip")
+          .forEach((el) => el.classList.remove("selected"));
+        event.target.classList.add("selected");
+
+        if (persona === "Baker") {
+          state.work_context = "Storefront";
+          state.categories = "Bakery";
+          state.business_name = "Maya's Bakery";
+          state.assistant_name = "Cookie";
+          state.assistant_tone = "Friendly";
+          state.first_offer = "Custom Birthday Cake";
+        } else if (persona === "Handyman") {
+          state.work_context = "Local Service";
+          state.categories = "Handyman";
+          state.business_name = "Carlos Repairs";
+          state.assistant_name = "Tools";
+          state.assistant_tone = "Concise";
+          state.first_offer = "Standard Repair Visit";
+        } else if (persona === "Boutique") {
+          state.work_context = "Storefront";
+          state.categories = "Boutique";
+          state.business_name = "Priya's Boutique";
+          state.assistant_name = "Style";
+          state.assistant_tone = "Professional";
+          state.first_offer = "Signature Dress";
+        } else if (persona === "Tutor") {
+          state.work_context = "Online Creator";
+          state.categories = "Tutoring";
+          state.business_name = "Leo's Music";
+          state.assistant_name = "Melody";
+          state.assistant_tone = "Friendly";
+          state.first_offer = "1-Hour Guitar Lesson";
+        }
+        populateForm();
+        saveCurrentState();
+
+        // Flash feedback
+        const chip = event.target;
+        const originalText = chip.innerText;
+        chip.innerText = "Applied!";
+        setTimeout(() => {
+          chip.innerText = originalText;
+        }, 1000);
+      }
+
+      function generateSubdomain(name) {
+        if (!name || name.trim() === "") return "my-business";
+        const cleanName = name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+        return cleanName ? cleanName : "my-business";
+      }
+
+      const finishBtn = document.getElementById("finish-btn");
+
+      const inputs = {
+        context: document.querySelectorAll('input[name="work_context"]'),
+        categories: document.getElementById("business-categories"),
+        name: document.getElementById("business-name"),
+        tagline: document.getElementById("business-tagline"),
+        assistant_name: document.getElementById("assistant-name"),
+        assistant_tone: document.getElementById("assistant-tone"),
+        admin_name: document.getElementById("admin-name"),
+        admin_email: document.getElementById("admin-email"),
+        admin_password: document.getElementById("admin-password"),
+        first_offer: document.getElementById("first-offer"),
+        location: document.getElementById("location-input"),
+        target_audience: document.getElementById("target-audience"),
+        template_selection: document.getElementById("template-selection"),
+        domain_name: document.getElementById("domain-name"),
+        instant_bio: document.getElementById("instant-bio"),
+        instant_image_url: document.getElementById("instant-image-url"),
+      };
+
+      const errors = {
+        context: document.getElementById("context-error"),
+        categories: document.getElementById("categories-error"),
+        name: document.getElementById("name-error"),
+        assistant_name: document.getElementById("assistant-name-error"),
+        assistant_tone: document.getElementById("tone-error"),
+        admin_name: document.getElementById("admin-name-error"),
+        admin_email: document.getElementById("email-error"),
+        admin_password: document.getElementById("password-error"),
+        first_offer: document.getElementById("offer-error"),
+        location: document.getElementById("location-error"),
+        target_audience: document.getElementById("target-audience-error"),
+        template_selection: document.getElementById("template-error"),
+        domain_name: document.getElementById("domain-error"),
+      };
+
+      let state = {
+        business_name: "",
+        assistant_name: "",
+        assistant_tone: "",
+        capabilities: { draft: true, schedule: true, inventory: false },
+        work_context: "",
+        categories: "",
+        tagline: "",
+        first_offer: "",
+        template_selection: "",
+        domain: "",
+      };
+
+      // Auto save draft logic
+      var autoSaveTimer = null;
+      function debouncedAutoSave() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+          saveCurrentState();
+
+          const backendUrl =
+            window.location.protocol === "file:" ||
+            ["1420", "3000", "8081"].includes(window.location.port)
+              ? "http://127.0.0.1:18789"
+              : "";
+          const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
+          const userId = localStorage.getItem("user_id") || "e2e-admin-user";
+
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            window.__TAURI__.core
+              .invoke("save_onboarding_state", { state, tenantId, userId })
+              .then(() => {
+                const msg = document.getElementById("draft-saved-msg");
+                if (msg) {
+                  msg.style.display = "block";
+                  setTimeout(() => {
+                    msg.style.display = "none";
+                  }, 2000);
+                }
+              })
+              .catch(console.error);
+          } else {
+            fetch(`${backendUrl}/api/onboarding/draft`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Tenant-ID": tenantId,
+                "X-User-ID": userId,
+              },
+              body: JSON.stringify(state),
+            })
+              .then((res) => {
+                if (res.ok) {
+                  const msg = document.getElementById("draft-saved-msg");
+                  if (msg) {
+                    msg.style.display = "block";
+                    setTimeout(() => {
+                      msg.style.display = "none";
+                    }, 2000);
+                  }
+                }
+              })
+              .catch(console.error);
+          }
+        }, 500);
+      }
+
+      document.querySelectorAll("input, select, textarea").forEach((el) => {
+        el.addEventListener("input", debouncedAutoSave);
+        el.addEventListener("change", debouncedAutoSave);
+      });
+
+      // Handle radio buttons selection visual state
+      inputs.context.forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+          document
+            .querySelectorAll(".context-card, .radio-option")
+            .forEach((el) => el.classList.remove("selected"));
+          e.target
+            .closest(".context-card, .radio-option")
+            .classList.add("selected");
+          errors.context.style.display = "none";
+        });
+      });
+
+      // Load existing state
+      async function loadState() {
+        const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
+        const userId = localStorage.getItem("user_id") || "e2e-admin-user";
+
+        let loadedState = null;
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          try {
+            loadedState = await window.__TAURI__.core.invoke(
+              "get_onboarding_state",
+              { tenantId, userId },
+            );
+          } catch (err) {
+            console.error("Tauri get_onboarding_state failed:", err);
+          }
+        } else {
+          const backendUrl =
+            window.location.protocol === "file:" ||
+            ["1420", "3000", "8081"].includes(window.location.port)
+              ? "http://127.0.0.1:18789"
+              : "";
+          try {
+            const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
+              method: "GET",
+              headers: { "X-Tenant-ID": tenantId, "X-User-ID": userId },
+            });
+            if (res.ok) {
+              loadedState = await res.json();
+            }
+          } catch (err) {
+            console.error("Web draft fetch failed:", err);
+          }
+        }
+
+        // Merge from localStorage as fallback
+        const stored = localStorage.getItem("onboardingState");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          state = { ...state, ...parsed };
+          if (parsed.businessName && !parsed.business_name) {
+            state.business_name = parsed.businessName;
+          }
+        }
+
+        // Merge backend state, taking priority
+        if (loadedState && Object.keys(loadedState).length > 0) {
+          state = { ...state, ...loadedState };
+          if (loadedState.businessName && !loadedState.business_name) {
+             state.business_name = loadedState.businessName;
+          }
+          localStorage.setItem("onboardingState", JSON.stringify(state));
+        }
+
+        populateForm();
+
+        if (state.step === undefined || state.step === 0) {
+          goToStep("step-initial", false);
+        } else {
+          const steps = [
+            "step-initial",
+            "step-context",
+            "step-categories",
+            "step-name",
+            "step-assistant",
+            "step-admin",
+            "step-offer",
+            "step-location",
+            "step-target-audience",
+            "step-domain",
+            "step-template",
+            "step-instant",
+            "step-chat",
+          ];
+          if (state.step < steps.length) {
+            goToStep(steps[state.step], false);
+          }
+        }
+      }
+      loadState();
+
+      // Clear name error on typing if valid
+      inputs.name.addEventListener("input", () => {
+        if (inputs.name.value.trim().length > 0) {
+          errors.name.style.display = "none";
+          inputs.name.classList.remove("invalid-input");
+        }
+        if (inputs.domain_name) {
+          const suggested = generateSubdomain(inputs.name.value);
+          inputs.domain_name.placeholder = `e.g. ${suggested}`;
+          // Only auto-fill if the user hasn't typed anything in the domain field yet
+          if (!state.domain || state.domain === "") {
+            inputs.domain_name.value = suggested;
+          }
+        }
+      });
+
+      inputs.admin_email.addEventListener("input", () => {
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.admin_email.value.trim())) {
+          errors.admin_email.style.display = "none";
+          inputs.admin_email.classList.remove("invalid-input");
+        }
+      });
+
+      inputs.admin_password.addEventListener("input", () => {
+        if (
+          inputs.admin_password.value.trim().length >= 8 &&
+          /\d/.test(inputs.admin_password.value)
+        ) {
+          errors.admin_password.style.display = "none";
+          inputs.admin_password.classList.remove("invalid-input");
+        }
+      });
+
+      inputs.assistant_name.addEventListener("input", () => {
+        if (inputs.assistant_name.value.trim().length > 0) {
+          errors.assistant_name.style.display = "none";
+          inputs.assistant_name.classList.remove("invalid-input");
+        }
+      });
+
+      inputs.first_offer.addEventListener("input", () => {
+        if (inputs.first_offer.value.trim().length > 0) {
+          errors.first_offer.style.display = "none";
+          inputs.first_offer.classList.remove("invalid-input");
+        }
+      });
+
+      inputs.location.addEventListener("input", () => {
+        if (inputs.location.value.trim().length > 0) {
+          errors.location.style.display = "none";
+          inputs.location.classList.remove("invalid-input");
+        }
+      });
+
+      inputs.target_audience.addEventListener("input", () => {
+        if (inputs.target_audience.value.trim().length > 0) {
+          errors.target_audience.style.display = "none";
+          inputs.target_audience.classList.remove("invalid-input");
+        }
+      });
+
+      function populateForm() {
+        if (state.business_name) inputs.name.value = state.business_name;
+        if (state.tagline) inputs.tagline.value = state.tagline;
+
+        if (state.work_context) {
+          populateCategories();
+        }
+        if (state.categories) inputs.categories.value = state.categories;
+
+        if (state.assistant_name)
+          inputs.assistant_name.value = state.assistant_name;
+        if (state.assistant_tone)
+          inputs.assistant_tone.value = state.assistant_tone;
+        if (state.admin_email) inputs.admin_email.value = state.admin_email;
+        if (state.admin_password)
+          inputs.admin_password.value = state.admin_password;
+        if (state.first_offer) inputs.first_offer.value = state.first_offer;
+        if (state.location) inputs.location.value = state.location;
+        if (state.target_audience) inputs.target_audience.value = state.target_audience;
+        if (state.template_selection)
+          inputs.template_selection.value = state.template_selection;
+        if (state.domain) inputs.domain_name.value = state.domain;
+        if (state.instant_bio && inputs.instant_bio) inputs.instant_bio.value = state.instant_bio;
+        if (state.instant_image_url && inputs.instant_image_url) inputs.instant_image_url.value = state.instant_image_url;
+        if (state.chat_history) {
+          chatHistory = state.chat_history;
+          const chatMessagesEl = document.getElementById("chat-messages");
+          if (chatMessagesEl && chatHistory.length > 0) {
+            chatMessagesEl.innerHTML = "";
+            chatHistory.forEach((msg) => {
+              const msgDiv = document.createElement("div");
+              msgDiv.className = "chat-message " + (msg.role === "user" ? "user" : "assistant");
+              const senderDiv = document.createElement("div");
+              senderDiv.className = "chat-sender";
+              senderDiv.textContent = msg.role === "user" ? "You" : "OHC Assistant";
+              const bubbleDiv = document.createElement("div");
+              bubbleDiv.className = "chat-bubble";
+              bubbleDiv.textContent = msg.content;
+              msgDiv.appendChild(senderDiv);
+              msgDiv.appendChild(bubbleDiv);
+              chatMessagesEl.appendChild(msgDiv);
+            });
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+          }
+        }
+
+        if (state.capabilities && document.getElementById("cap-draft")) {
+          document.getElementById("cap-draft").checked =
+            state.capabilities.draft !== false;
+          document.getElementById("cap-schedule").checked =
+            state.capabilities.schedule !== false;
+          document.getElementById("cap-inventory").checked =
+            state.capabilities.inventory === true;
+        }
+
+        const contextVal = state.work_context;
+        if (contextVal) {
+          inputs.context.forEach((r) => {
+            if (r.value === contextVal) {
+              r.checked = true;
+              document
+                .querySelectorAll(".context-card")
+                .forEach((el) => el.classList.remove("selected"));
+              r.closest(".context-card").classList.add("selected");
+            }
+          });
+        }
+
+        if (state.step !== undefined && state.step > 0) {
+          const steps = [
+            "step-initial",
+            "step-context",
+            "step-categories",
+            "step-name",
+            "step-assistant",
+            "step-admin",
+            "step-offer",
+            "step-location",
+            "step-target-audience",
+            "step-domain",
+            "step-template",
+            "step-instant",
+            "step-chat",
+          ];
+          if (state.step < steps.length) {
+            goToStep(steps[state.step]);
+          }
+        }
+      }
+
+      var saveStateTimer = null;
+      function saveCurrentState() {
+        state.categories = inputs.categories.value;
+        state.business_name = inputs.name.value;
+        state.businessName = inputs.name.value; // Sync for E2E
+        state.tagline = inputs.tagline.value;
+        state.assistant_name = inputs.assistant_name.value;
+        state.assistant_tone = inputs.assistant_tone.value;
+        state.admin_name = inputs.admin_name.value;
+        state.first_offer = inputs.first_offer.value;
+        state.location = inputs.location.value;
+        state.target_audience = inputs.target_audience.value;
+        state.template_selection = inputs.template_selection.value;
+        if (inputs.domain_name) state.domain = inputs.domain_name.value;
+        if (inputs.instant_bio) state.instant_bio = inputs.instant_bio.value;
+        if (inputs.instant_image_url) state.instant_image_url = inputs.instant_image_url.value;
+        state.chat_history = chatHistory;
+
+        state.capabilities = {
+          draft: document.getElementById("cap-draft")
+            ? document.getElementById("cap-draft").checked
+            : true,
+          schedule: document.getElementById("cap-schedule")
+            ? document.getElementById("cap-schedule").checked
+            : true,
+          inventory: document.getElementById("cap-inventory")
+            ? document.getElementById("cap-inventory").checked
+            : false,
+        };
+
+        let selectedContext = document.querySelector(
+          'input[name="work_context"]:checked',
+        );
+        if (selectedContext) {
+          state.work_context = selectedContext.value;
+        }
+
+        // Increment step if we are moving forward
+
+        const activeStep = document.querySelector(".step.active");
+        if (activeStep) {
+          const stepIndex = [
+            "step-initial",
+            "step-context",
+            "step-categories",
+            "step-name",
+            "step-assistant",
+            "step-admin",
+            "step-offer",
+            "step-location",
+            "step-target-audience",
+            "step-domain",
+            "step-template",
+            "step-instant",
+            "step-chat",
+          ].indexOf(activeStep.id);
+          if (stepIndex !== -1) {
+            state.step = stepIndex;
+          }
+        }
+
+        // Always set localStorage directly
+        localStorage.setItem("onboardingState", JSON.stringify(state));
+
+        const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
+        const userId = localStorage.getItem("user_id") || "e2e-admin-user";
+
+        clearTimeout(saveStateTimer);
+        saveStateTimer = setTimeout(async () => {
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            window.__TAURI__.core
+              .invoke("save_onboarding_state", { state, tenantId, userId })
+              .catch((err) => console.warn("Tauri save_onboarding_state failed, using offline fallback:", err));
+          } else {
+            localStorage.setItem("onboardingState", JSON.stringify(state));
+            const backendUrl =
+              window.location.protocol === "file:" ||
+              ["1420", "3000", "8081"].includes(window.location.port)
+                ? "http://127.0.0.1:18789"
+                : "";
+            try {
+              const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Tenant-ID": tenantId,
+                  "X-User-ID": userId,
+                },
+                body: JSON.stringify(state),
+              });
+              if (!res.ok) {
+                console.warn("Failed to sync onboarding state with backend", res.status);
+              }
+            } catch (err) {
+              console.warn("Network error syncing onboarding state, offline fallback active", err);
+            }
+          }
+        }, 1000);
+      }
+
+      function validateStep(stepId) {
+        let isValid = true;
+
+        if (
+          stepId === "step-initial" ||
+          stepId === "step-instant" ||
+          stepId === "step-chat" ||
+          stepId === "step-approval"
+        ) {
+          return true;
+        }
+
+        if (stepId === "step-context") {
+          const selected = document.querySelector(
+            'input[name="work_context"]:checked',
+          );
+          if (!selected) {
+            errors.context.style.display = "block";
+            isValid = false;
+          } else {
+            state.work_context = selected.value;
+          }
+        } else if (stepId === "step-categories") {
+          if (inputs.categories.value.trim() === "") {
+            errors.categories.style.display = "block";
+            inputs.categories.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.categories.style.display = "none";
+            inputs.categories.classList.remove("invalid-input");
+            state.categories = inputs.categories.value.trim();
+          }
+        } else if (stepId === "step-name") {
+          if (inputs.name.value.trim().length === 0) {
+            errors.name.style.display = "block";
+            inputs.name.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.name.style.display = "none";
+            inputs.name.classList.remove("invalid-input");
+            state.business_name = inputs.name.value.trim();
+            state.tagline = inputs.tagline.value.trim();
+          }
+        } else if (stepId === "step-assistant") {
+          if (inputs.assistant_name.value.trim() === "") {
+            errors.assistant_name.style.display = "block";
+            inputs.assistant_name.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.assistant_name.style.display = "none";
+            inputs.assistant_name.classList.remove("invalid-input");
+            state.assistant_name = inputs.assistant_name.value.trim();
+          }
+
+          if (!inputs.assistant_tone.value) {
+            errors.assistant_tone.style.display = "block";
+            inputs.assistant_tone.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.assistant_tone.style.display = "none";
+            inputs.assistant_tone.classList.remove("invalid-input");
+            state.assistant_tone = inputs.assistant_tone.value;
+          }
+        } else if (stepId === "step-admin") {
+          const nameVal = inputs.admin_name.value.trim();
+          const emailVal = inputs.admin_email.value.trim();
+          const passVal = inputs.admin_password.value.trim();
+          let stepValid = true;
+
+          if (nameVal === "") {
+            errors.admin_name.style.display = "block";
+            inputs.admin_name.classList.add("invalid-input");
+            stepValid = false;
+          } else {
+            errors.admin_name.style.display = "none";
+            inputs.admin_name.classList.remove("invalid-input");
+          }
+
+          if (emailVal === "" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+            errors.admin_email.style.display = "block";
+            errors.admin_email.innerText =
+              emailVal === ""
+                ? "Admin Email is required."
+                : "Please enter a valid email address.";
+            inputs.admin_email.classList.add("invalid-input");
+            stepValid = false;
+          } else {
+            errors.admin_email.style.display = "none";
+            inputs.admin_email.classList.remove("invalid-input");
+          }
+
+          if (passVal === "" || passVal.length < 8 || !/\d/.test(passVal)) {
+            errors.admin_password.style.display = "block";
+            errors.admin_password.innerText =
+              passVal === ""
+                ? "Password is required."
+                : "Password must be at least 8 characters and contain a number.";
+            inputs.admin_password.classList.add("invalid-input");
+            stepValid = false;
+          } else {
+            errors.admin_password.style.display = "none";
+            inputs.admin_password.classList.remove("invalid-input");
+          }
+
+          if (stepValid) {
+            state.admin_email = emailVal;
+            state.admin_password = passVal;
+          } else {
+            isValid = false;
+          }
+        } else if (stepId === "step-offer") {
+          if (inputs.first_offer.value.trim() === "") {
+            errors.first_offer.innerText = "Please tell us what you sell.";
+            errors.first_offer.style.display = "block";
+            inputs.first_offer.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.first_offer.style.display = "none";
+            inputs.first_offer.classList.remove("invalid-input");
+            state.first_offer = inputs.first_offer.value.trim();
+          }
+        } else if (stepId === "step-location") {
+          if (inputs.location.value.trim() === "") {
+            errors.location.innerText = "Please tell us your location.";
+            errors.location.style.display = "block";
+            inputs.location.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.location.style.display = "none";
+            inputs.location.classList.remove("invalid-input");
+            state.location = inputs.location.value.trim();
+          }
+        } else if (stepId === "step-target-audience") {
+          if (inputs.target_audience.value.trim() === "") {
+            errors.target_audience.innerText = "Please tell us your target audience.";
+            errors.target_audience.style.display = "block";
+            inputs.target_audience.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.target_audience.style.display = "none";
+            inputs.target_audience.classList.remove("invalid-input");
+            state.target_audience = inputs.target_audience.value.trim();
+          }
+        } else if (stepId === "step-domain") {
+          if (inputs.domain_name.value.trim().length < 3) {
+            errors.domain_name.style.display = "block";
+            inputs.domain_name.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.domain_name.style.display = "none";
+            inputs.domain_name.classList.remove("invalid-input");
+            state.domain = inputs.domain_name.value.trim();
+          }
+        } else if (stepId === "step-template") {
+          if (inputs.template_selection.value === "") {
+            errors.template_selection.style.display = "block";
+            inputs.template_selection.classList.add("invalid-input");
+            isValid = false;
+          } else {
+            errors.template_selection.style.display = "none";
+            inputs.template_selection.classList.remove("invalid-input");
+            state.template_selection = inputs.template_selection.value;
+          }
+        }
+
+        if (!isValid) {
+          container.classList.remove("animate-shake");
+          void container.offsetWidth; // trigger reflow
+          container.classList.add("animate-shake");
+        }
+
+        return isValid;
+      }
+
+      const togglePasswordBtn = document.getElementById(
+        "toggle-password-visibility",
+      );
+      if (togglePasswordBtn) {
+        togglePasswordBtn.addEventListener("click", () => {
+          const type =
+            inputs.admin_password.getAttribute("type") === "password"
+              ? "text"
+              : "password";
+          inputs.admin_password.setAttribute("type", type);
+          document.getElementById("eye-icon-show").style.display =
+            type === "password" ? "block" : "none";
+          document.getElementById("eye-icon-hide").style.display =
+            type === "password" ? "none" : "block";
+        });
+      }
+
+      function updateAssistantTeam() {
+        const selected = document.querySelector('input[name="assistant-team"]:checked');
+        if (selected) {
+          document.getElementById('assistant-name').value = selected.value;
+          state.assistant_name = selected.value;
+          document.querySelectorAll('#assistant-team-cards .context-card').forEach((el) => el.classList.remove("selected"));
+          selected.closest(".context-card").classList.add("selected");
+        }
+      }
+
+      function updateStepper(stepId) {
+        const stepperIndicator = document.getElementById("stepper-indicator");
+        if (
+          stepId === "step-initial" ||
+          stepId === "step-instant" ||
+          stepId === "step-chat" ||
+          stepId === "step-approval"
+        ) {
+          if (stepperIndicator) stepperIndicator.style.display = "none";
+        } else {
+          if (stepperIndicator) stepperIndicator.style.display = "flex";
+        }
+
+        const steps = [
+          "step-context",
+          "step-categories",
+          "step-name",
+          "step-assistant",
+          "step-admin",
+          "step-offer",
+          "step-domain",
+          "step-template",
+        ];
+        const currentIndex = steps.indexOf(stepId);
+        if (stepperIndicator)
+          stepperIndicator.setAttribute("aria-valuenow", currentIndex + 1);
+
+        const stepperProgress = document.getElementById("stepper-progress");
+        if (stepperProgress) {
+          stepperProgress.style.width = (currentIndex / 7) * 100 + "%";
+        }
+
+        document
+          .querySelectorAll(".step-indicator")
+          .forEach((indicator, index) => {
+            if (index < currentIndex) {
+              indicator.classList.add("completed");
+              indicator.classList.remove("active");
+            } else if (index === currentIndex) {
+              indicator.classList.add("active");
+              indicator.classList.remove("completed");
+            } else {
+              indicator.classList.remove("active");
+              indicator.classList.remove("completed");
+            }
+          });
+      }
+
+      const categoriesMap = {
+        "Local Service": [
+          "Plumbing",
+          "Electrical",
+          "Cleaning",
+          "Landscaping",
+          "HVAC",
+          "Pest Control",
+          "Handyman",
+          "Other",
+        ],
+        Storefront: [
+          "Bakery",
+          "Cafe",
+          "Restaurant",
+          "Retail",
+          "Salon",
+          "Spa",
+          "Gym",
+          "Boutique",
+          "Other",
+        ],
+        "Online Creator": [
+          "Tutoring",
+          "Consulting",
+          "Digital Art",
+          "Software",
+          "Writing",
+          "Video Creation",
+          "Music",
+          "Other",
+        ],
+        Agency: [
+          "Marketing",
+          "Design",
+          "Development",
+          "Consulting",
+          "Advertising",
+          "PR",
+          "Other",
+        ],
+      };
+
+      function populateCategories() {
+        const context = state.work_context;
+        const cats = categoriesMap[context] || ["Other"];
+        inputs.categories.innerHTML =
+          '<option value="" disabled selected>Select a category...</option>';
+        cats.forEach((c) => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          inputs.categories.appendChild(opt);
+        });
+        if (state.categories && cats.includes(state.categories)) {
+          inputs.categories.value = state.categories;
+        } else {
+          inputs.categories.value = "";
+        }
+      }
+
+      function goToStep(stepId, shouldSave = true) {
+        if (stepId === "step-instant") {
+          const instantBioInputEl = document.getElementById("instant-bio");
+          const generateStorefrontBtn = document.getElementById("generate-storefront-btn");
+          if (instantBioInputEl && generateStorefrontBtn) {
+            generateStorefrontBtn.disabled = instantBioInputEl.value.trim().length === 0;
+          }
+        }
+        if (stepId === "step-categories") {
+          populateCategories();
+        }
+        document.querySelectorAll(".step").forEach((el) => {
+          el.classList.remove("active");
+          el.style.display = "none";
+        });
+        if (document.querySelector(".container")) {
+          document.querySelector(".container").scrollTo(0, 0);
+        }
+        document.getElementById(stepId).classList.add("active");
+        document.getElementById(stepId).style.display = "block";
+        updateStepper(stepId);
+
+        if (shouldSave) {
+          saveCurrentState();
+          localStorage.setItem("onboardingState", JSON.stringify(state));
+        }
+      }
+
+      document.querySelectorAll(".next-step-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const currentStep = e.target.closest(".step").id;
+          const nextStepId = e.target.getAttribute("data-next");
+          if (validateStep(currentStep)) {
+            goToStep(nextStepId);
+            saveCurrentState();
+          }
+        });
+      });
+
+      window.goToStep = goToStep;
+
+      // Enter key support for select inputs
+      document.querySelectorAll("select").forEach((input) => {
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const step = e.target.closest(".step");
+            const nextBtn =
+              step.querySelector(".next-step-btn") ||
+              step.querySelector("#finish-btn");
+            if (nextBtn) nextBtn.click();
+          }
+        });
+      });
+
+      document.querySelectorAll(".prev-step-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const prevStepId = e.target.getAttribute("data-prev");
+          goToStep(prevStepId);
+          saveCurrentState();
+        });
+      });
+
+      document.querySelectorAll(".save-draft-btn").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const originalText = btn.innerText;
+          btn.innerText = "Saving...";
+          btn.disabled = true;
+
+          // Add a small delay to allow browser to render "Saving..."
+          await new Promise((r) => setTimeout(r, 100));
+
+          saveCurrentState();
+
+          btn.innerText = "Draft Saved!";
+          btn.style.backgroundColor = "#34C759";
+          btn.style.color = "white";
+          btn.style.borderColor = "#34C759";
+
+          const msg = document.getElementById("draft-saved-msg");
+          if (msg) msg.style.display = "block";
+
+          setTimeout(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+            btn.style.backgroundColor = "";
+            btn.style.color = "";
+            btn.style.borderColor = "";
+            if (msg) msg.style.display = "none";
+          }, 2000);
+        });
+      });
+
+      const generateStorefrontBtn = document.getElementById(
+        "generate-storefront-btn",
+      );
+      const instantBioInputEl = document.getElementById("instant-bio");
+      const instantErrorEl = document.getElementById("instant-error");
+
+      if (instantBioInputEl) {
+        // Initialize disabled state
+        if (generateStorefrontBtn && !instantBioInputEl.value.trim()) {
+          generateStorefrontBtn.disabled = true;
+        }
+        instantBioInputEl.addEventListener("input", () => {
+          instantBioInputEl.classList.remove("invalid-input");
+          if (instantErrorEl) {
+            instantErrorEl.style.display = "none";
+            instantErrorEl.classList.remove("animate-shake");
+            instantErrorEl.style.color = "";
+            instantErrorEl.style.borderColor = "";
+          }
+          if (generateStorefrontBtn) {
+            generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
+          }
+        });
+      }
+
+      // Chat logic
+      const chatInputEl = document.getElementById("chat-input");
+      const chatSendBtn = document.getElementById("chat-send-btn");
+      const chatMessagesEl = document.getElementById("chat-messages");
+      let chatHistory = [];
+
+      async function sendChatMessage() {
+        const text = chatInputEl.value.trim();
+        const chatImageEl = document.getElementById("chat-image-url");
+        const imageUrl = chatImageEl ? chatImageEl.value.trim() : "";
+        if (!text && !imageUrl) return;
+
+        // Append user message
+        const userMsgDiv = document.createElement("div");
+        userMsgDiv.className = "chat-message user";
+        const senderDiv = document.createElement("div");
+        senderDiv.className = "chat-sender";
+        senderDiv.textContent = "You";
+        const bubbleDiv = document.createElement("div");
+        bubbleDiv.className = "chat-bubble";
+
+        let displayMsg = text;
+        bubbleDiv.textContent = displayMsg;
+
+        if (imageUrl) {
+          const imgSpan = document.createElement("span");
+          imgSpan.style.fontSize = "12px";
+          imgSpan.style.color = "#666";
+          imgSpan.textContent = `[Attached Image: ${imageUrl}]`;
+          bubbleDiv.appendChild(document.createElement("br"));
+          bubbleDiv.appendChild(imgSpan);
+        }
+
+        userMsgDiv.appendChild(senderDiv);
+        userMsgDiv.appendChild(bubbleDiv);
+        chatMessagesEl.appendChild(userMsgDiv);
+        chatInputEl.value = "";
+        if (chatImageEl) chatImageEl.value = "";
+
+        let msgObj = { role: "user", content: text };
+        if (imageUrl) msgObj.image_url = imageUrl;
+
+        chatHistory.push(msgObj);
+        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+        chatSendBtn.disabled = true;
+
+        try {
+          const backendUrl =
+            window.location.protocol === "file:" ||
+            ["1420", "3000", "8081"].includes(window.location.port)
+              ? "http://127.0.0.1:18789"
+              : "";
+          const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Tenant-ID":
+                localStorage.getItem("tenant_id") ||
+                localStorage.getItem("tenant") ||
+                "e2e-tenant",
+              "X-User-ID": localStorage.getItem("user_id") || "e2e-admin-user",
+            },
+            body: JSON.stringify({ messages: chatHistory }),
+          });
+
+          if (!res.ok) throw new Error("Chat request failed");
+          const data = await res.json();
+
+          const asstMsgDiv = document.createElement("div");
+          asstMsgDiv.className = "chat-message assistant";
+          const asstSenderDiv = document.createElement("div");
+          asstSenderDiv.className = "chat-sender";
+          asstSenderDiv.textContent = "Assistant";
+          const asstBubbleDiv = document.createElement("div");
+          asstBubbleDiv.className = "chat-bubble";
+          asstBubbleDiv.textContent = data.reply;
+          asstMsgDiv.appendChild(asstSenderDiv);
+          asstMsgDiv.appendChild(asstBubbleDiv);
+          chatMessagesEl.appendChild(asstMsgDiv);
+          chatHistory.push({ role: "assistant", content: data.reply });
+          chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+          if (data.is_complete && data.intake_data) {
+            const intakeData = data.intake_data;
+            const agentBadges = document.querySelectorAll(
+              "#ai-agents-container .agent-badge",
+            );
+            const selectedAgents = Array.from(agentBadges).map((b) =>
+              b.innerText.trim(),
+            );
+            const autoRespondChecked = document.getElementById(
+              "ai-auto-respond",
+            )
+              ? document.getElementById("ai-auto-respond").checked
+              : true;
+
+            const req = {
+              company_name: intakeData.business_name || "My Business",
+              business_type: intakeData.business_type || "Online Store",
+              company_description: chatHistory.map((m) => m.content).join(" "),
+              selling_categories: intakeData.categories || ["physical"],
+              payment_pref: "online",
+              admin_email: "admin@mybusiness.com",
+              admin_name: "Admin",
+              admin_password: "password123",
+              website_template: "auto",
+              first_product_name:
+                intakeData.initial_products?.[0]?.name || "First Product",
+              first_product_price:
+                intakeData.initial_products?.[0]?.price || "0.00",
+              domain_choice:
+                state.domain || generateSubdomain(state.business_name),
+              price_type: "fixed",
+              location: intakeData.location || "Local",
+              target_audience: intakeData.target_audience || "General",
+              initial_products: intakeData.initial_products || [],
+              ai_agents: selectedAgents,
+              ai_auto_respond: autoRespondChecked,
+            };
+
+            window.pendingOnboardingReq = req;
+            let productsHtml = "";
+            if (req.initial_products && req.initial_products.length > 0) {
+              productsHtml = req.initial_products
+                .map((p) => `<li>${p.name} - ${p.price}</li>`)
+                .join("");
+            } else {
+              productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
+            }
+
+            const summaryCard = document.createElement("div");
+            summaryCard.className = "glassmorphism";
+            summaryCard.style.cssText =
+              "position: absolute; bottom: 0; left: 0; right: 0; padding: 24px; border-radius: 16px 16px 0 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(210%); box-shadow: 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; border-top: 1px solid rgba(255, 255, 255, 0.6);";
+
+            if (
+              window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches
+            ) {
+              summaryCard.style.background = "rgba(22, 22, 26, 0.85)";
+              summaryCard.style.borderTop =
+                "1px solid rgba(255, 255, 255, 0.1)";
+              summaryCard.style.color = "#F5F5F7";
+            }
+
+            summaryCard.innerHTML = `
+                      <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h2>
+                      <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
+                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
+                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
+                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
+                      </div>
+                      <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
+                  `;
+
+            document.getElementById("step-chat").style.position = "relative";
+            document.getElementById("step-chat").style.overflow = "hidden";
+            document.getElementById("step-chat").appendChild(summaryCard);
+
+            // Trigger slide up
+            requestAnimationFrame(() => {
+              summaryCard.style.transform = "translateY(0)";
+            });
+
+            document
+              .getElementById("approve-publish-btn-chat")
+              .addEventListener("click", async () => {
+                const btn = document.getElementById("approve-publish-btn-chat");
+                btn.disabled = true;
+                btn.innerHTML =
+                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
+
+                const approvePublishBtn = document.getElementById(
+                  "approve-publish-btn",
+                );
+                if (approvePublishBtn) {
+                  approvePublishBtn.click();
+                }
+              });
+            // Scroll to bottom
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+            // Zero-click onboarding
+            const approvePublishBtnChat = document.getElementById(
+              "approve-publish-btn-chat",
+            );
+            if (approvePublishBtnChat) {
+              approvePublishBtnChat.click();
+            }
+          }
+        } catch (e) {
+          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
+        } finally {
+          chatSendBtn.disabled = false;
+        }
+      }
+
+      const approvePublishBtn = document.getElementById("approve-publish-btn");
+      if (approvePublishBtn) {
+        approvePublishBtn.addEventListener("click", async () => {
+          if (!window.pendingOnboardingReq) return;
+          const req = window.pendingOnboardingReq;
+
+          approvePublishBtn.disabled = true;
+          approvePublishBtn.innerHTML =
+            '<div class="spinner"></div>Publishing...';
+
+          try {
+            const backendUrl =
+              window.location.protocol === "file:" ||
+              ["1420", "3000", "8081"].includes(window.location.port)
+                ? "http://127.0.0.1:18789"
+                : "";
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              await goToStep("step-loading");
+
+              const provisioningEl =
+                document.getElementById("step-provisioning");
+              const catalogEl = document.getElementById("step-catalog");
+              const storefrontEl = document.getElementById("step-storefront");
+
+              if (provisioningEl) {
+                provisioningEl.style.opacity = "1";
+                provisioningEl.querySelector(".loading-dot").style.background =
+                  "#0066FF";
+              }
+
+              const startData = await window.__TAURI__.core.invoke(
+                "start_onboarding",
+                { req },
+              );
+
+              if (catalogEl) {
+                catalogEl.style.opacity = "1";
+                catalogEl.querySelector(".loading-dot").style.background =
+                  "#0066FF";
+              }
+
+              if (storefrontEl) {
+                storefrontEl.style.opacity = "1";
+                storefrontEl.querySelector(".loading-dot").style.background =
+                  "#0066FF";
+              }
+
+
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              window.location.href = "dashboard.html";
+              return;
+            }
+
+            const tenantIdStr =
+              localStorage.getItem("tenant_id") ||
+              localStorage.getItem("tenant") ||
+              "e2e-tenant";
+            const userIdStr =
+              localStorage.getItem("user_id") || "e2e-admin-user";
+
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                business_type: req.business_type,
+                company_name: req.company_name,
+                company_description: req.company_description,
+                selling_categories: req.selling_categories,
+                payment_pref: req.payment_pref,
+                admin_email: req.admin_email,
+                website_template: req.website_template,
+                first_product_name: state.first_offer || req.first_product_name,
+                first_product_price: req.first_product_price,
+                domain_choice: req.domain_choice,
+                admin_name: req.admin_name,
+                admin_password: req.admin_password,
+                price_type: req.price_type,
+                location: state.location || req.location,
+                target_audience: state.target_audience || req.target_audience,
+                initial_products: req.initial_products,
+              }),
+            });
+
+            if (startRes.ok) {
+              const startData = await startRes.json();
+              if (startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
+
+              window.location.href = "dashboard.html";
+            } else {
+              const errData = await response.json().catch(() => ({}));
+              throw new Error(
+                errData.error ||
+                  errData.message ||
+                  "Failed to start onboarding",
+              );
+            }
+          } catch (e) {
+            approvePublishBtn.disabled = false;
+            approvePublishBtn.innerText = "Approve & Publish";
+            alert("Error publishing storefront.");
+          }
+        });
+      }
+
+      if (chatSendBtn) {
+        chatSendBtn.addEventListener("click", sendChatMessage);
+      }
+
+      if (generateStorefrontBtn) {
+        generateStorefrontBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          if (generateStorefrontBtn.dataset.submitting) return;
+          generateStorefrontBtn.dataset.submitting = "true";
+          const bioInput = instantBioInputEl.value;
+          const imageUrlInput = document.getElementById("instant-image-url");
+          const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : "";
+          if (!bioInput.trim()) {
+            instantErrorEl.innerText = "Please tell us about your business.";
+            instantErrorEl.style.display = "block";
+            instantErrorEl.classList.add("animate-shake");
+            instantErrorEl.style.color = "#FF3B30";
+            instantErrorEl.style.borderColor = "rgba(255, 59, 48, 0.3)";
+            instantBioInputEl.classList.add("invalid-input");
+            return;
+          }
+
+          instantErrorEl.style.display = "none";
+          instantErrorEl.classList.remove("animate-shake");
+          instantErrorEl.style.color = "";
+          instantErrorEl.style.borderColor = "";
+          instantBioInputEl.classList.remove("invalid-input");
+          generateStorefrontBtn.disabled = true;
+          const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
+          let loadingTextIdx = 0;
+          generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
+          window.generateStorefrontLoadingInterval = setInterval(() => {
+            loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
+            generateStorefrontBtn.innerHTML = '<div class="spinner" style="border-top-color: #ffffff; width: 20px; height: 20px; border-width: 2px;"></div>' + loadingTexts[loadingTextIdx];
+          }, 3000);
+
+
+          goToStep("step-loading");
+
+          try {
+            const backendUrl =
+              window.location.protocol === "file:" ||
+              ["1420", "3000", "8081"].includes(window.location.port)
+                ? "http://127.0.0.1:18789"
+                : "";
+            const res = await fetch(
+              `${backendUrl}/api/v1/growth/zero-click-builder/generate`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Tenant-ID": "e2e-tenant",
+                  "X-User-ID": "e2e-admin-user",
+                },
+                body: JSON.stringify({
+                  prompt: bioInput,
+                  image_url: imageUrl ? imageUrl : undefined
+                }),
+              },
+            );
+
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(
+                errData.error ||
+                  errData.message ||
+                  "Failed to generate storefront",
+              );
+            }
+
+            const data = await res.json();
+
+            if (data.organization_id) {
+              localStorage.setItem("tenant_id", data.organization_id);
+              localStorage.setItem("tenant", data.organization_id);
+            }
+            if (data.user_id) {
+              localStorage.setItem("user_id", data.user_id);
+            }
+
+            localStorage.removeItem("onboardingState");
+            localStorage.setItem("has_onboarded", "true");
+
+            if (window.generateStorefrontLoadingInterval) {
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
+            }
+
+            setTimeout(() => {
+              window.location.href = "success.html";
+            }, 1500);
+          } catch (err) {
+            console.error(err);
+            goToStep("step-instant");
+            const errorMsg = err.message || "Network Error: Failed to fetch";
+            instantErrorEl.innerText = errorMsg;
+            instantErrorEl.style.display = "block";
+            instantErrorEl.style.color = "#FF3B30";
+            instantErrorEl.style.borderColor = "rgba(255, 59, 48, 0.3)";
+            instantBioInputEl.classList.add("invalid-input");
+            generateStorefrontBtn.disabled = false;
+            delete generateStorefrontBtn.dataset.submitting;
+            if (window.generateStorefrontLoadingInterval) {
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
+            }
+            generateStorefrontBtn.innerHTML = "Next";
+          }
+        });
+      }
+      document.querySelectorAll(".save-draft-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const originalText = e.target.innerText;
+          e.target.innerText = "Saving...";
+          e.target.disabled = true;
+
+          const backendUrl =
+            window.location.protocol === "file:" ||
+            ["1420", "3000", "8081"].includes(window.location.port)
+              ? "http://127.0.0.1:18789"
+              : "";
+          const tenantId = localStorage.getItem("tenant_id") || "e2e-tenant";
+          const userId = localStorage.getItem("user_id") || "e2e-admin-user";
+
+          const currentStepEl = document.querySelector(".step.active");
+          let currentStepIdx = 0;
+          if (currentStepEl) {
+            const steps = Array.from(document.querySelectorAll(".step"));
+            currentStepIdx = steps.indexOf(currentStepEl);
+          }
+
+          state.step = currentStepIdx;
+
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            window.__TAURI__.core
+              .invoke("save_onboarding_state", { state, tenantId, userId })
+              .then(() => {
+                e.target.innerText = "Saved!";
+                setTimeout(() => {
+                  e.target.innerText = originalText;
+                  e.target.disabled = false;
+                }, 3000);
+              })
+              .catch((err) => {
+                console.error("Failed to save draft", err);
+                e.target.innerText = "Error!";
+                setTimeout(() => {
+                  e.target.innerText = originalText;
+                  e.target.disabled = false;
+                }, 3000);
+              });
+          } else {
+            fetch(`${backendUrl}/api/onboarding/draft`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Tenant-ID": tenantId,
+                "X-User-ID": userId,
+              },
+              body: JSON.stringify(state),
+            })
+              .then((res) => {
+                if (res.ok) {
+                  e.target.innerText = "Saved!";
+                  setTimeout(() => {
+                    e.target.innerText = originalText;
+                    e.target.disabled = false;
+                  }, 3000);
+                } else {
+                  throw new Error("Failed to save");
+                }
+              })
+              .catch((err) => {
+                console.error("Failed to save draft", err);
+                e.target.innerText = "Error!";
+                setTimeout(() => {
+                  e.target.innerText = originalText;
+                  e.target.disabled = false;
+                }, 3000);
+              });
+          }
+        });
+      });
+
+      if (finishBtn) {
+        finishBtn.addEventListener("click", () => {
+          if (validateStep("step-template")) {
+            const agentBadges = document.querySelectorAll(
+              "#ai-agents-container .agent-badge",
+            );
+            const selectedAgents = Array.from(agentBadges).map((b) =>
+              b.innerText.trim(),
+            );
+            const autoRespondChecked = document.getElementById(
+              "ai-auto-respond",
+            )
+              ? document.getElementById("ai-auto-respond").checked
+              : true;
+
+            const req = {
+              business_type:
+                state.work_context || state.work_context || "Local Service",
+              company_name: state.business_name,
+              company_description: state.tagline || "",
+              selling_categories: state.categories ? [state.categories] : [],
+              payment_pref: "online",
+              admin_email: state.admin_email || "admin@mybusiness.com",
+              admin_name: state.assistant_name || "Admin",
+              admin_password: state.admin_password || "password123",
+              website_template: state.template_selection || "Modern",
+              first_product_name: state.first_offer || "First Offer",
+              first_product_price: "0.00",
+              domain_choice:
+                state.domain || generateSubdomain(state.business_name),
+              price_type: "fixed",
+              location: "Local",
+              target_audience: "General",
+              ai_agents: selectedAgents,
+              ai_auto_respond: autoRespondChecked,
+            };
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              finishBtn.disabled = true;
+              goToStep("step-loading");
+              window.__TAURI__.core
+                .invoke("start_onboarding", { req })
+                .then((startData) => {
+                  if (startData && startData.organization_id) {
+                    localStorage.setItem(
+                      "tenant_id",
+                      startData.organization_id,
+                    );
+                    localStorage.setItem("tenant", startData.organization_id);
+                  }
+
+                  localStorage.removeItem("onboardingState");
+                  localStorage.setItem("has_onboarded", "true");
+
+                  window.location.href = "dashboard.html";
+                })
+                .catch((err) => {
+                  console.error(err);
+                  const submitError = document.getElementById("submit-error");
+                  if (submitError) {
+                    submitError.style.display = "block";
+                    submitError.innerText =
+                      err && err.message
+                        ? err.message
+                        : typeof err === "string"
+                          ? err
+                          : "Failed to launch store";
+                  }
+                  goToStep("step-template");
+                  finishBtn.disabled = false;
+                  finishBtn.innerText = "Launch Store";
+                });
+            } else {
+              finishBtn.disabled = true;
+              finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
+              const backendUrl =
+                window.location.protocol === "file:" ||
+                ["1420", "3000", "8081"].includes(window.location.port)
+                  ? "http://127.0.0.1:18789"
+                  : "";
+              fetch(`${backendUrl}/api/onboarding/start`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(req),
+              })
+                .then(async (response) => {
+                  if (response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    if (data && data.organization_id) {
+                      localStorage.setItem("tenant_id", data.organization_id);
+                      localStorage.setItem("tenant", data.organization_id);
+                    }
+                    localStorage.removeItem("onboardingState");
+                    localStorage.setItem("has_onboarded", "true");
+                    window.location.href = "dashboard.html";
+                  } else {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(
+                      errData.error ||
+                        errData.message ||
+                        "Failed to start onboarding",
+                    );
+                  }
+                })
+                .catch((err) => {
+                  console.error(err);
+                  const submitError = document.getElementById("submit-error");
+                  if (submitError) {
+                    submitError.style.display = "block";
+                    submitError.innerText =
+                      err && err.message
+                        ? err.message
+                        : typeof err === "string"
+                          ? err
+                          : "Failed to launch store";
+                  }
+                  goToStep("step-template");
+                  finishBtn.disabled = false;
+                  finishBtn.innerText = "Launch Store";
+                });
+            }
+          }
+        });
+      }
+
+      // Enter key support for text, email, and password inputs
+      document
+        .querySelectorAll(
+          'input[type="text"], input[type="email"], input[type="password"]',
+        )
+        .forEach((input) => {
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const step = e.target.closest(".step");
+              const nextBtn =
+                step.querySelector(".next-step-btn") ||
+                step.querySelector("#finish-btn");
+              if (nextBtn) nextBtn.click();
+            }
+          });
+        });
+    </script>
+    <script>
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Hybrid Setup Health Check
+        fetch("/api/onboarding/setup-health?mode=standalone")
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.status === "error") {
+              const errorDiv = document.createElement("div");
+              errorDiv.id = "setup-health-error";
+              errorDiv.style.cssText = "background: #FF3B30; color: white; padding: 12px; text-align: center; font-weight: 600; width: 100%; position: absolute; top: 0; left: 0; z-index: 9999;";
+              errorDiv.textContent = "Hybrid Setup Health Check Failed: " + (data.message || "Environment unprovisioned.");
+              document.body.prepend(errorDiv);
+            }
+          })
+          .catch((err) => console.error("Health check failed", err));
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Add keyboard navigation for context cards
+        document.querySelectorAll(".context-card").forEach((card) => {
+          card.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              this.click();
+            }
+          });
+        });
+
+        // Add keyboard navigation for toggle rows
+        document.querySelectorAll(".toggle-row").forEach((row) => {
+          row.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              const checkbox = this.querySelector('input[type="checkbox"]');
+              if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+              }
+            }
+          });
+        });
+
+        // Global Enter key support for all inputs within active step
+        document.addEventListener("keydown", (e) => {
+          if (
+            e.key === "Enter" &&
+            e.target.tagName !== "TEXTAREA" &&
+            e.target.tagName !== "BUTTON" &&
+            !e.target.closest(".context-card") &&
+            !e.target.closest(".toggle-row")
+          ) {
+            const activeStep = document.querySelector(".step.active");
+            if (activeStep) {
+              // Don't auto-advance in chat if we are focused on chat input
+              if (
+                activeStep.id === "step-chat" &&
+                (e.target.id === "chat-input" ||
+                  e.target.id === "chat-image-url")
+              ) {
+                e.preventDefault();
+                sendChatMessage();
+                return;
+              }
+              e.preventDefault();
+              e.stopPropagation();
+              const nextBtn = activeStep.querySelector(".next-step-btn");
+              if (nextBtn) {
+                nextBtn.click();
+              } else if (
+                activeStep.id === "step-instant" ||
+                activeStep.id === "step-template"
+              ) {
+                const launchBtn = activeStep.querySelector(
+                  '#generate-storefront-btn, #finish-btn, button[onclick*="start_onboarding"]',
+                );
+                if (launchBtn) {
+                  launchBtn.click();
+                } else {
+                  // Try to find any submit/launch button
+                  const anyLaunchBtn = document.querySelector(
+                    'button[onclick*="start_onboarding"]',
+                  );
+                  if (anyLaunchBtn) {
+                    anyLaunchBtn.click();
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        // Inject tooltip CSS
+        const style = document.createElement("style");
+        style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+      .capability-toggles {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+        margin-bottom: 24px;
+        text-align: left;
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 12px 16px;
+        border-radius: 16px;
+        box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+      }
+      .toggle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .toggle-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
+      .toggle-desc {
+        font-size: 12px;
+        color: #555555;
+      }
+      /* iOS-style toggle switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.1);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 8px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      }
+      input:checked + .slider {
+        background-color: #34C759;
+      }
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+      @media (prefers-color-scheme: dark) {
+        .container {
+            background: rgba(22, 22, 26, 0.7);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .context-card, .toggle-row {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .context-card:hover {
+          background: rgba(22, 22, 26, 0.7);
+        }
+        .context-title, .toggle-title { color: #F5F5F7; }
+        .context-desc, .toggle-desc { color: #A1A1A6; }
+        .context-card.selected {
+          background: rgba(0, 102, 255, 0.2);
+          box-shadow: 0 0 0 1px #0066FF;
+        }
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+        document.head.appendChild(style);
+
+        if (!window.OHC_TOOLTIPS) {
+          window.OHC_TOOLTIPS = {};
+          fetch("/api/tooltips")
+            .then((r) => r.json())
+            .then((data) => {
+              window.OHC_TOOLTIPS = data;
+            })
+            .catch((e) => {
+              //
+              //
+              //
+              //
+              //
+              //
+              //
+              console.error(e);
+            });
+        }
+        const tooltipEl = document.createElement("div");
+        tooltipEl.className = "ohc-tooltip";
+        document.body.appendChild(tooltipEl);
+
+        let hideTimeout;
+
+        function showTooltip(e, text) {
+          clearTimeout(hideTimeout);
+          tooltipEl.textContent = text;
+
+          const targetRect = e.target.getBoundingClientRect();
+
+          // Position below the element by default
+          let top = targetRect.bottom + 10;
+          let left =
+            targetRect.left + targetRect.width / 2 - tooltipEl.offsetWidth / 2;
+
+          // Adjust if it goes off screen
+          if (left < 10) left = 10;
+          if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+          }
+
+          if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            // Position above if it doesn't fit below
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+          }
+
+          tooltipEl.style.top = `${top}px`;
+          tooltipEl.style.left = `${left}px`;
+          tooltipEl.classList.add("visible");
+        }
+
+        function hideTooltip() {
+          hideTimeout = setTimeout(() => {
+            tooltipEl.classList.remove("visible");
+          }, 100); // slight delay to prevent flicker
+        }
+
+        // Desktop hover
+        document.addEventListener("mouseover", (e) => {
+          const t = e.target;
+          const target =
+            t && typeof t.closest === "function"
+              ? t.closest("[data-tooltip]")
+              : null;
+          if (target) {
+            showTooltip(
+              e,
+              (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) ||
+                target.getAttribute("data-tooltip"),
+            );
+          }
+        });
+
+        document.addEventListener("mouseout", (e) => {
+          const target = e.target;
+          if (
+            target &&
+            typeof target.closest === "function" &&
+            target.closest("[data-tooltip]")
+          ) {
+            hideTooltip();
+          }
+        });
+
+        document.addEventListener("touchstart", (e) => {
+          const target = e.target.closest("[id], [data-tooltip]");
+          if (target) {
+            const text =
+              (window.OHC_TOOLTIPS &&
+                target.id &&
+                window.OHC_TOOLTIPS[target.id]) ||
+              target.getAttribute("data-tooltip");
+            if (text) {
+              window.touchTimer = setTimeout(() => {
+                showTooltip(e.touches ? e.touches[0] : e, text);
+              }, 500); // 500ms long press
+            }
+          }
+        });
+
+        document.addEventListener("touchend", (e) => {
+          clearTimeout(window.touchTimer);
+          hideTooltip();
+        });
+
+        document.addEventListener("touchcancel", (e) => {
+          clearTimeout(window.touchTimer);
+          hideTooltip();
+        });
+
+        // Mobile long press (contextmenu) or touchstart
+        let touchTimeout;
+        document.addEventListener("touchstart", (e) => {
+          const t = e.target;
+          const target =
+            t && typeof t.closest === "function"
+              ? t.closest("[data-tooltip]")
+              : null;
+          if (target) {
+            touchTimeout = setTimeout(() => {
+              showTooltip(
+                e,
+                (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) ||
+                  target.getAttribute("data-tooltip"),
+              );
+            }, 500); // 500ms long press
+          }
+        });
+
+        document.addEventListener("touchend", () => {
+          clearTimeout(touchTimeout);
+          hideTooltip();
+        });
+
+        document.addEventListener("touchmove", () => {
+          clearTimeout(touchTimeout);
+          hideTooltip();
+        });
+      });
+    </script>
+
+    <style>
+      .ohc-tooltip {
+        position: fixed;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #1d1d1f;
+        padding: 8px 12px;
+        border-radius: 16px;
+        font-size: 13px;
+        font-family: Outfit, sans-serif;
+        z-index: 100000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-width: 250px;
+        line-height: 1.4;
+      }
+      .ohc-tooltip.visible {
+        opacity: 1;
+      }
+    </style>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!window.OHC_TOOLTIPS) {
+          window.OHC_TOOLTIPS = {};
+          fetch("/api/tooltips")
+            .then((r) => r.json())
+            .then((data) => {
+              window.OHC_TOOLTIPS = data;
+            })
+            .catch((e) => {
+              //
+              //
+              //
+              //
+              //
+              //
+              //
+              console.error(e);
+            });
+        }
+        const tooltipEl = document.createElement("div");
+        tooltipEl.className = "ohc-tooltip";
+        document.body.appendChild(tooltipEl);
+
+        function showTooltip(e, text) {
+          if (!text) return;
+          tooltipEl.textContent = text;
+          const targetRect = e.target.closest("[id]")
+            ? e.target.closest("[id]").getBoundingClientRect()
+            : e.target.getBoundingClientRect();
+
+          let left =
+            targetRect.left + targetRect.width / 2 - tooltipEl.offsetWidth / 2;
+          let top = targetRect.bottom + 10;
+
+          if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+          } else if (left < 10) {
+            left = 10;
+          }
+
+          if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+          }
+
+          tooltipEl.style.top = `${top}px`;
+          tooltipEl.style.left = `${left}px`;
+          tooltipEl.classList.add("visible");
+        }
+
+        function hideTooltip() {
+          tooltipEl.classList.remove("visible");
+        }
+
+        document.addEventListener("mouseover", (e) => {
+          const target = e.target.closest("[id]");
+          if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+          }
+        });
+
+        document.addEventListener("mouseout", (e) => {
+          const target = e.target.closest("[id]");
+          if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+          }
+        });
+
+        document.addEventListener("touchstart", (e) => {
+          const target = e.target.closest("[id], [data-tooltip]");
+          if (target) {
+            const text =
+              (window.OHC_TOOLTIPS &&
+                target.id &&
+                window.OHC_TOOLTIPS[target.id]) ||
+              target.getAttribute("data-tooltip");
+            if (text) {
+              window.touchTimer = setTimeout(() => {
+                showTooltip(e.touches ? e.touches[0] : e, text);
+              }, 500); // 500ms long press
+            }
+          }
+        });
+
+        document.addEventListener("touchend", (e) => {
+          clearTimeout(window.touchTimer);
+          hideTooltip();
+        });
+
+        document.addEventListener("touchcancel", (e) => {
+          clearTimeout(window.touchTimer);
+          hideTooltip();
+        });
+      });
+    </script>
+
+    <script>
+      function initWalkthrough() {
+        window.startWalkthrough = function (steps) {
+          if (!steps || steps.length === 0) return;
+
+          let currentStep = 0;
+
+          // Create overlay
+          const overlay = document.createElement("div");
+          overlay.id = "walkthrough-overlay";
+          overlay.classList.add("ohc-walkthrough-overlay");
+          overlay.className = "fixed z-[90]";
+          overlay.style.cssText =
+            "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;";
+          document.body.appendChild(overlay);
+
+          // Create bubble
+          const bubble = document.createElement("div");
+          bubble.id = "walkthrough-bubble";
+          bubble.classList.add("ohc-walkthrough-bubble");
+          bubble.setAttribute("role", "dialog");
+          bubble.style.cssText =
+            "position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;";
+          document.body.appendChild(bubble);
+
+          function renderStep() {
+            const step = steps[currentStep];
+            if (typeof bubbleEl !== "undefined" && bubbleEl) {
+              bubbleEl.setAttribute(
+                "aria-label",
+                (step.title || "Tour") + " walkthrough step",
+              );
+            } else if (typeof bubble !== "undefined" && bubble) {
+              bubble.setAttribute(
+                "aria-label",
+                (step.title || "Tour") + " walkthrough step",
+              );
+            }
+
+            // Clean up previous highlights
+            document
+              .querySelectorAll(
+                ".walkthrough-highlight, .ohc-walkthrough-highlight",
+              )
+              .forEach((el) => {
+                el.classList.remove(
+                  "walkthrough-highlight",
+                  "ohc-walkthrough-highlight",
+                );
+                el.style.position = "";
+                el.style.zIndex = "";
+                el.style.background = "";
+                el.style.pointerEvents = "";
+              });
+
+            // Find target
+            const target =
+              document.getElementById(step.targetId) ||
+              document.querySelector(step.targetId);
+
+            bubble.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || "Tour"}</h4>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
+                </div>
+            `;
+
+            document.getElementById("wt-close").onclick = closeWalkthrough;
+            if (document.getElementById("wt-prev"))
+              document.getElementById("wt-prev").onclick = () => {
+                currentStep--;
+                renderStep();
+              };
+            document.getElementById("wt-next").onclick = () => {
+              if (currentStep === steps.length - 1) {
+                closeWalkthrough();
+              } else {
+                currentStep++;
+                renderStep();
+              }
+            };
+
+            if (target) {
+              target.classList.add("walkthrough-highlight");
+              target.style.position = "relative";
+              target.style.zIndex = "99999";
+              target.style.background = "white"; // Make it pop
+              target.style.pointerEvents = "none";
+
+              const rect = target.getBoundingClientRect();
+              // Position bubble below target if space permits, else above
+              if (rect.bottom + 200 < window.innerHeight) {
+                bubble.style.top = rect.bottom + 10 + "px";
+              } else {
+                bubble.style.top = rect.top - bubble.offsetHeight - 10 + "px";
+              }
+              bubble.style.left =
+                Math.max(10, Math.min(rect.left, window.innerWidth - 320)) +
+                "px";
+            } else {
+              // Center if no target
+              bubble.style.top = "50%";
+              bubble.style.left = "50%";
+              bubble.style.transform = "translate(-50%, -50%)";
+            }
+          }
+
+          function closeWalkthrough() {
+            document
+              .querySelectorAll(
+                ".walkthrough-highlight, .ohc-walkthrough-highlight",
+              )
+              .forEach((el) => {
+                el.classList.remove(
+                  "walkthrough-highlight",
+                  "ohc-walkthrough-highlight",
+                );
+                el.style.position = "";
+                el.style.zIndex = "";
+                el.style.background = "";
+                el.style.pointerEvents = "";
+              });
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+          }
+
+          renderStep();
+        };
+      }
+      initWalkthrough();
+    </script>
+
+  </body>
+</html>
+
+<footer
+  style="
+    margin-top: 40px;
+    text-align: center;
+    padding: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(30px) saturate(210%);
+    border-top: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    box-sizing: border-box;
+  "
+>
+  <a
+    href="/setup.html?ref=website-builder"
+    id="dashboard-footer-viral-link"
+    style="
+      color: #0066ff;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    "
+  >
+    <span
+      style="
+        background: #0066ff;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 16px;
+        font-size: 10px;
+        font-weight: 800;
+      "
+      >OHC</span
+    >
+    Powered by OHC
+  </a>
+</footer>

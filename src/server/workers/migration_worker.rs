@@ -84,7 +84,7 @@ impl MigrationWorker {
     async fn perform_migration(db: &Arc<DB>, tenant_id: &str, url: &str) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
         // Fetch content
         let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(30))
+            .timeout(Duration::from_secs(60))
             .build()?;
         let res = client.get(url).send().await?;
         if !res.status().is_success() {

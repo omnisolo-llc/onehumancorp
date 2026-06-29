@@ -1008,11 +1008,75 @@ mod tests_clamped {
         // It tries once initially, then retries twice (clamped), making 3 calls total.
         assert_eq!(*failing_client.call_count.lock().await, 3);
     }
+
+    struct FeedbackLlmClient {
+        call_count: Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for FeedbackLlmClient {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            if *count == 1 {
+                // First call: return something that fails to parse but looks like an attempt
+                Ok(ChatResponse {
+                    message: crate::types::Message::assistant("Here is the data: { invalid json"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("resp_1".to_string()),
+                })
+            } else {
+                // Second call: inspect the request to verify feedback was included
+                assert!(req.messages.len() >= 2, "Expected previous failed message and error message");
+
+                let last_msg = req.messages.last().unwrap();
+                assert_eq!(last_msg.role, crate::types::Role::Tool);
+                assert!(last_msg.tool_results[0].content.contains("Validation Error (Pydantic-first tool schema)"));
+                assert!(last_msg.tool_results[0].content.contains("{ invalid json"));
+
+                // Then return valid json
+                Ok(ChatResponse {
+                    message: crate::types::Message::assistant("{\"result\": \"success\"}"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("resp_2".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_fallback_mechanic_feeds_error_back() {
+        let feedback_client = Arc::new(FeedbackLlmClient {
+            call_count: Mutex::new(0),
+        });
+
+        let req = create_test_req();
+        let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
+            Box::new(AdvancedPydanticOutputParser::new());
+        let retry_parser =
+            RetryWithErrorOutputParser::new(parser, feedback_client.clone() as Arc<dyn LlmClientForParser>);
+
+        let handle = tokio::spawn(async move {
+            retry_parser.parse_with_prompt_and_strategy(req, 2, &crate::output_parser::ExponentialBackoffWithJitter::new(0, 0)).await
+        });
+
+        let result = handle.await.expect("Expected TestOutput in test");
+
+        assert!(result.is_ok());
+        assert_eq!(result.expect("Should be OK").result, "success");
+        assert_eq!(*feedback_client.call_count.lock().await, 2);
+    }
 }
 
 impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for AdvancedPydanticOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
-        match serde_json::from_value::<T>(data.clone()) {
+        match T::deserialize(data) {
             Ok(parsed) => Ok(parsed),
             Err(e) => {
                 let args_str = serde_json::to_string(data).unwrap_or_default();
@@ -1028,7 +1092,7 @@ impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for AdvancedPyda
 
 impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
-        match serde_json::from_value::<T>(data.clone()) {
+        match T::deserialize(data) {
             Ok(parsed) => Ok(parsed),
             Err(e) => {
                 let args_str = serde_json::to_string(data).unwrap_or_default();

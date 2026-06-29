@@ -32,7 +32,7 @@ interface AgentActionCardProps {
     approved: boolean,
     editContent?: string,
     event_source?: string,
-  ) => void;
+  ) => void | Promise<void>;
 }
 
 export const AgentActionCard: React.FC<AgentActionCardProps> = ({
@@ -48,7 +48,32 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   setEditQuoteScope,
   handleDecision,
 }) => {
-  if ((approval.proposed_action || approval.context_payload)?.feature_type === "shift_reassignment") {
+  const [loadingAction, setLoadingAction] = React.useState<string | null>(null);
+
+  const wrapDecision = async (
+    id: string,
+    approved: boolean,
+    editContentValue?: string,
+    event_source?: string,
+    actionName?: string,
+  ) => {
+    try {
+      setLoadingAction(actionName || (approved ? "approve" : "dismiss"));
+      await handleDecision(id, approved, editContentValue, event_source);
+    } catch (e) {
+      console.error("Decision failed", e);
+    } finally {
+      // If the component is still mounted, remove loading state
+      setLoadingAction(null);
+    }
+  };
+
+  const isActionLoading = (actionName: string) => loadingAction === actionName;
+
+  if (
+    (approval.proposed_action || approval.context_payload)?.feature_type ===
+    "shift_reassignment"
+  ) {
     return (
       <ShiftReassignmentCard
         approval={approval}
@@ -61,7 +86,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   return (
     <div
       key={approval.id}
-      className="glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal"
+      className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal ${approval.event_source?.includes("marketing") ? "!border-t-[4px] !border-t-pink-500" : approval.event_source?.includes("operations") ? "!border-t-[4px] !border-t-blue-500" : approval.event_source?.includes("sales") || approval.event_source?.includes("triage") ? "!border-t-[4px] !border-t-green-500" : ""}`}
       data-testid={`triage-card-${approval.id}`}
     >
       <div className="flex flex-col gap-1">
@@ -74,7 +99,11 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           </span>
           {approval.lifecycle_state === "PENDING_APPROVAL" && (
             <span className="text-xs font-bold uppercase tracking-wider text-green-700 bg-green-100 px-2 py-1 rounded-[8px]">
-              {approval.event_source === "customer_success_agent" || approval.event_source === "instagram_dm" || approval.context_payload?.feature_type === "ambassador_reply" ? "Action Required: Approve Reply" : "Action Needed"}
+              {approval.event_source === "customer_success_agent" ||
+              approval.event_source === "instagram_dm" ||
+              approval.context_payload?.feature_type === "ambassador_reply"
+                ? "Action Required: Approve Reply"
+                : "Action Needed"}
             </span>
           )}
           {queuedActionIds.has(approval.id) && (
@@ -87,14 +116,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           )}
         </div>
         <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1 tracking-wide break-words">
-          {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" ?
-            "Action Required: Approve Reply"
-            : ((approval as any).description ||
-            approval.context_payload?.description ||
-            approval.proposed_action?.message ||
-            approval.proposed_action?.description ||
-            approval.proposed_action?.action_type ||
-            approval.event_source)}
+          {(approval.proposed_action || approval.context_payload)
+            ?.feature_type === "ambassador_reply"
+            ? "Action Required: Approve Reply"
+            : (approval as any).description ||
+              approval.context_payload?.description ||
+              approval.proposed_action?.message ||
+              approval.proposed_action?.description ||
+              approval.proposed_action?.action_type ||
+              approval.event_source}
         </h3>
         {((approval.proposed_action || approval.context_payload)?.context ||
           (approval.proposed_action || approval.context_payload)
@@ -174,38 +204,103 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "instagram_dm" && (
-              <InstagramDMCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} onDismiss={() => handleDecision(approval.id, false, undefined, approval.event_source)} />
+              <InstagramDMCard
+                approval={approval}
+                onApprove={() =>
+                  wrapDecision(
+                    approval.id,
+                    true,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                onDismiss={() =>
+                  wrapDecision(
+                    approval.id,
+                    false,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+              />
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "ambassador_reply" && (
-              <AmbassadorReplyCard approval={approval} onApprove={() => handleDecision(approval.id, true, undefined, approval.event_source)} onDismiss={() => handleDecision(approval.id, false, undefined, approval.event_source)} />
+              <AmbassadorReplyCard
+                approval={approval}
+                onApprove={() =>
+                  wrapDecision(
+                    approval.id,
+                    true,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                onDismiss={() =>
+                  wrapDecision(
+                    approval.id,
+                    false,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+              />
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "review" && (
               <ReviewFeedCard
-                 review={approval.context_payload?.review}
-                 response={approval.proposed_action?.response}
-                 onApprove={async (id, content) => {
-                     await handleDecision(approval.id, true, content, 'review');
-                 }}
-                 onDismiss={async (id) => {
-                     await handleDecision(approval.id, false, undefined, 'review');
-                 }}
-               />
+                review={approval.context_payload?.review}
+                response={approval.proposed_action?.response}
+                onApprove={async (id, content) => {
+                  await wrapDecision(approval.id, true, content, "review");
+                }}
+                onDismiss={async (id) => {
+                  await wrapDecision(approval.id, false, undefined, "review");
+                }}
+              />
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "order" && (
               <div className="mb-4 p-4 rounded-[16px] bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-yellow-600 font-semibold text-sm">
-                  <span className="w-5 h-5 flex items-center justify-center">📦</span>
+                  <span className="w-5 h-5 flex items-center justify-center">
+                    📦
+                  </span>
                   Order Needs Fulfillment
                 </div>
                 <p className="text-sm text-gray-800 dark:text-gray-200">
-                  {approval.context_payload?.description || "An order is waiting to be fulfilled."}
+                  {approval.context_payload?.description ||
+                    "An order is waiting to be fulfilled."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'order')}>Fulfill Order</button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'order')}>Dismiss</button>
+                  <button
+                    type="button"
+                    className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]"
+                    onClick={() =>
+                      wrapDecision(approval.id, true, undefined, "order")
+                    }
+                    disabled={loadingAction !== null}
+                  >
+                    {isActionLoading("approve") ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : (
+                      "Fulfill Order"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]"
+                    onClick={() =>
+                      wrapDecision(approval.id, false, undefined, "order")
+                    }
+                    disabled={loadingAction !== null}
+                  >
+                    {isActionLoading("dismiss") ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : (
+                      "Dismiss"
+                    )}
+                  </button>
                 </div>
               </div>
             )}
@@ -213,35 +308,84 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               ?.feature_type === "triage" && (
               <div className="mb-4 p-4 rounded-[16px] bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm">
-                  <span className="w-5 h-5 flex items-center justify-center">✉️</span>
+                  <span className="w-5 h-5 flex items-center justify-center">
+                    ✉️
+                  </span>
                   Message Requires Attention
                 </div>
                 <p className="text-sm text-gray-800 dark:text-gray-200">
-                  {approval.context_payload?.description || "You have an open customer conversation waiting for your reply."}
+                  {approval.context_payload?.description ||
+                    "You have an open customer conversation waiting for your reply."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'triage')}>Resolve Message</button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'triage')}>Dismiss</button>
+                  <button
+                    type="button"
+                    className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]"
+                    onClick={() =>
+                      wrapDecision(approval.id, true, undefined, "triage")
+                    }
+                    disabled={loadingAction !== null}
+                  >
+                    {isActionLoading("approve") ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : (
+                      "Resolve Message"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]"
+                    onClick={() =>
+                      wrapDecision(approval.id, false, undefined, "triage")
+                    }
+                    disabled={loadingAction !== null}
+                  >
+                    {isActionLoading("dismiss") ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : (
+                      "Dismiss"
+                    )}
+                  </button>
                 </div>
               </div>
             )}
-                        {(approval.proposed_action || approval.context_payload)
+            {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "proactive_ops" && (
               <div className="mb-4 p-4 rounded-[16px] bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 flex flex-col gap-3 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-[#FF9500]"></div>
                 <div className="flex items-center gap-2 text-orange-600 font-semibold text-sm">
-                  <span className="w-5 h-5 flex items-center justify-center">✨</span>
+                  <span className="w-5 h-5 flex items-center justify-center">
+                    ✨
+                  </span>
                   Needs Attention Today
                 </div>
                 <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">
-                  {approval.context_payload?.description || "A proactive ops task needs your attention."}
+                  {approval.context_payload?.description ||
+                    "A proactive ops task needs your attention."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#FF9500] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, "operations")}>
+                  <button
+                    type="button"
+                    className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#FF9500] text-white rounded-[8px]"
+                    onClick={() =>
+                      wrapDecision(approval.id, true, undefined, "operations")
+                    }
+                  >
                     {approval.proposed_action?.message || "Approve"}
                   </button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-orange-200 text-orange-900 dark:text-orange-100 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, "operations")}>
-                    Dismiss
+                  <button
+                    type="button"
+                    className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-orange-200 text-orange-900 dark:text-orange-100 rounded-[8px]"
+                    onClick={() =>
+                      wrapDecision(approval.id, false, undefined, "operations")
+                    }
+                    disabled={loadingAction !== null}
+                  >
+                    {isActionLoading("dismiss") ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : (
+                      "Dismiss"
+                    )}
                   </button>
                 </div>
               </div>
@@ -250,15 +394,44 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               ?.feature_type === "task" && (
               <div className="mb-4 p-4 rounded-[16px] bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-purple-600 font-semibold text-sm">
-                  <span className="w-5 h-5 flex items-center justify-center">✅</span>
+                  <span className="w-5 h-5 flex items-center justify-center">
+                    ✅
+                  </span>
                   Pending Task
                 </div>
                 <p className="text-sm text-gray-800 dark:text-gray-200">
-                  {approval.context_payload?.description || "You have a pending task."}
+                  {approval.context_payload?.description ||
+                    "You have a pending task."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'task')}>Complete Task</button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'task')}>Dismiss</button>
+                  <button
+                    type="button"
+                    className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]"
+                    onClick={() =>
+                      wrapDecision(approval.id, true, undefined, "task")
+                    }
+                    disabled={loadingAction !== null}
+                  >
+                    {isActionLoading("approve") ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : (
+                      "Complete Task"
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]"
+                    onClick={() =>
+                      wrapDecision(approval.id, false, undefined, "task")
+                    }
+                    disabled={loadingAction !== null}
+                  >
+                    {isActionLoading("dismiss") ? (
+                      <span className="animate-pulse">Loading...</span>
+                    ) : (
+                      "Dismiss"
+                    )}
+                  </button>
                 </div>
               </div>
             )}
@@ -283,26 +456,53 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     />
                   </svg>
                   Draft quote and propose schedule for{" "}
-                  {(approval.proposed_action || approval.context_payload).service || "Emergency Handyman Service"}
+                  {(approval.proposed_action || approval.context_payload)
+                    .service || "Emergency Handyman Service"}
                 </div>
 
                 {editingId === approval.id ? (
-                  <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+                  <div
+                    role="dialog"
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+                  >
                     <div className="bg-white dark:bg-gray-900 rounded-[16px] p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col gap-4">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Review Booking Quote</h3>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        Review Booking Quote
+                      </h3>
 
                       <div className="flex flex-col gap-2">
-                        <div className="text-sm text-gray-500 font-semibold">Proposed Schedule</div>
+                        <div className="text-sm text-gray-500 font-semibold">
+                          Proposed Schedule
+                        </div>
                         <div className="flex flex-wrap gap-2">
-                          {((approval.proposed_action || approval.context_payload).proposed_slots || []).map((slot: any, idx: number) => {
-                            const timeStr = slot.start_time ? new Date(slot.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false}) : "14:00";
+                          {(
+                            (
+                              approval.proposed_action ||
+                              approval.context_payload
+                            ).proposed_slots || []
+                          ).map((slot: any, idx: number) => {
+                            const timeStr = slot.start_time
+                              ? new Date(slot.start_time).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  },
+                                )
+                              : "14:00";
                             return (
-                              <button key={idx} className="px-3 py-1.5 rounded-lg border border-[#0066FF] text-[#0066FF] bg-[#0066FF]/10 text-sm font-medium">
+                              <button
+                                key={idx}
+                                className="px-3 py-1.5 rounded-lg border border-[#0066FF] text-[#0066FF] bg-[#0066FF]/10 text-sm font-medium"
+                              >
                                 {timeStr}
                               </button>
                             );
                           })}
-                          {!((approval.proposed_action || approval.context_payload).proposed_slots?.length) && (
+                          {!(
+                            approval.proposed_action || approval.context_payload
+                          ).proposed_slots?.length && (
                             <button className="px-3 py-1.5 rounded-lg border border-[#0066FF] text-[#0066FF] bg-[#0066FF]/10 text-sm font-medium">
                               14:00
                             </button>
@@ -311,9 +511,20 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       </div>
 
                       <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800 p-3 rounded-lg mt-2">
-                        <span className="text-sm text-gray-500">Total Price</span>
-                        <span className="font-bold text-lg text-gray-900 dark:text-gray-100" data-testid="modal-quote-total">
-                          ${Number((approval.proposed_action || approval.context_payload).suggested_price || 180).toFixed(2)}
+                        <span className="text-sm text-gray-500">
+                          Total Price
+                        </span>
+                        <span
+                          className="font-bold text-lg text-gray-900 dark:text-gray-100"
+                          data-testid="modal-quote-total"
+                        >
+                          $
+                          {Number(
+                            (
+                              approval.proposed_action ||
+                              approval.context_payload
+                            ).suggested_price || 180,
+                          ).toFixed(2)}
                         </span>
                       </div>
 
@@ -329,12 +540,22 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                         <button
                           data-testid="modal-approve-btn"
                           onClick={() => {
-                            handleDecision(approval.id, true, undefined, 'operations');
+                            wrapDecision(
+                              approval.id,
+                              true,
+                              undefined,
+                              "operations",
+                            );
                             setEditingId(null);
                           }}
                           className="flex-1 py-3 px-4 rounded-[8px] bg-[#0066FF] hover:bg-[#0052CC] font-medium text-white shadow-md"
+                          disabled={loadingAction !== null}
                         >
-                          Approve & Send
+                          {isActionLoading("approve") ? (
+                            <span className="animate-pulse">Loading...</span>
+                          ) : (
+                            "Approve & Send"
+                          )}
                         </button>
                       </div>
                     </div>
@@ -351,9 +572,21 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     <button
                       type="button"
                       className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]"
-                      onClick={() => handleDecision(approval.id, false, undefined, 'operations')}
+                      onClick={() =>
+                        wrapDecision(
+                          approval.id,
+                          false,
+                          undefined,
+                          "operations",
+                        )
+                      }
+                      disabled={loadingAction !== null}
                     >
-                      Dismiss
+                      {isActionLoading("dismiss") ? (
+                        <span className="animate-pulse">Loading...</span>
+                      ) : (
+                        "Dismiss"
+                      )}
                     </button>
                   </div>
                 )}
@@ -640,55 +873,63 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   }
                 </div>
               </>
-            ) : (approval.proposed_action?.action_type === 'Daily Prep Checklist' || approval.context_payload?.feature_type === 'daily_prep_checklist') ? (
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            <button
-              onClick={() =>
-                handleDecision(
-                  approval.id,
-                  true,
-                  undefined,
-                  approval.event_source,
-                )
-              }
-              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-md flex items-center justify-center"
-              aria-label="Mark Complete"
-              data-testid="feed-approve-btn"
-            >
-              Mark Complete
-            </button>
-            <button
-              onClick={() =>
-                handleDecision(
-                  approval.id,
-                  true,
-                  'Assign to Staff',
-                  approval.event_source,
-                )
-              }
-              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-              aria-label="Assign to Staff"
-              data-testid="feed-assign-btn"
-            >
-              Assign to Staff
-            </button>
-            <button
-              onClick={() =>
-                handleDecision(
-                  approval.id,
-                  false,
-                  undefined,
-                  approval.event_source,
-                )
-              }
-              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-              aria-label="Dismiss task"
-              data-testid="feed-dismiss-btn"
-            >
-              Dismiss
-            </button>
-          </div>
-        ) : (approval.proposed_action || approval.context_payload)?.context
+            ) : approval.proposed_action?.action_type ===
+                "Daily Prep Checklist" ||
+              approval.context_payload?.feature_type ===
+                "daily_prep_checklist" ? (
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <button
+                  onClick={() =>
+                    handleDecision(
+                      approval.id,
+                      true,
+                      undefined,
+                      approval.event_source,
+                    )
+                  }
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                  aria-label="Mark Complete"
+                  data-testid="feed-approve-btn"
+                >
+                  Mark Complete
+                </button>
+                <button
+                  onClick={() =>
+                    handleDecision(
+                      approval.id,
+                      true,
+                      "Assign to Staff",
+                      approval.event_source,
+                    )
+                  }
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                  aria-label="Assign to Staff"
+                  data-testid="feed-assign-btn"
+                >
+                  Assign to Staff
+                </button>
+                <button
+                  onClick={() =>
+                    handleDecision(
+                      approval.id,
+                      false,
+                      undefined,
+                      approval.event_source,
+                    )
+                  }
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                  aria-label="Dismiss task"
+                  data-testid="feed-dismiss-btn"
+                  disabled={loadingAction !== null}
+                >
+                  {isActionLoading("dismiss") ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    "Dismiss"
+                  )}
+                </button>
+              </div>
+            ) : (approval.proposed_action || approval.context_payload)?.context
                 ?.smart_pricing === true ? (
               <>
                 <div className="flex justify-between items-center text-sm mb-1">
@@ -970,8 +1211,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss"
               data-testid="dismiss-onboarding-welcome"
+              disabled={loadingAction !== null}
             >
-              Dismiss
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Dismiss"
+              )}
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
@@ -999,8 +1245,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   }}
                   className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                   data-testid="save-booking-draft"
+                  disabled={loadingAction !== null}
                 >
-                  Save & Approve
+                  {isActionLoading("approve") ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    "Save & Approve"
+                  )}
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
@@ -1071,8 +1322,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                   aria-label="Reject booking draft"
                   data-testid="reject-booking-draft"
+                  disabled={loadingAction !== null}
                 >
-                  Deny
+                  {isActionLoading("dismiss") ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    "Deny"
+                  )}
                 </button>
               </div>
             </>
@@ -1107,8 +1363,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss Plan"
               data-testid="dismiss-incident-resolution"
+              disabled={loadingAction !== null}
             >
-              Dismiss
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Dismiss"
+              )}
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
@@ -1140,8 +1401,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="w-full sm:w-auto min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-6 rounded-[8px] bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss"
+              disabled={loadingAction !== null}
             >
-              Dismiss
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Dismiss"
+              )}
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
@@ -1171,8 +1437,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve & Send"
               data-testid="approve-supply-order"
+              disabled={loadingAction !== null}
             >
-              Approve & Send
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve & Send"
+              )}
             </button>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <button
@@ -1201,8 +1472,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Deny supply order"
                 data-testid="reject-supply-order"
+                disabled={loadingAction !== null}
               >
-                Deny
+                {isActionLoading("dismiss") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Deny"
+                )}
               </button>
             </div>
           </>
@@ -1220,8 +1496,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               }
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Approve & Send"
+              disabled={loadingAction !== null}
             >
-              Approve & Send
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve & Send"
+              )}
             </button>
             <button
               onClick={() =>
@@ -1268,8 +1549,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss proposal"
               data-testid="dismiss-social-post"
+              disabled={loadingAction !== null}
             >
-              Dismiss
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Dismiss"
+              )}
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
@@ -1361,8 +1647,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Approve"
               data-testid="approve-stockout"
+              disabled={loadingAction !== null}
             >
-              Approve
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve"
+              )}
             </button>
             <button
               onClick={() =>
@@ -1376,23 +1667,27 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss"
               data-testid="dismiss-stockout"
+              disabled={loadingAction !== null}
             >
-              Dismiss
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Dismiss"
+              )}
             </button>
           </div>
-        ) : ((approval.proposed_action || approval.context_payload)
-            ?.feature_type === "review" ||
-            (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "order" ||
-            (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "triage" ||
-            (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "task" ||
-            (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "proactive_ops") ? (
-           null
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "ambassador_reply" ? (
+            ?.feature_type === "review" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "order" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "triage" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "task" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "proactive_ops" ? null : (
+            approval.proposed_action || approval.context_payload
+          )?.feature_type === "ambassador_reply" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <textarea
@@ -1474,8 +1769,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Dismiss Draft"
                 data-testid="dismiss-ambassador-reply"
+                disabled={loadingAction !== null}
               >
-                Dismiss
+                {isActionLoading("dismiss") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Dismiss"
+                )}
               </button>
             </div>
           )
@@ -1524,8 +1824,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   }}
                   className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                   data-testid="modal-approve-btn"
+                  disabled={loadingAction !== null}
                 >
-                  Approve & Send
+                  {isActionLoading("approve") ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    "Approve & Send"
+                  )}
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
@@ -1550,8 +1855,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                 aria-label="Approve & Send"
                 data-testid="approve-quote-draft"
+                disabled={loadingAction !== null}
               >
-                Approve & Send
+                {isActionLoading("approve") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Approve & Send"
+                )}
               </button>
               <button
                 onClick={() => {
@@ -1595,8 +1905,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss proposal"
               data-testid="feed-dismiss-btn"
+              disabled={loadingAction !== null}
             >
-              Dismiss
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Dismiss"
+              )}
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)?.context
@@ -1614,8 +1929,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Draft it"
               data-testid="feed-approve-btn"
+              disabled={loadingAction !== null}
             >
-              Yes, draft it!
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Yes, draft it!"
+              )}
             </button>
             <button
               onClick={() =>
@@ -1629,8 +1949,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss proposal"
               data-testid="feed-dismiss-btn"
+              disabled={loadingAction !== null}
             >
-              Dismiss
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Dismiss"
+              )}
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
@@ -1648,8 +1973,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all duration-200 shadow-md flex items-center justify-center"
               aria-label="Approve Restock"
               data-testid="feed-approve-btn"
+              disabled={loadingAction !== null}
             >
-              Approve Restock
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve Restock"
+              )}
             </button>
             <button
               onClick={() =>
@@ -1663,8 +1993,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
               aria-label="Dismiss restock"
               data-testid="feed-dismiss-btn"
+              disabled={loadingAction !== null}
             >
-              Dismiss
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Dismiss"
+              )}
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
@@ -1682,8 +2017,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve & Send"
               data-testid="feed-approve-btn"
+              disabled={loadingAction !== null}
             >
-              Approve & Send
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve & Send"
+              )}
             </button>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <a
@@ -1706,8 +2046,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Ask Agent to Adjust"
                 data-testid="feed-dismiss-btn"
+                disabled={loadingAction !== null}
               >
-                Ask Agent to Adjust
+                {isActionLoading("dismiss") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Ask Agent to Adjust"
+                )}
               </button>
             </div>
           </>
@@ -1734,8 +2079,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 }}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                 data-testid="save-proposal"
+                disabled={loadingAction !== null}
               >
-                Save & Approve
+                {isActionLoading("approve") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Save & Approve"
+                )}
               </button>
               <button
                 onClick={() => setEditingId(null)}
@@ -1760,8 +2110,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
               aria-label="Approve proposal"
               data-testid="feed-approve-btn"
+              disabled={loadingAction !== null}
             >
-              Approve
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve"
+              )}
             </button>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <button
@@ -1796,8 +2151,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                 aria-label="Reject proposal"
                 data-testid="feed-dismiss-btn"
+                disabled={loadingAction !== null}
               >
-                Deny
+                {isActionLoading("dismiss") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Deny"
+                )}
               </button>
             </div>
           </>

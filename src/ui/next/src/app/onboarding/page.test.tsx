@@ -1139,7 +1139,7 @@ describe("OnboardingWizard", () => {
     await user.click(generateBtn);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Failed to generate your business|HTTP error! status: 500|Backend connection failed|error/i)).not.toBeNull();
+      expect(screen.queryByText(/Failed to generate storefront: 500|Failed to generate your business|Backend connection failed|error/i)).not.toBeNull();
     });
   });
 

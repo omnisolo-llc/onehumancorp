@@ -32,6 +32,9 @@ pub enum NodeType {
         agent_name: String,
         task_template: String,
     },
+    HumanInLoop {
+        prompt_template: String,
+    },
     Merge {
         state_keys: Vec<String>,
         output_key: String,
@@ -252,6 +255,13 @@ impl WorkflowExecutor {
                 NodeType::Input { name: _ } => {
                     // Start execution
                 }
+                NodeType::HumanInLoop { prompt_template } => {
+                    let mut prompt = prompt_template.clone();
+                    for (k, v) in &state {
+                        prompt = prompt.replace(&format!("{{{{{}}}}}", k), v);
+                    }
+                    return Err(format!("USER_FIXABLE: Human in loop required: {}", prompt));
+                }
                 NodeType::Llm { prompt_template } => {
                     let mut prompt = prompt_template.clone();
                     for (k, v) in &state {
@@ -469,6 +479,13 @@ impl WorkflowExecutor {
                         return Ok((state, Some(current_node_id)));
                     }
                     NodeType::Input { name: _ } => {}
+                    NodeType::HumanInLoop { prompt_template } => {
+                        let mut prompt = prompt_template.clone();
+                        for (k, v) in &state {
+                            prompt = prompt.replace(&format!("{{{{{}}}}}", k), v);
+                        }
+                        return Err(format!("USER_FIXABLE: Human in loop required: {}", prompt));
+                    }
                     NodeType::Llm { prompt_template } => {
                         let mut prompt = prompt_template.clone();
                         for (k, v) in &state {
@@ -1122,6 +1139,61 @@ mod tests {
         );
         // The error message is formatted as "LLM node {} failed: {}"
         assert!(inner_result.unwrap_err().contains("LLM Request Timed Out"));
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_human_in_loop() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_var".to_string(),
+                    },
+                },
+                Node {
+                    id: "human".to_string(),
+                    node_type: NodeType::HumanInLoop {
+                        prompt_template: "Please approve this text: {{input_var}}".to_string(),
+                    },
+                },
+            ],
+            edges: vec![Edge {
+                source: "in".to_string(),
+                target: "human".to_string(),
+            }],
+        };
+
+        let config = AgentRunConfig::default();
+
+        let mut inputs = HashMap::new();
+        inputs.insert("input_var".to_string(), "test".to_string());
+
+        struct EmptyMockLlmClient;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for EmptyMockLlmClient {
+            async fn chat(
+                &self,
+                _req: crate::types::ChatRequest,
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("mock"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "".to_string(),
+                    response_id: Some("123".to_string()),
+                })
+            }
+        }
+
+        let agent = Arc::new(Agent::new(Arc::new(EmptyMockLlmClient), vec![]));
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+
+        let res = executor.execute(inputs).await;
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err(),
+            "USER_FIXABLE: Human in loop required: Please approve this text: test"
+        );
     }
 
     #[tokio::test]

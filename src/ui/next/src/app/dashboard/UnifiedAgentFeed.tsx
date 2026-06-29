@@ -664,10 +664,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     approved: boolean,
     modified_content?: string,
     event_source?: string,
-  ) => {
-    // Optimistic UI update
-    setItems((prev) => prev.filter((app) => app.id !== id));
-
+  ): Promise<void> => {
     if (isOffline) {
       // Enqueue offline action
       await enqueueAction({
@@ -678,34 +675,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       });
       setOfflineActionsCount((prev) => prev + 1);
       setQueuedActionIds((prev) => new Set(prev).add(id));
+      setItems((prev) => prev.filter((app) => app.id !== id));
       return;
     }
 
     try {
       await submitDecision(id, approved, modified_content, event_source);
+      // Remove item only after successful submission
+      setItems((prev) => prev.filter((app) => app.id !== id));
     } catch (err: any) {
-      // Revert optimistic update gracefully by refetching
-      const tenant = tenantId();
-      try {
-        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-          headers: { "x-tenant-id": tenant, "x-user-id": "default" },
-        });
-        if (refreshRes.ok) {
-          const data: any = await refreshRes.json();
-          if (data.items) {
-            setItems(
-              data.items.filter(
-                (i: any) =>
-                  i.lifecycle_state !== "APPROVED" &&
-                  i.lifecycle_state !== "DISMISSED",
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        console.error("Failed to restore state", e);
-      }
       setError(err.message || "Action failed");
+      throw err;
     }
   };
 

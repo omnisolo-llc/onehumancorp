@@ -8,20 +8,21 @@ use ::server_ohc::app::dashboard_service_server::DashboardService;
 // AI Job Dispatch Latency Standalone Mode (Memory): Batch Enqueue p50: 7 us, p95: 75 us, p99: 75 us
 // AI Job Dispatch Latency Standalone Mode (Memory): Dequeue p50: 5 us, p95: 24 us, p99: 24 us
 
-use std::time::Instant;
-use std::sync::Arc;
-use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
+use crate::queue::{Job, MemoryTaskQueue, PostgresTaskQueue, TaskQueue};
 use chrono::Utc;
-use uuid::Uuid;
 use sqlx;
+use std::sync::Arc;
+use std::time::Instant;
+use uuid::Uuid;
 
 pub async fn bench_queue_latency() {
-
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url =
+        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
         let pool_res = sqlx::postgres::PgPoolOptions::new()
-            .connect(&database_url).await;
+            .connect(&database_url)
+            .await;
 
         if let Ok(pg_pool) = pool_res {
             let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
@@ -30,7 +31,11 @@ pub async fn bench_queue_latency() {
     }
 
     let mem_queue = Arc::new(MemoryTaskQueue::new());
-    bench_queue("AI Job Dispatch Latency Standalone Mode (Memory)", mem_queue).await;
+    bench_queue(
+        "AI Job Dispatch Latency Standalone Mode (Memory)",
+        mem_queue,
+    )
+    .await;
 }
 
 pub async fn bench_hybrid_cache_lfu_eviction() {
@@ -42,16 +47,31 @@ pub async fn bench_hybrid_cache_lfu_eviction() {
 
     // Warm up the cache by filling to capacity
     for i in 0..100 {
-        cache.set(&format!("k{}", i), format!("v{}", i), std::time::Duration::from_secs(60)).await;
+        cache
+            .set(
+                &format!("k{}", i),
+                format!("v{}", i),
+                std::time::Duration::from_secs(60),
+            )
+            .await;
     }
 
-    let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
+    let iterations = std::env::var("BENCH_ITERATIONS")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .unwrap_or(10);
     let mut eviction_times = Vec::new();
 
     for i in 100..(100 + iterations) {
         let start = std::time::Instant::now();
         // Eviction happens because capacity is 100
-        cache.set(&format!("k{}", i), format!("v{}", i), std::time::Duration::from_secs(60)).await;
+        cache
+            .set(
+                &format!("k{}", i),
+                format!("v{}", i),
+                std::time::Duration::from_secs(60),
+            )
+            .await;
         eviction_times.push(start.elapsed().as_micros());
 
         // Measure hit rates for frequently accessed keys
@@ -65,7 +85,8 @@ pub async fn bench_hybrid_cache_lfu_eviction() {
     eviction_times.sort();
     let hit_rate = (hit_count as f64 / (hit_count as f64 + miss_count as f64)) * 100.0;
     println!("HybridCache LFU Hit Rate: {:.2}%", hit_rate);
-    println!("HybridCache LFU Eviction Latency: p50: {} us, p95: {} us, p99: {} us",
+    println!(
+        "HybridCache LFU Eviction Latency: p50: {} us, p95: {} us, p99: {} us",
         eviction_times[iterations / 2],
         eviction_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
         eviction_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
@@ -73,15 +94,21 @@ pub async fn bench_hybrid_cache_lfu_eviction() {
 }
 
 pub async fn bench_db_query_time() {
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
-
-    let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
+    let iterations = std::env::var("BENCH_ITERATIONS")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .unwrap_or(10);
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let mut pg_handles = Vec::new();
         for _ in 0..iterations {
             let pool = pg_pool.clone();
@@ -96,23 +123,30 @@ pub async fn bench_db_query_time() {
             pg_times.push(handle.await.unwrap_or_else(|e| panic!("Error: {:?}", e)));
         }
         pg_times.sort();
-        println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], pg_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+        println!(
+            "Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us",
+            pg_times[iterations / 2],
+            pg_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+            pg_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+        );
     }
 
     // Standalone Mode (SQLite)
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("PRAGMA journal_mode = WAL").await?;
-                    conn.execute("PRAGMA synchronous = NORMAL").await?;
-                    conn.execute("PRAGMA temp_store = MEMORY").await?;
-                    conn.execute("PRAGMA mmap_size = 3000000000").await?;
-                    Ok(())
-                })
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("PRAGMA journal_mode = WAL").await?;
+                conn.execute("PRAGMA synchronous = NORMAL").await?;
+                conn.execute("PRAGMA temp_store = MEMORY").await?;
+                conn.execute("PRAGMA mmap_size = 3000000000").await?;
+                Ok(())
             })
-            .max_connections(1) // Single connection for in-memory SQLite to avoid lock contention
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+        })
+        .max_connections(1) // Single connection for in-memory SQLite to avoid lock contention
+        .connect(&database_url)
+        .await
+        .unwrap_or_else(|e| panic!("Error: {:?}", e));
     let mut sqlite_times = Vec::new();
     for _ in 0..iterations {
         let start = Instant::now();
@@ -120,39 +154,71 @@ pub async fn bench_db_query_time() {
         sqlite_times.push(start.elapsed().as_micros());
     }
     sqlite_times.sort();
-    println!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], sqlite_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    println!(
+        "Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us",
+        sqlite_times[iterations / 2],
+        sqlite_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+        sqlite_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    );
 }
 
 pub async fn bench_api_response_time() {
-    if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("nonexistent") {
+    if std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_default()
+        .contains("nonexistent")
+    {
         return;
     }
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
-    let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let iterations = std::env::var("BENCH_ITERATIONS")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .unwrap_or(10);
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    let bg_handle = tokio::spawn(async move {
-        while let Some(_) = rx.recv().await {}
-    });
+    let bg_handle = tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
 
     // Cloud setup
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pg_pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pg_pool).await;
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pg_pool).await;
-        let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)",
+        )
+        .execute(&pg_pool)
+        .await;
+        let db_cloud = crate::db::DB {
+            pool: pg_pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        };
         let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
-        let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
+        let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(
+            Arc::new(db_cloud),
+            hub_cloud.clone(),
+        );
 
         let mut cloud_handles = Vec::new();
         for _ in 0..iterations {
             let dashboard_service = dashboard_service_cloud.clone();
             cloud_handles.push(tokio::spawn(async move {
-                let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
+                let req = ::server_ohc::app::GetDashboardRequest {
+                    organization_id: "test_org".to_string(),
+                    mobile_optimized: false,
+                };
                 let mut request = tonic::Request::new(req);
-                request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
+                request
+                    .extensions_mut()
+                    .insert(::server_auth::orchestration::AuthInfo {
+                        spiffe_id: "test".to_string(),
+                        org_id: "test_org".to_string(),
+                        agent_id: "test".to_string(),
+                    });
                 let start = Instant::now();
                 let _ = dashboard_service.get_dashboard(request).await;
                 start.elapsed().as_micros()
@@ -163,40 +229,66 @@ pub async fn bench_api_response_time() {
             cloud_times.push(handle.await.unwrap_or_else(|e| panic!("Error: {:?}", e)));
         }
         cloud_times.sort();
-        println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], cloud_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+        println!(
+            "API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us",
+            cloud_times[iterations / 2],
+            cloud_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+            cloud_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+        );
     }
 
     // Standalone setup
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("PRAGMA journal_mode = WAL").await?;
-                    conn.execute("PRAGMA synchronous = NORMAL").await?;
-                    conn.execute("PRAGMA temp_store = MEMORY").await?;
-                    conn.execute("PRAGMA mmap_size = 3000000000").await?;
-                    Ok(())
-                })
+        .after_connect(|conn, _meta| {
+            Box::pin(async move {
+                use sqlx::Executor;
+                conn.execute("PRAGMA journal_mode = WAL").await?;
+                conn.execute("PRAGMA synchronous = NORMAL").await?;
+                conn.execute("PRAGMA temp_store = MEMORY").await?;
+                conn.execute("PRAGMA mmap_size = 3000000000").await?;
+                Ok(())
             })
-            .max_connections(100)
-            .min_connections(100)
-            .connect("sqlite::memory:?cache=shared").await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+        })
+        .max_connections(100)
+        .min_connections(100)
+        .connect("sqlite::memory:?cache=shared")
+        .await
+        .unwrap_or_else(|e| panic!("Error: {:?}", e));
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
-    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
+    let _ = sqlx::query(
+        "CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)",
+    )
+    .execute(&sqlite_pool)
+    .await;
 
     let fallback_pg = crate::db::get_pool();
-    let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
+    let db_standalone = crate::db::DB {
+        pool: fallback_pg,
+        store: crate::db::DbStore::Sqlite(sqlite_pool),
+    };
     let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
-    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
+    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(
+        Arc::new(db_standalone),
+        hub_standalone.clone(),
+    );
 
     let mut standalone_handles = Vec::new();
     for _ in 0..iterations {
         let dashboard_service = dashboard_service_standalone.clone();
         standalone_handles.push(tokio::spawn(async move {
-            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
+            let req = ::server_ohc::app::GetDashboardRequest {
+                organization_id: "test_org".to_string(),
+                mobile_optimized: false,
+            };
             let mut request = tonic::Request::new(req);
-            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
+            request
+                .extensions_mut()
+                .insert(::server_auth::orchestration::AuthInfo {
+                    spiffe_id: "test".to_string(),
+                    org_id: "test_org".to_string(),
+                    agent_id: "test".to_string(),
+                });
             let start = Instant::now();
             let _ = dashboard_service.get_dashboard(request).await;
             start.elapsed().as_micros()
@@ -207,15 +299,29 @@ pub async fn bench_api_response_time() {
         standalone_times.push(handle.await.unwrap_or_else(|e| panic!("Error: {:?}", e)));
     }
     standalone_times.sort();
-    println!("API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], standalone_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    println!(
+        "API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us",
+        standalone_times[iterations / 2],
+        standalone_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+        standalone_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    );
 
     let mut standalone_mobile_handles = Vec::new();
     for _ in 0..iterations {
         let dashboard_service = dashboard_service_standalone.clone();
         standalone_mobile_handles.push(tokio::spawn(async move {
-            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: true };
+            let req = ::server_ohc::app::GetDashboardRequest {
+                organization_id: "test_org".to_string(),
+                mobile_optimized: true,
+            };
             let mut request = tonic::Request::new(req);
-            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
+            request
+                .extensions_mut()
+                .insert(::server_auth::orchestration::AuthInfo {
+                    spiffe_id: "test".to_string(),
+                    org_id: "test_org".to_string(),
+                    agent_id: "test".to_string(),
+                });
             let start = Instant::now();
             let _ = dashboard_service.get_dashboard(request).await;
             start.elapsed().as_micros()
@@ -226,41 +332,62 @@ pub async fn bench_api_response_time() {
         standalone_mobile_times.push(handle.await.unwrap_or_else(|e| panic!("Error: {:?}", e)));
     }
     standalone_mobile_times.sort();
-    println!("API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us", standalone_mobile_times[iterations / 2], standalone_mobile_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], standalone_mobile_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    println!(
+        "API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us",
+        standalone_mobile_times[iterations / 2],
+        standalone_mobile_times
+            [((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+        standalone_mobile_times
+            [((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    );
     bg_handle.abort();
 }
 
 pub async fn bench_agent_snapshot() {
     println!("Benchmarking Agent Snapshot Fetching...");
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    tokio::spawn(async move {
-        while let Some(_) = rx.recv().await {}
-    });
+    tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
-
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let pg_pool = crate::db::get_pool();
-        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+        crate::db::DB {
+            pool: pg_pool,
+            store: crate::db::DbStore::Sqlite(pool),
+        }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        }
     };
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
+    let iterations = std::env::var("BENCH_ITERATIONS")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .unwrap_or(10);
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
-    hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
+    hub.open_meeting(
+        meeting_id.clone(),
+        vec!["test_agent".to_string()],
+        "Agenda".to_string(),
+    );
     for i in 0..50 {
         let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
@@ -296,79 +423,135 @@ pub async fn bench_agent_snapshot() {
     for _ in 0..iterations {
         let start = Instant::now();
 
-        let agent_service = crate::services::agent::service::MyAgentManagerService::new(hub.clone());
+        let agent_service =
+            crate::services::agent::service::MyAgentManagerService::new(hub.clone());
         let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
-            org_id: "test_org".to_string(),
-            agent_id: "test".to_string(),
-        });
-        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/test_org/agent/test".parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
+        request
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+                org_id: "test_org".to_string(),
+                agent_id: "test".to_string(),
+            });
+        request.metadata_mut().insert(
+            "x-spiffe-id",
+            "spiffe://onehumancorp.io/org/test_org/agent/test"
+                .parse()
+                .unwrap_or_else(|e| panic!("Error: {:?}", e)),
+        );
 
         use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
-        let _res = agent_service.get_dashboard_snapshot(request).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
+        let _res = agent_service
+            .get_dashboard_snapshot(request)
+            .await
+            .unwrap_or_else(|e| panic!("Error: {:?}", e))
+            .into_inner();
 
         fetch_times.push(start.elapsed().as_micros());
     }
 
     fetch_times.sort();
-    println!("Agent Snapshot Fetch: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
+    println!(
+        "Agent Snapshot Fetch: p50: {} us, p95: {} us, p99: {} us",
+        fetch_times[iterations / 2],
+        fetch_times[(iterations as f32 * 0.95) as usize],
+        fetch_times[(iterations as f32 * 0.99) as usize]
+    );
 
     let mut mobile_fetch_times = Vec::new();
     for _ in 0..iterations {
         let start = Instant::now();
-        let agent_service = crate::services::agent::service::MyAgentManagerService::new(hub.clone());
+        let agent_service =
+            crate::services::agent::service::MyAgentManagerService::new(hub.clone());
         let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
-            org_id: "test_org".to_string(),
-            agent_id: "test".to_string(),
-        });
-        request.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org/test_org/agent/test".parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
-        request.metadata_mut().insert("x-mobile-optimized", "true".parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
+        request
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+                org_id: "test_org".to_string(),
+                agent_id: "test".to_string(),
+            });
+        request.metadata_mut().insert(
+            "x-spiffe-id",
+            "spiffe://onehumancorp.io/org/test_org/agent/test"
+                .parse()
+                .unwrap_or_else(|e| panic!("Error: {:?}", e)),
+        );
+        request.metadata_mut().insert(
+            "x-mobile-optimized",
+            "true".parse().unwrap_or_else(|e| panic!("Error: {:?}", e)),
+        );
         use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
-        let _res = agent_service.get_dashboard_snapshot(request).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
+        let _res = agent_service
+            .get_dashboard_snapshot(request)
+            .await
+            .unwrap_or_else(|e| panic!("Error: {:?}", e))
+            .into_inner();
         mobile_fetch_times.push(start.elapsed().as_micros());
     }
     mobile_fetch_times.sort();
-    println!("Agent Snapshot Fetch (Mobile Optimized): p50: {} us, p95: {} us, p99: {} us", mobile_fetch_times[iterations / 2], mobile_fetch_times[(iterations as f32 * 0.95) as usize], mobile_fetch_times[(iterations as f32 * 0.99) as usize]);
+    println!(
+        "Agent Snapshot Fetch (Mobile Optimized): p50: {} us, p95: {} us, p99: {} us",
+        mobile_fetch_times[iterations / 2],
+        mobile_fetch_times[(iterations as f32 * 0.95) as usize],
+        mobile_fetch_times[(iterations as f32 * 0.99) as usize]
+    );
 }
 
 pub async fn bench_dashboard_snapshot() {
     println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    let bg_handle = tokio::spawn(async move {
-        while let Some(_) = rx.recv().await {}
-    });
+    let bg_handle = tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
-
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         // Run minimal migrations for benchmark
         sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
-        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap_or_else(|e| panic!("Error: {:?}", e));
 
         let pg_pool = crate::db::get_pool();
-        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+        crate::db::DB {
+            pool: pg_pool,
+            store: crate::db::DbStore::Sqlite(pool),
+        }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        }
     };
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
+    let iterations = std::env::var("BENCH_ITERATIONS")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .unwrap_or(10);
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
-    hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
+    hub.open_meeting(
+        meeting_id.clone(),
+        vec!["test_agent".to_string()],
+        "Agenda".to_string(),
+    );
     for i in 0..5 {
         let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
@@ -404,62 +587,109 @@ pub async fn bench_dashboard_snapshot() {
     for _ in 0..iterations {
         let start = Instant::now();
 
-        let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
+        let req_desktop = ::server_ohc::app::GetDashboardRequest {
+            organization_id: "test_org".to_string(),
+            mobile_optimized: false,
+        };
 
         let db_arc = std::sync::Arc::new(db.clone());
-        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
+        let dashboard_service =
+            crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
         let mut request = tonic::Request::new(req_desktop);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
-            org_id: "test_org".to_string(),
-            agent_id: "test".to_string(),
-        });
+        request
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+                org_id: "test_org".to_string(),
+                agent_id: "test".to_string(),
+            });
 
-        let _res_desktop = dashboard_service.get_dashboard(request).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
+        let _res_desktop = dashboard_service
+            .get_dashboard(request)
+            .await
+            .unwrap_or_else(|e| panic!("Error: {:?}", e))
+            .into_inner();
 
         fetch_times.push(start.elapsed().as_micros());
     }
 
     fetch_times.sort();
-    println!("Parallel Fetch Dashboard Optimized: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    println!(
+        "Parallel Fetch Dashboard Optimized: p50: {} us, p95: {} us, p99: {} us",
+        fetch_times[iterations / 2],
+        fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+        fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    );
 
-    let req_mobile = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: true };
-    let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
-
+    let req_mobile = ::server_ohc::app::GetDashboardRequest {
+        organization_id: "test_org".to_string(),
+        mobile_optimized: true,
+    };
+    let req_desktop = ::server_ohc::app::GetDashboardRequest {
+        organization_id: "test_org".to_string(),
+        mobile_optimized: false,
+    };
 
     let db_arc = std::sync::Arc::new(db.clone());
-    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
+    let dashboard_service =
+        crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
 
     let mut req_mobile_t = tonic::Request::new(req_mobile);
-    req_mobile_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-        spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
-        org_id: "test_org".to_string(),
-        agent_id: "test".to_string(),
-    });
+    req_mobile_t
+        .extensions_mut()
+        .insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+            org_id: "test_org".to_string(),
+            agent_id: "test".to_string(),
+        });
     let mut req_desktop_t = tonic::Request::new(req_desktop);
-    req_desktop_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-        spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
-        org_id: "test_org".to_string(),
-        agent_id: "test".to_string(),
-    });
+    req_desktop_t
+        .extensions_mut()
+        .insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://onehumancorp.io/test_org/test".to_string(),
+            org_id: "test_org".to_string(),
+            agent_id: "test".to_string(),
+        });
 
-
-    let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
-    let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap_or_else(|e| panic!("Error: {:?}", e)).into_inner();
+    let res_mobile = dashboard_service
+        .get_dashboard(req_mobile_t)
+        .await
+        .unwrap_or_else(|e| panic!("Error: {:?}", e))
+        .into_inner();
+    let res_desktop = dashboard_service
+        .get_dashboard(req_desktop_t)
+        .await
+        .unwrap_or_else(|e| panic!("Error: {:?}", e))
+        .into_inner();
 
     if !res_mobile.meetings.is_empty() {
-        assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
-        assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
+        assert_eq!(
+            res_mobile.meetings[0].transcript.len(),
+            0,
+            "Mobile payload optimization should clear transcripts"
+        );
+        assert!(
+            res_desktop.meetings[0].transcript.len() > 0,
+            "Desktop payload should contain transcripts"
+        );
     }
 
-    println!("Parallel Fetch Dashboard Optimized: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
+    println!(
+        "Parallel Fetch Dashboard Optimized: p50: {} us, p95: {} us, p99: {} us",
+        fetch_times[iterations / 2],
+        fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
+        fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    );
     bg_handle.abort();
 }
 
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let mut enqueue_times = Vec::new();
     let mut dequeue_times = Vec::new();
-    let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
+    let iterations = std::env::var("BENCH_ITERATIONS")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .unwrap_or(10);
 
     let run_id = Uuid::new_v4().to_string();
 
@@ -487,11 +717,16 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
             };
 
             let start = Instant::now();
-            q.enqueue_batch(vec![job]).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+            q.enqueue_batch(vec![job])
+                .await
+                .unwrap_or_else(|e| panic!("Error: {:?}", e));
             let elapsed_enqueue = start.elapsed();
 
             let start_deq = Instant::now();
-            let _ = q.dequeue(vec!["test_agent".to_string()]).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+            let _ = q
+                .dequeue(vec!["test_agent".to_string()])
+                .await
+                .unwrap_or_else(|e| panic!("Error: {:?}", e));
             let elapsed_dequeue = start_deq.elapsed();
 
             (elapsed_enqueue.as_micros(), elapsed_dequeue.as_micros())
@@ -507,37 +742,70 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     enqueue_times.sort();
     dequeue_times.sort();
 
-    let enq_p50 = if iterations > 0 { enqueue_times[iterations / 2] } else { 0 };
-    let enq_p95 = if iterations > 0 { enqueue_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))] } else { 0 };
-    let enq_p99 = if iterations > 0 { enqueue_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))] } else { 0 };
+    let enq_p50 = if iterations > 0 {
+        enqueue_times[iterations / 2]
+    } else {
+        0
+    };
+    let enq_p95 = if iterations > 0 {
+        enqueue_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))]
+    } else {
+        0
+    };
+    let enq_p99 = if iterations > 0 {
+        enqueue_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    } else {
+        0
+    };
 
-    let deq_p50 = if iterations > 0 { dequeue_times[iterations / 2] } else { 0 };
-    let deq_p95 = if iterations > 0 { dequeue_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))] } else { 0 };
-    let deq_p99 = if iterations > 0 { dequeue_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))] } else { 0 };
+    let deq_p50 = if iterations > 0 {
+        dequeue_times[iterations / 2]
+    } else {
+        0
+    };
+    let deq_p95 = if iterations > 0 {
+        dequeue_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))]
+    } else {
+        0
+    };
+    let deq_p99 = if iterations > 0 {
+        dequeue_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
+    } else {
+        0
+    };
 
-    println!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
-    println!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
+    println!(
+        "{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us",
+        name, enq_p50, enq_p95, enq_p99
+    );
+    println!(
+        "{}: Dequeue p50: {} us, p95: {} us, p99: {} us",
+        name, deq_p50, deq_p95, deq_p99
+    );
 }
 
 pub async fn bench_get_analytics() {
     println!("Benchmarking MyOrgService get_analytics...");
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     let db = if database_url.starts_with("sqlite") {
         println!("  - Analytics API Response Time Simulation (Standalone/SQLite)");
         return;
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        }
     };
 
     let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-    let bg_handle = tokio::spawn(async move {
-        while let Some(_) = rx.recv().await {}
-    });
+    let bg_handle = tokio::spawn(async move { while let Some(_) = rx.recv().await {} });
     let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
     // Pre-populate some agents and meetings for the analytics calculation
@@ -554,24 +822,44 @@ pub async fn bench_get_analytics() {
     }
 
     let meeting_id = format!("meeting-{}", uuid::Uuid::new_v4());
-    hub.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
+    hub.open_meeting(
+        meeting_id.clone(),
+        vec!["agent-0".to_string()],
+        "Agenda".to_string(),
+    );
 
     let org_service = crate::services::org::service::MyOrgService::new(hub);
-    let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
+    let iterations = std::env::var("BENCH_ITERATIONS")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .unwrap_or(10);
 
     // First run (cold start, no cache)
     let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
-    request_cold.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
+    request_cold.metadata_mut().insert(
+        "x-spiffe-id",
+        format!("spiffe://onehumancorp.io/{}/test", org_id)
+            .parse()
+            .unwrap_or_else(|e| panic!("Error: {:?}", e)),
+    );
     let start_cold = std::time::Instant::now();
     use ::server_ohc::orchestration::org_service_server::OrgService;
     let _ = org_service.get_analytics(request_cold).await;
-    println!("get_analytics Cold Start: {} us", start_cold.elapsed().as_micros());
+    println!(
+        "get_analytics Cold Start: {} us",
+        start_cold.elapsed().as_micros()
+    );
 
     // Warm runs (hot start, hits hybrid cache)
     let mut fetch_times = Vec::new();
     for _ in 0..iterations {
         let mut request = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
-        request.metadata_mut().insert("x-spiffe-id", format!("spiffe://onehumancorp.io/{}/test", org_id).parse().unwrap_or_else(|e| panic!("Error: {:?}", e)));
+        request.metadata_mut().insert(
+            "x-spiffe-id",
+            format!("spiffe://onehumancorp.io/{}/test", org_id)
+                .parse()
+                .unwrap_or_else(|e| panic!("Error: {:?}", e)),
+        );
 
         let start = std::time::Instant::now();
         let _ = org_service.get_analytics(request).await;
@@ -579,7 +867,8 @@ pub async fn bench_get_analytics() {
     }
 
     fetch_times.sort();
-    println!("get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
+    println!(
+        "get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
         fetch_times[iterations / 2],
         fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
         fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
@@ -588,6 +877,21 @@ pub async fn bench_get_analytics() {
 }
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_bench_ui_dashboard_unified_agent_feed_latency() {
+        super::bench_ui_dashboard_unified_agent_feed_latency().await;
+    }
+
+    #[tokio::test]
+    async fn test_bench_ui_ledger_latency() {
+        super::bench_ui_ledger_latency().await;
+    }
+
+    #[tokio::test]
+    async fn test_bench_ui_priority_tasks_latency() {
+        super::bench_ui_priority_tasks_latency().await;
+    }
+
     use super::*;
 
     #[tokio::test]
@@ -630,7 +934,6 @@ mod tests {
         bench_dashboard_analytics_chat_latency().await;
     }
 
-
     #[tokio::test]
     async fn test_bench_time_savings_latency() {
         bench_time_savings_latency().await;
@@ -671,8 +974,6 @@ mod tests {
         bench_dashboard_unified_feed_parallel_latency().await;
     }
 
-
-
     #[tokio::test]
     async fn test_bench_ui_supply_latency() {
         bench_ui_supply_latency().await;
@@ -692,14 +993,14 @@ mod tests {
     async fn test_bench_assistant_mobile_payload() {
         bench_assistant_mobile_payload().await;
 
-    println!("15. Ledger Latency");
-    bench_ui_ledger_latency().await;
+        println!("15. Ledger Latency");
+        bench_ui_ledger_latency().await;
 
-    println!("17. Priority Tasks Latency");
-    bench_ui_priority_tasks_latency().await;
+        println!("17. Priority Tasks Latency");
+        bench_ui_priority_tasks_latency().await;
 
-    println!("16. Unified Agent Feed Latency");
-    bench_ui_dashboard_unified_agent_feed_latency().await;
+        println!("16. Unified Agent Feed Latency");
+        bench_ui_dashboard_unified_agent_feed_latency().await;
     }
 
     #[tokio::test]
@@ -712,9 +1013,13 @@ mod tests {
         let mem_queue = Arc::new(MemoryTaskQueue::new());
         bench_queue("Memory_Stress", mem_queue).await;
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
         if database_url.starts_with("postgres") {
-            if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await {
+            if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new()
+                .connect(&database_url)
+                .await
+            {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
                 bench_queue("Postgres_Stress", pg_queue).await;
             }
@@ -725,13 +1030,18 @@ mod tests {
     async fn test_ml_resilience_60s_timeout_rule() {
         // Enforce the specific 60-second ML Resilience timeout rule using the agent's actual timeout function
         let timeout_duration = ohc_builtin_agent::agent::agent_task_timeout();
-        assert_eq!(timeout_duration.as_secs(), 60, "Agent tasks must have a strictly enforced 60s timeout");
+        assert_eq!(
+            timeout_duration.as_secs(),
+            60,
+            "Agent tasks must have a strictly enforced 60s timeout"
+        );
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a long-running hung AI operation that exceeds 60s
-            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+            std::future::pending::<()>().await;
             Ok::<(), String>(())
-        }).await;
+        })
+        .await;
 
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience 60s timeout rule to prevent cascading failure");
     }
@@ -742,10 +1052,10 @@ mod tests {
         let result = tokio::time::timeout(std::time::Duration::from_millis(2000), async {
             std::future::pending::<()>().await;
             "data"
-        }).await;
+        })
+        .await;
         assert!(result.is_err());
     }
-
 
     #[tokio::test]
     async fn test_bench_get_analytics() {
@@ -758,22 +1068,25 @@ mod tests {
         bench_get_analytics().await;
     }
 
-
-
     #[tokio::test]
     async fn test_bench_get_completed_tasks_latency() {
         bench_get_completed_tasks_latency().await;
     }
 }
 
-
 pub async fn bench_dashboard_analytics_briefing_latency() {
-    println!("Benchmarking ui_dashboard_analytics_briefing_handler (Parallel Execution Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    println!(
+        "Benchmarking ui_dashboard_analytics_briefing_handler (Parallel Execution Optimization)..."
+    );
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     // Test that two parallel DB queries execute concurrently faster than sequentially
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -784,7 +1097,10 @@ pub async fn bench_dashboard_analytics_briefing_latency() {
         );
         let duration = start_sim.elapsed();
 
-        println!("  - ui_dashboard_analytics_briefing_handler (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - ui_dashboard_analytics_briefing_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: metrics and inbox fetches parallelized)");
     } else {
         println!("  - ui_dashboard_analytics_briefing_handler (Parallel Execution Optimization verified, Hybrid Cache)");
@@ -811,9 +1127,10 @@ pub async fn bench_hybrid_latency() {
     println!("4.5. AI Token Efficiency");
     bench_ai_token_efficiency().await;
 
-    println!("4. Billing API Response Time (Parallel Execution Optimization verified, Hybrid Cache)");
+    println!(
+        "4. Billing API Response Time (Parallel Execution Optimization verified, Hybrid Cache)"
+    );
     bench_billing_api_response_time().await;
-
 
     println!("7. Time Savings Latency");
     bench_time_savings_latency().await;
@@ -831,7 +1148,6 @@ pub async fn bench_hybrid_latency() {
 
     println!("9. Mobile Payload Optimization Latency");
 
-
     println!("10. CRM Opportunities Latency");
     bench_crm_opportunities_latency().await;
 
@@ -843,7 +1159,6 @@ pub async fn bench_hybrid_latency() {
 
     println!("13. Orders Dashboard Latency");
     bench_ui_orders_latency().await;
-
 
     println!("14. Assistant Mobile Payload Optimization Latency");
     bench_assistant_mobile_payload().await;
@@ -861,11 +1176,17 @@ pub async fn bench_hybrid_latency() {
 }
 
 pub async fn bench_ui_supply_latency() {
-    println!("Benchmarking list_ui_supply_handler (Parallel Execution Optimization / Hybrid Cache)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    println!(
+        "Benchmarking list_ui_supply_handler (Parallel Execution Optimization / Hybrid Cache)..."
+    );
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -879,10 +1200,15 @@ pub async fn bench_ui_supply_latency() {
         );
         let duration = start_sim.elapsed();
 
-        println!("  - list_ui_supply_handler (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - list_ui_supply_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: Supply vendors, raw materials, and bom items fetched concurrently)");
     } else {
-        println!("  - list_ui_supply_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        println!(
+            "  - list_ui_supply_handler (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
@@ -893,10 +1219,14 @@ async fn test_bench_crm_opportunities_latency() {
 
 pub async fn bench_crm_opportunities_latency() {
     println!("Benchmarking list_opportunities_handler (Parallel Execution Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -909,7 +1239,10 @@ pub async fn bench_crm_opportunities_latency() {
         );
         let duration = start_sim.elapsed();
 
-        println!("  - list_opportunities_handler (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - list_opportunities_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: opportunities and lead stats fetched concurrently)");
     } else {
         println!("  - list_opportunities_handler (Parallel Execution Optimization verified, Hybrid Cache)");
@@ -919,7 +1252,6 @@ pub async fn bench_crm_opportunities_latency() {
 async fn test_bench_ai_token_efficiency() {
     bench_ai_token_efficiency().await;
 }
-
 
 pub async fn bench_ai_token_efficiency() {
     println!("Benchmarking AI Token Efficiency...");
@@ -971,32 +1303,51 @@ pub async fn bench_ai_token_efficiency() {
 
     let anomalies = auditor.get_tenant_anomalies("test_tenant");
     assert_eq!(anomalies.len(), 1);
-    println!("  - Anomaly tracking verified: {} anomaly recorded", anomalies.len());
+    println!(
+        "  - Anomaly tracking verified: {} anomaly recorded",
+        anomalies.len()
+    );
 }
 
 pub async fn bench_billing_api_response_time() {
     println!("Benchmarking Billing API Response Time...");
     // Skip if nonexistent DB
-    if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("nonexistent") {
+    if std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_default()
+        .contains("nonexistent")
+    {
         return;
     }
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
+    let database_url =
+        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let iterations = std::env::var("BENCH_ITERATIONS")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .unwrap_or(10);
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let pg_pool = crate::db::get_pool();
-        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+        crate::db::DB {
+            pool: pg_pool,
+            store: crate::db::DbStore::Sqlite(pool),
+        }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-
-            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        }
     };
 
     // Setup tables for mock data
@@ -1036,26 +1387,26 @@ pub async fn bench_billing_api_response_time() {
     let p50 = fetch_times[iterations / 2];
     let p95 = fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))];
     let p99 = fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))];
-    println!("Billing API Fetch: p50: {} us, p95: {} us, p99: {} us", p50, p95, p99);
+    println!(
+        "Billing API Fetch: p50: {} us, p95: {} us, p99: {} us",
+        p50, p95, p99
+    );
 }
 
 pub async fn bench_time_savings_latency() {
     println!("Benchmarking Time Savings API Response Time (Parallel Execution)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
         let pool4 = pg_pool.clone();
-
-
-
-
-
-
-
 
         let _ = tokio::join!(
             sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
@@ -1064,20 +1415,29 @@ pub async fn bench_time_savings_latency() {
             sqlx::query("SELECT pg_sleep(0.015)").execute(&pool4)
         );
         let duration = start_sim.elapsed();
-        println!("  - time_savings_handler (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - time_savings_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: 4 metrics fetched in parallel)");
     } else {
-        println!("  - time_savings_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        println!(
+            "  - time_savings_handler (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
 pub async fn bench_advisory_insights_latency() {
     println!("Benchmarking advisory_insights_handler (Parallel Execution)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
     let tenant_id = "test_tenant";
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
         let pool2 = pg_pool.clone();
@@ -1086,23 +1446,34 @@ pub async fn bench_advisory_insights_latency() {
 
         let (_, _) = tokio::join!(
             tokio::spawn(async move {
-                sqlx::query_as::<_, (String, String)>("SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1")
-                    .bind(&t1).fetch_optional(&pool1).await
+                sqlx::query_as::<_, (String, String)>(
+                    "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1",
+                )
+                .bind(&t1)
+                .fetch_optional(&pool1)
+                .await
             }),
             tokio::spawn(async move {
-                sqlx::query_scalar::<_, i64>("SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'")
-                    .bind(&t2).fetch_one(&pool2).await
+                sqlx::query_scalar::<_, i64>(
+                    "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'",
+                )
+                .bind(&t2)
+                .fetch_one(&pool2)
+                .await
             })
         );
         let duration = start_sim.elapsed();
-        println!("  - advisory_insights_handler (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - advisory_insights_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: DB and order counts fetched concurrently using real queries)");
     } else {
         println!("  - advisory_insights_handler (Parallel Execution Optimization verified, Hybrid Cache)");
     }
 }
 
-    #[tokio::test]
+#[tokio::test]
 async fn test_hybrid_cache_hit_rate() {
     let redis_client = None;
     let cache = ::server_utils::cache::HybridCache::<String>::with_capacity(redis_client, 1000);
@@ -1113,7 +1484,13 @@ async fn test_hybrid_cache_hit_rate() {
     for i in 0..100 {
         if cache.get(&format!("key_{}", i)).await.is_none() {
             misses += 1;
-            cache.set(&format!("key_{}", i), "value".to_string(), std::time::Duration::from_secs(60)).await;
+            cache
+                .set(
+                    &format!("key_{}", i),
+                    "value".to_string(),
+                    std::time::Duration::from_secs(60),
+                )
+                .await;
         }
     }
 
@@ -1128,11 +1505,17 @@ async fn test_hybrid_cache_hit_rate() {
 }
 
 pub async fn bench_dashboard_unified_feed_parallel_latency() {
-    println!("Benchmarking ui_dashboard_unified_feed_handler (Parallel vs Sequential Execution)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    println!(
+        "Benchmarking ui_dashboard_unified_feed_handler (Parallel vs Sequential Execution)..."
+    );
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let db1 = pg_pool.clone();
         let db2 = pg_pool.clone();
@@ -1144,14 +1527,30 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
         let db8 = pg_pool.clone();
 
         let start_seq = std::time::Instant::now();
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
+        let _ = sqlx::query("SELECT pg_sleep(0.010)")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT pg_sleep(0.010)")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT pg_sleep(0.010)")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT pg_sleep(0.010)")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT pg_sleep(0.010)")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT pg_sleep(0.010)")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT pg_sleep(0.010)")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT pg_sleep(0.010)")
+            .execute(&pg_pool)
+            .await;
         let duration_seq = start_seq.elapsed();
 
         let start_par = std::time::Instant::now();
@@ -1175,16 +1574,19 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
     }
 }
 
-
-
-
 pub async fn bench_dashboard_analytics_chat_latency() {
-    println!("Benchmarking ui_dashboard_analytics_chat_handler (Parallel Execution Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    println!(
+        "Benchmarking ui_dashboard_analytics_chat_handler (Parallel Execution Optimization)..."
+    );
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     // Test that two parallel DB queries execute concurrently faster than sequentially
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1195,22 +1597,28 @@ pub async fn bench_dashboard_analytics_chat_latency() {
         );
         let duration = start_sim.elapsed();
 
-        println!("  - ui_dashboard_analytics_chat_handler (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - ui_dashboard_analytics_chat_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: metrics and inbox fetches parallelized)");
     } else {
         println!("  - ui_dashboard_analytics_chat_handler (Parallel Execution Optimization verified, Hybrid Cache)");
     }
 }
 
-
 // Benchmarking complete. Hybrid Latency Benchmarking optimizations verified.
 
 pub async fn bench_ui_omni_inbox_latency() {
     println!("Benchmarking list_ui_omni_inbox_handler (Parallel Execution Optimization / Hybrid Cache)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1220,7 +1628,10 @@ pub async fn bench_ui_omni_inbox_latency() {
         );
         let duration = start_sim.elapsed();
 
-        println!("  - list_ui_omni_inbox_handler (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - list_ui_omni_inbox_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
     } else {
         println!("  - list_ui_omni_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)");
@@ -1228,11 +1639,17 @@ pub async fn bench_ui_omni_inbox_latency() {
 }
 
 pub async fn bench_ui_inbox_latency() {
-    println!("Benchmarking list_ui_inbox_handler (Parallel Execution Optimization / Hybrid Cache)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    println!(
+        "Benchmarking list_ui_inbox_handler (Parallel Execution Optimization / Hybrid Cache)..."
+    );
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1242,27 +1659,52 @@ pub async fn bench_ui_inbox_latency() {
         );
         let duration = start_sim.elapsed();
 
-        println!("  - list_ui_inbox_handler (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - list_ui_inbox_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
     } else {
-        println!("  - list_ui_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        println!(
+            "  - list_ui_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
 pub async fn bench_ai_job_dispatch_latency() {
     println!("Benchmarking AI Job Dispatch Latency...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
-    use crate::orchestration::queue::{Job, pg_queue::PgTaskQueue};
+    use crate::orchestration::queue::{pg_queue::PgTaskQueue, Job};
 
-    let (queue, is_postgres): (std::sync::Arc<dyn crate::orchestration::queue::queue::TaskQueue>, bool) = if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        (std::sync::Arc::new(PgTaskQueue::new(std::sync::Arc::new(pg_pool))), true)
+    let (queue, is_postgres): (
+        std::sync::Arc<dyn crate::orchestration::queue::queue::TaskQueue>,
+        bool,
+    ) = if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        (
+            std::sync::Arc::new(PgTaskQueue::new(std::sync::Arc::new(pg_pool))),
+            true,
+        )
     } else {
-        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         sqlx::query("CREATE TABLE IF NOT EXISTS ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, parent_task_id TEXT, job_type TEXT, payload TEXT, status TEXT, retry_count INTEGER DEFAULT 0, max_retries INTEGER DEFAULT 3, next_retry_at TEXT, locked_until TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_ohc_job_queue_status_job_type_next_retry ON ohc_job_queue (status, job_type, next_retry_at);").execute(&sqlite_pool).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
-        (std::sync::Arc::new(crate::orchestration::queue::sqlite_queue::SQLiteTaskQueue::new(std::sync::Arc::new(sqlite_pool))), false)
+        (
+            std::sync::Arc::new(
+                crate::orchestration::queue::sqlite_queue::SQLiteTaskQueue::new(
+                    std::sync::Arc::new(sqlite_pool),
+                ),
+            ),
+            false,
+        )
     };
 
     let mut jobs = Vec::new();
@@ -1284,26 +1726,42 @@ pub async fn bench_ai_job_dispatch_latency() {
     }
 
     let start_sim = std::time::Instant::now();
-    queue.enqueue_batch(jobs).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+    queue
+        .enqueue_batch(jobs)
+        .await
+        .unwrap_or_else(|e| panic!("Error: {:?}", e));
     let duration = start_sim.elapsed();
-    println!("  - AI Job Dispatch (Enqueue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration);
-
+    println!(
+        "  - AI Job Dispatch (Enqueue) ({}): {:?}",
+        if is_postgres { "Postgres" } else { "SQLite" },
+        duration
+    );
 
     let _start_sim = std::time::Instant::now();
     for _ in 0..100 {
-        queue.dequeue(vec!["bench-role".to_string()], 0, 0).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
+        queue
+            .dequeue(vec!["bench-role".to_string()], 0, 0)
+            .await
+            .unwrap_or_else(|e| panic!("Error: {:?}", e));
     }
     let duration_deq = _start_sim.elapsed();
-    println!("  - AI Job Dispatch (Dequeue) ({}): {:?}", if is_postgres { "Postgres" } else { "SQLite" }, duration_deq);
+    println!(
+        "  - AI Job Dispatch (Dequeue) ({}): {:?}",
+        if is_postgres { "Postgres" } else { "SQLite" },
+        duration_deq
+    );
 }
-
 
 pub async fn bench_ui_orders_latency() {
     println!("Benchmarking list_ui_orders_handler (Mobile Payload Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url =
+        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1318,7 +1776,10 @@ pub async fn bench_ui_orders_latency() {
 
         let duration = start_sim.elapsed();
 
-        println!("  - list_ui_orders_handler (Postgres Payload Optimization): {:?}", duration);
+        println!(
+            "  - list_ui_orders_handler (Postgres Payload Optimization): {:?}",
+            duration
+        );
         println!("    (Payload Optimization verified: mobile_optimized fetches return trimmed payload for orders)");
     } else {
         println!("  - list_ui_orders_handler (Payload Optimization verified, Hybrid Cache)");
@@ -1327,10 +1788,14 @@ pub async fn bench_ui_orders_latency() {
 
 pub async fn bench_ui_bookings_latency() {
     println!("Benchmarking list_ui_bookings_handler (Payload Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1349,13 +1814,17 @@ pub async fn bench_ui_bookings_latency() {
 
         let duration = start_sim.elapsed();
 
-        println!("  - list_ui_bookings_handler (Postgres Payload Optimization): {:?}", duration);
-        println!("    (Payload Optimization verified: mobile_optimized fetches return trimmed payload)");
+        println!(
+            "  - list_ui_bookings_handler (Postgres Payload Optimization): {:?}",
+            duration
+        );
+        println!(
+            "    (Payload Optimization verified: mobile_optimized fetches return trimmed payload)"
+        );
     } else {
         println!("  - list_ui_bookings_handler (Payload Optimization verified, Hybrid Cache)");
     }
 }
-
 
 pub async fn bench_docs_mobile_payload() {
     println!("Benchmarking Docs Mobile Payload Optimization...");
@@ -1363,16 +1832,23 @@ pub async fn bench_docs_mobile_payload() {
     // and tests the mapping overhead
     let start_sim = std::time::Instant::now();
     let duration = start_sim.elapsed();
-    println!("  - Docs Mobile Payload Optimization (Mapping): {:?}", duration);
+    println!(
+        "  - Docs Mobile Payload Optimization (Mapping): {:?}",
+        duration
+    );
     println!("    (Mobile Payload Optimization verified: docs mapping omits desc and duration)");
 }
 
 pub async fn bench_supply_mobile_payload() {
     println!("Benchmarking Supply Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1381,18 +1857,27 @@ pub async fn bench_supply_mobile_payload() {
 
         let _ = tokio::join!(
             tokio::spawn(async move {
-                let _ = sqlx::query("SELECT id, name FROM vendors").fetch_all(&pool1).await;
+                let _ = sqlx::query("SELECT id, name FROM vendors")
+                    .fetch_all(&pool1)
+                    .await;
             }),
             tokio::spawn(async move {
-                let _ = sqlx::query("SELECT id, name, current_quantity FROM raw_materials").fetch_all(&pool2).await;
+                let _ = sqlx::query("SELECT id, name, current_quantity FROM raw_materials")
+                    .fetch_all(&pool2)
+                    .await;
             }),
             tokio::spawn(async move {
-                let _ = sqlx::query("SELECT id, raw_material_id, quantity_required FROM bom_items").fetch_all(&pool3).await;
+                let _ = sqlx::query("SELECT id, raw_material_id, quantity_required FROM bom_items")
+                    .fetch_all(&pool3)
+                    .await;
             })
         );
         let duration = start_sim.elapsed();
 
-        println!("  - Supply Mobile Payload Optimization (Postgres): {:?}", duration);
+        println!(
+            "  - Supply Mobile Payload Optimization (Postgres): {:?}",
+            duration
+        );
         println!("    (Mobile Payload Optimization verified: vendors, raw_materials, bom_items return trimmed payload)");
     } else {
         println!("  - Supply Mobile Payload Optimization (SQLite)");
@@ -1401,10 +1886,14 @@ pub async fn bench_supply_mobile_payload() {
 
 pub async fn bench_assistant_mobile_payload() {
     println!("Benchmarking Assistant Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1415,8 +1904,13 @@ pub async fn bench_assistant_mobile_payload() {
         }).await;
         let duration = start_sim.elapsed();
 
-        println!("  - Assistant Mobile Payload Optimization (Postgres): {:?}", duration);
-        println!("    (Mobile Payload Optimization verified: assistant_tasks return trimmed payload)");
+        println!(
+            "  - Assistant Mobile Payload Optimization (Postgres): {:?}",
+            duration
+        );
+        println!(
+            "    (Mobile Payload Optimization verified: assistant_tasks return trimmed payload)"
+        );
     } else {
         println!("  - Assistant Mobile Payload Optimization (SQLite)");
     }
@@ -1424,10 +1918,14 @@ pub async fn bench_assistant_mobile_payload() {
 
 pub async fn bench_get_completed_tasks_latency() {
     println!("Benchmarking get_completed_tasks (Parallel Execution Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let database_url =
+        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1439,7 +1937,10 @@ pub async fn bench_get_completed_tasks_latency() {
         );
         let duration = start_sim.elapsed();
 
-        println!("  - get_completed_tasks (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - get_completed_tasks (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: shared_tasks and swarm_tasks fetched concurrently)");
     } else {
         println!("  - get_completed_tasks (Parallel Execution Optimization verified, Standalone)");
@@ -1448,10 +1949,14 @@ pub async fn bench_get_completed_tasks_latency() {
 
 pub async fn bench_ui_ledger_latency() {
     println!("Benchmarking ui_ledger_handler (Parallel Execution Optimization / Hybrid Cache)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1461,19 +1966,30 @@ pub async fn bench_ui_ledger_latency() {
         );
         let duration = start_sim.elapsed();
 
-        println!("  - load_ui_ledger_from_db (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - load_ui_ledger_from_db (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
     } else {
-        println!("  - load_ui_ledger_from_db (Parallel Execution Optimization verified, Hybrid Cache)");
+        println!(
+            "  - load_ui_ledger_from_db (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
 pub async fn bench_ui_dashboard_unified_agent_feed_latency() {
-    println!("Benchmarking ui_dashboard_unified_agent_feed_handler (Parallel Execution Optimization)...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    println!(
+        "Benchmarking ui_dashboard_unified_agent_feed_handler (Parallel Execution Optimization)..."
+    );
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1487,7 +2003,10 @@ pub async fn bench_ui_dashboard_unified_agent_feed_latency() {
         );
         let duration = start_sim.elapsed();
 
-        println!("  - ui_dashboard_unified_agent_feed_handler (Postgres Parallel Execution): {:?}", duration);
+        println!(
+            "  - ui_dashboard_unified_agent_feed_handler (Postgres Parallel Execution): {:?}",
+            duration
+        );
         println!("    (Parallel Execution Optimization verified: approvals, ledger, and feed fetched concurrently)");
     } else {
         println!("  - ui_dashboard_unified_agent_feed_handler (Parallel Execution Optimization verified, Hybrid Cache)");
@@ -1496,10 +2015,14 @@ pub async fn bench_ui_dashboard_unified_agent_feed_latency() {
 
 pub async fn bench_ui_priority_tasks_latency() {
     println!("Benchmarking Priority Tasks Mobile Payload Optimization...");
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     if database_url.starts_with("postgres") {
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
@@ -1510,8 +2033,13 @@ pub async fn bench_ui_priority_tasks_latency() {
         }).await;
         let duration = start_sim.elapsed();
 
-        println!("  - Priority Tasks Mobile Payload Optimization (Postgres): {:?}", duration);
-        println!("    (Mobile Payload Optimization verified: priority_tasks return trimmed payload)");
+        println!(
+            "  - Priority Tasks Mobile Payload Optimization (Postgres): {:?}",
+            duration
+        );
+        println!(
+            "    (Mobile Payload Optimization verified: priority_tasks return trimmed payload)"
+        );
     } else {
         println!("  - Priority Tasks Mobile Payload Optimization (SQLite)");
     }

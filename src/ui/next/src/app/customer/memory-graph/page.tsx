@@ -1,11 +1,9 @@
-'use client';
-
+"use client";
+import { Suspense } from "react";
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { PoweredByOHC } from '../../components/PoweredByOHC';
 import { FaInstagram, FaRegEnvelope, FaStore, FaCalendarCheck, FaGlobe, FaRobot } from 'react-icons/fa';
-
-export default function CustomerMemoryGraph() { return <React.Suspense fallback={<div>Loading...</div>}><CustomerMemoryGraphContent /></React.Suspense>; }
 
 function CustomerMemoryGraphContent() {
   const searchParams = useSearchParams();
@@ -33,134 +31,111 @@ function CustomerMemoryGraphContent() {
         setLoading(false);
       }
     };
+
     fetchMemoryGraph();
-  }, [customerId, tenantId]);
+  }, [tenantId, customerId]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 font-inter">
-        <p className="text-gray-500 font-medium">Loading customer history...</p>
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#0066FF]"></div>
+        <span className="sr-only">Loading customer history...</span>
       </div>
     );
   }
 
-  if (error || !data) {
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 font-inter p-4">
-        <div className="text-center">
-          <p className="text-[#FF3B30] font-medium mb-2">{error || 'Customer not found.'}</p>
-          <p className="text-gray-500 text-sm">Make sure the customer ID is correct.</p>
-        </div>
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="text-red-500">{error}</div>
       </div>
     );
   }
 
-  const getChannelIcon = (channel: string) => {
-    switch (channel.toLowerCase()) {
-      case 'instagram': return <FaInstagram className="text-pink-500" />;
-      case 'email': return <FaRegEnvelope className="text-blue-500" />;
-      case 'pos': case 'in-store': return <FaStore className="text-emerald-500" />;
-      case 'booking': return <FaCalendarCheck className="text-purple-500" />;
-      case 'web': case 'online': return <FaGlobe className="text-indigo-500" />;
-      case 'ai': case 'agent': return <FaRobot className="text-orange-500" />;
-      default: return <div className="w-2 h-2 rounded-full bg-gray-400" />;
-    }
-  };
+  const interactions = data?.events ? data.events : (data?.interactions ? data.interactions : []);
 
-  const getChannelColor = (channel: string) => {
-    switch (channel.toLowerCase()) {
-      case 'instagram': return 'bg-pink-100 text-pink-700 border-pink-200';
-      case 'pos': case 'in-store': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'booking': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'ai': case 'agent': return 'bg-orange-100 text-orange-700 border-orange-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+  const summary = data?.summary || "No summary available.";
+  const customerName = data?.customer_name || "Unknown Customer";
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'ig_dm': return <FaInstagram className="text-pink-500" />;
+      case 'email': return <FaRegEnvelope className="text-blue-500" />;
+      case 'store_visit': return <FaStore className="text-green-500" />;
+      case 'booking': return <FaCalendarCheck className="text-indigo-500" />;
+      case 'agent_reply': return <FaRobot className="text-[#0066FF]" />;
+      default: return <FaGlobe className="text-gray-500" />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] font-inter p-4 pb-20 sm:p-6 sm:pb-24">
-      <div className="max-w-[480px] mx-auto">
-        <header className="mb-6">
-          <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">Customer Context</h1>
-          <p className="text-sm text-gray-500 mt-1">Unified history across all channels</p>
-        </header>
+    <div className="flex flex-col h-screen w-full bg-gray-50 dark:bg-gray-900 text-[#1D1D1F] dark:text-[#F5F5F7]">
+      <div className="flex-1 overflow-y-auto p-4 max-w-2xl mx-auto w-full space-y-6 pt-8 pb-20">
 
-        {data.segments && data.segments.length > 0 && (
-          <div className="mb-6 p-4 rounded-xl border bg-blue-50 border-blue-200" role="status">
-            <h3 className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <FaRobot /> AI Insights
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {data.segments.map((segment: string, i: number) => (
-                <span key={i} className="px-2.5 py-1 text-xs font-semibold rounded-full bg-white text-blue-700 border border-blue-100 shadow-sm">
-                  {segment}
-                </span>
-              ))}
-            </div>
-            {data.total_interactions > 0 && (
-              <p className="text-sm text-blue-800 mt-3 font-medium">
-                {data.total_interactions} total interactions recorded.
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="relative p-6 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-6 overflow-hidden"
-             style={{
-                background: 'rgba(255, 255, 255, 0.7)',
-                backdropFilter: 'blur(40px) saturate(210%)',
-                border: '1px solid rgba(255, 255, 255, 0.8)'
-             }}>
-
-          <h2 className="text-lg font-bold font-outfit text-gray-900 mb-6 border-b border-gray-100/80 pb-4">Timeline</h2>
-
-          {data.events && data.events.length > 0 ? (
-            <div className="relative border-l-2 border-gray-100 ml-3 space-y-8 pb-4">
-              {data.events.map((event: any, index: number) => (
-                <div key={event.id || index} className="relative pl-6 animate-fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
-                  <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center shadow-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-                  </div>
-
-                  <div className="mb-1 flex items-center justify-between gap-4">
-                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border flex items-center gap-1.5 w-fit ${getChannelColor(event.channel)}`}>
-                      {getChannelIcon(event.channel)} {event.channel}
-                    </span>
-                    <span className="text-xs text-gray-400 font-medium whitespace-nowrap">
-                      {new Date(event.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                    </span>
-                  </div>
-
-                  <div className="bg-white/60 p-3 rounded-xl border border-gray-100/50 shadow-sm backdrop-blur-sm mt-2">
-                    <p className="text-sm text-gray-800 font-medium leading-relaxed">{event.raw_content}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-             <div className="text-center py-8">
-               <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-3">
-                 <FaGlobe className="text-gray-300 text-xl" />
-               </div>
-               <p className="text-gray-500 font-medium text-sm">No interaction history found.</p>
-               <p className="text-gray-400 text-xs mt-1">Events will appear here automatically.</p>
+        <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-6 shadow-sm">
+          <div className="flex items-center gap-4 mb-4">
+             <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-2xl font-bold text-[#0066FF]">
+               {customerName.charAt(0)}
              </div>
-          )}
+             <div>
+               <h1 className="text-2xl font-bold">Customer Context</h1>
+               <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">High Intent</span>
+               {data?.segments && data.segments.map((s: string) => <span key={s} className="ml-1 inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">{s}</span>)}
+             </div>
+          </div>
+          <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h3 className="text-sm font-semibold mb-2">Agent Summary</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+              {summary}
+            </p>
+            <p className="text-xs text-gray-500 mt-2">{data?.total_interactions || interactions.length} total interactions recorded.</p>
+          </div>
         </div>
 
-        <div className="flex gap-3">
-          <button className="flex-1 py-3.5 px-4 bg-[#0066FF] text-white font-semibold rounded-xl shadow-sm hover:bg-blue-600 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-            <FaRegEnvelope /> Draft Reply
-          </button>
-          <button className="flex-1 py-3.5 px-4 bg-white border border-gray-200 text-gray-900 font-semibold rounded-xl shadow-sm hover:bg-gray-50 transition-all active:scale-[0.98]">
-            Issue Refund
-          </button>
+        <div>
+           <h2 className="text-lg font-bold mb-4 ml-1">Timeline</h2>
+           <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 dark:before:via-gray-700 before:to-transparent">
+
+             {interactions.length === 0 ? <div className="text-center p-4">No interaction history found.</div> : interactions.map((interaction: any, idx: number) => (
+               <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 bg-white dark:bg-gray-800 text-gray-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                     {getIcon(interaction.channel || interaction.type)}
+                  </div>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 rounded-[16px] shadow-sm">
+                     <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-sm">{interaction.channel || (interaction.type === 'agent_reply' ? 'OHC Agent' : 'Customer')}</span>
+                        <time className="text-xs text-gray-500">{interaction.date || (interaction.created_at ? new Date(interaction.created_at).toLocaleString() : '')}</time>
+                     </div>
+                     <p className="text-sm text-gray-600 dark:text-gray-300">{interaction.description || interaction.raw_content}</p>
+                  </div>
+               </div>
+             ))}
+
+           </div>
+
+           <div className="mt-8 flex justify-center gap-4">
+               <button className="px-4 py-2 bg-blue-600 text-white rounded-md">Draft Reply</button>
+               <button className="px-4 py-2 bg-red-600 text-white rounded-md">Issue Refund</button>
+           </div>
         </div>
 
-        <div className="mt-8 flex justify-center">
-            <PoweredByOHC tenantId={tenantId} />
-        </div>
+      </div>
+      <div className="fixed bottom-4 left-0 right-0 flex justify-center z-50">
+          <PoweredByOHC tenantId={tenantId} />
       </div>
     </div>
+  );
+}
+
+export default function CustomerMemoryGraph() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#0066FF]"></div>
+        <span className="sr-only">Loading customer history...</span>
+      </div>
+    }>
+      <CustomerMemoryGraphContent />
+    </Suspense>
   );
 }

@@ -18,6 +18,7 @@ impl MyPosService {
     pub async fn reconcile_crdt_payloads(&self, payloads: Vec<::server_ohc::orchestration::PosCrdtPayload>, tenant_id: &str) -> Result<(), String> {
         let pool = crate::db::get_pool();
         let mut db_tx = pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         for payload in payloads {
             if payload.r#type == "inventory" {
@@ -248,6 +249,8 @@ impl PosService for MyPosService {
 
         let session_id = uuid::Uuid::new_v4().to_string();
         let pool = crate::db::get_pool();
+        let mut db_tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let res = sqlx::query(
             "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
@@ -257,11 +260,20 @@ impl PosService for MyPosService {
         .bind(&session_id)
         .bind(&tenant_id)
         .bind(&req.device_id)
-        .fetch_one(&pool)
+        .fetch_one(&mut *db_tx)
         .await;
+
+        let commit_res = db_tx.commit().await;
 
         match res {
             Ok(row) => {
+                if let Err(e) = commit_res {
+                    return Ok(Response::new(StartTerminalSessionResponse {
+                        session_id: "".to_string(),
+                        success: false,
+                        error_message: e.to_string(),
+                    }));
+                }
                 let returned_id: String = sqlx::Row::get(&row, "id");
                 Ok(Response::new(StartTerminalSessionResponse {
                     session_id: returned_id,
@@ -301,6 +313,8 @@ impl PosService for MyPosService {
         let tenant_id = auth_tenant;
 
         let pool = crate::db::get_pool();
+        let mut db_tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let res = sqlx::query(
             "UPDATE pos_terminal_sessions SET status = $1, last_synced_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3"
@@ -308,11 +322,19 @@ impl PosService for MyPosService {
         .bind(&req.status)
         .bind(&req.session_id)
         .bind(&tenant_id)
-        .execute(&pool)
+        .execute(&mut *db_tx)
         .await;
+
+        let commit_res = db_tx.commit().await;
 
         match res {
             Ok(result) => {
+                if let Err(e) = commit_res {
+                    return Ok(Response::new(UpdateTerminalSessionStatusResponse {
+                        success: false,
+                        error_message: e.to_string(),
+                    }));
+                }
                 if result.rows_affected() > 0 {
                     Ok(Response::new(UpdateTerminalSessionStatusResponse {
                         success: true,
@@ -356,17 +378,27 @@ impl PosService for MyPosService {
         let tenant_id = auth_tenant;
 
         let pool = crate::db::get_pool();
+        let mut db_tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let res = sqlx::query(
             "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
         )
         .bind(&req.session_id)
         .bind(&tenant_id)
-        .execute(&pool)
+        .execute(&mut *db_tx)
         .await;
+
+        let commit_res = db_tx.commit().await;
 
         match res {
             Ok(result) => {
+                if let Err(e) = commit_res {
+                    return Ok(Response::new(EndTerminalSessionResponse {
+                        success: false,
+                        error_message: e.to_string(),
+                    }));
+                }
                 if result.rows_affected() > 0 {
                     Ok(Response::new(EndTerminalSessionResponse {
                         success: true,

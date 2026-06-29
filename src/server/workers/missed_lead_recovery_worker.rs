@@ -160,7 +160,7 @@ impl MissedLeadRecoveryWorker {
                     }
                 };
 
-                match tokio::time::timeout(Duration::from_secs(30), llm_call).await {
+                match tokio::time::timeout(Duration::from_secs(60), llm_call).await {
                     Ok(Ok(reply)) => {
                         if !reply.trim().is_empty() {
                             // Extract JSON block if surrounded by markdown
