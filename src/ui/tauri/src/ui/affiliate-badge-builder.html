@@ -8,7 +8,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);  border-radius: 16px;
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
@@ -17,7 +17,7 @@
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);  border-radius: 16px;
         }
       }
       .old-glassmorphism {
@@ -34,7 +34,21 @@
       .glassmorphism-input {
         border-radius: 8px;
       }
-    </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Affiliate Badge Builder | OHC</title>
@@ -185,7 +199,7 @@
       font-size: 13px;
       font-weight: 600;
       text-decoration: none;
-      transition: all 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .badge-preview.light {
       background-color: #ffffff;
@@ -300,7 +314,7 @@
         }
 
         const codeSnippet = `<!-- OHC Affiliate Badge -->
-<a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; border-radius: 9999px; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s ease; ${inlineStyle}" onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';" onmouseout="this.style.opacity='1'; this.style.transform='none';">
+<a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; border-radius: 9999px; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); ${inlineStyle}" onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';" onmouseout="this.style.opacity='1'; this.style.transform='none';">
   <span style="font-size: 16px; color: ${iconColor};">⚡</span>
   ${text}
 </a>`;

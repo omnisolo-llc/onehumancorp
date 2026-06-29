@@ -130,7 +130,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       border: 1px solid transparent;
       flex: 1;
     }
@@ -167,7 +167,7 @@
       border: 2px solid var(--border);
       border-top-color: var(--primary);
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
       margin: 0 auto 16px;
     }
 
@@ -190,7 +190,21 @@
         grid-template-columns: repeat(3, 1fr);
       }
     }
-  </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
 </head>
 <body>
 

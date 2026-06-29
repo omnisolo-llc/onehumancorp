@@ -63,7 +63,7 @@
         letter-spacing: 4px;
         color: rgba(0,0,0,0.3);
         filter: blur(5px);
-        transition: all 0.5s ease;
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .locked-code-box.unlocked {
         filter: blur(0);
@@ -84,7 +84,7 @@
         font-weight: 700;
         text-transform: uppercase;
         z-index: 2;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     button.share-btn {
@@ -147,7 +147,21 @@
       h1 { font-size: 24px; }
     }
 
-  </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
 <style>
 @media (prefers-color-scheme: dark) {
     body {

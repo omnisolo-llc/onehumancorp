@@ -99,7 +99,21 @@
       .total-area { border-top: 1px solid rgba(255,255,255,0.1); }
       .total-price { color: #409CFF; }
     }
-  </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
 </head>
 <body>
   <div class="widget-container">

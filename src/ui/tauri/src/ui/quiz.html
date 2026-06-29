@@ -21,7 +21,7 @@
     .btn-primary:hover { background: #005fbc; }
     .btn-primary:disabled { background: #a78bfa; cursor: not-allowed; }
 
-    .step { display: none; width: 100%; animation: fadeInUp 0.4s ease-out forwards; }
+    .step { display: none; width: 100%; animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
     .step.active { display: block; }
 
     .question-count { font-size: 14px; font-weight: 600; color: #9CA3AF; margin-bottom: 8px; }
@@ -56,7 +56,21 @@
       0% { opacity: 0; transform: translateY(10px); }
       100% { opacity: 1; transform: translateY(0); }
     }
-  </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
 </head>
 <body>
 

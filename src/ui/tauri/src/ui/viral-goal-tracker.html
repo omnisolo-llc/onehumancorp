@@ -36,7 +36,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);  border-radius: 16px;
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
@@ -45,7 +45,7 @@
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);  border-radius: 16px;
         }
       }
       .old-glassmorphism {
@@ -212,7 +212,7 @@
       background: var(--primary);
       width: 40%;
       border-radius: 4px;
-      transition: width 0.5s ease;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .progress-text {
@@ -366,7 +366,21 @@
         grid-template-columns: 1fr;
       }
     }
-  </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
 </head>
 <body>
   <div style="width: 100%; display: flex; flex-direction: column;">

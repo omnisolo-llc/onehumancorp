@@ -8,7 +8,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);  border-radius: 16px;
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
@@ -17,7 +17,7 @@
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);  border-radius: 16px;
         }
       }
       .old-glassmorphism {
@@ -34,7 +34,21 @@
       .glassmorphism-input {
         border-radius: 8px;
       }
-    </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Your Custom Quote</title>
@@ -541,7 +555,7 @@
               div.innerHTML = `
                   <input type="text" value="${item.description}" class="edit-desc" data-index="${index}" style="flex: 2; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main);">
                   <input type="number" value="${item.unit_price_cents / 100}" class="edit-price" data-index="${index}" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main);">
-                  <button class="btn-remove-item" data-index="${index}" style="background: none; border: none; color: red; font-size: 20px; cursor: pointer;">&times;</button>
+                  <button class="btn-remove-item" data-index="${index}" style="background: none; border: none; color: #FF3B30; font-size: 20px; cursor: pointer;">&times;</button>
               `;
               editLineItemsContainer.appendChild(div);
           });
@@ -764,7 +778,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pointer-events: none;
             opacity: 0;
             transform: translateY(10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: center;
         }
         .ohc-tooltip.visible {

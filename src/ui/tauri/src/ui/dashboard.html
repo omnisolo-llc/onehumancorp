@@ -568,7 +568,21 @@
         .omnibox-type { background: #333336; color: #f5f5f7; }
       }
 
-    </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
     <style>
       @media (min-width: 600px) {
         .paywall-actions {
@@ -806,7 +820,7 @@
         <h2>Your Referral Rewards</h2>
         <p id="referral-tier-text">Loading your tier...</p>
         <div style="background-color: rgba(0,0,0,0.1); border-radius: 8px; height: 10px; width: 100%; margin: 10px 0; overflow: hidden;">
-          <div id="referral-tier-progress" style="background-color: #0066FF; height: 100%; width: 0%; transition: width 0.5s ease;"></div>
+          <div id="referral-tier-progress" style="background-color: #0066FF; height: 100%; width: 0%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);"></div>
         </div>
         <p id="referral-tier-subtext" style="font-size: 13px; color: #666;"></p>
       </div>
@@ -881,7 +895,7 @@
               Unlock Cloud Collaboration
             </button>
         </div>
-        <div id="cloud-bridge-status" style="margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 500; display: none; word-break: break-all; transition: all 0.3s ease;"></div>
+        <div id="cloud-bridge-status" style="margin-top: 15px; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 500; display: none; word-break: break-all; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);"></div>
       </div>
 
       <div class="ohc-growth-card app-card">
@@ -972,7 +986,7 @@
             border-radius: 8px;
             pointer-events: none;
             z-index: 10001;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .ohc-walkthrough-bubble {
             position: absolute;
@@ -986,7 +1000,7 @@
             z-index: 10002;
             font-family: "Outfit", sans-serif;
             color: #1d1d1f;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             opacity: 0;
             transform: translateY(10px);
         }
@@ -2495,7 +2509,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pointer-events: none;
             opacity: 0;
             transform: translateY(10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: center;
         }
         .ohc-tooltip.visible {

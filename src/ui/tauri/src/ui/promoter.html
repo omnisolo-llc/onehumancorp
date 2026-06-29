@@ -8,7 +8,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);  border-radius: 16px;
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
@@ -17,7 +17,7 @@
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);  border-radius: 16px;
         }
       }
       .old-glassmorphism {
@@ -34,7 +34,21 @@
       .glassmorphism-input {
         border-radius: 8px;
       }
-    </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>The Promoter</title>
@@ -150,7 +164,7 @@
       border: 3px solid rgba(255,255,255,0.3);
       border-radius: 50%;
       border-top-color: white;
-      animation: spin 1s ease-in-out infinite;
+      animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
       margin: 0 auto;
     }
     @keyframes spin {

@@ -116,7 +116,21 @@
       background: white; cursor: pointer; font-weight: 600; transition: all 0.2s;
     }
     .theme-btn.active { border-color: #0066FF; background: rgba(0, 102, 255, 0.05); color: #0066FF; }
-  </style>
+
+      /* OHC Touch Targets & Colors Enforced */
+      button, input, select, textarea, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-height: 44px !important;
+      }
+      button, .btn, .btn-primary, .btn-secondary, .btn-outline {
+        min-width: 44px !important;
+      }
+      .error-msg {
+        color: #FF3B30 !important;
+      }
+      .invalid-input {
+        border-color: #FF3B30 !important;
+      }
+</style>
 </head>
 <body>
 
