@@ -671,10 +671,7 @@ mod tests {
         bench_dashboard_unified_feed_parallel_latency().await;
     }
 
-    #[tokio::test]
-    async fn test_run_bench_ui_triage_mobile_payload() {
 
-    }
 
     #[tokio::test]
     async fn test_bench_ui_supply_latency() {
