@@ -228,105 +228,64 @@ impl InventoryService {
             }
 
             let pool = crate::db::get_pool();
-            if let Ok(mut tx) = pool.begin().await {
-                if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
-                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
+            let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+            if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
+                let updated_stock: Option<i32> = sqlx::query_scalar(
+                    "UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND available_quantity >= $1 RETURNING available_quantity"
+                )
+                    .bind(quantity)
+                    .bind(product_id)
+                    .bind(tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if updated_stock.is_some() {
+                    let _ = tx.commit().await;
+                    // Release the lock right after reservation is recorded, so others can concurrently reserve remaining stock.
+                    self.locker.clear(&lock_key).await;
+                    return Ok(ReserveResult {
+                        success: true,
+                        lock_id,
+                        error_message: "".to_string(),
+                    });
+                } else {
+                    let _ = tx.rollback().await;
+
+                    // Check if product exists at all to return correct error
+                    let exists: Option<i32> = sqlx::query_scalar("SELECT 1 FROM products WHERE id = $1 AND tenant_id = $2")
                         .bind(product_id)
                         .bind(tenant_id)
-                        .fetch_optional(&mut *tx)
+                        .fetch_optional(&pool)
                         .await
-                        .unwrap_or(None);
+                        .map_err(|e| e.to_string())?;
 
-                    if let Some(stock) = current_stock {
-                        if stock < quantity {
-                            let _ = tx.rollback().await;
-                            self.locker.clear(&lock_key).await;
-                            return Ok(ReserveResult {
-                                success: false,
-                                lock_id: "".to_string(),
-                                error_message: format!("Insufficient inventory. Available: {}", stock)
-                            });
-                        } else {
-                            let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
-                                .bind(quantity)
-                                .bind(product_id)
-                                .bind(tenant_id)
-                                .execute(&mut *tx)
-                                .await;
-                        }
+                    self.locker.clear(&lock_key).await;
+
+                    if exists.is_some() {
+                        return Ok(ReserveResult {
+                            success: false,
+                            lock_id: "".to_string(),
+                            error_message: "Oops! Item just sold out.".to_string(),
+                        });
                     } else {
-                        let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
-                            .bind(product_id)
-                            .bind(tenant_id)
-                            .fetch_optional(&mut *tx)
-                            .await
-                            .unwrap_or(None);
-
-                        if let Some(f_stock) = fallback_stock {
-                            if f_stock < quantity {
-                                let _ = tx.rollback().await;
-                                self.locker.clear(&lock_key).await;
-                                return Ok(ReserveResult {
-                                    success: false,
-                                    lock_id: "".to_string(),
-                                    error_message: format!("Insufficient inventory. Available: {}", f_stock)
-                                });
-                            } else {
-                                let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(tenant_id)
-                                    .execute(&mut *tx)
-                                    .await;
-                            }
-                        } else {
-                            let _ = tx.rollback().await;
-                            self.locker.clear(&lock_key).await;
-                            return Ok(ReserveResult {
-                                success: false,
-                                lock_id: "".to_string(),
-                                error_message: "Product not found".to_string()
-                            });
-                        }
+                        return Ok(ReserveResult {
+                            success: false,
+                            lock_id: "".to_string(),
+                            error_message: "Product not found".to_string(),
+                        });
                     }
-                    let _ = tx.commit().await;
-
-                    // Publish to Redis Pub/Sub for Real-Time Sync
-                    if false {
-
-
-                // Also emit cache invalidation event for storefront
-                let _invalidation_topic = "cache_invalidation_events";
-                let _invalidation_payload = serde_json::json!({
-                    "event": "inventory.updated",
-                    "tags": [
-                        format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
-                    ]
-                }).to_string();
-                    }
-                } else {
-            self.locker.clear(&lock_key).await;
-                    return Ok(ReserveResult {
-                        success: false,
-                        lock_id: "".to_string(),
-                        error_message: "Failed to set org context".to_string()
-                    });
                 }
             } else {
+                let _ = tx.rollback().await;
                 self.locker.clear(&lock_key).await;
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
-                    error_message: "Database error".to_string()
+                    error_message: "Failed to set org context".to_string(),
                 });
             }
-
-        Ok(ReserveResult {
-            success: true,
-            lock_id,
-            error_message: "".to_string(),
-        })
     }
 
     pub async fn release_inventory(
