@@ -187,13 +187,97 @@ async fn generate_proposal(
     })?
     .ok_or(axum::http::StatusCode::NOT_FOUND)?;
 
-    // 2. Here would be the AI integration logic.
-    // For now, we mock the generated quote based on the request message.
-    let mock_price = if request.message.to_lowercase().contains("door") {
-        15000 // $150
+    // 2. AI integration logic using LLM for Estimator Agent
+    // We dynamically parse the incoming message to look up matching prices from the services table.
+
+    let mut mock_price = 25000; // $250 default
+    let mut matched_service_name = "Custom Service Base Fee".to_string();
+
+    let request_lower = request.message.to_lowercase();
+
+    // Find all services for the tenant
+    #[derive(FromRow, serde::Serialize)]
+    struct Service {
+        title: String,
+        price_cents: i64,
+    }
+
+    if let Ok(services) = sqlx::query_as::<_, Service>("SELECT title, price_cents FROM services WHERE tenant_id = $1")
+        .bind(&claims.organization_id)
+        .fetch_all(&pool)
+        .await
+    {
+        // Try LLM parsing
+        let catalog_json = serde_json::to_string(&services).unwrap_or_default();
+
+        let key = std::env::var("GEMINI_API_KEY")
+            .or_else(|_| std::env::var("OPENAI_API_KEY"))
+            .unwrap_or_default();
+
+        let mut llm_matched = false;
+
+        if !key.is_empty() {
+            let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gemini-pro".to_string());
+            let endpoint = std::env::var("OHC_LLM_ENDPOINT").ok();
+
+            let mut config = if let Some(endpoint) = endpoint {
+                ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key.clone(), endpoint, Some(model.clone()))
+            } else {
+                ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(key.clone())
+            };
+            config.default_model = Some(model.clone());
+            let llm = ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config);
+
+            let prompt = format!(
+                "You are the Estimator Agent for a service business. You have the following service catalog:
+{0}
+
+Customer Inquiry: '{1}'
+
+Task: Extract the scope of work and identify the closest matching service from the catalog based on the inquiry. Respond ONLY in valid JSON format: {{ \"matched_service_title\": \"string\", \"matched_price_cents\": 15000 }}",
+                catalog_json, request.message
+            );
+
+
+            let req = ohc_builtin_agent::types::ChatRequest {
+                messages: vec![ohc_builtin_agent::types::Message::user(&prompt)],
+                model,
+                temperature: 0.0,
+                max_tokens: 256,
+                system: "You are an Estimator Agent. Parse scopes of work and match with service catalog. Output pure JSON.".to_string(),
+                tools: vec![],
+            };
+
+            use ohc_builtin_agent::llm::LlmClient;
+            if let Ok(resp) = llm.chat(req).await {
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&resp.message.content) {
+                    if let Some(title) = parsed.get("matched_service_title").and_then(|t| t.as_str()) {
+                        matched_service_name = title.to_string();
+                        llm_matched = true;
+                    }
+                    if let Some(price) = parsed.get("matched_price_cents").and_then(|p| p.as_i64()) {
+                        mock_price = price;
+                        llm_matched = true;
+                    }
+                }
+            }
+        }
+
+        if !llm_matched {
+            // Fallback naive matching
+            for service in services {
+                if request_lower.contains(&service.title.to_lowercase()) {
+                    mock_price = service.price_cents;
+                    matched_service_name = service.title.clone();
+                    break;
+                }
+            }
+        }
     } else {
-        25000 // $250
-    };
+        if request_lower.contains("door") {
+            mock_price = 15000;
+        }
+    }
 
     // Agent parsing: Attempt to find and reserve an available slot
     let mut proposed_slot_id = None;
