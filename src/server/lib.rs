@@ -6894,6 +6894,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
+        .route("/help/videos", axum::routing::get(|| async { axum::response::Html(include_str!("../ui/tauri/src/ui/help-videos.html")) }))
         .route("/api/ui/help.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
         }))

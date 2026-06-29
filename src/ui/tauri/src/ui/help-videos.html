@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        max-width: 400px;
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-sizing: border-box;
+      }
+      h1 {
+        margin-top: 0;
+        color: #1d1d1f;
+        font-size: 24px;
+        font-weight: 700;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #16161a;
+        }
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 {
+          color: #F5F5F7;
+        }
+      }
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Guides</title>
+</head>
+<body>
+    <div class="container glassmorphism">
+        <h1>Video Guides</h1>
+        <div id="videos-container" style="display: flex; flex-direction: column; gap: 16px; margin-top: 24px;"></div>
+    </div>
+    <script>
+        fetch('/api/videos').then(r => r.json()).then(videos => {
+            const container = document.getElementById('videos-container');
+            videos.forEach(v => {
+                const el = document.createElement('div');
+                el.className = 'glassmorphism';
+                el.style.padding = '20px';
+                el.style.textAlign = 'left';
+                el.innerHTML = `<h3 style="margin: 0 0 8px 0; color: #0066FF;">${v.title}</h3><p style="margin: 0; color: #6b7280;">Duration: ${v.duration}</p>`;
+                container.appendChild(el);
+            });
+        });
+    </script>
+</body>
+</html>

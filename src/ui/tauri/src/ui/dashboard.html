@@ -645,7 +645,7 @@
          <button id="sold-out-toggle-falafel">Sold Out</button>
       </div>
       <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%;">
-        <h1 id="dashboard-title" style="margin: 0;">Dashboard</h1>
+        <div id="dashboard-tooltip" data-tooltip="dashboard-tooltip"><h1 id="dashboard-title" style="margin: 0;">Dashboard</h1></div>
         <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
       </div>
       <div class="subtitle" style="margin-top: 5px;" id="welcome-message">Welcome back.</div>
@@ -654,10 +654,10 @@
 
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;">
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
-        <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
+        <div id="inventory-tooltip" data-tooltip="inventory-tooltip" style="display:inline-block;"><a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a></div>
         <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
-        <a href="agent-audit-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Agent Audit Dashboard</a>
-        <a href="booking-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Booking Dashboard</a>
+        <div id="inbox-activity-tooltip" data-tooltip="inbox-activity-tooltip" style="display:inline-block;"><a href="agent-audit-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Agent Audit Dashboard</a></div>
+        <div id="recent-orders-tooltip" data-tooltip="recent-orders-tooltip" style="display:inline-block;"><a href="booking-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Booking Dashboard</a></div>
         <a href="/kairos" id="kairos-nav-link" data-tooltip-id="kairos-nav-link-tooltip" class="btn-outline" style="width: auto; text-decoration: none;">Kairos</a>
       </div>
 
