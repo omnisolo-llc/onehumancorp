@@ -443,7 +443,7 @@ impl HybridSyncDaemon {
 
     pub async fn prune_stuck_agent_missions(&self) -> Result<(), Box<dyn std::error::Error>> {
         // SQLite
-        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_failed', 'agent_missions', json_object('id', id, 'payload', json(COALESCE(payload, '{}'))), '[bug] Mission became stuck' FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hours') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hours')))").execute(&self.sqlite_pool).await;
+        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_failed', 'agent_missions', json_object('id', id, 'payload', json(COALESCE(payload, '{}'))), '[cleanup] Mission became stuck' FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hours') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hours')))").execute(&self.sqlite_pool).await;
         let res_sqlite = sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hours') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hours')))")
             .execute(&self.sqlite_pool)
             .await;
@@ -454,7 +454,7 @@ impl HybridSyncDaemon {
         }
 
         // PG
-        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_failed', 'agent_missions', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{}'::jsonb))::text, '[bug] Mission became stuck' FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))").execute(&self.pg_pool).await;
+        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_failed', 'agent_missions', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{}'::jsonb))::text, '[cleanup] Mission became stuck' FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))").execute(&self.pg_pool).await;
         let res_pg = sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))")
             .execute(&self.pg_pool)
             .await;

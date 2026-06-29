@@ -44,7 +44,7 @@ pub fn categorize_error_signal(err_msg: &str) -> &'static str {
         "feature"
     } else if lower.contains("deprecated") || lower.contains("legacy") || lower.contains("refactor") {
         "refactor"
-    } else if lower.contains("leak") || lower.contains("garbage") || lower.contains("clean up") || lower.contains("cleanup") {
+    } else if lower.contains("leak") || lower.contains("garbage") || lower.contains("clean up") || lower.contains("cleanup") || lower.contains("stagnant") || lower.contains("stuck") {
         "cleanup"
     } else if lower.contains("doc") || lower.contains("comment") || lower.contains("readme") {
         "docs"
