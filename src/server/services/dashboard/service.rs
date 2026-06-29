@@ -418,14 +418,6 @@ impl DashboardService for MyDashboardService {
 
         let req = request.into_inner();
 
-        let cache_key = format!("dashboard_snapshot:{}:mobile:{}", req.organization_id, req.mobile_optimized);
-        let cache = DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-        if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(Response::new(cached));
-            }
-        }
-
         if self.is_multitenant && req.organization_id.is_empty() {
             return Err(Status::invalid_argument(
                 "organization_id is required in cloud mode to maintain tenant isolation",
@@ -441,6 +433,14 @@ impl DashboardService for MyDashboardService {
         }
 
         let org_id = std::sync::Arc::new(req.organization_id);
+        let cache_key = format!("dashboard_snapshot:{}:mobile:{}", org_id, req.mobile_optimized);
+        let cache = DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(Response::new(cached));
+            }
+        }
+
         let mobile_optimized = req.mobile_optimized;
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
