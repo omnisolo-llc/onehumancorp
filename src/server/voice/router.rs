@@ -31,7 +31,7 @@ pub struct LlmVoiceTurnPlanner;
 impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
     async fn plan_turn(&self, session_id: &str, user_text: &str) -> Result<VoiceTurnPlan, String> {
         let prompt = format!(
-            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, or GENERAL_HELP. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
+            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, ORDER_FOOD, GENERAL_INQUIRY, or GENERAL_HELP. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent, or if the intent is ORDER_FOOD to send them an online ordering link. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
         );
 
         let provider = std::env::var("OHC_VOICE_LLM_PROVIDER")
@@ -66,7 +66,7 @@ impl VoiceContextRouter {
     pub async fn process_user_input(&self, session_id: &str, user_text: &str, merchant_phone: &str) -> String {
         self.engine.log_transcript(session_id, "USER", user_text).await;
 
-        let plan = match self.planner.plan_turn(session_id, user_text).await {
+        let mut plan = match self.planner.plan_turn(session_id, user_text).await {
             Ok(plan) => plan,
             Err(err) => {
                 ::server_telemetry::record_error_signal("[bug] VoiceContextRouter LLM planning failed");
@@ -80,6 +80,13 @@ impl VoiceContextRouter {
         };
 
         if let Some(intent_type) = plan.intent_type.as_deref() {
+            if intent_type == "ORDER_FOOD" {
+                plan.ai_response = "Absolutely. I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!".to_string();
+                if plan.sms_body.is_none() {
+                    plan.sms_body = Some("Here is the link to our online menu to place your order: https://pay.ohc.com/order".to_string());
+                }
+            }
+
             self.engine
                 .log_intent_action(
                     session_id,

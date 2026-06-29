@@ -139,6 +139,7 @@ pub async fn twilio_voice_status_handler(
         let actions = state.voice_engine.actions.lock().await;
         let session_actions: Vec<_> = actions.iter().filter(|a| a.session_id == call_sid).collect();
         let has_booking_intent = session_actions.iter().any(|a| a.intent_type == "BOOK_APPOINTMENT");
+        let has_order_food_intent = session_actions.iter().any(|a| a.intent_type == "ORDER_FOOD");
 
         let deposit_link = session_actions.iter()
             .find(|a| a.intent_type == "BOOK_APPOINTMENT")
@@ -222,23 +223,37 @@ pub async fn twilio_voice_status_handler(
                 tracing::error!("Failed to insert voice call transcript into omni_inbox_messages: {}", e);
             }
 
-            if has_booking_intent {
+            if has_booking_intent || has_order_food_intent {
                 let task_manager = crate::tasks::TaskManager::with_db(state.db.clone());
                 let mission_id = uuid::Uuid::new_v4().to_string();
 
-                let title = format!("Voice Booking Request from {}", clean_caller);
-                let priority = "P1".to_string(); // Requires approval
+                let title = if has_order_food_intent {
+                    format!("Voice Order Request Handled for {}", clean_caller)
+                } else {
+                    format!("Voice Booking Request from {}", clean_caller)
+                };
+
+                let priority = if has_order_food_intent { "P2".to_string() } else { "P1".to_string() };
 
                 if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary.clone(), priority) {
-                    task.approval_status = Some("PENDING".to_string());
-
-                    let proposed_content = serde_json::json!({
-                        "feature_type": "booking_draft",
-                        "summary": summary,
-                        "caller_phone": clean_caller,
-                        "deposit_link": deposit_link,
-                    });
-                    task.proposed_content = Some(proposed_content.to_string());
+                    if has_order_food_intent {
+                        task.approval_status = Some("RESOLVED".to_string());
+                        let proposed_content = serde_json::json!({
+                            "feature_type": "order_draft_sms_sent",
+                            "summary": "Automated receptionist handled a call from ".to_string() + &clean_caller + " and sent the ordering link.",
+                            "caller_phone": clean_caller,
+                        });
+                        task.proposed_content = Some(proposed_content.to_string());
+                    } else {
+                        task.approval_status = Some("PENDING".to_string());
+                        let proposed_content = serde_json::json!({
+                            "feature_type": "booking_draft",
+                            "summary": summary,
+                            "caller_phone": clean_caller,
+                            "deposit_link": deposit_link,
+                        });
+                        task.proposed_content = Some(proposed_content.to_string());
+                    }
 
                     let _ = task_manager.insert_task(task);
                 }
