@@ -10,7 +10,7 @@ spec:
     rules:
     - alert: KubeHpaMaxedOut
       expr: kube_horizontalpodautoscaler_status_current_replicas == kube_horizontalpodautoscaler_spec_max_replicas
-      for: 5m
+      for: 15m
       labels:
         severity: warning
       annotations:
@@ -26,7 +26,7 @@ spec:
         description: 'Pod {{ "{{ $labels.pod }}" }} is crash looping.'
     - alert: KubePodNotReady
       expr: sum by (namespace, pod) (max by(namespace, pod) (kube_pod_status_phase{phase=~"Pending|Unknown"}) * on(namespace, pod) group_left(owner_kind) topk by(namespace, pod) (1, max by(namespace, pod, owner_kind) (kube_pod_owner{owner_kind!="Job"}))) > 0
-      for: 5m
+      for: 15m
       labels:
         severity: warning
       annotations:
@@ -34,7 +34,7 @@ spec:
         description: 'Pod {{ "{{ $labels.namespace }}" }}/{{ "{{ $labels.pod }}" }} has been in a non-ready state for longer than 15 minutes.'
     - alert: KubeDeploymentReplicasMismatch
       expr: (kube_deployment_spec_replicas != kube_deployment_status_replicas_available) and (kube_deployment_status_replicas_unavailable > 0)
-      for: 5m
+      for: 15m
       labels:
         severity: warning
       annotations:
