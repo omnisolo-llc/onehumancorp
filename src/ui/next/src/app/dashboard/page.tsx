@@ -350,6 +350,7 @@ export default function Dashboard() {
       subtitle="Network-style command center for your store operations."
       statusItems={statusItems}
       actions={[
+        { label: "Sell In Person", href: "/pos/terminal" },
         { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
         { label: "New Product", href: "/products/new", primary: true },
       ]}
@@ -779,6 +780,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Invoice Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
+            </Link>
+
+            <Link href="/pos/terminal" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📱</div>
+                <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Sell In Person</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Instantly collect payments with Tap-to-Pay and keep inventory synced.</p>
             </Link>
 
             <Link href="/proposal-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
