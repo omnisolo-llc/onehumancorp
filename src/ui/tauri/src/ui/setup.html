@@ -1041,7 +1041,7 @@
         }
       }
 
-      @media (max-width: 375px) {
+      @media (max-width: 414px) {
         .container {
           padding: 16px;
           margin: 0;
@@ -1061,11 +1061,15 @@
           border-radius: 8px;
         }
         .work-context-cards {
-          grid-template-columns: 1fr;
+          display: flex;
+          flex-direction: column;
+        }
+        .persona-row {
+          flex-direction: column;
         }
         .radio-group {
           grid-template-columns: 1fr;
-        } /* Added if it was a grid */
+        }
         .stepper {
           gap: 8px;
           padding: 0 10px;
