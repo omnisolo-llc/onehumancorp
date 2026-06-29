@@ -258,8 +258,6 @@ impl McpService for MyMcpService {
             sip_db
         };
 
-        let grounding_content = sip_db.load_grounding_content().await;
-
         let is_standalone = crate::is_standalone_runtime();
         let _permit = if is_standalone {
             match crate::sip::get_sqlite_limiter().try_acquire() {
@@ -277,7 +275,7 @@ impl McpService for MyMcpService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         for m in req.missions {
-            sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
+            sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local)
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
         }
