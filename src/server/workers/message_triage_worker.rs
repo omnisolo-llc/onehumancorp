@@ -253,12 +253,50 @@ Output JSON format:
                 sender: sender_id.to_string(),
                 content: customer_message.to_string(),
             };
-            let omni_result = router.route_and_synthesize(&msg).await.unwrap_or(crate::orchestration::router::DraftReply {
-                final_draft: "Thanks for reaching out! We will review this and get back to you soon.".to_string(),
-                operations_context: None,
-                sales_context: None,
-                customer_context: None,
-            });
+
+            let omni_result_res = router.route_and_synthesize(&msg).await;
+
+            if let Err(_) = omni_result_res {
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES ($1, $2, 'AI Agent Paused: Message Triage', 'The AI agent responsible for message triage is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually review incoming messages.')
+                            "#
+                        )
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .execute(&self.db.pool)
+                        .await;
+
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
+                            .bind(&job_id)
+                            .execute(&self.db.pool).await;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES (?, ?, 'AI Agent Paused: Message Triage', 'The AI agent responsible for message triage is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually review incoming messages.')
+                            "#
+                        )
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .execute(pool)
+                        .await;
+
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(&job_id)
+                            .execute(pool).await;
+                    }
+                }
+
+                // Return safely to not crash the worker but stop processing this task
+                return Ok(true);
+            }
+
+            let omni_result = omni_result_res.unwrap();
 
             let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
             let action_payload_str = omni_result.final_draft;
