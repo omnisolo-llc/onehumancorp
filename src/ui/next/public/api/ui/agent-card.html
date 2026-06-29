@@ -1,6 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <style>
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+      }
+      .old-glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      .glassmorphism-btn {
+        border-radius: 8px;
+      }
+      .glassmorphism-input {
+        border-radius: 8px;
+      }
+    </style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Agent Public Card Generator - OHC</title>
@@ -76,15 +110,16 @@
       font-size: 14px;
     }
 
-    .card {
-      background: var(--card-bg);
-      backdrop-filter: blur(30px) saturate(210%);
-      -webkit-backdrop-filter: blur(30px) saturate(210%);
-      padding: 32px;
-      border-radius: 16px;
-      border: 1px solid var(--card-border);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    }
+    .ohc-growth-card {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #1d1d1f;
+        border-radius: 16px;
+        padding: 32px 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      }
 
     .form-group {
       margin-bottom: 20px;
@@ -101,9 +136,11 @@
     .form-group input, .form-group textarea {
       width: 100%;
       padding: 12px;
-      border-radius: 8px;
+      border-radius: 16px;
       border: 1px solid var(--input-border);
       background: var(--input-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
       color: var(--text-color);
       font-family: inherit;
       font-size: 14px;
@@ -128,12 +165,12 @@
       margin-bottom: 24px;
       padding: 16px;
       background: rgba(0, 0, 0, 0.02);
-      border-radius: 8px;
+      border-radius: 16px;
     }
 
     @media (prefers-color-scheme: dark) {
       .toggle-group {
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(22, 22, 26, 0.7);
       }
     }
 
@@ -154,7 +191,7 @@
       color: white;
       border: none;
       padding: 14px 24px;
-      border-radius: 8px;
+      border-radius: 16px;
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
@@ -177,7 +214,10 @@
     .preview-wrapper {
       width: 100%;
       max-width: 320px;
-      background: white;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
       border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 20px 40px rgba(0,0,0,0.1);
@@ -201,7 +241,10 @@
       width: 80px;
       height: 80px;
       border-radius: 50%;
-      background: white;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
       position: absolute;
       bottom: -40px;
       left: 50%;
@@ -265,7 +308,7 @@
       background: #111;
       color: white;
       padding: 12px 24px;
-      border-radius: 24px;
+      border-radius: 16px;
       font-weight: 600;
       font-size: 14px;
       display: inline-block;
@@ -317,8 +360,8 @@
     <a href="dashboard.html">← Back to Dashboard</a>
   </div>
 
-  <div class="container">
-    <div class="card">
+  <div class="container glassmorphism">
+    <div class="ohc-growth-card">
       <h2>Card Details</h2>
       <p style="color: var(--secondary-text); font-size: 14px; margin-bottom: 24px;">
         Generate a shareable public card for your AI agent to build trust with your customers.
@@ -359,10 +402,10 @@
           <p class="preview-role" id="preview-role-el">Customer Success Agent</p>
           <p class="preview-desc" id="preview-desc-el">Hi! I'm here 24/7 to answer your questions, help with orders, and make sure you have a great experience.</p>
 
-          <a href="#" class="preview-btn">Chat with me</a>
+          <a href="assistant.html" class="preview-btn">Chat with me</a>
         </div>
         <div class="preview-footer" id="preview-footer-el">
-          <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-team" id="branding-link" target="_blank">
+          <a href="/api/v1/growth/referrals/click?target=/setup.html&ref=default-team" id="branding-link" target="_blank">
             <span>⚡</span> Powered by OHC
           </a>
         </div>
@@ -386,7 +429,7 @@
 
       // Update tenant ID in link if available
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
-      brandingLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
+      brandingLink.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}`;
 
       function updatePreview() {
         nameEl.textContent = nameInput.value || 'Agent Name';
@@ -427,41 +470,61 @@
     });
   </script>
 
-<style>
-.ohc-tooltip {
-    position: fixed;
-    background: #333;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
-.ohc-tooltip.visible {
-    opacity: 1;
-}
-</style>
+
+
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // Inject tooltip CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
             window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
+              "demo-btn": "This is a demo tooltip",
+              "action-btn": "Perform action"
             };
+            console.error(e);
         });
     }
+
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
     document.body.appendChild(tooltipEl);
@@ -469,23 +532,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function showTooltip(e, text) {
         if (!text) return;
         tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+        const rect = e.target.getBoundingClientRect();
 
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
+        // Position above the element
+        let top = rect.top - tooltipEl.offsetHeight - 10;
+        let left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
 
+        // Adjust if out of bounds
+        if (top < 10) {
+            top = rect.bottom + 10; // show below if not enough space above
+        }
+        if (left < 10) left = 10;
         if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
             left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
         }
 
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
+        tooltipEl.style.top = top + 'px';
+        tooltipEl.style.left = left + 'px';
         tooltipEl.classList.add('visible');
     }
 
@@ -493,18 +556,64 @@ document.addEventListener('DOMContentLoaded', () => {
         tooltipEl.classList.remove('visible');
     }
 
+    // Hover (desktop)
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
             hideTooltip();
         }
+    });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
     });
 });
 </script>
@@ -519,24 +628,24 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
-            const step = steps[currentStep];
+            const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -549,11 +658,14 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4); cursor: pointer;">Back</button>' : ''}
                     <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                 </div>
             `;
@@ -593,8 +705,8 @@ function initWalkthrough() {
         }
 
         function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
