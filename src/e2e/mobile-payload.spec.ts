@@ -70,4 +70,46 @@ test.describe('Mobile Payload Optimization', () => {
      expect(json.triage).toBeDefined();
      expect(json.inbox).toBeDefined();
   });
+
+
+  test('UI Orders request succeeds with mobile_optimized=true', async ({ request }) => {
+     const response = await request.get(`/api/ui/orders?mobile_optimized=true`, { headers });
+     expect(response.status()).toBe(200);
+     const json = await response.json();
+     expect(Array.isArray(json)).toBeTruthy();
+     if (json.length > 0) {
+         expect(json[0].customer_name).toBeUndefined();
+     }
+  });
+
+  test('UI Bookings request succeeds with mobile_optimized=true', async ({ request }) => {
+     const response = await request.get(`/api/ui/bookings?mobile_optimized=true`, { headers });
+     expect(response.status()).toBe(200);
+     const json = await response.json();
+     expect(Array.isArray(json)).toBeTruthy();
+     if (json.length > 0) {
+         expect(json[0].customer_name).toBeUndefined();
+         expect(json[0].end_time).toBeUndefined();
+     }
+  });
+
+  test('UI Supply request succeeds with mobile_optimized=true', async ({ request }) => {
+     const response = await request.get(`/api/ui/supply?mobile_optimized=true`, { headers });
+     expect(response.status()).toBe(200);
+     const json = await response.json();
+     expect(json.vendors).toBeDefined();
+     expect(json.raw_materials).toBeDefined();
+     expect(json.bom_items).toBeDefined();
+  });
+
+  test('UI Omni Inbox request succeeds with mobile_optimized=true', async ({ request }) => {
+     const response = await request.get(`/api/ui/omni_inbox?mobile_optimized=true`, { headers });
+     expect(response.status()).toBe(200);
+     const json = await response.json();
+     expect(Array.isArray(json)).toBeTruthy();
+     if (json.length > 0) {
+         expect(json[0].original_content).toBeUndefined();
+         expect(json[0].draft_reply).toBeUndefined();
+     }
+  });
 });
