@@ -221,6 +221,20 @@ impl InventoryService {
                     .execute(&pool)
                     .await;
 
+                // Draft response for online customer
+                let draft_msg_id = Uuid::new_v4().to_string();
+                let draft_payload = serde_json::json!({
+                    "message": "Sorry, this item just sold out in-store!",
+                    "product_id": product_id
+                }).to_string();
+
+                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'DraftCustomerMessage', $3::jsonb, 'PENDING')")
+                    .bind(draft_msg_id)
+                    .bind(tenant_id)
+                    .bind(&draft_payload)
+                    .execute(&pool)
+                    .await;
+
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
