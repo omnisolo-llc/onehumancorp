@@ -378,10 +378,10 @@ impl InventoryService {
     ) -> Result<CommitResult, String> {
         let mut all_match = true;
         let mut valid_indices = Vec::new();
-        let mut lock_id_base = "";
+
         let parts: Vec<&str> = lock_id.split(':').collect();
         if parts.len() == 2 {
-            lock_id_base = parts[0];
+            let lock_id_base = parts[0];
             let indices: Vec<&str> = parts[1].split(',').collect();
             for idx in indices {
                 let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);

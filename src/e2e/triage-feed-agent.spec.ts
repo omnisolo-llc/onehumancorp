@@ -13,7 +13,7 @@ test.describe('Agentic Work Triage Feed', () => {
     const triageItemId = json.id;
 
     // 3. Go to the dashboard
-    await page.goto('/api/ui/triage.html');
+    await page.goto('/dashboard');
 
     // Wait for the feed to load
     const feed = page.locator('[data-testid^="triage-card-"]').first();
@@ -29,7 +29,7 @@ test.describe('Agentic Work Triage Feed', () => {
     await expect(card).toContainText('Hi! Yes, we have 2 vegan chocolate cakes left for this weekend');
 
     // 6. Click Approve & Execute
-    const approveButton = page.locator(`[data-testid="triage-approve-${triageItemId}"]`);
+    const approveButton = page.locator(`[data-testid="approve-instagram-dm"]`);
     await approveButton.click();
 
     // 7. Verify the item is removed from the feed
@@ -42,13 +42,13 @@ test.describe('Agentic Work Triage Feed', () => {
     const json = await response.json();
     const triageItemId = json.id;
 
-    await page.goto('/api/ui/triage.html');
+    await page.goto('/dashboard');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.click();
 
-    const dismissButton = page.locator(`[data-testid="triage-dismiss-${triageItemId}"]`);
+    const dismissButton = page.locator(`[data-testid="dismiss-instagram-dm"]`);
     await dismissButton.click();
 
     await expect(card).not.toBeVisible({ timeout: 5000 });
@@ -56,7 +56,7 @@ test.describe('Agentic Work Triage Feed', () => {
 
   test('Triage feed handles empty state correctly', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    await page.goto('/api/ui/triage.html');
+    await page.goto('/dashboard');
 
     // It should either show the empty state or an empty feed, but given we might have real data,
     // let's just ensure it loads without crashing and either shows items or caught up state.
@@ -76,7 +76,7 @@ test.describe('Agentic Work Triage Feed', () => {
     const json = await response.json();
     const triageItemId = json.id;
 
-    await page.goto('/api/ui/triage.html');
+    await page.goto('/dashboard');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
@@ -95,7 +95,7 @@ test.describe('Agentic Work Triage Feed', () => {
     const json = await response.json();
     const triageItemId = json.id;
 
-    await page.goto('/api/ui/triage.html');
+    await page.goto('/dashboard');
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });

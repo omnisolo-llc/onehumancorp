@@ -28,7 +28,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
     if (targetElement) {
       // Scroll into view gently if needed
-      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetElement.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
 
       // We need a slight delay to let scrolling settle before measuring
       const timeoutId = setTimeout(() => {
@@ -146,7 +146,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
         id="walkthrough-bubble"
-        className="ohc-walkthrough-bubble fixed z-[10000] glassmorphism shadow-[0_8px_32px_rgba(0,0,0,0.15)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
+        className="ohc-walkthrough-bubble fixed z-[10000] backdrop-blur-[40px] saturate-[210%] bg-white/90 dark:bg-[#1C1C1E]/90 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.15)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
