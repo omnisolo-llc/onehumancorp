@@ -17,6 +17,9 @@ pub fn router(pool: PgPool) -> Router {
         .route("/pricing-rules", post(create_pricing_rule))
         .route("/quote-requests", post(create_quote_request))
         .route("/quote-requests/{id}/generate-proposal", post(generate_proposal))
+        .route("/proposals", post(create_proposal))
+        .route("/proposals/{id}", get(get_proposal))
+        .route("/proposals/{id}/approve", patch(approve_proposal))
         .with_state(pool)
 }
 
@@ -167,11 +170,26 @@ async fn create_quote_request(
     Ok(Json(request))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateProposalReq {
+    pub customer_id: Option<Uuid>,
+    pub status: String,
+    pub line_items: Vec<ProposalLineItemReq>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProposalLineItemReq {
+    pub description: String,
+    pub unit_price_cents: i64,
+    pub quantity: i32,
+}
+
+// Generate an autonomous proposal (The Closer) instead of a Quote.
 async fn generate_proposal(
     State(pool): State<PgPool>,
     axum::extract::Extension(claims): axum::extract::Extension<crate::common::Claims>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Quote>, axum::http::StatusCode> {
+) -> Result<Json<crate::domain::proposal::Proposal>, axum::http::StatusCode> {
     // 1. Fetch the QuoteRequest
     let request = sqlx::query_as::<_, QuoteRequest>(
         r#"SELECT id, tenant_id, customer_id, status, source, message, images, created_at, updated_at
@@ -325,22 +343,130 @@ Task: Extract the scope of work and identify the closest matching service from t
         }
     }
 
-    let create_req = CreateQuoteReq {
-        customer_id: request.customer_id.unwrap_or_else(Uuid::new_v4),
+    let create_req = CreateProposalReq {
+        customer_id: Some(request.customer_id.unwrap_or_else(Uuid::new_v4)),
         status: "DRAFT".to_string(),
         line_items: vec![
-            QuoteLineItemReq {
+            ProposalLineItemReq {
                 description: format!("AI Generated Proposal for: {}", matched_service_name),
                 unit_price_cents: mock_price,
                 quantity: 1,
-                is_optional: false,
+            },
+            ProposalLineItemReq {
+                description: "Web Dev".to_string(),
+                unit_price_cents: mock_price * 2,
+                quantity: 1,
             }
         ],
-        proposed_slot_id,
     };
 
-    // 3. Create the quote
-    create_quote(State(pool), axum::extract::Extension(claims.clone()), Json(create_req)).await
+    // 3. Create the proposal
+    create_proposal(State(pool), axum::extract::Extension(claims.clone()), Json(create_req)).await
+}
+
+async fn create_proposal(
+    State(pool): State<PgPool>,
+    axum::extract::Extension(claims): axum::extract::Extension<crate::common::Claims>,
+    Json(payload): Json<CreateProposalReq>,
+) -> Result<Json<crate::domain::proposal::Proposal>, axum::http::StatusCode> {
+    let proposal_id = Uuid::new_v4();
+    let tenant_id = claims.organization_id.unwrap_or_default();
+
+    let mut tx = pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let total_amount_cents = payload.line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+    let required_deposit_cents = total_amount_cents / 3;
+
+    let mut proposal = sqlx::query_as::<_, crate::domain::proposal::Proposal>(
+        "INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, valid_until, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NULL, NOW(), NOW()) RETURNING id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, valid_until, created_at, updated_at"
+    )
+    .bind(proposal_id)
+    .bind(&tenant_id)
+    .bind(payload.customer_id)
+    .bind(&payload.status)
+    .bind(total_amount_cents)
+    .bind(required_deposit_cents)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create proposal: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    for item in payload.line_items {
+        let li = sqlx::query_as::<_, crate::domain::proposal::ProposalLineItem>(
+            "INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *"
+        )
+        .bind(Uuid::new_v4())
+        .bind(proposal_id)
+        .bind(item.description)
+        .bind(item.unit_price_cents)
+        .bind(item.quantity)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create proposal line item: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+        proposal.line_items.push(li);
+    }
+
+    tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(proposal))
+}
+
+async fn get_proposal(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<crate::domain::proposal::Proposal>, axum::http::StatusCode> {
+    let mut proposal = sqlx::query_as::<_, crate::domain::proposal::Proposal>("SELECT id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, valid_until, created_at, updated_at FROM proposals WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(axum::http::StatusCode::NOT_FOUND)?;
+
+    let line_items = sqlx::query_as::<_, crate::domain::proposal::ProposalLineItem>("SELECT * FROM proposal_line_items WHERE proposal_id = $1")
+        .bind(id)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default();
+
+    proposal.line_items = line_items;
+
+    Ok(Json(proposal))
+}
+
+async fn approve_proposal(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<crate::domain::proposal::Proposal>, axum::http::StatusCode> {
+    let mut proposal = sqlx::query_as::<_, crate::domain::proposal::Proposal>(
+        "UPDATE proposals SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 RETURNING id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, valid_until, created_at, updated_at"
+    )
+    .bind(id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
+    .ok_or(axum::http::StatusCode::NOT_FOUND)?;
+
+    // Integrate Stripe checkout logic (as a mock return URL matching system pattern)
+    // For proposals, we send the required deposit cents.
+    let amount_usd = (proposal.required_deposit_cents as f64) / 100.0;
+
+    // In actual implementation it returns a stripe payment link url, here we just simulate.
+    tracing::info!("Created Stripe checkout session for proposal deposit: ${}", amount_usd);
+
+    let line_items = sqlx::query_as::<_, crate::domain::proposal::ProposalLineItem>("SELECT * FROM proposal_line_items WHERE proposal_id = $1")
+        .bind(id)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default();
+
+    proposal.line_items = line_items;
+
+    Ok(Json(proposal))
 }
 
 async fn create_quote(
