@@ -65,7 +65,7 @@ test.describe('Voice Assistant Mobile Command Center', () => {
     await expect(newProposal).toBeVisible({ timeout: 5000 });
 
     // 7. Verify the proposal is an actionable card (has Approve & Send Proposal button)
-    const approveBtn = newProposal.locator('..').locator('..').getByTestId('approve-proposal');
+    const approveBtn = newProposal.locator('..').locator('..').getByTestId('feed-approve-btn');
     await expect(approveBtn).toBeVisible();
   });
 });
