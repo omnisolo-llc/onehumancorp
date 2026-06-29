@@ -207,6 +207,7 @@ impl MissedLeadRecoveryWorker {
             }
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
+            let daily_work_item_id = Uuid::new_v4().to_string();
 
             let context_payload = serde_json::json!({
                 "description": format!("The customer ({}) hasn't received a reply for the configured threshold.", customer_name)
@@ -215,8 +216,17 @@ impl MissedLeadRecoveryWorker {
             let proposed_action = serde_json::json!({
                 "action_type": "Draft Follow-up",
                 "message": format!("The Assistant recovered 1 missed lead today, securing potential revenue. The Salesperson sent a recovery message for {}.", customer_name),
-                "draft_reply": follow_up_msg,
+                "draft_reply": follow_up_msg.clone(),
                 "message_id": message_id
+            });
+
+            let customer_info = serde_json::json!({
+                "name": customer_name,
+                "message": original_content
+            });
+
+            let suggested_actions = serde_json::json!({
+                "draft_reply": follow_up_msg.clone()
             });
 
             match &self.db.store {
@@ -231,6 +241,17 @@ impl MissedLeadRecoveryWorker {
                     .bind("Lead Recovery Agent")
                     .bind(context_payload.to_string())
                     .bind(proposed_action.to_string())
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    sqlx::query(
+                        "INSERT INTO daily_work_items (id, tenant_id, intent, customer_info, suggested_actions, status, created_at, updated_at) VALUES ($1, $2, 'missed_lead_recovery', $3, $4, 'PENDING', NOW(), NOW())"
+                    )
+                    .bind(&daily_work_item_id)
+                    .bind(&tenant_id)
+                    .bind(sqlx::types::Json(&customer_info))
+                    .bind(sqlx::types::Json(&suggested_actions))
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
@@ -256,6 +277,17 @@ impl MissedLeadRecoveryWorker {
                     .bind("Lead Recovery Agent")
                     .bind(context_payload.to_string())
                     .bind(proposed_action.to_string())
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    sqlx::query(
+                        "INSERT INTO daily_work_items (id, tenant_id, intent, customer_info, suggested_actions, status, created_at, updated_at) VALUES (?, ?, 'missed_lead_recovery', ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    )
+                    .bind(&daily_work_item_id)
+                    .bind(&tenant_id)
+                    .bind(customer_info.to_string())
+                    .bind(suggested_actions.to_string())
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
