@@ -25,6 +25,9 @@ filegroup(
     srcs = glob(
         [
             "src/**",
+            "public/**",
+
+
             "*.mjs",
             "*.mts",
             "*.json",

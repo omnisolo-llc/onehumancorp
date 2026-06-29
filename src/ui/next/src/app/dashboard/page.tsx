@@ -350,6 +350,7 @@ export default function Dashboard() {
       subtitle="Network-style command center for your store operations."
       statusItems={statusItems}
       actions={[
+        { label: "Sell In Person", href: "/pos/terminal" },
         { label: "Campaigns", href: "/dashboard/campaigns", icon: "campaigns" },
         { label: "New Product", href: "/products/new", primary: true },
       ]}
@@ -1017,6 +1018,17 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Discount Code Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create discount code widgets for your customers.</p>
+            </Link>
+            </WithTooltip>
+
+            <WithTooltip id="lead-magnet-tooltip" defaultText="Capture emails and grow your audience.">
+            <Link href="/lead-magnet-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧲</div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Leads</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Lead Magnet Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Capture emails and grow your audience.</p>
             </Link>
             </WithTooltip>
 
