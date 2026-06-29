@@ -691,7 +691,7 @@
 
       <div class="ohc-growth-card" id="triage-section" style="display: none;">
         <h2>Unified Agent Feed</h2>
-        <div id="triage-queue">
+        <div id="unified-agent-feed-section">
           <div class="triage-card empty">Loading triage items...</div>
         </div>
       </div>
@@ -1025,7 +1025,7 @@
 
       // Triage Data Logic
       const triageSection = document.getElementById('triage-section');
-      const triageQueue = document.getElementById('triage-queue');
+      const triageQueue = document.getElementById('unified-agent-feed-section');
 
       async function loadUnifiedFeed() {
         triageSection.style.display = 'block';

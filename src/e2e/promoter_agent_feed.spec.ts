@@ -13,7 +13,7 @@ test.describe('Unified Agent Feed - Promoter Auto-Draft', () => {
     await expect(page).toHaveURL(/\/dashboard/);
 
     // 2. Wait for the feed to be visible
-    const feedSection = page.locator('div#triage-queue');
+    const feedSection = page.locator('div#unified-agent-feed-section');
     await expect(feedSection).toBeVisible();
 
     // In a real environment, we would first create a product.

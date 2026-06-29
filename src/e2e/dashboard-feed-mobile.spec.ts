@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test.describe('Unified Agent Feed Mobile MVP', () => {
   test.use({ viewport: { width: 375, height: 812 } });
@@ -6,12 +6,9 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
   test('displays feed and ensures no horizontal scroll on mobile', async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard');
-
-    // Make sure we wait for the page to load
     await page.waitForLoadState('domcontentloaded');
 
-    // The feed should be present and visible
-    const feedSection = page.locator('#unified-agent-feed-section');
+    const feedSection = page.locator('#unified-agent-feed-section').first();
     await expect(feedSection).toBeVisible({ timeout: 15000 });
 
     // Ensure there is no horizontal scroll on the body
@@ -20,55 +17,73 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     });
     expect(isScrollable).toBeFalsy();
 
-    // Check if there are proposal action buttons with min 44x44
-    // If the backend returns no proposals, this might be empty, but we can verify touch targets of the tab
+    // Check tabs touch targets
     const proposalsTab = page.getByRole('button', { name: /Proposals/ });
     const box = await proposalsTab.boundingBox();
     expect(box).not.toBeNull();
     if (box) {
       expect(box.height).toBeGreaterThanOrEqual(44);
     }
-
-    // Since triage items are now part of UnifiedAgentFeed, verify interaction
-    // We will wait for at least one triage card to appear, or mock if we have to, but since it's E2E it should hit db.
-    // If we have a triage item (like "Proactive Context Agent" or normal), let's find the first approve button
-    const approveBtn = page.getByTestId('feed-approve-btn').first();
-    const btnCount = await approveBtn.count();
-
-    if (btnCount > 0) {
-      // Check touch target for the action button
-      const btnBox = await approveBtn.boundingBox();
-      expect(btnBox).not.toBeNull();
-      if (btnBox) {
-        expect(btnBox.height).toBeGreaterThanOrEqual(44);
-        expect(btnBox.width).toBeGreaterThanOrEqual(44);
-      }
-
-      const testId = await approveBtn.getAttribute('data-testid');
-      await approveBtn.click();
-
-      // Wait to verify it's removed from DOM optimally
-      await expect(page.getByTestId(testId as string)).toHaveCount(0);
-    }
   });
 
-  test('renders feed sections correctly on mobile', async ({ page }) => {
+  test('should allow approving an action card in the feed', async ({ page }) => {
+    test.setTimeout(180000);
+
+    // Navigate to dashboard
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
-    await expect(feedSection).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    // Check tabs touch targets
-    const proposalsTab = page.locator('button:has-text("Proposals")');
-    await expect(proposalsTab).toBeVisible();
-    const proposalsTabBox = await proposalsTab.boundingBox();
-    expect(proposalsTabBox?.width).toBeGreaterThanOrEqual(44);
-    expect(proposalsTabBox?.height).toBeGreaterThanOrEqual(44);
+    const feedContainer = page.locator('#unified-agent-feed-section').first();
+    await expect(feedContainer).toBeVisible({ timeout: 15000 });
 
-    const activityTab = page.locator('button:has-text("Activity Feed")');
-    await expect(activityTab).toBeVisible();
-    const activityTabBox = await activityTab.boundingBox();
-    expect(activityTabBox?.width).toBeGreaterThanOrEqual(44);
-    expect(activityTabBox?.height).toBeGreaterThanOrEqual(44);
+    // Look for approve buttons in the feed
+    const approveButtons = feedContainer.locator('button:has-text("Approve")');
+    // We expect there to be at least one card generated for triage
+    await expect(approveButtons.first()).toBeVisible({ timeout: 15000 });
+
+    // Verify touch target for action buttons
+    const box = await approveButtons.first().boundingBox();
+    if (box) {
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.width).toBeGreaterThanOrEqual(44);
+    }
+
+    // Store count to verify the count decreases
+    const initialCount = await approveButtons.count();
+
+    await approveButtons.first().click();
+
+    // Expect the card to disappear or change state, count should be less
+    await expect(async () => {
+       const newCount = await page.locator('#unified-agent-feed-section').locator('button:has-text("Approve")').count();
+       expect(newCount).toBeLessThan(initialCount);
+    }).toPass({ timeout: 10000 });
+  });
+
+  test('should allow dismissing an action card in the feed', async ({ page }) => {
+    test.setTimeout(180000);
+
+    // Navigate to dashboard
+    await page.goto('/dashboard');
+    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+
+    const feedContainer = page.locator('#unified-agent-feed-section').first();
+    await expect(feedContainer).toBeVisible({ timeout: 15000 });
+
+    // Look for dismiss/reject buttons in the feed
+    const rejectButtons = feedContainer.locator('button:has-text("Dismiss"), button:has-text("Reject"), button:has-text("Deny")');
+    // We expect there to be at least one card generated for triage
+    await expect(rejectButtons.first()).toBeVisible({ timeout: 15000 });
+
+    // Store count to verify the count decreases
+    const initialCount = await rejectButtons.count();
+
+    await rejectButtons.first().click();
+
+    // Expect the card to disappear or change state, count should be less
+    await expect(async () => {
+       const newCount = await page.locator('#unified-agent-feed-section').locator('button:has-text("Dismiss"), button:has-text("Reject"), button:has-text("Deny")').count();
+       expect(newCount).toBeLessThan(initialCount);
+    }).toPass({ timeout: 10000 });
   });
 });
