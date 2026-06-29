@@ -119,9 +119,9 @@ impl PosService for MyPosService {
 
         let session_id = req.session_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
         let _ = sqlx::query(
-            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-             ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = pos_terminal_sessions.offline_changes_count + $4"
+            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, last_reconciled_at, pending_offline_syncs, offline_changes_count)
+             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4, $4)
+             ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, pending_offline_syncs = pos_terminal_sessions.pending_offline_syncs + $4, offline_changes_count = pos_terminal_sessions.offline_changes_count + $4"
         )
         .bind(&session_id)
         .bind(&tenant_id)
@@ -200,6 +200,33 @@ impl PosService for MyPosService {
                     return Err(tx.id);
                 }
 
+                // Parse the JSON payload and commit inventory here
+                if let Ok(json_payload) = serde_json::from_str::<serde_json::Value>(&tx.payload) {
+                    if let Some(mutation) = json_payload.get("mutation") {
+                        if let Some(product_id) = mutation.get("product_id").and_then(|v| v.as_str()) {
+                            if let Some(quantity_deducted) = mutation.get("quantity_deducted").and_then(|v| v.as_i64()) {
+                                let inventory_service = crate::services::inventory::InventoryService::new(crate::get_redis_client());
+                                if let Err(e) = inventory_service.commit_inventory(&tenant_id_clone, product_id, quantity_deducted as i32, "").await {
+                                    tracing::error!("Failed to commit inventory for pos transaction {}: {:?}", tx.id, e);
+                                    return Err(tx.id);
+                                }
+                            }
+                        }
+                    } else if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(&tx.payload) {
+                         for item in arr {
+                             if let Some(product_id) = item.get("product_id").and_then(|p| p.as_str()) {
+                                 if let Some(quantity_deducted) = item.get("quantity").and_then(|q| q.as_i64()) {
+                                     let inventory_service = crate::services::inventory::InventoryService::new(crate::get_redis_client());
+                                     if let Err(e) = inventory_service.commit_inventory(&tenant_id_clone, product_id, quantity_deducted as i32, "").await {
+                                         tracing::error!("Failed to commit inventory for pos transaction {}: {:?}", tx.id, e);
+                                         return Err(tx.id);
+                                     }
+                                 }
+                             }
+                         }
+                    }
+                }
+
                 Ok(())
             }));
         }
@@ -253,9 +280,9 @@ impl PosService for MyPosService {
         ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let res = sqlx::query(
-            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
-             ON CONFLICT (tenant_id, device_id) DO UPDATE SET status = 'ACTIVE', last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = 0 RETURNING id"
+            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, last_reconciled_at, pending_offline_syncs, offline_changes_count)
+             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, 0)
+             ON CONFLICT (tenant_id, device_id) DO UPDATE SET status = 'ACTIVE', last_synced_at = CURRENT_TIMESTAMP, pending_offline_syncs = 0, offline_changes_count = 0 RETURNING id"
         )
         .bind(&session_id)
         .bind(&tenant_id)
@@ -382,7 +409,7 @@ impl PosService for MyPosService {
         ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let res = sqlx::query(
-            "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
+            "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP, last_reconciled_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
         )
         .bind(&req.session_id)
         .bind(&tenant_id)
