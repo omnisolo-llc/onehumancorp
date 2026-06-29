@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Viral Giveaway Generator | OHC</title>
+  <title>Viral Group Buy Generator | OHC</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -75,7 +75,7 @@
       margin-bottom: 8px;
     }
 
-    input[type="text"], textarea {
+    input[type="text"], input[type="number"], textarea {
       width: 100%;
       padding: 14px;
       border: 1px solid rgba(134, 134, 139, 0.3);
@@ -89,7 +89,7 @@
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    input[type="text"]:focus, textarea:focus {
+    input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
         outline: none;
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
@@ -191,6 +191,15 @@
         color: var(--text-color);
     }
 
+    .row-group {
+      display: flex;
+      gap: 16px;
+    }
+
+    .row-group > div {
+      flex: 1;
+    }
+
     .loading-spinner {
         display: none;
         width: 20px;
@@ -216,22 +225,34 @@
 </head>
 <body>
   <div class="container glassmorphism">
-    <div style="font-size: 48px; text-align: center; margin-bottom: 10px;">🎁</div>
-    <h1>Viral Giveaway Generator</h1>
-    <h2>Giveaway Details</h2>
+    <div style="font-size: 48px; text-align: center; margin-bottom: 10px;">👥</div>
+    <h1>Viral Group Buy Generator</h1>
+    <h2>Offer Details</h2>
+    <p style="color: #86868b; font-size: 14px; margin-top: -10px; margin-bottom: 20px;">Offer a massive discount that only unlocks if enough friends join the deal.</p>
 
     <div>
-      <label for="title">Prize / Title</label>
-      <input type="text" id="title" placeholder="e.g. Win a Free iPad" />
+      <label for="product-name">Product / Service</label>
+      <input type="text" id="product-name" placeholder="e.g. Masterclass Subscription" />
+    </div>
+
+    <div class="row-group">
+      <div>
+        <label for="regular-price">Regular Price ($)</label>
+        <input type="number" id="regular-price" placeholder="100" />
+      </div>
+      <div>
+        <label for="group-price">Group Price ($)</label>
+        <input type="number" id="group-price" placeholder="49" />
+      </div>
     </div>
 
     <div>
-      <label for="desc">Description</label>
-      <textarea id="desc" rows="4" placeholder="Enter instructions to win..."></textarea>
+      <label for="group-size">Required Group Size</label>
+      <input type="number" id="group-size" placeholder="3" value="3" />
     </div>
 
     <button id="generate-btn">
-        <span class="btn-text">Generate Giveaway Link</span>
+        <span class="btn-text">Generate Group Buy Link</span>
         <div class="loading-spinner"></div>
     </button>
 
@@ -243,7 +264,6 @@
             <input type="text" id="generated-url" readonly />
             <button id="copy-btn" style="width: auto; padding: 14px 20px;" class="btn-secondary">Copy</button>
           </div>
-          <button id="share-x-btn" style="background-color: #000; box-shadow: none;">Share on X</button>
       </div>
     </div>
   </div>
@@ -251,24 +271,26 @@
   <a href="/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
 
   <footer>
-    <a href="/setup.html?ref=giveaway_footer" target="_blank" class="footer-link">⚡ Powered by OHC</a>
+    <a href="/setup.html?ref=group_buy_footer" target="_blank" class="footer-link">⚡ Powered by OHC</a>
   </footer>
 
   <script>
     document.getElementById('generate-btn').addEventListener('click', () => {
-      const title = document.getElementById('title').value.trim();
-      const desc = document.getElementById('desc').value.trim();
+      const productName = document.getElementById('product-name').value.trim();
+      const regularPrice = document.getElementById('regular-price').value.trim();
+      const groupPrice = document.getElementById('group-price').value.trim();
+      const groupSize = document.getElementById('group-size').value.trim();
       const btn = document.getElementById('generate-btn');
 
-      if (!title || !desc) {
-        alert("Please fill in both title and description.");
+      if (!productName || !regularPrice || !groupPrice || !groupSize) {
+        alert("Please fill in all fields.");
         return;
       }
 
       btn.classList.add('btn-loading');
       btn.disabled = true;
 
-      const baseUrl = window.location.origin;
+      const baseUrl = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
 
       fetch('/api/v1/growth/referrals/generate', {
@@ -279,22 +301,26 @@
           }
       }).then(res => res.json()).then(data => {
           const params = new URLSearchParams({
-            title: title,
-            desc: desc,
-            ref: data.referral_link ? data.referral_link.split('/').pop() : 'giveaway_' + Date.now()
+            product: productName,
+            reg: regularPrice,
+            grp: groupPrice,
+            size: groupSize,
+            ref: data.referral_link ? data.referral_link.split('/').pop() : 'gb_' + Date.now()
           });
-          const generatedUrl = `${baseUrl}/giveaway/enter?${params.toString()}`;
+          const generatedUrl = `${baseUrl}/ui/group-buy/join/index.html?${params.toString()}`;
 
           showResult(generatedUrl);
       }).catch(err => {
           console.error(err);
           // Fallback
           const params = new URLSearchParams({
-            title: title,
-            desc: desc,
-            ref: 'giveaway_' + Date.now()
+            product: productName,
+            reg: regularPrice,
+            grp: groupPrice,
+            size: groupSize,
+            ref: 'gb_' + Date.now()
           });
-          const generatedUrl = `${baseUrl}/giveaway/enter?${params.toString()}`;
+          const generatedUrl = `${baseUrl}/ui/group-buy/join/index.html?${params.toString()}`;
 
           showResult(generatedUrl);
       }).finally(() => {
@@ -322,13 +348,6 @@
             btn.textContent = originalText;
             btn.style.backgroundColor = '';
         }, 2000);
-    });
-
-    document.getElementById('share-x-btn').addEventListener('click', () => {
-        const title = document.getElementById('title').value.trim();
-        const url = document.getElementById('generated-url').value;
-        const text = `I'm running a new giveaway: ${title}! Enter to win here:\n\n${url}\n\n⚡ Powered by OHC`;
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
     });
   </script>
 </body>
