@@ -206,22 +206,35 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               ?.feature_type === "instagram_dm" && (
               <InstagramDMCard
                 approval={approval}
-                onApprove={() =>
+                isEditing={editingId === approval.id}
+                editContent={editContent}
+                setEditContent={setEditContent}
+                onEdit={() => {
+                  setEditingId(approval.id);
+                  setEditContent(
+                    approval.proposed_action?.draft_reply ||
+                    approval.proposed_action?.generated_response ||
+                    ""
+                  );
+                }}
+                onApprove={() => {
                   wrapDecision(
                     approval.id,
                     true,
-                    undefined,
-                    approval.event_source,
-                  )
-                }
-                onDismiss={() =>
+                    editingId === approval.id ? editContent : undefined,
+                    approval.event_source
+                  );
+                  setEditingId(null);
+                }}
+                onDismiss={() => {
                   wrapDecision(
                     approval.id,
                     false,
                     undefined,
-                    approval.event_source,
-                  )
-                }
+                    approval.event_source
+                  );
+                  setEditingId(null);
+                }}
               />
             )}
             {(approval.proposed_action || approval.context_payload)

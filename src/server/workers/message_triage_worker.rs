@@ -545,7 +545,8 @@ Output JSON format:
                         "priority": priority,
                         "context": context_summary,
                         "inbox_message_id": message_id,
-                        "customer_id": customer_id_val
+                        "customer_id": customer_id_val,
+                        "sender_id": sender_id
                     }))
                     .bind(serde_json::json!({
                         "action_type": action_type,
@@ -673,7 +674,8 @@ Output JSON format:
                         "priority": priority,
                         "context": context_summary,
                         "inbox_message_id": message_id,
-                        "customer_id": customer_id_val
+                        "customer_id": customer_id_val,
+                        "sender_id": sender_id
                     }).to_string())
                     .bind(serde_json::json!({
                         "action_type": action_type,
