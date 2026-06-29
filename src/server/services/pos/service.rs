@@ -3,6 +3,7 @@ use ::server_ohc::app::{
     EndTerminalSessionRequest, EndTerminalSessionResponse, StartTerminalSessionRequest,
     StartTerminalSessionResponse, SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse,
     UpdateTerminalSessionStatusRequest, UpdateTerminalSessionStatusResponse,
+    ReserveTerminalInventoryRequest, ReserveTerminalInventoryResponse,
 };
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
@@ -443,6 +444,46 @@ impl PosService for MyPosService {
                 Ok(Response::new(EndTerminalSessionResponse {
                     success: false,
                     error_message: e.to_string(),
+                }))
+            }
+        }
+    }
+
+    async fn reserve_terminal_inventory(
+        &self,
+        request: Request<ReserveTerminalInventoryRequest>,
+    ) -> Result<Response<ReserveTerminalInventoryResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_tenant = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if auth_tenant.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let req = request.into_inner();
+        let tenant_id = auth_tenant;
+
+        let inventory_service = crate::services::inventory::InventoryService::new(crate::get_redis_client());
+        match inventory_service.reserve_inventory(&tenant_id, &req.product_id, req.quantity, 15).await {
+            Ok(result) => {
+                Ok(Response::new(ReserveTerminalInventoryResponse {
+                    success: result.success,
+                    lock_id: result.lock_id,
+                    error_message: result.error_message,
+                }))
+            }
+            Err(e) => {
+                tracing::error!("Failed to reserve terminal inventory: {}", e);
+                Ok(Response::new(ReserveTerminalInventoryResponse {
+                    success: false,
+                    lock_id: "".to_string(),
+                    error_message: e,
                 }))
             }
         }
