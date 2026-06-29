@@ -409,7 +409,7 @@ impl VectorRepository {
                                 .map_err(|e| e.to_string())?,
                             reference_count: row.get("reference_count"),
                             reliability_score: row.get("reliability_score"),
-                            owner_override: row.get("owner_override"),
+                            owner_override: row.try_get("owner_override").unwrap_or(false),
                             metadata: row.get("metadata"),
                         };
                         all_records.push(record);
@@ -570,7 +570,7 @@ impl VectorRepository {
             reliability_score: row
                 .try_get("reliability_score")
                 .map_err(|e| e.to_string())?,
-            owner_override: row.try_get("owner_override").map_err(|e| e.to_string())?,
+            owner_override: row.try_get("owner_override").unwrap_or(false),
             metadata: row.try_get("metadata").unwrap_or(None),
         })
     }
@@ -710,7 +710,7 @@ impl VectorRepository {
             reliability_score: row
                 .try_get("a_reliability_score")
                 .map_err(|e| e.to_string())?,
-            owner_override: row.try_get("a_owner_override").map_err(|e| e.to_string())?,
+            owner_override: row.try_get("a_owner_override").unwrap_or(false),
             metadata: row.try_get("a_metadata").map_err(|e| e.to_string())?,
         };
 
@@ -736,7 +736,7 @@ impl VectorRepository {
             reliability_score: row
                 .try_get("b_reliability_score")
                 .map_err(|e| e.to_string())?,
-            owner_override: row.try_get("b_owner_override").map_err(|e| e.to_string())?,
+            owner_override: row.try_get("b_owner_override").unwrap_or(false),
             metadata: row.try_get("b_metadata").map_err(|e| e.to_string())?,
         };
 
@@ -838,7 +838,7 @@ impl VectorRepository {
                                 .map_err(|e| e.to_string())?,
                             reference_count: row.get("a_reference_count"),
                             reliability_score: row.get("a_reliability_score"),
-                            owner_override: row.get("a_owner_override"),
+                            owner_override: row.try_get("a_owner_override").unwrap_or(false),
                             metadata: row.get("a_metadata"),
                         };
 
@@ -859,7 +859,7 @@ impl VectorRepository {
                                 .map_err(|e| e.to_string())?,
                             reference_count: row.get("b_reference_count"),
                             reliability_score: row.get("b_reliability_score"),
-                            owner_override: row.get("b_owner_override"),
+                            owner_override: row.try_get("b_owner_override").unwrap_or(false),
                             metadata: row.get("b_metadata"),
                         };
 
