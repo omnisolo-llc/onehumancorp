@@ -44,16 +44,11 @@ export default function AgentTerminalPage() {
       });
 
       if (!res.ok) {
-        // Fallback for mocked execution if backend is not running or endpoint fails
-        setTimeout(() => {
-          setOutput((prev) => [...prev, `hello\n`]);
-          setLoading(false);
-        }, 500);
-        return;
+        throw new Error(`Failed to start session: ${res.statusText}`);
       }
 
       const data = await res.json();
-      setOutput((prev) => [...prev, data.output || 'hello\n']);
+      setOutput((prev) => [...prev, data.output]);
     } catch (err: any) {
       setOutput((prev) => [...prev, `Error: ${err.message}`]);
     } finally {

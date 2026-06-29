@@ -22,8 +22,7 @@ test.describe('Lens Audit Visual Checks', () => {
   test('should navigate to website builder', async ({ page }) => {
     await page.goto('/website-builder');
     await page.waitForTimeout(2000);
-    // click the assistant button
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Setup Assistant' }).first()).toBeVisible();
   });
 
   test('should display login fields', async ({ page }) => {

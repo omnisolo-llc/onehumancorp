@@ -10,6 +10,24 @@
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
+      @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+      }
+      .old-glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
       .glassmorphism-btn {
         border-radius: 8px;
       }
@@ -350,7 +368,7 @@
       <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
         <div class="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] px-4 py-1.5 rounded-full shadow border border-white/40 dark:border-white/10 flex items-center gap-2 pointer-events-auto">
           <div id="network-status-dot" class="w-2 h-2 rounded-full bg-yellow-400"></div>
-          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Offline - Changes will sync later</span>
+          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Syncing Paused</span>
         </div>
       </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Payments Pending Sync</div>
@@ -926,6 +944,36 @@
                   quantity: 1,
                   timestamp: new Date().toISOString()
               });
+
+              // Optimistically update local inventory
+              const tenantId = localStorage.getItem('tenant_id') || 'default';
+              const cacheKey = `ohc_catalog_${tenantId}`;
+
+              const updateCache = (key) => {
+                  try {
+                      const cached = localStorage.getItem(key);
+                      if (cached) {
+                          const catalog = JSON.parse(cached);
+                          const updated = catalog.map(p => {
+                              if (p.id === currentProductId && p.inventory_count !== undefined && p.inventory_count !== null) {
+                                  return { ...p, inventory_count: Math.max(0, p.inventory_count - 1) };
+                              }
+                              return p;
+                          });
+                          localStorage.setItem(key, JSON.stringify(updated));
+                          if (key === cacheKey && window.renderCatalog) {
+                              window.renderCatalog(updated);
+                          }
+                      }
+                  } catch (e) {
+                      console.warn("Could not update local catalog cache", e);
+                  }
+              };
+
+              updateCache(cacheKey);
+              if (cacheKey !== 'ohc_catalog_default') {
+                  updateCache('ohc_catalog_default');
+              }
           } else {
               document.querySelector('.receipt-text').innerText = "Payment Successful";
               const tenantId = localStorage.getItem('tenant_id') || 'default';
@@ -1000,13 +1048,36 @@
                   const inventoryHtml = p.inventory_count !== undefined && p.inventory_count !== null
                       ? `<span class="product-btn-inventory">${p.inventory_count} in stock</span>` : '';
 
-                  btn.onclick = () => selectProduct(p.id, priceCents, title);
 
-                  btn.innerHTML = `
+                  const isSoldOut = p.inventory_count === 0;
+
+                  if (isSoldOut) {
+                      btn.classList.add('sold-out');
+                      btn.style.opacity = "0.5";
+                  }
+
+                  const infoDiv = document.createElement('div');
+                  infoDiv.onclick = (e) => {
+                      if (!isSoldOut) {
+                          selectProduct(p.id, priceCents, title);
+                      }
+                  };
+                  infoDiv.innerHTML = `
                       <span class="product-btn-name">${title}</span>
                       <span class="product-btn-price">${displayPrice}</span>
                       ${inventoryHtml}
                   `;
+
+                  const toggleBtn = document.createElement('button');
+                  toggleBtn.innerText = isSoldOut ? "Available" : "Sold Out";
+                  toggleBtn.style = "margin-top: 8px; padding: 4px 8px; font-size: 11px; border-radius: 4px; background: rgba(0,0,0,0.05); border: none; cursor: pointer; color: #666; font-weight: bold;";
+                  toggleBtn.onclick = (e) => {
+                      e.stopPropagation(); // prevent selectProduct
+                      toggleSoldOut(p.id, !isSoldOut);
+                  };
+
+                  btn.appendChild(infoDiv);
+                  btn.appendChild(toggleBtn);
                   productGrid.appendChild(btn);
               });
           };
@@ -1035,6 +1106,57 @@
               } catch(e) {
                   console.warn("Network fetch failed, relying on cache.", e);
               }
+          }
+      }
+
+      function toggleSoldOut(id, markSoldOut) {
+          const tenantId = localStorage.getItem('tenant_id') || 'default';
+          const cacheKey = `ohc_catalog_${tenantId}`;
+
+          const updateCache = (key) => {
+              try {
+                  const cached = localStorage.getItem(key);
+                  if (cached) {
+                      const catalog = JSON.parse(cached);
+                      const updated = catalog.map(p => {
+                          if (p.id === id) {
+                              return { ...p, inventory_count: markSoldOut ? 0 : Math.max(1, p.inventory_count || 1) };
+                          }
+                          return p;
+                      });
+                      localStorage.setItem(key, JSON.stringify(updated));
+                      if (key === cacheKey && window.renderCatalog) {
+                          window.renderCatalog(updated);
+                      }
+                  }
+              } catch (e) { }
+          };
+          updateCache(cacheKey);
+          if (cacheKey !== 'ohc_catalog_default') updateCache('ohc_catalog_default');
+
+          if (!navigator.onLine) {
+              enqueueOfflineMutation({
+                  type: 'inventory_toggle',
+                  id: 'e2e-product-' + id,
+                  payload: { item_id: id, is_sold_out: markSoldOut },
+                  timestamp: new Date().toISOString()
+              });
+          } else {
+              // Online: sync to backend
+              fetch('/api/v1/sync/mcp-deltas', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+                  body: JSON.stringify({
+                      tenant_id: tenantId,
+                      deltas: [{
+                          id: crypto.randomUUID(),
+                          entity_type: 'inventory_toggle',
+                          entity_id: id,
+                          payload: { action: "toggle_sold_out", is_sold_out: markSoldOut },
+                          updated_at: Date.now()
+                      }]
+                  })
+              });
           }
       }
 
@@ -1500,7 +1622,7 @@ initWalkthrough();
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
             if (dot) dot.className = "w-2 h-2 rounded-full bg-yellow-400";
-            if (text) text.innerText = "Offline - Changes will sync later";
+            if (text) text.innerText = "Syncing Paused";
         } else if (queue.length > 0) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");

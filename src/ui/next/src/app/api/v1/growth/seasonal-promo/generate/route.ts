@@ -21,16 +21,13 @@ export async function POST(req: Request) {
       });
 
       if (!backendRes.ok) {
-         // Fallback for tests if backend not available
-         const content = `${occasion} Special!\n\nGet ${discount}% OFF all orders.\n\n⚡ Powered by OHC`;
-         return NextResponse.json({ content });
+        return NextResponse.json({ error: 'Failed to generate promo' }, { status: backendRes.status });
       }
 
       const data = await backendRes.json();
       return NextResponse.json(data);
     } catch(e) {
-         const content = `${occasion} Special!\n\nGet ${discount}% OFF all orders.\n\n⚡ Powered by OHC`;
-         return NextResponse.json({ content });
+      return NextResponse.json({ error: 'Failed to generate promo' }, { status: 500 });
     }
   } catch (error) {
     return NextResponse.json({ error: 'Failed to generate promo' }, { status: 500 });

@@ -376,6 +376,9 @@ fn test_standalone_wrapper_audit() {
     let expected_telemetry_check = r#"if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
   export OHC_TELEMETRY_ENABLED=false
   export DISABLE_TELEMETRY=true
+else
+  export OHC_TELEMETRY_ENABLED=true
+  unset DISABLE_TELEMETRY
 fi"#;
 
     assert!(
@@ -680,4 +683,9 @@ fn test_record_error_signal() {
                 assert!(!config.telemetry_enabled, "Local Sovereignty violation: Telemetry must default to false in standalone mode without explicit user opt-in.");
             },
         );
+}
+#[test]
+fn test_categorize_stuck_error_signal() {
+    assert_eq!(::server_telemetry::categorize_error_signal("stuck item found"), "cleanup");
+    assert_eq!(::server_telemetry::categorize_error_signal("stagnant backlog item"), "cleanup");
 }

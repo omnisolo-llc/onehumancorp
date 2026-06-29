@@ -33,7 +33,7 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     await page.goto('/api/ui/dashboard.html');
 
     // 3. Verify Triage cards are rendered
-    await expect(page.locator('#triage-queue')).toBeVisible();
+    await expect(page.locator('#unified-agent-feed-section')).toBeVisible();
 
     // Verify the newly seeded card is visible
     const triageCard = page.locator('.triage-item', { hasText: 'Instagram DM' }).first();
