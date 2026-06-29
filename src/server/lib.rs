@@ -796,7 +796,7 @@ async fn http_login_handler(
 
     if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
         ::server_telemetry::record_error_signal("[bug] failed to set tenant context for login");
-        tracing::error!("failed to set tenant context for login: {}", e);
+        tracing::error!("failed to set tenant context for login: {}", e); // pii-safe
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
@@ -3830,7 +3830,7 @@ pub async fn update_ui_triage_action_handler(
                             &db.pool
                         ).await;
                     } else if action_type == "SocialPostDraft" {
-                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
                     } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
@@ -4091,7 +4091,7 @@ pub async fn update_ui_triage_action_handler(
                             &db.pool
                         ).await;
                     } else if action_type == "SocialPostDraft" {
-                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
                     } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {

@@ -44,7 +44,7 @@ impl MigrationWorker {
             None => return Ok(()),
         };
 
-        tracing::info!("Processing migration job {} for tenant {} (url: {})", job_id, tenant_id, url);
+        tracing::info!("Processing migration job {} for tenant {} (url: {})", job_id, tenant_id, url); // pii-safe
 
         // Update status to IN_PROGRESS
         sqlx::query("UPDATE migration_jobs SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = $1")

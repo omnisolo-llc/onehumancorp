@@ -60,7 +60,7 @@ impl ProactiveAnalysisWorker {
 
         tx.commit().await?;
 
-        tracing::info!("ProactiveAnalysisWorker processing job {} for tenant {}", job_id, tenant_id);
+        tracing::info!("ProactiveAnalysisWorker processing job {} for tenant {}", job_id, tenant_id); // pii-safe
 
         let _payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
 

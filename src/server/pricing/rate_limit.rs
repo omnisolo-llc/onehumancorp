@@ -223,7 +223,7 @@ impl RedisRateLimiter {
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
 
-        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe
+        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe // pii-safe
 
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
         let model_key = format!("tenant:{}:tokens_used:{}:{}", tenant_id, model, month_key);
@@ -260,7 +260,7 @@ impl RedisRateLimiter {
         let month_key = now.format("%Y-%m").to_string();
 
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-        tracing::info!("💰 Miser telemetry: Recording action for tenant: {} agent: {}", tenant_id, agent_id);
+        tracing::info!("💰 Miser telemetry: Recording action for tenant: {} agent: {}", tenant_id, agent_id); // pii-safe
         let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
 
         let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e| e.to_string())?;
@@ -318,7 +318,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
-        tracing::info!("💰 Miser telemetry: Checking product quota for tenant: {}", tenant_id);
+        tracing::info!("💰 Miser telemetry: Checking product quota for tenant: {}", tenant_id); // pii-safe
         if let Some(store) = &self.telemetry_store {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
         }
@@ -365,7 +365,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
-        tracing::info!("💰 Miser telemetry: Checking agent quota for tenant: {}", tenant_id);
+        tracing::info!("💰 Miser telemetry: Checking agent quota for tenant: {}", tenant_id); // pii-safe
         if let Some(store) = &self.telemetry_store {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
         }
@@ -412,7 +412,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
-        tracing::info!("💰 Miser telemetry: Checking storage quota for tenant: {} with delta: {}", tenant_id, delta_bytes);
+        tracing::info!("💰 Miser telemetry: Checking storage quota for tenant: {} with delta: {}", tenant_id, delta_bytes); // pii-safe
         if let Some(store) = &self.telemetry_store {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
         }

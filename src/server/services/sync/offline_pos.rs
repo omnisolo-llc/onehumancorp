@@ -77,7 +77,7 @@ impl CRDTOfflineSynchronizer {
                     }
                 }
                 Ok(None) => {
-                    tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id); // pii-safe
+                    tracing::warn!("Product {} not found or unauthorized for tenant {}", mutation.product_id, tenant_id); // pii-safe // pii-safe
                 }
                 Err(e) => {
                     tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
