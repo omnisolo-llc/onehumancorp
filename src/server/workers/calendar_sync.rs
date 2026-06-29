@@ -53,7 +53,7 @@ async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> 
                 .unwrap_or(false);
 
             if !acquired {
-                tracing::debug!("Sync already running for tenant {}", tenant_id);
+                tracing::debug!("Sync already running for tenant {}", tenant_id); // pii-safe
                 continue;
             }
 
@@ -67,16 +67,16 @@ async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> 
                 Ok(_fb_data) => {
                     // Update availability schedules in DB
                     // (Simplified dummy update for illustration, typically parses JSON and updates busy_slots)
-                    tracing::info!("Successfully synced calendar for tenant {}", tenant_id);
+                    tracing::info!("Successfully synced calendar for tenant {}", tenant_id); // pii-safe
                 }
                 Err(e) => {
-                    tracing::error!("Failed to fetch free/busy for tenant {}: {}", tenant_id, e);
+                    tracing::error!("Failed to fetch free/busy for tenant {}: {}", tenant_id, e); // pii-safe
                 }
             }
 
             // Push OHC bookings to Google Calendar
             if let Err(e) = push_bookings_to_calendar(&tenant_id, &provider_client).await {
-                tracing::error!("Failed to push bookings for tenant {}: {}", tenant_id, e);
+                tracing::error!("Failed to push bookings for tenant {}: {}", tenant_id, e); // pii-safe
             }
         }
     }

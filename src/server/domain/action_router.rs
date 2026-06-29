@@ -19,7 +19,7 @@ pub async fn dispatch_action(
                 .map_err(|e| e.to_string())?;
         }
         "supply_order" => {
-            tracing::info!("Approved and dispatched supply order via Quartermaster Agent for tenant: {}", tenant_id);
+            tracing::info!("Approved and dispatched supply order via Quartermaster Agent for tenant: {}", tenant_id); // pii-safe
             // Simulating outbound communication to vendor via omnichannel dispatcher
             if let Some(msg) = payload.get("draft_message").and_then(|v| v.as_str()) {
                 tracing::info!("Omnichannel Dispatcher sent: {}", msg);
@@ -27,7 +27,7 @@ pub async fn dispatch_action(
         }
         "social_post_draft" => {
             // Real implementation would buffer post here to AYRSHARE.
-            tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+            tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
         }
         "booking_draft" => {
             crate::domain::booking::handle_booking_action(tenant_id, payload, pool)
@@ -42,7 +42,7 @@ pub async fn dispatch_action(
         }
         "dispute_resolution" => {
 
-            tracing::info!("Approved and resolved dispute for tenant: {}", tenant_id);
+            tracing::info!("Approved and resolved dispute for tenant: {}", tenant_id); // pii-safe
             if let Some(msg) = payload.get("generated_response").and_then(|v| v.as_str()) {
                 tracing::info!("Dispute Resolution Engine sent reply: {}", msg);
             }

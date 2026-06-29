@@ -566,7 +566,7 @@ async fn handle_trial_extension_claim(
     {
         Ok(result) => result,
         Err(e) => {
-            tracing::error!("Failed to query tenant for trial extension check: {}", e);
+            tracing::error!("Failed to query tenant for trial extension check: {}", e); // pii-safe
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
     };

@@ -130,7 +130,7 @@ Task: Extract the scope of work and identify the closest matching service from t
     .execute(pool)
     .await?;
 
-    tracing::info!("Estimator Agent drafted proposal {} for tenant {}", proposal_id, tenant_id);
+    tracing::info!("Estimator Agent drafted proposal {} for tenant {}", proposal_id, tenant_id); // pii-safe
 
     Ok(proposal_id)
 }

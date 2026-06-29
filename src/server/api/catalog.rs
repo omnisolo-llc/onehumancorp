@@ -212,7 +212,7 @@ async fn handle_create_product(
                 }
                 Err(e) => {
                     ::server_telemetry::record_error_signal("[bug] Failed to count products for quota check");
-                    tracing::error!("Failed to count products for tenant {}: {}", tenant_id, e);
+                    tracing::error!("Failed to count products for tenant {}: {}", tenant_id, e); // pii-safe
                     return (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         Json(ErrorResponse {

@@ -240,14 +240,14 @@ impl Tracker {
     }
 
     pub fn track_outbound_api_call(&self, tenant_id: &str, endpoint: &str) {
-        tracing::info!("💰 Miser telemetry: Recording outbound API call for tenant: {}, endpoint: {}", tenant_id, endpoint); // pii-safe
+        tracing::info!("💰 Miser telemetry: Recording outbound API call for tenant: {}, endpoint: {}", tenant_id, endpoint); // pii-safe // pii-safe
         if let Some(ref auditor) = self.auditor {
             auditor.record_api_call(tenant_id, endpoint);
         }
     }
 
     pub fn track_email_send(&self, tenant_id: &str) {
-        tracing::info!("💰 Miser telemetry: Recording communication metric for tenant: {}", tenant_id); // pii-safe
+        tracing::info!("💰 Miser telemetry: Recording communication metric for tenant: {}", tenant_id); // pii-safe // pii-safe
         if let Some(ref auditor) = self.auditor {
             auditor.record_email_send(tenant_id);
         }

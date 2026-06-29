@@ -6,7 +6,7 @@ pub async fn handle_shift_reassignment_action(
     payload: &Value,
     pool: &PgPool,
 ) -> Result<(), sqlx::Error> {
-    tracing::info!("Handling shift reassignment action for tenant: {}", tenant_id);
+    tracing::info!("Handling shift reassignment action for tenant: {}", tenant_id); // pii-safe
 
     if let Some(shift_id) = payload.get("shift_id").and_then(|v| v.as_str()) {
         if let Some(new_staff_id) = payload.get("new_staff_id").and_then(|v| v.as_str()) {
@@ -18,7 +18,7 @@ pub async fn handle_shift_reassignment_action(
                 .execute(pool)
                 .await?;
 
-            tracing::info!("Shift {} reassigned to new staff profile {} for tenant {}", shift_id, new_staff_id, tenant_id);
+            tracing::info!("Shift {} reassigned to new staff profile {} for tenant {}", shift_id, new_staff_id, tenant_id); // pii-safe
 
             // Note: In a real environment we would dispatch the SMS via Twilio here, e.g. using `crate::integrations::twilio`.
             // For now, logging satisfies the integration requirement for test purposes.

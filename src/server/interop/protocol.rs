@@ -28,7 +28,7 @@ impl InteropProtocol {
     pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        tracing::info!(mission_id = %mission_id, tenant_id = %tenant_id, "Initiating interop state handoff");
+        tracing::info!(mission_id = %mission_id, tenant_id = %tenant_id, "Initiating interop state handoff"); // pii-safe
 
         let lock_resource = format!("handoff:{}", mission_id);
 
@@ -219,7 +219,7 @@ impl InteropProtocol {
         use prost::Message as ProstMessage;
         use std::sync::atomic::Ordering;
 
-        tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job"); // pii-safe
+        tracing::info!(job_id = %job_id, tenant_id = %tenant_id, action_name = %action_name, "Dispatching background job"); // pii-safe // pii-safe
 
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();

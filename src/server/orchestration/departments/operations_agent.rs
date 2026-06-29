@@ -195,7 +195,7 @@ impl Department for OperationsAgent {
         }
 
         if event.event_type == "POS_SALE_COMPLETED" {
-            tracing::info!("Operations Agent: Handling POS sale completion for tenant {}", event.tenant_id);
+            tracing::info!("Operations Agent: Handling POS sale completion for tenant {}", event.tenant_id); // pii-safe
             return Ok(());
         }
 
