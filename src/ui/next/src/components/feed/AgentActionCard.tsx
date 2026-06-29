@@ -66,12 +66,31 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
     >
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#0066FF]/20 px-2 py-1 rounded-[8px]">
-            Approval
-          </span>
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-[8px]">
-            {approval.event_source.replace("_", " ")}
-          </span>
+          {(() => {
+            let bgColor = "bg-indigo-50 dark:bg-indigo-900/30";
+            let textColor = "text-indigo-600 dark:text-indigo-400";
+            let label = (approval.event_source || "Approval").replace(/_/g, " ");
+            const es = label.toLowerCase();
+            if (es.includes("instagram") || es.includes("message") || es.includes("inbox") || es.includes("customer")) {
+              bgColor = "bg-blue-100 dark:bg-blue-900/30";
+              textColor = "text-blue-600 dark:text-blue-400";
+              label = "Customer Success";
+            } else if (es.includes("inventory") || es.includes("operations") || es.includes("fulfillment") || es.includes("supply")) {
+              bgColor = "bg-orange-100 dark:bg-orange-900/30";
+              textColor = "text-orange-600 dark:text-orange-400";
+              label = "Operations";
+            } else if (es.includes("marketing") || es.includes("promo") || es.includes("campaign")) {
+              bgColor = "bg-purple-100 dark:bg-purple-900/30";
+              textColor = "text-purple-600 dark:text-purple-400";
+              label = "Marketing";
+            }
+
+            return (
+              <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-[8px] ${bgColor} ${textColor}`}>
+                {label}
+              </span>
+            );
+          })()}
           {approval.lifecycle_state === "PENDING_APPROVAL" && (
             <span className="text-xs font-bold uppercase tracking-wider text-green-700 bg-green-100 px-2 py-1 rounded-[8px]">
               {approval.event_source === "customer_success_agent" || approval.event_source === "instagram_dm" || approval.context_payload?.feature_type === "ambassador_reply" ? "Action Required: Approve Reply" : "Action Needed"}
@@ -204,8 +223,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   {approval.context_payload?.description || "An order is waiting to be fulfilled."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'order')}>Fulfill Order</button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'order')}>Dismiss</button>
+                  <button disabled={queuedActionIds.has(approval.id)} type="button" className={`app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px] ${queuedActionIds.has(approval.id) ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => handleDecision(approval.id, true, undefined, 'order')}>
+                    {queuedActionIds.has(approval.id) ? 'Processing...' : 'Fulfill Order'}
+                  </button>
+                  <button disabled={queuedActionIds.has(approval.id)} type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'order')}>Dismiss</button>
                 </div>
               </div>
             )}
@@ -220,8 +241,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   {approval.context_payload?.description || "You have an open customer conversation waiting for your reply."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, 'triage')}>Resolve Message</button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'triage')}>Dismiss</button>
+                  <button disabled={queuedActionIds.has(approval.id)} type="button" className={`app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#0066FF] text-white rounded-[8px] ${queuedActionIds.has(approval.id) ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => handleDecision(approval.id, true, undefined, 'triage')}>
+                    {queuedActionIds.has(approval.id) ? 'Processing...' : 'Resolve Message'}
+                  </button>
+                  <button disabled={queuedActionIds.has(approval.id)} type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center bg-gray-100 dark:bg-gray-800 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, 'triage')}>Dismiss</button>
                 </div>
               </div>
             )}
@@ -237,10 +260,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   {approval.context_payload?.description || "A proactive ops task needs your attention."}
                 </p>
                 <div className="flex gap-2 w-full mt-1">
-                  <button type="button" className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#FF9500] text-white rounded-[8px]" onClick={() => handleDecision(approval.id, true, undefined, "operations")}>
-                    {approval.proposed_action?.message || "Approve"}
+                  <button disabled={queuedActionIds.has(approval.id)} type="button" className={`app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-[#FF9500] text-white rounded-[8px] ${queuedActionIds.has(approval.id) ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => handleDecision(approval.id, true, undefined, "operations")}>
+                    {queuedActionIds.has(approval.id) ? 'Processing...' : (approval.proposed_action?.message || "Approve")}
                   </button>
-                  <button type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-orange-200 text-orange-900 dark:text-orange-100 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, "operations")}>
+                  <button disabled={queuedActionIds.has(approval.id)} type="button" className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-orange-200 text-orange-900 dark:text-orange-100 rounded-[8px]" onClick={() => handleDecision(approval.id, false, undefined, "operations")}>
                     Dismiss
                   </button>
                 </div>
@@ -1723,6 +1746,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             />
             <div className="flex gap-3">
               <button
+                disabled={queuedActionIds.has(approval.id)}
                 onClick={() => {
                   handleDecision(
                     approval.id,
@@ -1732,12 +1756,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   );
                   setEditingId(null);
                 }}
-                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                className={`flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center ${queuedActionIds.has(approval.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 data-testid="save-proposal"
               >
-                Save & Approve
+                {queuedActionIds.has(approval.id) ? 'Saving...' : 'Save & Approve'}
               </button>
               <button
+                disabled={queuedActionIds.has(approval.id)}
                 onClick={() => setEditingId(null)}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
                 data-testid="cancel-edit-proposal"
@@ -1749,6 +1774,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
         ) : (
           <>
             <button
+              disabled={queuedActionIds.has(approval.id)}
               onClick={() =>
                 handleDecision(
                   approval.id,
@@ -1757,14 +1783,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   approval.event_source,
                 )
               }
-              className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+              className={`w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3 ${queuedActionIds.has(approval.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
               aria-label="Approve proposal"
               data-testid="feed-approve-btn"
             >
-              Approve
+              {queuedActionIds.has(approval.id) ? 'Approving...' : 'Approve'}
             </button>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <button
+                disabled={queuedActionIds.has(approval.id)}
                 onClick={() => {
                   setEditingId(approval.id);
                   const textToEdit =
@@ -1785,6 +1812,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 Edit
               </button>
               <button
+                disabled={queuedActionIds.has(approval.id)}
                 onClick={() =>
                   handleDecision(
                     approval.id,

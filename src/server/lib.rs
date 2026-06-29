@@ -3568,69 +3568,64 @@ pub async fn simulate_ui_triage_item_handler(
 pub async fn simulate_agent_feed_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+    payload_opt: Option<axum::extract::Json<serde_json::Value>>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
-    let item_id = format!("sim-triage-{}", uuid::Uuid::new_v4());
 
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            if let Err(e) = sqlx::query(
-                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            )
-            .bind(item_id.clone())
-            .bind(&tenant_id)
-            .bind("Simulated Webhook")
-            .bind(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."})))
-            .bind(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."})))
-            .bind("PENDING_APPROVAL")
-            .execute(&db.pool)
-            .await {
-                tracing::error!("Failed to insert agent_feed_item: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
-            }
-        },
-        crate::db::DbStore::Sqlite(ref pool) => {
-            if let Err(e) = sqlx::query(
-                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            )
-            .bind(item_id.clone())
-            .bind(&tenant_id)
-            .bind("Simulated Webhook")
-            .bind(serde_json::json!({"description": "A new simulated event needs your attention."}).to_string())
-            .bind(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}).to_string())
-            .bind("PENDING_APPROVAL")
-            .execute(pool)
-            .await {
-                tracing::error!("Failed to insert agent_feed_item: {:?}", e);
-                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
-            }
+    let mut event_source = "Simulated Webhook".to_string();
+    let mut context_payload = serde_json::json!({"description": "A new simulated event needs your attention."});
+
+    if let Some(axum::extract::Json(body)) = payload_opt {
+        if let Some(es) = body.get("event_source").and_then(|s| s.as_str()) {
+            event_source = es.to_string();
+        }
+        if let Some(cp) = body.get("payload") {
+            context_payload = cp.clone();
         }
     }
 
-    // Invalidating cache
-    let cache_key = format!("ui_unified_agent_feed:{}:mobile:false", tenant_id);
-    let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    let _ = cache.invalidate(&cache_key).await;
+    let mut item_id = format!("sim-triage-{}", uuid::Uuid::new_v4());
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let service = crate::services::agent_feed::service::AgentFeedService::new(db.pool.clone());
+            match service.process_event(&tenant_id, &event_source, &context_payload).await {
+                Ok(item) => {
+                    item_id = item.id.clone();
 
-    let cache_key_mobile = format!("ui_unified_agent_feed:{}:mobile:true", tenant_id);
-    let _ = cache.invalidate(&cache_key_mobile).await;
+                    // Invalidating cache
+                    let cache_key = format!("ui_unified_agent_feed:{}:mobile:false", tenant_id);
+                    let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                    let _ = cache.invalidate(&cache_key).await;
 
-    // Also publish to pubsub so SSE picks it up
-    if let Some(client) = get_redis_client() {
-        let topic = format!("agent_feed:{}", tenant_id);
-        let item_json = serde_json::json!({
-            "id": item_id.clone(),
-            "tenant_id": tenant_id,
-            "event_source": "Simulated Webhook",
-            "lifecycle_state": "PENDING_APPROVAL",
-            "context_payload": {"description": "A new simulated event needs your attention."},
-            "proposed_action": {"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}
-        });
-        if let Ok(payload_str) = serde_json::to_string(&item_json) {
-            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                let _: Result<(), _> = redis::cmd("PUBLISH").arg(topic).arg(payload_str).query_async(&mut conn).await;
+                    let cache_key_mobile = format!("ui_unified_agent_feed:{}:mobile:true", tenant_id);
+                    let _ = cache.invalidate(&cache_key_mobile).await;
+
+                    // Publish to websocket
+                    if let Some(client) = get_redis_client() {
+                        let topic = format!("agent_feed:{}", tenant_id);
+                        if let Ok(payload_json) = serde_json::to_string(&item) {
+                            tokio::spawn(async move {
+                                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                    let res: Result<(), _> = redis::cmd("PUBLISH").arg(topic).arg(payload_json).query_async(&mut conn).await;
+                                    if let Err(e) = res {
+                                        tracing::error!("Failed to publish to redis for agent_feed simulate: {}", e);
+                                    }
+                                } else {
+                                    tracing::error!("Failed to get multiplexed connection for agent_feed simulate");
+                                }
+                            });
+                        }
+                    }
+                },
+                Err(e) => {
+                    tracing::error!("Failed to process agent_feed event: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "success": false, "error": e.to_string() }))).into_response();
+                }
             }
+        },
+        crate::db::DbStore::Sqlite(_) => {
+            return (axum::http::StatusCode::NOT_IMPLEMENTED, axum::Json(serde_json::json!({ "success": false, "error": "Sqlite not supported for this simulation" }))).into_response();
         }
     }
 
@@ -3649,59 +3644,6 @@ pub async fn simulate_agent_feed_item_handler(
 
     let cache = crate::api::agent_feed::get_agent_feed_cache();
     cache.invalidate_by_tag(&format!("agent_feed_tenant:{}", tenant_id)).await;
-
-    // Publish to Redis Pub/Sub for WebSockets
-    if let Some(client) = get_redis_client() {
-        let topic = format!("agent_feed:{}", tenant_id);
-        let payload_json = serde_json::json!({
-            "id": item_id,
-            "tenant_id": tenant_id,
-            "event_source": "Simulated Webhook",
-            "context_payload": {"description": "A new simulated event needs your attention."},
-            "proposed_action": {"action_type": "Draft Reply", "message": "This is a simulated draft action payload."},
-            "lifecycle_state": "PENDING_APPROVAL",
-            "created_at": chrono::Utc::now().to_rfc3339(),
-            "updated_at": chrono::Utc::now().to_rfc3339()
-        }).to_string();
-
-        tokio::spawn(async move {
-            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                let _: Result<(), _> = redis::cmd("PUBLISH").arg(topic).arg(payload_json).query_async(&mut conn).await;
-            }
-        });
-    }
-
-    // Invalidate the actual agent feed cache too
-    let feed_cache = crate::api::agent_feed::get_agent_feed_cache();
-    let tag = format!("agent_feed_tenant:{}", tenant_id);
-    feed_cache.invalidate_by_tag(&tag).await;
-
-    // And publish to Redis to wake up websockets
-    let client = crate::api::agent_feed::get_redis_client();
-    let topic = format!("agent_feed:{}", tenant_id);
-    let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
-        id: item_id.clone(),
-        tenant_id: tenant_id.clone(),
-        event_source: "Simulated Webhook".to_string(),
-        context_payload: Some(sqlx::types::Json(serde_json::json!({"description": "A new simulated event needs your attention."}))),
-        proposed_action: Some(sqlx::types::Json(serde_json::json!({"action_type": "Draft Reply", "message": "This is a simulated draft action payload."}))),
-        lifecycle_state: "PENDING_APPROVAL".to_string(),
-        created_at: Some(chrono::Utc::now()),
-        updated_at: Some(chrono::Utc::now()),
-    };
-
-    if let Ok(payload_json) = serde_json::to_string(&item) {
-        tokio::spawn(async move {
-            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                let res: Result<(), _> = redis::AsyncCommands::publish(&mut conn, topic, payload_json).await;
-                if let Err(e) = res {
-                    tracing::error!("Failed to publish to redis for agent_feed simulate: {}", e);
-                }
-            } else {
-                tracing::error!("Failed to get multiplexed connection for agent_feed simulate");
-            }
-        });
-    }
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "success": true, "id": item_id }))).into_response()
 }

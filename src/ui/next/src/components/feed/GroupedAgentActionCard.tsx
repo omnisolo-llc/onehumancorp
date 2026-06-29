@@ -35,6 +35,11 @@ export const GroupedAgentActionCard = ({
              <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#0066FF]/20 px-2 py-1 rounded-[8px]">
                Grouped Actions
              </span>
+             {items.some((i: any) => queuedActionIds?.has(i.id)) && (
+               <span className="text-xs font-bold uppercase tracking-wider text-yellow-600 bg-yellow-50 px-2 py-1 rounded-[8px] shadow-sm border border-yellow-200">
+                 Queued
+               </span>
+             )}
           </div>
           <span className="text-sm font-semibold font-outfit px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-700 dark:text-gray-300">
             {items.length} items
@@ -50,12 +55,13 @@ export const GroupedAgentActionCard = ({
 
       <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
         <button
+          disabled={items.every((i: any) => queuedActionIds?.has(i.id))}
           onClick={handleApproveAll}
-          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center"
+          className={`flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center ${items.every((i: any) => queuedActionIds?.has(i.id)) ? 'opacity-50 cursor-not-allowed' : ''}`}
           aria-label="Approve All"
           data-testid={`approve-all-${groupKey}`}
         >
-          Approve All
+          {items.some((i: any) => queuedActionIds?.has(i.id)) ? 'Processing...' : 'Approve All'}
         </button>
         <button
           onClick={() => setIsExpanded(!isExpanded)}

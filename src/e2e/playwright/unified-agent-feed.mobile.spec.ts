@@ -9,7 +9,9 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     const tenantId = 'mobile-feed-test-tenant';
 
     // Seed data
-    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    const response = await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`, {
+        data: { event_source: 'instagram_dm', payload: { description: 'A new simulated event needs your attention.' } }
+    });
     expect(response.ok()).toBeTruthy();
 
     // Navigate to the dashboard where UnifiedAgentFeed is rendered
