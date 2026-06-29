@@ -41,7 +41,7 @@ mod tests {
         }
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_jitter_calc() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -61,12 +61,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
-        });
-
-
-        let res = handle.await.expect("Expected string in test");
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
         assert!(res.is_ok());
         assert_eq!(res.expect("Expected string in test"), "success");
@@ -101,7 +96,7 @@ mod tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_success_eventually() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -121,19 +116,14 @@ mod tests {
             arguments: json!({}),
         };
 
-        let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
-        });
-
-
-        let res = handle.await.expect("Expected string in test");
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
         assert!(res.is_ok());
         assert_eq!(res.expect("Expected string in test"), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 2 failures + 1 success = 3 calls
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_exhausted() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -153,12 +143,7 @@ mod tests {
             arguments: json!({}),
         };
 
-        let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
-        });
-
-
-        let res = handle.await.expect("Expected string in test");
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -407,7 +392,7 @@ mod tests {
         }
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_clamped_to_two() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -428,12 +413,7 @@ mod tests {
         };
 
         // Pass max_retries = 5, but it should be clamped to 2
-        let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 5).await
-        });
-
-
-        let res = handle.await.expect("Expected string in test");
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 5).await;
 
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -471,7 +451,7 @@ mod additional_transient_tests {
         }
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_fails_first_then_succeeds() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -491,12 +471,7 @@ mod additional_transient_tests {
             arguments: json!({}),
         };
 
-        let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
-        });
-
-
-        let res = handle.await.expect("Expected string in test");
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
 
         assert!(res.is_ok());
         assert_eq!(res.expect("Expected string in test"), "success");
@@ -504,7 +479,7 @@ mod additional_transient_tests {
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_fails_first_then_succeeds_custom() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -524,10 +499,7 @@ mod additional_transient_tests {
             arguments: json!({}),
         };
 
-        let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await
-        });
-        let res = handle.await.expect("Expected string in test");
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
         assert!(res.is_ok());
         assert_eq!(res.expect("Expected string in test"), "success");
     }

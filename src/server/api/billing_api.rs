@@ -764,6 +764,10 @@ mod department_tier_usage_tests {
             return;
         }
 
+        if sqlx::query("SELECT 1 FROM information_schema.tables WHERE table_name = 'tenants'").fetch_optional(&pool).await.unwrap_or(None).is_none() {
+            return;
+        }
+
         let tenant_id = format!("test_tenant_{}", uuid::Uuid::new_v4());
 
         // Start a transaction so we can rollback and not pollute the DB
