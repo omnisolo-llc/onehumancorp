@@ -139,6 +139,7 @@ pub async fn twilio_voice_status_handler(
         let actions = state.voice_engine.actions.lock().await;
         let session_actions: Vec<_> = actions.iter().filter(|a| a.session_id == call_sid).collect();
         let has_booking_intent = session_actions.iter().any(|a| a.intent_type == "BOOK_APPOINTMENT");
+        let has_order_food_intent = session_actions.iter().any(|a| a.intent_type == "ORDER_FOOD");
 
         let deposit_link = session_actions.iter()
             .find(|a| a.intent_type == "BOOK_APPOINTMENT")
@@ -237,6 +238,26 @@ pub async fn twilio_voice_status_handler(
                         "summary": summary,
                         "caller_phone": clean_caller,
                         "deposit_link": deposit_link,
+                    });
+                    task.proposed_content = Some(proposed_content.to_string());
+
+                    let _ = task_manager.insert_task(task);
+                }
+            } else if has_order_food_intent {
+                let task_manager = crate::tasks::TaskManager::with_db(state.db.clone());
+                let mission_id = uuid::Uuid::new_v4().to_string();
+
+                let title = format!("Voice Order Link Sent to {}", clean_caller);
+                let summary_text = format!("Automated receptionist handled a call from {} and sent the ordering link.", clean_caller);
+                let priority = "P2".to_string();
+
+                if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary_text.clone(), priority) {
+                    task.approval_status = Some("RESOLVED".to_string());
+
+                    let proposed_content = serde_json::json!({
+                        "feature_type": "order_food",
+                        "summary": summary_text,
+                        "caller_phone": clean_caller,
                     });
                     task.proposed_content = Some(proposed_content.to_string());
 
