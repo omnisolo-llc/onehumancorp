@@ -20,6 +20,13 @@ export function GrowBusinessCard() {
           </div>
           <div className="flex gap-2">
             <Link
+              id="promoter-agent-generator-btn"
+              href="/viral-post-generator"
+              className="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Promoter Agent
+            </Link>
+            <Link
               id="viral-widget-btn"
               href="/viral-powered-by-ohc-widget"
               className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
