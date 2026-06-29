@@ -1568,7 +1568,7 @@ impl BookingEngineService for NativeBookingService {
         for item in &req.line_items {
             total_amount_cents += item.unit_price_cents * item.quantity as i64;
             sqlx::query(
-                "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional) VALUES ($1, $2, $3, $4, $5, $6)"
+                "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
             )
             .bind(uuid::Uuid::new_v4())
             .bind(uuid::Uuid::parse_str(&quote_id).unwrap())
@@ -1576,6 +1576,7 @@ impl BookingEngineService for NativeBookingService {
             .bind(item.unit_price_cents)
             .bind(item.quantity)
             .bind(item.is_optional)
+            .bind(tenant_id.clone())
             .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;

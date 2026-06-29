@@ -174,7 +174,7 @@ async fn create_quote(
     for item in line_items {
         let item_id = Uuid::new_v4();
         let res = sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
+            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
         )
         .bind(item_id)
         .bind(quote_id)
@@ -182,6 +182,7 @@ async fn create_quote(
         .bind(item.unit_price_cents)
         .bind(item.quantity)
         .bind(item.is_optional)
+        .bind("default_tenant".to_string())
         .execute(&mut *tx)
         .await;
 
@@ -300,7 +301,7 @@ async fn update_quote(
     for item in payload.line_items {
         let item_id = Uuid::new_v4();
         let res = sqlx::query(
-            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
+            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
         )
         .bind(item_id)
         .bind(quote_id)
@@ -308,6 +309,7 @@ async fn update_quote(
         .bind(item.unit_price_cents)
         .bind(item.quantity)
         .bind(item.is_optional)
+        .bind("default_tenant".to_string())
         .execute(&mut *tx)
         .await;
 

@@ -373,7 +373,7 @@ Output JSON format:
                                         let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
                                         let is_opt = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
                                         let _ = sqlx::query(
-                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
+                                            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
                                         )
                                         .bind(item_id)
                                         .bind(draft_quote_id)
@@ -381,6 +381,7 @@ Output JSON format:
                                         .bind(price)
                                         .bind(qty)
                                         .bind(is_opt)
+                                        .bind(tenant_id.clone())
                                         .execute(&mut *tx).await;
                                     }
                                 }
@@ -406,7 +407,7 @@ Output JSON format:
                                     let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
                                     let is_opt = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
                                     let _ = sqlx::query(
-                                        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                        "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)"
                                     )
                                     .bind(item_id.to_string())
                                     .bind(draft_quote_id.to_string())
@@ -414,6 +415,7 @@ Output JSON format:
                                     .bind(price)
                                     .bind(qty)
                                     .bind(is_opt)
+                                    .bind(tenant_id.clone())
                                     .execute(&*sqlite_pool).await;
                                 }
                             }
