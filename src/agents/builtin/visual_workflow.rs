@@ -297,7 +297,7 @@ impl WorkflowExecutor {
                         .find(|t| &t.name == tool_name)
                         .ok_or_else(|| format!("Tool {} not found", tool_name))?;
 
-                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await;
+                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2, &crate::agent::AgentRunConfig::default()).await;
 
                     let result_str = match result {
                         Ok(res) => res,
@@ -521,7 +521,7 @@ impl WorkflowExecutor {
                             .find(|t| &t.name == tool_name)
                             .ok_or_else(|| format!("Tool {} not found", tool_name))?;
 
-                        let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await;
+                        let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2, &crate::agent::AgentRunConfig::default()).await;
 
                         let result_str = match result {
                             Ok(res) => res,
