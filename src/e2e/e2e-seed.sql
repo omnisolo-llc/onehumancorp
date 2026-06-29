@@ -581,11 +581,12 @@ ON CONFLICT DO NOTHING;
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALUES
 ('ms_e2e_revenue_10k', 'e2e-milestone-tenant', 'revenue_10k', CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
-UPDATE tenants SET plan_tier = 'Starter' WHERE id = 'e2e-tenant';
+UPDATE tenants SET plan_tier = 'starter' WHERE id = 'e2e-tenant';
 INSERT INTO tenants (id, name, industry, plan_tier, has_claimed_trial_extension)
 VALUES
-  ('e2e-tenant-free', 'OHC E2E Free Bakery', 'Food and beverage', 'Free', false),
-  ('e2e-tenant-business', 'OHC E2E Business Bakery', 'Food and beverage', 'Business', false)
+  ('e2e-tenant-free', 'OHC E2E Free Bakery', 'Food and beverage', 'free', false),
+  ('e2e-tenant-business', 'OHC E2E Business Bakery', 'Food and beverage', 'business', false),
+  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'pro', false)
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
