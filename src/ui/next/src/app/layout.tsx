@@ -11,6 +11,12 @@ import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
 import { ProductShellGuard } from './components/ProductShellGuard';
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 export const metadata: Metadata = {
   title: 'In-App Help Center',
   description: 'Automated storefront builder',
