@@ -61,7 +61,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
     await page.goto('http://mock/setup.html');
 
     // Start wizard to reach an input
-    await page.getByText('Start My Business').click();
+    await page.getByText('Step-by-Step Setup').click();
 
     // Check an input
     const input = page.locator('.container input').first();
