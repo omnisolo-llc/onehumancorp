@@ -722,7 +722,9 @@ Image provided: ${instantImageUrl}`;
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">10-Minute Setup Wizard</h2>
+
+
+              <div className="flex flex-col items-center justify-center gap-2 mb-2"><h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] m-0">Setup</h2><span className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full uppercase tracking-wider">10-Minute Wizard</span></div>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-8 leading-relaxed max-w-sm">
                 Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.
               </p>
