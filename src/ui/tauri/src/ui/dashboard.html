@@ -927,7 +927,7 @@
             <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')" style="flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Proposals</button>
             <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')" style="flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Activity</button>
           </div>
-          <div id="triage-queue" style="display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box;">
+          <div id="unified-agent-feed-section" style="display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box;">
             <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1); width: 100%; box-sizing: border-box;">
                 <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                     <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
@@ -1702,7 +1702,7 @@
 
 
       const triageSection = document.getElementById('triage-section');
-      const triageQueue = document.getElementById('triage-queue');
+      const triageQueue = document.getElementById('unified-agent-feed-section');
       let currentTriageTab = 'proposals';
       let agentFeedItems = [];
 
