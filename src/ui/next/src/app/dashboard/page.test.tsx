@@ -1,9 +1,10 @@
+import React from "react";
 import { TooltipProvider } from '../../components/TooltipRegistry';
 import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard from './page';
 import { FloatingActionButton } from './components/FAB';
 vi.mock('./components/FAB', () => ({
-  FloatingActionButton: () => <div data-testid="mock-fab">Mock FAB</div>
+  FloatingActionButton: () => null
 }));
 import { expect, test, vi } from 'vitest';
 
