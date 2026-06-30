@@ -90,7 +90,7 @@ export function AIFeaturePaywallWidget() {
 
   if (unlocked) {
       return (
-          <div className="mb-6 ohc-growth-card glassmorphism p-6 rounded-[16px] border border-green-400/50 dark:border-[#34C759]/30 bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 shadow-md">
+          <div className="mb-6 ohc-growth-card glassmorphism p-6 border border-green-400/50 dark:border-[#34C759]/30 bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 shadow-md">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center shrink-0">
                  <span className="text-2xl">✨</span>
@@ -112,7 +112,7 @@ export function AIFeaturePaywallWidget() {
   }
 
   return (
-    <div className="mb-6 ohc-growth-card glassmorphism p-6 rounded-[16px] border border-indigo-200/60 dark:border-indigo-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden" data-testid="ai-feature-paywall">
+    <div className="mb-6 ohc-growth-card glassmorphism p-6 border border-indigo-200/60 dark:border-indigo-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden" data-testid="ai-feature-paywall">
       {/* Blurred "premium" background effect */}
       <div className="absolute inset-0 pointer-events-none opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+CjxjaXJjbGUgY3g9IjIiIGN5PSIyIiByPSIyIiBmaWxsPSIjNGE0ZWRlIiBvcGFjaXR5PSIwLjQiLz4KPC9zdmc+')]"></div>
 

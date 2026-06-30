@@ -104,7 +104,7 @@ pub fn get_articles() -> Vec<HelpArticle> {
 
 pub fn get_videos() -> Vec<VideoTutorial> {
     vec![
-        VideoTutorial { id: 1, title: "How to set up your store in 5 minutes".to_string(), duration: "1:15".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 1, title: "How to set up your first store easily".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
         VideoTutorial { id: 2, title: "Connecting a bank account to accept payments".to_string(), duration: "0:45".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
         VideoTutorial { id: 3, title: "Activating your AI Support Agent".to_string(), duration: "1:25".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
         VideoTutorial { id: 4, title: "Adding a new product to your inventory".to_string(), duration: "0:50".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
@@ -112,7 +112,7 @@ pub fn get_videos() -> Vec<VideoTutorial> {
         VideoTutorial { id: 6, title: "Creating a marketing campaign".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
         VideoTutorial { id: 7, title: "Using the Analytics Dashboard".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
         VideoTutorial { id: 8, title: "How to handle refunds and returns".to_string(), duration: "1:05".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 9, title: "Customizing your storefront design".to_string(), duration: "1:15".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial { id: 9, title: "Customizing your storefront design".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
         VideoTutorial { id: 10, title: "Setting up automated email receipts".to_string(), duration: "0:55".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
     ]
 }
@@ -445,7 +445,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
         "info": {
             "title": "OHC Advanced API Reference",
             "version": "1.0.0",
-            "description": "API Reference for advanced users integrating with OneHumanCorp.",
+            "description": "OHC Advanced API Reference integrating with OneHumanCorp.",
         },
         "servers": [
             {

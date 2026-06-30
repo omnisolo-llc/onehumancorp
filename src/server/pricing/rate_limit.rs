@@ -223,7 +223,7 @@ impl RedisRateLimiter {
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
 
-        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe
+        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe // pii-safe
 
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
         let model_key = format!("tenant:{}:tokens_used:{}:{}", tenant_id, model, month_key);
@@ -260,7 +260,7 @@ impl RedisRateLimiter {
         let month_key = now.format("%Y-%m").to_string();
 
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-        tracing::info!("💰 Miser telemetry: Recording action for tenant: {} agent: {}", tenant_id, agent_id);
+        tracing::info!("💰 Miser telemetry: Recording action for tenant: {} agent: {}", tenant_id, agent_id); // pii-safe
         let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
 
         let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e| e.to_string())?;
@@ -318,7 +318,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
-        tracing::info!("💰 Miser telemetry: Checking product quota for tenant: {}", tenant_id);
+        tracing::info!("💰 Miser telemetry: Checking product quota for tenant: {}", tenant_id); // pii-safe
         if let Some(store) = &self.telemetry_store {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
         }
@@ -365,7 +365,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
-        tracing::info!("💰 Miser telemetry: Checking agent quota for tenant: {}", tenant_id);
+        tracing::info!("💰 Miser telemetry: Checking agent quota for tenant: {}", tenant_id); // pii-safe
         if let Some(store) = &self.telemetry_store {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
         }
@@ -412,7 +412,7 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
-        tracing::info!("💰 Miser telemetry: Checking storage quota for tenant: {} with delta: {}", tenant_id, delta_bytes);
+        tracing::info!("💰 Miser telemetry: Checking storage quota for tenant: {} with delta: {}", tenant_id, delta_bytes); // pii-safe
         if let Some(store) = &self.telemetry_store {
             store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
         }
@@ -570,8 +570,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_product_quota_no_mutation() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-no-mutation";
 
@@ -603,13 +603,12 @@ mod tests {
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // Should be reached since we have 10 products (limit is 10)
             }
-        }
     }
 
     #[tokio::test]
     async fn test_check_storage_quota_no_mutation() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-storage-no-mutation";
 
@@ -620,13 +619,12 @@ mod tests {
                 let status = limiter.check_storage_quota(tenant_id, 0).await.expect("failed to unwrap");
                 assert!(status.is_allowed);
             }
-        }
     }
 
     #[tokio::test]
     async fn test_check_storage_quota() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-storage-quota";
 
@@ -651,13 +649,12 @@ mod tests {
                 assert!(status.soft_limit_reached); // But flag is set
                 assert!(status.user_message.expect("failed to unwrap").contains("500MB storage"));
             }
-        }
     }
 
     #[tokio::test]
     async fn test_record_agent_quota() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-agent-quota";
 
@@ -677,13 +674,12 @@ mod tests {
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // Limit is 1 for Free tier
             }
-        }
     }
 
     #[tokio::test]
     async fn test_record_action_monthly_reset() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-monthly-reset";
                 let agent_id = "agent-1";
@@ -707,13 +703,12 @@ mod tests {
                 let count: usize = conn.get(&tenant_key).await.unwrap_or(0);
                 assert_eq!(count, 1);
             }
-        }
     }
 
     #[tokio::test]
     async fn test_agent_action_limit() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-agent-action";
                 let agent_id = "agent-limit";
@@ -732,13 +727,12 @@ mod tests {
                 let status = limiter.record_action(tenant_id, agent_id).await.expect("failed to unwrap");
                 assert!(status.soft_limit_reached);
             }
-        }
     }
 
     #[tokio::test]
     async fn test_record_token_usage() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-tokens";
 
@@ -757,13 +751,12 @@ mod tests {
                 let usage = limiter.get_token_usage(tenant_id).await.expect("failed to get usage");
                 assert_eq!(usage, 2000);
             }
-        }
     }
 
     #[tokio::test]
     async fn test_rate_limit_status_is_always_allowed_soft_limit() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-soft-limits";
                 let agent_id = "agent-1";
@@ -785,6 +778,5 @@ mod tests {
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached);
             }
-        }
     }
 }

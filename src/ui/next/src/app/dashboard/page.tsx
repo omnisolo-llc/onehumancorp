@@ -355,7 +355,7 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
-      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
+      <div className="mb-6 p-6 glassmorphism border border-white/40 dark:border-white/10">
         <WalkthroughTarget id="dashboard-title">
           <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         </WalkthroughTarget>
@@ -446,7 +446,7 @@ export default function Dashboard() {
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
           <button
             onClick={() => router.push("/incidents")}
-            className="h-[44px] px-6 rounded-[16px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
+            className="h-[44px] px-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
             data-testid="report-incident-btn"
           >
             Report Incident
@@ -483,7 +483,7 @@ export default function Dashboard() {
                   name="migration_url"
                   value={migrationUrl}
                   onChange={(event) => setMigrationUrl(event.target.value)}
-                  className="mt-2 w-full rounded-[16px] border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
+                  className="mt-2 w-full border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
                   placeholder="mayas-cakes.myshopify.com"
                 />
               </label>
@@ -520,7 +520,7 @@ export default function Dashboard() {
             <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Active AI Departments</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {activeDepartments.map(dept => (
-                <div key={dept} className="glassmorphism p-4 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-2">
+                <div key={dept} className="glassmorphism p-4 border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">{dept}</span>
                     <span className="w-2 h-2 rounded-full bg-[#34C759]"></span>
@@ -532,10 +532,10 @@ export default function Dashboard() {
           </section>
         )}
 
-        <div className="mb-6">
-          <Link href="/assistant" className="app-card block p-5 min-h-[44px] rounded-[16px] hover:shadow-md transition-all group">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link href="/assistant" className="app-card block p-5 min-h-[44px] hover:shadow-md transition-all group">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-[16px] bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
+              <div className="w-11 h-11 bg-[#0f766e] flex items-center justify-center text-white text-xl shadow-sm">
                 <span aria-hidden="true">A</span>
               </div>
               <div className="flex-1">
@@ -547,13 +547,28 @@ export default function Dashboard() {
               </div>
             </div>
           </Link>
+
+          <Link id="sell-in-person-btn" href="/pos/terminal" className="app-card block p-5 min-h-[44px] hover:shadow-md transition-all group bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100/50 dark:border-blue-800/30">
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 bg-[#0066FF] flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Sell In Person</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Tap-to-Pay, inventory sync, and cash sales.</p>
+              </div>
+              <div className="text-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
+                →
+              </div>
+            </div>
+          </Link>
         </div>
 
         <GrowBusinessCard />
           <PromoterCard />
 
         <section>
-          <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
+          <div className="mb-6 p-6 bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
                 <div className="text-4xl">🎉</div>
@@ -711,7 +726,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link href="/feed" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/feed" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
                 <div className="text-sky-700 dark:text-sky-300 font-semibold text-sm bg-sky-50 dark:bg-sky-900/30 px-3 py-1 rounded-full">Orchestrate</div>
@@ -720,7 +735,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Plan, generate, review, and launch customer campaigns from live dashboard data.</p>
             </Link>
 
-            <Link href="/upgrade-roi" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/upgrade-roi" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📈</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">ROI</div>
@@ -729,7 +744,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
             </Link>
 
-            <Link href="/zero-click-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/zero-click-builder" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚡</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
@@ -738,7 +753,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate a business in 30 seconds to show friends how fast OHC is.</p>
             </Link>
 
-            <Link href="/referrals" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/referrals" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Earn $50</div>
@@ -747,7 +762,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
             </Link>
 
-            <Link href="/referrals" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/referrals" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Referrals</div>
@@ -755,7 +770,7 @@ export default function Dashboard() {
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Referral Program</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite your network and earn credits for every business that signs up.</p>
             </Link>
-            <Link href="/affiliate-badge-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/affiliate-badge-builder" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
                 <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Viral</div>
@@ -764,7 +779,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create an embeddable badge to grow your affiliate network.</p>
             </Link>
 
-            <Link href="/finance" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/finance" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💰</div>
                 <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Finance</div>
@@ -773,7 +788,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Manage cash flow, invoices, and automated payment follow-ups.</p>
             </Link>
 
-            <Link href="/invoice-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/invoice-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧾</div>
                 <div className="text-cyan-600 dark:text-cyan-400 font-semibold text-sm bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1 rounded-full">Billing</div>
@@ -782,7 +797,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
             </Link>
 
-            <Link href="/pos/terminal" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/pos/terminal" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📱</div>
                 <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
@@ -791,7 +806,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Instantly collect payments with Tap-to-Pay and keep inventory synced.</p>
             </Link>
 
-            <Link href="/proposal-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/proposal-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
                 <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
@@ -800,7 +815,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create smart, shareable proposals with an interactive approval flow to win clients faster.</p>
             </Link>
 
-            <Link href="/milestone-alerts" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/milestone-alerts" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform" aria-hidden="true">🏆</div>
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
@@ -810,7 +825,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
             </Link>
 
-            <Link href="/loyalty-program" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/loyalty-program" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
                 <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">Loyalty</div>
@@ -819,7 +834,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Set up a 'Give X, Get Y' referral program and generate campaigns.</p>
             </Link>
 
-            <Link href="/customer-referral-program" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/customer-referral-program" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💸</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Referrals</div>
@@ -828,7 +843,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Launch a Give $10, Get $10 program to turn your customers into advocates.</p>
             </Link>
 
-            <Link href="/share-cards" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/share-cards" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎴</div>
                 <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Cards</div>
@@ -837,7 +852,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate Share Cards to promote your brand on social media.</p>
             </Link>
 
-            <Link href="/storefront-widget" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/storefront-widget" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🌐</div>
                 <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Widget</div>
@@ -846,7 +861,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
             </Link>
 
-            <Link href="/embed-builder" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/embed-builder" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔌</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Widget</div>
@@ -855,7 +870,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Build custom intake, booking, or quote widgets for your site.</p>
             </Link>
 
-            <Link href="/subscriptions" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/subscriptions" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📦</div>
                 <div className="text-amber-700 dark:text-amber-300 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Recurring</div>
@@ -864,7 +879,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Manage recurring products, subscribers, and shipping batches.</p>
             </Link>
 
-            <Link href="/social-proof-nudge" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/social-proof-nudge" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🚀</div>
                 <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Proof</div>
@@ -873,7 +888,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Show visitors that others are buying to increase conversions.</p>
             </Link>
 
-            <Link href="/work-intake-widget" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/work-intake-widget" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📋</div>
                 <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
@@ -883,7 +898,7 @@ export default function Dashboard() {
             </Link>
 
             <WithTooltip id="link-in-bio-tooltip" defaultText="One link to rule them all. Drive social traffic to your store.">
-            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Bio</div>
@@ -894,7 +909,7 @@ export default function Dashboard() {
             </WithTooltip>
 
             <WithTooltip id="quiz-generator-tooltip" defaultText="Create AI-powered product recommendation quizzes to capture leads.">
-            <Link href="/quiz-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/quiz-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧠</div>
                 <span className="text-xs font-semibold px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full tracking-wider uppercase">Lead Gen</span>
@@ -904,7 +919,7 @@ export default function Dashboard() {
             </Link>
             </WithTooltip>
 
-            <Link href="/whatsapp-link-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/whatsapp-link-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💬</div>
                 <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Social</div>
@@ -913,7 +928,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create shareable WhatsApp links to start conversations instantly.</p>
             </Link>
 
-            <Link href="/calendar" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/calendar" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📅</div>
                 <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Schedule</div>
@@ -922,7 +937,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">View upcoming appointments and sync with your AI operations assistant.</p>
             </Link>
 
-            <Link href="/giveaway" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/giveaway" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
                 <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Viral</div>
@@ -931,7 +946,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Launch a viral sweepstakes to capture emails and drive social shares.</p>
             </Link>
 
-            <Link href="/share-and-save-widget" id="share-and-save-link" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/share-and-save-widget" id="share-and-save-link" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💸</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
@@ -940,7 +955,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">One-Tap share widget to reward your customers with discounts for sharing your storefront.</p>
             </Link>
 
-            <Link href="/share-to-unlock-generator" id="share-to-unlock-link" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/share-to-unlock-generator" id="share-to-unlock-link" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔓</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
@@ -949,7 +964,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Require customers to share your page on social media to reveal a discount code.</p>
             </Link>
 
-            <Link href="/interactive-quote-generator" id="interactive-quote-link" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/interactive-quote-generator" id="interactive-quote-link" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧮</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
@@ -958,7 +973,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Build a pricing calculator to embed on your site to capture leads and drive referrals.</p>
             </Link>
 
-            <Link href="/win-back" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/win-back" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💌</div>
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Retain</div>
@@ -967,7 +982,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Re-engage inactive customers with AI-generated email campaigns.</p>
             </Link>
 
-            <Link href="/review-campaigns" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/review-campaigns" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⭐️</div>
                 <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">Reviews</div>
@@ -976,7 +991,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate highly-converting, personalized review request emails.</p>
             </Link>
 
-            <Link href="/seasonal-promo" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/seasonal-promo" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">✨</div>
                 <div className="text-teal-600 dark:text-teal-400 font-semibold text-sm bg-teal-50 dark:bg-teal-900/30 px-3 py-1 rounded-full">Promo</div>
@@ -986,7 +1001,7 @@ export default function Dashboard() {
             </Link>
 
             <WithTooltip id="cart-recovery-tooltip" defaultText="Recover abandoned carts with personalized AI follow-ups.">
-            <Link href="/cart-recovery" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/cart-recovery" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🛒</div>
                 <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Recover</div>
@@ -997,7 +1012,7 @@ export default function Dashboard() {
             </WithTooltip>
 
             <WithTooltip id="flash-sale-tooltip" defaultText="Create high-converting flash sale countdown widgets.">
-            <Link href="/flash-sale-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/flash-sale-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚡</div>
                 <div className="text-red-600 dark:text-red-400 font-semibold text-sm bg-red-50 dark:bg-red-900/30 px-3 py-1 rounded-full">Urgency</div>
@@ -1009,7 +1024,7 @@ export default function Dashboard() {
 
 
             <WithTooltip id="pre-order-tooltip" defaultText="Launch an omnichannel pre-order engine with tiered waitlist capabilities.">
-            <Link href="/pre-order-widget" id="pre-order-waitlist-link" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/pre-order-widget" id="pre-order-waitlist-link" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⏳</div>
                 <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Virality</div>
@@ -1020,7 +1035,7 @@ export default function Dashboard() {
             </WithTooltip>
 
             <WithTooltip id="pos-tooltip" defaultText="Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync.">
-            <Link href="/pos/terminal" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/pos/terminal" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💳</div>
                 <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
@@ -1031,7 +1046,7 @@ export default function Dashboard() {
             </WithTooltip>
 
             <WithTooltip id="discount-code-tooltip" defaultText="Create discount code widgets for your customers.">
-            <Link href="/discount-code-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/discount-code-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
                 <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
@@ -1042,7 +1057,7 @@ export default function Dashboard() {
             </WithTooltip>
 
             <WithTooltip id="lead-magnet-tooltip" defaultText="Capture emails and grow your audience.">
-            <Link href="/lead-magnet-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/lead-magnet-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧲</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Leads</div>
@@ -1053,7 +1068,7 @@ export default function Dashboard() {
             </WithTooltip>
 
             <WithTooltip id="link-in-bio-tooltip" defaultText="One link to rule them all. Drive social traffic to your store.">
-            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
@@ -1064,7 +1079,7 @@ export default function Dashboard() {
             </WithTooltip>
 
             <WithTooltip id="spin-to-win-tooltip" defaultText="Create interactive discount wheels to capture emails.">
-            <Link href="/spin-to-win-generator" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/spin-to-win-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎡</div>
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Gamification</div>
@@ -1074,7 +1089,7 @@ export default function Dashboard() {
             </Link>
             </WithTooltip>
             <WithTooltip id="trial-extension-tooltip" defaultText="Share your setup on X to instantly unlock 7 extra days of Pro.">
-            <Link href="/trial-extension" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/trial-extension" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Extension</div>
@@ -1085,7 +1100,7 @@ export default function Dashboard() {
             </WithTooltip>
 
             <WithTooltip id="field-ops-tooltip" defaultText="Offline-first mobile route management for field service workers.">
-            <Link href="/field-ops/jobs" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/field-ops/jobs" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📍</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Operations</div>
@@ -1097,7 +1112,7 @@ export default function Dashboard() {
 
 
             <WithTooltip id="my-plan-tooltip" defaultText="Manage your subscription, usage, and billing.">
-            <Link href="/plan" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/plan" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💳</div>
                 <div className="text-[#0071E3] dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Billing</div>
@@ -1107,7 +1122,7 @@ export default function Dashboard() {
             </Link>
             </WithTooltip>
             <WithTooltip id="proposal-draft-tooltip" defaultText="Generate complex AI proposals instantly.">
-            <Link href="/proposals/new" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/proposals/new" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Proposals</div>
@@ -1118,7 +1133,7 @@ export default function Dashboard() {
             </WithTooltip>
 
             <WithTooltip id="settings-widget-tooltip" defaultText="Manage your account and preferences.">
-            <Link href="/settings" className="block glassmorphism p-6 min-h-[44px] rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link href="/settings" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚙️</div>
                 <div className="text-gray-600 dark:text-gray-400 font-semibold text-sm bg-gray-50 dark:bg-gray-900/30 px-3 py-1 rounded-full">Config</div>

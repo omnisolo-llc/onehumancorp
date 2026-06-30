@@ -57,7 +57,7 @@ export default function BookingWidgetBuilder() {
 
         {/* Configuration Panel */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 rounded-[16px]" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+            <div className="p-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
                 <h2 className="text-lg font-bold font-outfit mb-6">Widget Settings</h2>
 
                 <div className="mb-6">
@@ -66,14 +66,14 @@ export default function BookingWidgetBuilder() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -86,7 +86,7 @@ export default function BookingWidgetBuilder() {
                         type="text"
                         value={tenant}
                         onChange={(e) => setTenant(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         placeholder="e.g. my-store"
                     />
                     <p className="text-xs text-gray-500 mt-2">Used to link the widget to your store.</p>
@@ -98,7 +98,7 @@ export default function BookingWidgetBuilder() {
                         type="text"
                         value={serviceName}
                         onChange={(e) => setServiceName(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         placeholder="e.g. Service Consultation"
                     />
                 </div>
@@ -117,13 +117,13 @@ export default function BookingWidgetBuilder() {
 
                 <button
                     onClick={() => setShowModal(true)}
-                    className="w-full py-3 bg-[#0071E3] text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] hover:bg-blue-700 transition-colors shadow-sm"
+                    className="w-full py-3 bg-[#0071E3] text-white font-medium min-h-[44px] min-w-[44px] hover:bg-blue-700 transition-colors shadow-sm"
                 >
                     Get Widget
                 </button>
             </div>
 
-            <div className="p-6 rounded-[16px]" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+            <div className="p-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
                 <h3 className="text-md font-semibold font-outfit mb-2 flex items-center gap-2">
                     <span className="text-xl">📅</span> Why embed?
                 </h3>
@@ -136,7 +136,7 @@ export default function BookingWidgetBuilder() {
         {/* Live Preview */}
         <div className="w-full md:w-2/3 flex flex-col items-center">
             <h2 className="text-xl font-semibold font-outfit self-start mb-4" style={{ color: '#1D1D1F' }}>Live Preview</h2>
-            <div className="w-full p-8 rounded-[16px] h-full flex flex-col items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+            <div className="w-full p-8 h-full flex flex-col items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
 
                 <div className="relative z-10 w-[320px] h-[400px]" style={{ ...getThemeStyles(), borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
                     {/* Mock Widget Content for Preview */}
@@ -178,7 +178,7 @@ export default function BookingWidgetBuilder() {
       {/* Embed Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
-            <div className="app-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="app-card p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
@@ -196,7 +196,7 @@ export default function BookingWidgetBuilder() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
@@ -212,13 +212,13 @@ export default function BookingWidgetBuilder() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium min-h-[44px] min-w-[44px] transition-colors"
                     >
                         Close
                     </button>

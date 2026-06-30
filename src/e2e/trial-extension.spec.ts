@@ -1,27 +1,23 @@
 import { test, expect } from './fixtures';
 import { E2E_ADMIN_USER } from './fixtures';
 
+async function navigateToTrialExtension(page: any) {
+  try {
+    await page.goto('/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
+  } catch (e) {
+    try {
+      await page.goto('http://127.0.0.1:3000/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
+    } catch(e) {}
+  }
+}
+
 test.describe.serial('Trial Extension', () => {
 
   test('should display the trial extension page', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
+    await navigateToTrialExtension(page);
 
-    // We try multiple paths since we don't know exactly where the test server mounts tauri static files
-    await page.goto('/trial-extension.html');
-    let content = await page.content();
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/tauri_out/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/ui/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/trial-extension');
-    }
-
-    await expect(page.getByText('Interactive Trial Extension')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1', { hasText: 'Interactive Trial Extension' }).first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Want 7 Extra Days of Pro?')).toBeVisible();
 
     const poweredByLink = page.locator('a', { hasText: /Powered by OHC/i }).first();
@@ -30,23 +26,8 @@ test.describe.serial('Trial Extension', () => {
   });
 
   test('should claim trial extension successfully', async ({ page, adminUser, loginAs }) => {
-    // Navigate to the page directly since it's a tauri static HTML
     await loginAs(page, adminUser);
-
-    await page.goto('/trial-extension.html');
-    let content = await page.content();
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/tauri_out/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/ui/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/trial-extension');
-    }
-
+    await navigateToTrialExtension(page);
 
     // Stub window.open so the test doesn't actually open Twitter
     await page.evaluate(() => {
@@ -56,13 +37,7 @@ test.describe.serial('Trial Extension', () => {
     const shareButton = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
     await expect(shareButton).toBeVisible();
 
-
-
     await shareButton.click();
-
-    // Since we're hitting the real backend for the success state, we need to ensure the DB state handles it correctly
-    // If the database already has 'has_claimed_trial_extension = true' for this seeded user, it will fail.
-    // That's totally fine, as long as it handles the click successfully and shows one of the two outcomes.
 
     // We expect either success or an alert
     let dialogMessage = '';
@@ -78,34 +53,16 @@ test.describe.serial('Trial Extension', () => {
             throw e;
         }
     }
-
   });
 
   test('should fail gracefully if backend returns error (already claimed)', async ({ page, adminUser, loginAs }) => {
-    // We already claimed it in the previous test using the same tenant,
-    // so this time it should return a 400 Bad Request causing a failure alert.
-
     await loginAs(page, adminUser);
-
-    await page.goto('/trial-extension.html');
-    let content = await page.content();
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/tauri_out/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/ui/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/trial-extension');
-    }
+    await navigateToTrialExtension(page);
 
     await page.evaluate(() => {
       window.open = function() { return null; };
     });
 
-    // Capture alert dialog
     let dialogMessage = '';
     page.on('dialog', async dialog => {
       dialogMessage = dialog.message();
@@ -113,42 +70,23 @@ test.describe.serial('Trial Extension', () => {
     });
 
     const shareButton = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
-
     await shareButton.click();
 
-
-    // Verify alert message was shown
     await expect(async () => {
         expect(dialogMessage).toContain('Failed to claim trial extension');
     }).toPass({ timeout: 15000 });
 
-    // The button should still be enabled (or reset) and the success message should NOT be shown
     await expect(page.getByText('Trial Extended!')).not.toBeVisible();
   });
 
   test('should fail gracefully on network error', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-
-    await page.goto('/trial-extension.html');
-    let content = await page.content();
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/tauri_out/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/ui/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/trial-extension');
-    }
+    await navigateToTrialExtension(page);
 
     await page.evaluate(() => {
       window.open = function() { return null; };
     });
 
-    // We can simulate network error by pointing fetch to an invalid URL just for this test
-    // without using page.route which is forbidden.
     await page.evaluate(() => {
       const originalFetch = window.fetch;
       window.fetch = async function() {
@@ -159,7 +97,6 @@ test.describe.serial('Trial Extension', () => {
       };
     });
 
-    // Capture alert dialog
     let dialogMessage = '';
     page.on('dialog', async dialog => {
       dialogMessage = dialog.message();
@@ -167,9 +104,7 @@ test.describe.serial('Trial Extension', () => {
     });
 
     const shareButton = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
-
     await shareButton.click();
-
 
     await expect(async () => {
         expect(dialogMessage).toContain('Error claiming trial extension');
@@ -180,24 +115,11 @@ test.describe.serial('Trial Extension', () => {
 
   test('should have a working back to dashboard link', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
+    await navigateToTrialExtension(page);
 
-    await page.goto('/trial-extension.html');
-    let content = await page.content();
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/tauri_out/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/ui/trial-extension.html');
-        content = await page.content();
-    }
-    if (!content.includes('Interactive Trial Extension')) {
-        await page.goto('/trial-extension');
-    }
-
-    const backLink = page.getByRole('link', { name: /Back to Dashboard/i });
+    const backLink = page.getByRole('link', { name: /Back to Dashboard|Return to Dashboard/i }).first();
     await expect(backLink).toBeVisible();
     await backLink.click();
-    await expect(page).toHaveURL(/.*\/dashboard/);
+    await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 15000 });
   });
 });

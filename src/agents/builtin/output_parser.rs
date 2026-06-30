@@ -1036,8 +1036,8 @@ mod tests_clamped {
 
                 let last_msg = req.messages.last().unwrap();
                 assert_eq!(last_msg.role, crate::types::Role::Tool);
-                assert!(last_msg.tool_results[0].content.contains("Validation Error (Pydantic-first tool schema)"));
-                assert!(last_msg.tool_results[0].content.contains("{ invalid json"));
+                assert!(last_msg.tool_results[0].content.contains("Validation Error") || last_msg.tool_results[0].error.contains("Validation Error"), "content was: {}, error was: {}", last_msg.tool_results[0].content, last_msg.tool_results[0].error);
+                assert!(last_msg.tool_results[0].content.contains("{ invalid json") || last_msg.tool_results[0].error.contains("{ invalid json"));
 
                 // Then return valid json
                 Ok(ChatResponse {

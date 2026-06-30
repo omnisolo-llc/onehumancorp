@@ -27,14 +27,14 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [tooltips, setTooltips] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    let mounted = true;
-    fetch("/api/tooltips")
+    const abortController = new AbortController();
+    fetch("/api/tooltips", { signal: abortController.signal })
       .then(r => {
         if (!r.ok) throw new Error("Failed to load tooltips");
         return r.json();
       })
       .then(data => {
-        if (mounted && data && typeof data === 'object' && !Array.isArray(data)) {
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
           const safeTooltips = Object.fromEntries(
             Object.entries(data).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
           );
@@ -42,8 +42,12 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           window.OHC_TOOLTIPS = safeTooltips;
         }
       })
-      .catch(() => {});
-    return () => { mounted = false; };
+      .catch((e) => {
+        if (e.name !== 'AbortError') {
+          console.error('Failed to load tooltips', e);
+        }
+      });
+    return () => { abortController.abort(); };
   }, []);
 
   const [windowWidth, setWindowWidth] = useState(1000);
@@ -80,7 +84,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           className="fixed z-[100] backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-[0_12px_40px_rgba(0,0,0,0.2)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
-            left: Math.max(128, Math.min(windowWidth - 128, tooltipRect.left + tooltipRect.width / 2)),
+            left: Math.max(144, Math.min(windowWidth - 144, tooltipRect.left + tooltipRect.width / 2)),
             transform: 'translate(-50%, -100%)'
           }}
         >

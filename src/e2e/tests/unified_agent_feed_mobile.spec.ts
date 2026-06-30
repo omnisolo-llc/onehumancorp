@@ -10,7 +10,12 @@ test.describe('Mobile Unified Agent Feed @mobile', () => {
     await page.waitForTimeout(5000);
 
     // Check if the unified agent feed structure is present
-    await expect(page.locator('section[aria-label="Unified Agent Feed"]')).toBeVisible();
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
+
+    // Verify layout and background constraints
+    await expect(feedSection).toHaveClass(/max-w-full/);
+    await expect(feedSection).toHaveClass(/dark:bg-slate-950/);
 
     // Verify tabs are visible
     await expect(page.getByRole('button', { name: /Proposals/i })).toBeVisible();
@@ -34,7 +39,13 @@ test.describe('Mobile Unified Agent Feed @mobile', () => {
     // At least one of these states should be present
     expect(isAllCaughtUpVisible || isAgentCardVisible || isActionNeededCardVisible || (await page.getByText(/All caught up!\s*Your agents are currently monitoring the business/).isVisible())).toBeTruthy();
 
-    // Check for standard dashboard widgets which should also be visible
-    // await expect(page.getByText('Success Milestones')).toBeVisible();
+    if (isAgentCardVisible || isActionNeededCardVisible) {
+       // Verify touch targets have minimum height requirements for mobile UX
+       const approveButton = page.getByRole('button', { name: /Approve/i }).first();
+       if (await approveButton.isVisible()) {
+           await expect(approveButton).toHaveClass(/min-h-\[44px\]/);
+           await expect(approveButton).toHaveClass(/min-w-\[44px\]/);
+       }
+    }
   });
 });

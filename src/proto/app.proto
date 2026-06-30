@@ -311,25 +311,11 @@ message EndTerminalSessionResponse {
   string error_message = 2;
 }
 
-message ReserveTerminalInventoryRequest {
-  string tenant_id = 1;
-  string device_id = 2;
-  string product_id = 3;
-  int32 quantity = 4;
-}
-
-message ReserveTerminalInventoryResponse {
-  bool success = 1;
-  string lock_id = 2;
-  string error_message = 3;
-}
-
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
   rpc StartTerminalSession(StartTerminalSessionRequest) returns (StartTerminalSessionResponse);
   rpc UpdateTerminalSessionStatus(UpdateTerminalSessionStatusRequest) returns (UpdateTerminalSessionStatusResponse);
   rpc EndTerminalSession(EndTerminalSessionRequest) returns (EndTerminalSessionResponse);
-  rpc ReserveTerminalInventory(ReserveTerminalInventoryRequest) returns (ReserveTerminalInventoryResponse);
 }
 
 

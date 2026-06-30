@@ -57,7 +57,7 @@ export function DashboardViralInviteWidget() {
   const shareText = `Start your business on OHC! It's super easy. Use my link to get $50 off your first month: ${referralLink}`;
 
   return (
-    <div className="mb-6 ohc-growth-card p-6 rounded-[16px] backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20 shadow-xl" data-testid="dashboard-viral-invite-widget">
+    <div className="mb-6 ohc-growth-card p-6 backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20 shadow-xl" data-testid="dashboard-viral-invite-widget">
       <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite & Earn</h2>

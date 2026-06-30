@@ -12,6 +12,7 @@ static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organi
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>>> = OnceLock::new();
 static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
+pub static DASHBOARD_SNAPSHOT_CACHE: OnceLock<HybridCache<DashboardSnapshot>> = OnceLock::new();
 pub static ONBOARDING_STATE_CACHE: OnceLock<HybridCache<::server_ohc::app::GetOnboardingStateResponse>> = OnceLock::new();
 
 #[derive(Clone)]
@@ -432,6 +433,14 @@ impl DashboardService for MyDashboardService {
         }
 
         let org_id = std::sync::Arc::new(req.organization_id);
+        let cache_key = format!("dashboard_snapshot:{}:mobile:{}", org_id, req.mobile_optimized);
+        let cache = DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+        if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+            if !is_stale {
+                return Ok(Response::new(cached));
+            }
+        }
+
         let mobile_optimized = req.mobile_optimized;
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
@@ -503,30 +512,27 @@ impl DashboardService for MyDashboardService {
 
 
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
-        for m in _meetings.iter() {
-            let mut transcript = Vec::new();
-            if !req.mobile_optimized {
-                for msg in &m.transcript {
-                    transcript.push(::server_ohc::agent::AgentMessage {
-                        id: msg.id.clone(),
-                        from_agent_id: msg.from_agent.clone(),
-                        to_agent_id: msg.to_agent.clone(),
-                        message_type: msg.r#type.clone(),
-                        content: msg.content.clone(),
-                        meeting_id: m.id.clone(),
-                        occurred_at_unix: msg.occurred_at_unix,
-                    });
-                }
-            }
-            out_meetings.push(::server_ohc::app::MeetingRoom {
+        let final_meetings = _meetings.iter().map(|m| {
+            let transcript = if req.mobile_optimized {
+                Vec::new()
+            } else {
+                m.transcript.iter().map(|msg| ::server_ohc::agent::AgentMessage {
+                    id: msg.id.clone(),
+                    from_agent_id: msg.from_agent.clone(),
+                    to_agent_id: msg.to_agent.clone(),
+                    message_type: msg.r#type.clone(),
+                    content: msg.content.clone(),
+                    meeting_id: m.id.clone(),
+                    occurred_at_unix: msg.occurred_at_unix,
+                }).collect()
+            };
+
+            ::server_ohc::app::MeetingRoom {
                 id: m.id.clone(),
                 participants: m.participants.clone(),
                 transcript,
-            });
-        }
-
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
+            }
+        }).collect::<Vec<_>>();
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
         if req.mobile_optimized { final_statuses.clear(); }
@@ -640,7 +646,7 @@ impl DashboardService for MyDashboardService {
             org
         };
 
-        Ok(Response::new(DashboardSnapshot {
+        let result = DashboardSnapshot {
             organization: org,
             agents: final_agents_payload,
             meetings: final_meetings,
@@ -650,7 +656,14 @@ impl DashboardService for MyDashboardService {
             products,
             orders,
             bookings,
-        }))
+        };
+        if let Some(c) = DASHBOARD_SNAPSHOT_CACHE.get() {
+            let cache_key_set = cache_key.clone();
+            let result_set = result.clone();
+            tokio::spawn(async move { c.set(&cache_key_set, result_set, std::time::Duration::from_secs(5)).await; });
+        }
+
+        Ok(Response::new(result))
     }
 
     async fn get_onboarding_state(

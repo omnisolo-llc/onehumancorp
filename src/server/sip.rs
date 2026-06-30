@@ -399,8 +399,9 @@ impl SipDB {
     /// By utilizing the agent_missions table, we natively inject complete project context
     /// into sub-agent payloads at the moment of creation, achieving hermetic,
     /// zero-latency Bazel-native context routing.
-    pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
-        let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
+    pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
+        let grounding_content = self.load_grounding_content().await;
+        let final_payload = self.enrich_payload_with_grounding_content(payload, &grounding_content);
         let is_standalone = crate::is_standalone_runtime();
 
         let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
@@ -579,7 +580,7 @@ mod tests {
         let payload = "Original Task Payload";
 
         let mut tx = pool.begin().await.unwrap();
-        sip_db.delegate_mission_with_tx(&mut tx, "tc1_id", "PENDING", payload, false, &sip_db.load_grounding_content().await).await.unwrap();
+        sip_db.delegate_mission_with_tx(&mut tx, "tc1_id", "PENDING", payload, false).await.unwrap();
         tx.commit().await.unwrap();
 
         let row = sqlx::query("SELECT payload FROM agent_missions WHERE id = 'tc1_id'")
@@ -661,7 +662,7 @@ mod tests {
         let payload = "Original Task Payload";
 
         let mut tx = pool.begin().await.unwrap();
-        sip_db.delegate_mission_with_tx(&mut tx, "tc2_id", "PENDING", payload, false, &sip_db.load_grounding_content().await).await.unwrap();
+        sip_db.delegate_mission_with_tx(&mut tx, "tc2_id", "PENDING", payload, false).await.unwrap();
         tx.commit().await.unwrap();
 
         let row = sqlx::query("SELECT payload FROM agent_missions WHERE id = 'tc2_id'")
@@ -721,10 +722,8 @@ mod tests {
             .with_context_root(dir_str.clone());
 
         let payload = "{\"task\":\"Scale K8s HPA\"}";
-        let grounding = sip_db.load_grounding_content().await;
-
         let mut tx = pool.begin().await.unwrap();
-        sip_db.delegate_mission_with_tx(&mut tx, "tc6_id", "PENDING", payload, false, &grounding).await.unwrap();
+        sip_db.delegate_mission_with_tx(&mut tx, "tc6_id", "PENDING", payload, false).await.unwrap();
         tx.commit().await.unwrap();
 
         let row = sqlx::query("SELECT payload FROM agent_missions WHERE id = 'tc6_id'")
@@ -786,7 +785,7 @@ mod tests {
         let payload = "Original Task Payload";
 
         let mut tx = pool.begin().await.unwrap();
-        sip_db.delegate_mission_with_tx(&mut tx, "tc3_id", "PENDING", payload, false, &sip_db.load_grounding_content().await).await.unwrap();
+        sip_db.delegate_mission_with_tx(&mut tx, "tc3_id", "PENDING", payload, false).await.unwrap();
         tx.commit().await.unwrap();
 
         let row = sqlx::query("SELECT payload FROM agent_missions WHERE id = 'tc3_id'")
@@ -850,7 +849,7 @@ mod tests {
         let payload = "Original Task Payload";
 
         let mut tx = pool.begin().await.unwrap();
-        sip_db.delegate_mission_with_tx(&mut tx, "tc4_id", "PENDING", payload, false, &sip_db.load_grounding_content().await).await.unwrap();
+        sip_db.delegate_mission_with_tx(&mut tx, "tc4_id", "PENDING", payload, false).await.unwrap();
         tx.commit().await.unwrap();
 
         let row = sqlx::query("SELECT payload FROM agent_missions WHERE id = 'tc4_id'")
@@ -906,7 +905,7 @@ mod tests {
         let payload = "Original Task Payload";
 
         let mut tx = pool.begin().await.unwrap();
-        sip_db.delegate_mission_with_tx(&mut tx, "tc5_id", "PENDING", payload, false, &sip_db.load_grounding_content().await).await.unwrap();
+        sip_db.delegate_mission_with_tx(&mut tx, "tc5_id", "PENDING", payload, false).await.unwrap();
         tx.commit().await.unwrap();
 
         let row = sqlx::query("SELECT payload FROM agent_missions WHERE id = 'tc5_id'")

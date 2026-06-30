@@ -55,6 +55,8 @@ export default function TriagePage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
 
 
   useEffect(() => {
@@ -116,12 +118,12 @@ export default function TriagePage() {
     ["urgent", "high"].includes((item.priority || "").toLowerCase()),
   ).length;
 
-  async function handleDecision(id: string, approved: boolean) {
+  async function handleDecision(id: string, approved: boolean, edited_payload?: string) {
     if (isOffline) {
       await SyncManager.getInstance().enqueue({
         id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
         type: 'triage_action',
-        payload: { triage_item_id: id, approved },
+        payload: { triage_item_id: id, approved, edited_payload },
         timestamp: Date.now()
       });
       const newItems = items.filter((i) => i.id !== id);
@@ -139,7 +141,7 @@ export default function TriagePage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ triage_item_id: id, approved }),
+          body: JSON.stringify({ triage_item_id: id, approved, edited_payload }),
         },
       );
       if (!res.ok) throw new Error("Failed to update action");
@@ -156,6 +158,7 @@ export default function TriagePage() {
       setActionStatus("Error updating action.");
     } finally {
       setProcessingId(null);
+      setEditingId(null);
     }
   }
 
@@ -193,6 +196,37 @@ export default function TriagePage() {
       )}
 
       <div className="flex flex-col gap-4 w-full max-w-full pb-20">
+        <div className="flex justify-end px-1">
+          <button
+            onClick={async () => {
+              setLoading(true);
+              try {
+                await fetch(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId())}`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    source: "SMS (Missed Call)",
+                    priority: "urgent",
+                    context: "Leaky pipe under sink, can you fix?",
+                    action_type: "Draft Reply",
+                    action_payload: "Hi! I am currently on a job but can fix this today. Can you send a photo of the leak?",
+                    customer_id: "Unknown Caller"
+                  }),
+                });
+                await loadItems();
+              } catch (err) {
+                console.error("Failed to simulate missed lead", err);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            data-testid="simulate-missed-lead-btn"
+            className="text-xs bg-[#0066FF]/10 text-[#0066FF] dark:text-[#3388FF] px-3 py-1.5 rounded-full font-medium hover:bg-[#0066FF]/20 transition-colors flex items-center gap-1 shadow-sm border border-[#0066FF]/20 min-h-[44px]"
+          >
+            <span>📱</span> Simulate Missed Call
+          </button>
+        </div>
+
         {error && <div className="app-empty">{error}</div>}
         {loading ? (
           <div className="p-6 space-y-4">
@@ -243,7 +277,7 @@ export default function TriagePage() {
                     <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
                       Proposed Action: {item.action_type}
                     </div>
-                    <div className="proposed-action rounded-[16px] border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
+                    <div className="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
                       {item.action_payload || "No specific payload"}
                     </div>
                   </div>
@@ -256,24 +290,81 @@ export default function TriagePage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
-                  <button
-                    disabled={isProcessing}
-                    className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
-                    data-testid={`triage-approve-${item.id}`}
-                    onClick={() => handleDecision(item.id, true)}
-                  >
-                    {isProcessing ? "Processing..." : "Approve & Send"}
-                  </button>
-                  <button
-                    disabled={isProcessing}
-                    className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
-                    data-testid={`triage-dismiss-${item.id}`}
-                    onClick={() => handleDecision(item.id, false)}
-                  >
-                    Dismiss
-                  </button>
-                </div>
+                {editingId === item.id ? (
+                  <div className="p-5 flex flex-col gap-3 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/80 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-[12px] p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y"
+                      data-testid={`triage-edit-textarea-${item.id}`}
+                      placeholder="Edit the draft payload..."
+                    />
+                    <div className="flex flex-col sm:flex-row gap-3 w-full pt-2">
+                      <button
+                        onClick={() => handleDecision(item.id, true, editValue)}
+                        disabled={isProcessing}
+                        className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                        data-testid={`triage-save-btn-${item.id}`}
+                      >
+                        {isProcessing ? "Processing..." : "Save & Send"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditValue("");
+                        }}
+                        disabled={isProcessing}
+                        className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                        data-testid={`triage-cancel-btn-${item.id}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
+                    {item.action_type ? (
+                      <>
+                        <button
+                          disabled={isProcessing}
+                          className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                          data-testid={`triage-review-btn-${item.id}`}
+                          onClick={() => {
+                            setEditingId(item.id);
+                            setEditValue(item.action_payload || "");
+                          }}
+                        >
+                          Review Draft
+                        </button>
+                        <button
+                          disabled={isProcessing}
+                          className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                          data-testid={`triage-approve-${item.id}`}
+                          onClick={() => handleDecision(item.id, true)}
+                        >
+                          {isProcessing ? "Processing..." : "Approve as-is"}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        disabled={isProcessing}
+                        className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                        data-testid={`triage-approve-${item.id}`}
+                        onClick={() => handleDecision(item.id, true)}
+                      >
+                        {isProcessing ? "Processing..." : "Approve & Send"}
+                      </button>
+                    )}
+                    <button
+                      disabled={isProcessing}
+                      className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                      data-testid={`triage-dismiss-${item.id}`}
+                      onClick={() => handleDecision(item.id, false)}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })

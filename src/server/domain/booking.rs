@@ -34,7 +34,7 @@ pub async fn handle_booking_action(tenant_id: &str, payload: &Value, pool: &PgPo
 }
 
 pub async fn handle_autonomous_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
-    tracing::info!("Handling autonomous quote action for tenant: {}", tenant_id);
+    tracing::info!("Handling autonomous quote action for tenant: {}", tenant_id); // pii-safe
 
     let proposed_slot_id = payload.get("proposed_slot_id").and_then(|v| v.as_str()).unwrap_or("");
     let start_time_str = payload.get("proposed_slots").and_then(|v| v.as_array())

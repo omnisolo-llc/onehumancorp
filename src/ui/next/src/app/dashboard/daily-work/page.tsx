@@ -59,7 +59,7 @@ export default function DailyWorkFeed() {
             <span className="text-gray-500">Loading your work feed...</span>
           </div>
         ) : items.length === 0 ? (
-          <div className="glassmorphism p-8 rounded-[16px] text-center border border-gray-200 dark:border-gray-800">
+          <div className="glassmorphism p-8 text-center border border-gray-200 dark:border-gray-800">
             <h2 className="text-lg font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
               You're all caught up!
             </h2>

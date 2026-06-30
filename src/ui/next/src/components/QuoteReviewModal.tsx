@@ -87,7 +87,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Line Items</label>
             <div className="space-y-3">
               {lineItems.map((item, idx) => (
-                <div key={idx} className="p-4 rounded-[16px] bg-white/50 dark:bg-black/20 border border-gray-200/50 dark:border-white/5 space-y-3">
+                <div key={idx} className="p-4 bg-white/50 dark:bg-black/20 border border-gray-200/50 dark:border-white/5 space-y-3">
                   <input
                     type="text"
                     value={item.description}
@@ -121,7 +121,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-[16px] bg-[#0066FF]/5 border border-[#0066FF]/10">
+          <div className="flex items-center justify-between p-4 bg-[#0066FF]/5 border border-[#0066FF]/10">
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">Require 50% Deposit</span>
               <span className="text-xs text-gray-500">Stripe payment link will be included</span>
@@ -148,7 +148,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
                     <button
                       key={idx}
                       onClick={() => setSelectedSlot(slot.start_time)}
-                      className={`w-full p-4 rounded-[16px] border text-left transition-colors flex items-center gap-3 ${isSelected ? 'bg-[#0066FF]/10 border-[#0066FF]' : 'bg-white/50 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-[#0066FF]/50'}`}
+                      className={`w-full p-4 border text-left transition-colors flex items-center gap-3 ${isSelected ? 'bg-[#0066FF]/10 border-[#0066FF]' : 'bg-white/50 dark:bg-black/20 border-gray-200/50 dark:border-white/5 hover:border-[#0066FF]/50'}`}
                     >
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-[#0066FF]' : 'border-gray-300 dark:border-gray-600'}`}>
                         {isSelected && <div className="w-2.5 h-2.5 bg-[#0066FF] rounded-full" />}
@@ -179,7 +179,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
         <div className="p-6 bg-gray-50/50 dark:bg-white/5 border-t border-gray-200/50 dark:border-gray-700/50">
           <button
             onClick={handleApproveClick}
-            className="w-full h-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-bold rounded-[16px] shadow-lg shadow-[#0066FF]/20 transition-all active:scale-[0.98] flex items-center justify-center text-[17px]"
+            className="w-full h-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-bold shadow-lg shadow-[#0066FF]/20 transition-all active:scale-[0.98] flex items-center justify-center text-[17px]"
             data-testid="modal-approve-btn"
           >
             Approve & Send

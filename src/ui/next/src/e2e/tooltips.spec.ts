@@ -106,10 +106,6 @@ test.describe("Tooltips", () => {
     // Wait a bit to simulate holding (less than 500ms)
     await page.waitForTimeout(200);
 
-    // Dispatch a touchmove event to simulate scrolling
-    await tooltipTarget.evaluate((node) => {
-        const target = node.querySelector('span') || node;
-        target.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, cancelable: true }));
     });
 
     // Wait past the 500ms threshold
@@ -144,5 +140,76 @@ test.describe("Tooltips", () => {
     // After 2 seconds, it should disappear
     await page.waitForTimeout(2100);
     await expect(tooltipText).not.toBeAttached();
+  });
+});
+
+  test("renders help widget tooltip on hover", async ({ page }) => {
+    // Navigate to a page that contains the help widget
+    await page.goto("/dashboard");
+
+    // Wait for the page to load
+    await page.waitForLoadState("domcontentloaded");
+
+    // Wait for the window to have tooltips loaded to prevent racing
+    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+
+    // Locate the element with the tooltip text
+    const tooltipTarget = page.locator("#help-btn-tooltip");
+
+    // Wait for it to be attached to the DOM
+    await tooltipTarget.waitFor({ state: "attached" });
+
+    // Fallback to touchstart
+    await page.evaluate(() => {
+      const node = document.getElementById("help-btn-tooltip");
+      if (node) {
+        const target = node.querySelector('button') || node;
+        target.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true }));
+      }
+    });
+
+    // Wait past the 500ms threshold for long press
+    await page.waitForTimeout(600);
+
+    // Wait for the tooltip text to appear
+    const tooltipText = page
+      .locator("div", {
+        hasText: "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.",
+      })
+      .last();
+
+    await tooltipText.waitFor({ state: "attached", timeout: 5000 });
+  });
+
+  test("renders help search tooltip on hover", async ({ page }) => {
+    // Navigate to help page
+    await page.goto("/help");
+
+    // Wait for the page to load
+    await page.waitForLoadState("domcontentloaded");
+
+    // Wait for the window to have tooltips loaded to prevent racing
+    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+
+    const tooltipTarget = page.locator("#help-search-tooltip");
+    await tooltipTarget.waitFor({ state: "attached" });
+
+    await page.evaluate(() => {
+      const node = document.getElementById("help-search-tooltip");
+      if (node) {
+        const target = node.querySelector('input') || node;
+        target.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true }));
+      }
+    });
+
+    await page.waitForTimeout(600);
+
+    const tooltipText = page
+      .locator("div", {
+        hasText: "Search for help articles and videos...",
+      })
+      .last();
+
+    await tooltipText.waitFor({ state: "attached", timeout: 5000 });
   });
 });

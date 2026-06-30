@@ -310,7 +310,7 @@ export default function OnboardingWizard() {
       updateState({ businessType: intakeData.business_type || 'Online Store' });
       updateState({ businessName: intakeData.business_name || 'My Business' });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '10.00' });
+      updateState({ firstProductPrice: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || '10.00') });
       if (intakeData.initial_products) {
           localStorage.setItem('onboarding_initial_products', JSON.stringify(intakeData.initial_products));
       }
@@ -331,7 +331,7 @@ export default function OnboardingWizard() {
         step: 2,
         aiAgents: newAgents,
         firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-        firstProductPrice: intakeData.initial_products?.[0]?.price || "10.00"
+        firstProductPrice: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || "10.00")
       }); // Go to review step
     } catch (err: any) {
       console.error(err);
@@ -417,7 +417,7 @@ export default function OnboardingWizard() {
             admin_password: adminPassword,
             website_template: "auto",
             first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
-            first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
+            first_product_price: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || "0.00"),
             domain_choice: "subdomain",
             price_type: "fixed",
             location: intakeData.location || "",
@@ -483,7 +483,7 @@ Image provided: ${instantImageUrl}`;
         },
         body: JSON.stringify({ description: combinedInput, image_url: instantImageUrl })
       });
-      let intakeData: { business_name?: string, business_type?: string, categories?: string[], initial_products?: { name: string, price: number }[], error?: string } = {};
+      let intakeData: any = {};
       try {
           if (!intakeRes.ok) {
              throw new Error(`Failed to generate storefront: ${intakeRes.status}`);
@@ -502,7 +502,7 @@ Image provided: ${instantImageUrl}`;
       updateState({ businessDescription: bio });
       updateState({ categories: intakeData.categories || ['physical'] });
       updateState({ firstProductName: intakeData.initial_products?.[0]?.name || 'First Product' });
-      updateState({ firstProductPrice: intakeData.initial_products?.[0]?.price || '0.00' });
+      updateState({ firstProductPrice: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || '0.00') });
       updateState({ location: intakeData.location || 'Local' });
       updateState({ targetAudience: intakeData.target_audience || 'General' });
       updateState({ adminName: intakeData.business_name || 'Admin' });
@@ -534,7 +534,7 @@ Image provided: ${instantImageUrl}`;
           admin_password: defaultAdminPassword,
           website_template: 'auto',
           first_product_name: intakeData.initial_products?.[0]?.name || 'First Product',
-          first_product_price: intakeData.initial_products?.[0]?.price || '0.00',
+          first_product_price: typeof intakeData.initial_products?.[0]?.price === 'number' ? String(intakeData.initial_products[0].price) : (intakeData.initial_products?.[0]?.price || '0.00'),
           domain_choice: 'subdomain',
           price_type: 'fixed',
           location: intakeData.location || 'Local',
@@ -684,7 +684,7 @@ Image provided: ${instantImageUrl}`;
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
-              <button type="button" onClick={handleBackToIntro} className="setup-nav-button">
+              <button type="button" onClick={handleBackToIntro} className="setup-nav-button min-h-[44px]">
                 Back
               </button>
             ) : (
@@ -694,7 +694,7 @@ Image provided: ${instantImageUrl}`;
               <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
               <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
             </div>
-            <button type="button" onClick={handleSkipSetup} className="setup-nav-button">
+            <button type="button" onClick={handleSkipSetup} className="setup-nav-button min-h-[44px]">
               Skip setup
             </button>
           </div>
@@ -729,22 +729,22 @@ Image provided: ${instantImageUrl}`;
 
               <div className="flex flex-col gap-4 w-full">
                 <button
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px]"
+                  className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px] min-h-[44px]"
                   onClick={() => { updateState({ step: 1 }); syncStateToBackend({ step: 1 }); }}
                 >
                   Start My Business
                 </button>
                 <button
                   type="button"
-                  className="flex items-center justify-center w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all"
+                  className="flex items-center justify-center w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
                   onClick={() => { updateState({ step: -1 }); syncStateToBackend({ step: -1 }); }}
                 >
                   <span className="flex items-center gap-2"><SetupIcon name="sparkles" /> Instant Build</span>
                 </button>
                 <button
                   type="button"
-                  className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all"
-                  onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }}
+                  className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
+                  onClick={() => { updateState({ step: 0 }); syncStateToBackend({ step: 0 }); }}
                 >
                   Conversational Setup
                 </button>
@@ -763,7 +763,7 @@ Image provided: ${instantImageUrl}`;
               </p>
 
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
-                <div id="chat-messages" className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4">
+                <div id="chat-messages" className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4">
                   {chatMessages.length === 0 && (
                     <div className="mb-2"><strong>Assistant:</strong> What do you do? (e.g. I bake custom vegan cakes in Austin)</div>
                   )}
@@ -902,7 +902,7 @@ Image provided: ${instantImageUrl}`;
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
