@@ -1891,6 +1891,9 @@
             const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true;
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
+            const draftReplyText = item.proposed_action?.draft_reply || item.proposed_action?.draft_action || '';
+            const intentText = item.proposed_action?.intent || item.context_payload?.intent || '';
+
 
 
             if (item.thread && item.triage_actions && item.triage_actions.length > 0) {
@@ -2294,10 +2297,13 @@
                 <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
                 <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
               </div>
+              ${intentText ? `<div class="triage-context" style="font-size: 14px; font-weight: 600; color: #6b7280; margin-bottom: 4px;">${intentText}</div>` : ''}
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
+              ${draftReplyText ? `<div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #0044BB;"><span style="font-weight: 600; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; display: block;">AI Draft</span>${draftReplyText}</div>` : ''}
               <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
                 <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; width: 100%; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
+                ${draftReplyText ? `<button class="triage-btn-dismiss" onclick="document.getElementById('triage-view-${item.id}').style.display='none'; document.getElementById('triage-edit-${item.id}').style.display='block';" style="min-height: 44px; min-width: 44px; width: 100%; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Edit Draft</button>` : ''}
+                <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Discard</button>
               </div>
             </div>
             `;
@@ -2366,7 +2372,7 @@
             let url, method, bodyPayload;
 
             if (isAgentFeed) {
-              url = '/api/agent-feed/' + encodeURIComponent(id) + '/state';
+              url = '/api/agent_feed/' + encodeURIComponent(id) + '/state';
               method = 'PUT';
               let finalState = 'APPROVED';
               if (typeof state === 'boolean') {
@@ -2428,7 +2434,7 @@ window.handleTriageAction = async function(id, state) {
           let bodyPayload;
 
           if (isAgentFeed) {
-             url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
+             url = `/api/agent_feed/${encodeURIComponent(id)}/state`;
              method = 'PUT';
              let finalState = 'APPROVED';
              if (typeof state === 'boolean') {
