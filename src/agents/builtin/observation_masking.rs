@@ -1,4 +1,4 @@
-#![allow(clippy::all)]
+
 use ohc_builtin_agent_core::types::{Message, Role};
 use serde_json::Value;
 
@@ -163,8 +163,8 @@ impl JetBrainsObservationMasker {
                                 let content_trimmed = tr.content.trim();
                                 let is_array = content_trimmed.starts_with('[');
 
-                                if content_trimmed.starts_with('{') || is_array {
-                                    if let Ok(json_val) = serde_json::from_str::<Value>(&tr.content)
+                                if (content_trimmed.starts_with('{') || is_array)
+                                    && let Ok(json_val) = serde_json::from_str::<Value>(&tr.content)
                                     {
                                         let mut best_content = None;
                                         let mut factor_low = 1;
@@ -221,7 +221,6 @@ impl JetBrainsObservationMasker {
                                             modification_successful = true;
                                         }
                                     }
-                                }
 
                                 if !modification_successful {
                                     let preview_chars = std::cmp::max(10, self.size_limit / 4);
@@ -448,7 +447,7 @@ mod additional_tests {
             if arr.len() == 1
                 && arr[0]
                     .as_object()
-                    .map_or(false, |o| o.contains_key("_masked_observation"))
+                    .is_some_and(|o| o.contains_key("_masked_observation"))
             {
                 let s = arr[0]
                     .as_object()
@@ -461,11 +460,7 @@ mod additional_tests {
             } else {
                 assert_eq!(arr.len(), 11); // 10 original elements + 1 masked summary
                 let last_element = if let Some(v) = arr.last() {
-                    if let Some(s) = v.as_str() {
-                        s
-                    } else {
-                        "[Masked array: 0 elements truncated]"
-                    }
+                    v.as_str().unwrap_or("[Masked array: 0 elements truncated]")
                 } else {
                     ""
                 };

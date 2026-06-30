@@ -1,4 +1,4 @@
-#![allow(clippy::all)]
+
 use crate::agent::AgentRunConfig;
 use crate::llm::LlmClient;
 use crate::llm::ollama::OllamaClient;

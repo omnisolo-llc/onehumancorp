@@ -1,4 +1,4 @@
-#![allow(clippy::all)]
+
 /// Master Catalog B.1. The Orchestration Loop
 use crate::actor_model::Actor;
 use ohc_builtin_agent_core::types::ToolError;
@@ -937,9 +937,9 @@ impl Agent {
         };
 
         let mut lightweight_index_vec: Option<Vec<String>> = None;
-        if let Some(store) = &self.memory_store {
-            if let Ok(index_content) = store.get_lightweight_index().await {
-                if !index_content.trim().is_empty() {
+        if let Some(store) = &self.memory_store
+            && let Ok(index_content) = store.get_lightweight_index().await
+                && !index_content.trim().is_empty() {
                     let mut lines = Vec::new();
                     for line in index_content.lines() {
                         let l = line.trim();
@@ -956,8 +956,6 @@ impl Agent {
                         lightweight_index_vec = Some(lines);
                     }
                 }
-            }
-        }
 
         let system_prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(
             cfg,
@@ -1201,8 +1199,8 @@ impl Agent {
 
             // Checkpointing logic: Put checkpoint before executing any tools
             let mut current_checkpoint_id = None;
-            if let Some(checkpointer) = &self.checkpointer {
-                if let Some(thread_id) = &cfg.thread_id {
+            if let Some(checkpointer) = &self.checkpointer
+                && let Some(thread_id) = &cfg.thread_id {
                     let checkpoint_id = msg
                         .response_id
                         .clone()
@@ -1227,7 +1225,6 @@ impl Agent {
                         current_checkpoint_id = Some(checkpoint_id);
                     }
                 }
-            }
 
             // Master Catalog B.2: Tools (The Agent's Hands): Read-only operations run concurrently; mutating operations run serially.
             // We group tool calls into sequential batches. A batch is a set of consecutive read-only tools,
@@ -1326,24 +1323,20 @@ impl Agent {
                                 ))));
                             }
                             Err(crate::types::ToolError::UserFixable(err_msg)) => {
-                                if let Some(checkpointer) = &self.checkpointer {
-                                    if let Some(cp_id) = &current_checkpoint_id {
+                                if let Some(checkpointer) = &self.checkpointer
+                                    && let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
-                                        if let Some(thread_id) = &cfg.thread_id {
-                                            if let Ok(Some(cp)) =
+                                        if let Some(thread_id) = &cfg.thread_id
+                                            && let Ok(Some(cp)) =
                                                 checkpointer.get_checkpoint(thread_id, cp_id).await
-                                            {
-                                                if let Ok(restored_msgs) = serde_json::from_value::<
+                                                && let Ok(restored_msgs) = serde_json::from_value::<
                                                     Vec<crate::types::Message>,
                                                 >(
                                                     cp.data
                                                 ) {
                                                     messages = restored_msgs;
                                                 }
-                                            }
-                                        }
                                     }
-                                }
                                 if let Some(ref cb) = cfg.human_input_callback.0
                                     && let Some(human_input) = cb(&err_msg).await
                                 {
@@ -1379,24 +1372,20 @@ impl Agent {
                                 ))));
                             }
                             Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                                if let Some(checkpointer) = &self.checkpointer {
-                                    if let Some(cp_id) = &current_checkpoint_id {
+                                if let Some(checkpointer) = &self.checkpointer
+                                    && let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
-                                        if let Some(thread_id) = &cfg.thread_id {
-                                            if let Ok(Some(cp)) =
+                                        if let Some(thread_id) = &cfg.thread_id
+                                            && let Ok(Some(cp)) =
                                                 checkpointer.get_checkpoint(thread_id, cp_id).await
-                                            {
-                                                if let Ok(restored_msgs) = serde_json::from_value::<
+                                                && let Ok(restored_msgs) = serde_json::from_value::<
                                                     Vec<crate::types::Message>,
                                                 >(
                                                     cp.data
                                                 ) {
                                                     messages = restored_msgs;
                                                 }
-                                            }
-                                        }
                                     }
-                                }
                                 let self_correct_msg =
                                     ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                         "".to_string(),
@@ -1473,11 +1462,10 @@ impl Agent {
                                     ))));
                                 }
                                 Err(crate::types::ToolError::UserFixable(err_msg)) => {
-                                    if let Some(checkpointer) = &self.checkpointer {
-                                        if let Some(cp_id) = &current_checkpoint_id {
+                                    if let Some(checkpointer) = &self.checkpointer
+                                        && let Some(cp_id) = &current_checkpoint_id {
                                             let _ = checkpointer.restore_checkpoint(cp_id).await;
                                         }
-                                    }
                                     if let Some(ref cb) = cfg.human_input_callback.0 {
                                         // Await inside sequential block is safe here
                                         if let Some(human_input) = cb(&err_msg).await {
@@ -1514,11 +1502,10 @@ impl Agent {
                                     ))));
                                 }
                                 Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                                    if let Some(checkpointer) = &self.checkpointer {
-                                        if let Some(cp_id) = &current_checkpoint_id {
+                                    if let Some(checkpointer) = &self.checkpointer
+                                        && let Some(cp_id) = &current_checkpoint_id {
                                             let _ = checkpointer.restore_checkpoint(cp_id).await;
                                         }
-                                    }
                                     let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &err_msg).error;
                                     on_event(AgentEvent::ToolCall {
                                         name: tc.name.clone(),
@@ -1787,8 +1774,8 @@ impl Agent {
                 let tool_calls = &last_msg.tool_calls;
 
                 let mut current_checkpoint_id = None;
-                if let Some(checkpointer) = &checkpointer_node {
-                    if let Some(thread_id) = &cfg_arc_node.thread_id {
+                if let Some(checkpointer) = &checkpointer_node
+                    && let Some(thread_id) = &cfg_arc_node.thread_id {
                         let checkpoint_id = last_msg.response_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
                         let metadata = serde_json::json!({
                             "tool_calls": last_msg.tool_calls.len()
@@ -1809,7 +1796,6 @@ impl Agent {
                             current_checkpoint_id = Some(checkpoint_id);
                         }
                     }
-                }
 
                 let mut error_counts = state.error_counts.clone();
                 let mut read_only_calls = Vec::new();
@@ -1879,11 +1865,10 @@ impl Agent {
                             };
                         }
                         Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                            if let Some(checkpointer) = &checkpointer_node {
-                                if let Some(cp_id) = &current_checkpoint_id {
+                            if let Some(checkpointer) = &checkpointer_node
+                                && let Some(cp_id) = &current_checkpoint_id {
                                     let _ = checkpointer.restore_checkpoint(cp_id).await;
                                 }
-                            }
                             let count = *error_counts.entry(tool_name.clone()).or_insert(0) + 1;
                             error_counts.insert(tool_name.clone(), count);
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
@@ -1898,11 +1883,10 @@ impl Agent {
                             return Err(format!("Unexpected tool error: {}", msg));
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
-                            if let Some(checkpointer) = &checkpointer_node {
-                                if let Some(cp_id) = &current_checkpoint_id {
+                            if let Some(checkpointer) = &checkpointer_node
+                                && let Some(cp_id) = &current_checkpoint_id {
                                     let _ = checkpointer.restore_checkpoint(cp_id).await;
                                 }
-                            }
                             if let Some(ref cb) = cfg_arc_node.human_input_callback.0
                                 && let Some(human_input) = cb(&msg).await {
                                     tool_results[idx] = crate::types::ToolResult {
@@ -1930,25 +1914,23 @@ impl Agent {
                     let id = tc.id.clone();
                     let idx = tool_calls.iter().position(|t| t.id == id).expect("Tool call not found in tool_calls array");
 
-                    let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
+                    let gating_err = crate::tools_gating::ToolGater::check_gating(tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
                         match e {
                             crate::types::ToolError::LlmRecoverable(err_msg) => {
-                                if let Some(checkpointer) = &checkpointer_node {
-                                    if let Some(cp_id) = &current_checkpoint_id {
+                                if let Some(checkpointer) = &checkpointer_node
+                                    && let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
                                         // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
                                     }
-                                }
                                 tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id, &err_msg);
                             }
                             crate::types::ToolError::UserFixable(msg) => {
-                                if let Some(checkpointer) = &checkpointer_node {
-                                    if let Some(cp_id) = &current_checkpoint_id {
+                                if let Some(checkpointer) = &checkpointer_node
+                                    && let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
                                         // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
                                     }
-                                }
                                 if let Some(ref cb) = cfg_arc_node.human_input_callback.0
                                     && let Some(human_input) = cb(&msg).await {
                                         tool_results[idx] = crate::types::ToolResult {
@@ -1992,7 +1974,7 @@ impl Agent {
                         let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                         let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                             tool,
-                            &tc,
+                            tc,
                             max_retries,
                             &cfg_arc_node
                         ).await;
@@ -2008,12 +1990,11 @@ impl Agent {
                                 };
                             }
                             Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                                if let Some(checkpointer) = &checkpointer_node {
-                                    if let Some(cp_id) = &current_checkpoint_id {
+                                if let Some(checkpointer) = &checkpointer_node
+                                    && let Some(cp_id) = &current_checkpoint_id {
                                         let _ = checkpointer.restore_checkpoint(cp_id).await;
                                         // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
                                     }
-                                }
                                 let count = *error_counts.entry(name.clone()).or_insert(0) + 1;
                                 error_counts.insert(name.clone(), count);
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
@@ -2038,11 +2019,10 @@ impl Agent {
                                 return Err(format!("Unexpected tool error: {}", err_msg));
                             }
                             Err(crate::types::ToolError::UserFixable(err_msg)) => {
-                            if let Some(checkpointer) = &checkpointer_node {
-                                if let Some(cp_id) = &current_checkpoint_id {
+                            if let Some(checkpointer) = &checkpointer_node
+                                && let Some(cp_id) = &current_checkpoint_id {
                                     let _ = checkpointer.restore_checkpoint(cp_id).await;
                                 }
-                            }
                             if let Some(ref cb) = cfg_arc_node.human_input_callback.0
                                 && let Some(human_input) = cb(&err_msg).await {
                                     tool_results[idx] = crate::types::ToolResult {
@@ -3060,12 +3040,11 @@ impl Agent {
     ) -> Option<Vec<Message>> {
         let mut target_idx = None;
         for (i, m) in messages.iter().enumerate() {
-            if let Some(rid) = &m.response_id {
-                if rid == target_id {
+            if let Some(rid) = &m.response_id
+                && rid == target_id {
                     target_idx = Some(i);
                     break;
                 }
-            }
         }
 
         let target_idx = target_idx?;
@@ -3201,8 +3180,8 @@ impl Agent {
 
         // We might need to mutate sona_matcher if it's enabled but not loaded
         let mut dynamic_sona_matcher = self.sona_matcher.clone();
-        if cfg.enable_sona_patterns && dynamic_sona_matcher.is_none() {
-            if let Some(path_str) = &cfg.sona_patterns_path {
+        if cfg.enable_sona_patterns && dynamic_sona_matcher.is_none()
+            && let Some(path_str) = &cfg.sona_patterns_path {
                 if let Ok(loaded) =
                     crate::sona_patterns::PatternMatcher::load_from_disk(path_str).await
                 {
@@ -3213,7 +3192,6 @@ impl Agent {
                     )));
                 }
             }
-        }
 
         if cfg.long_term_memory.is_some()
             || (cfg.enable_sona_patterns && self.sona_matcher.is_none())
@@ -3241,8 +3219,8 @@ impl Agent {
         let mut final_cfg = cfg.clone();
         let mut actual_initial_message = initial_message.to_string();
 
-        if final_cfg.enable_sona_patterns {
-            if let Some(matcher_arc) = &self_with_memory.sona_matcher {
+        if final_cfg.enable_sona_patterns
+            && let Some(matcher_arc) = &self_with_memory.sona_matcher {
                 let matcher = matcher_arc.lock().await;
                 if let Some(pattern) = matcher.find_best_match(initial_message) {
                     actual_initial_message = format!(
@@ -3252,7 +3230,6 @@ impl Agent {
                     );
                 }
             }
-        }
         if final_cfg.max_retries > 2 {
             final_cfg.max_retries = 2;
         }
@@ -3538,8 +3515,8 @@ impl Agent {
             }
 
             // Anthropic Mechanic: 3-Tier Memory Store implementation. Crucial rule: Agent must treat memory as a "hint" and verify against actual state before acting.
-            if let Ok(index_content) = store.get_lightweight_index().await {
-                if !index_content.trim().is_empty() {
+            if let Ok(index_content) = store.get_lightweight_index().await
+                && !index_content.trim().is_empty() {
                     let mut lines = Vec::new();
                     for line in index_content.lines() {
                         let l = line.trim();
@@ -3556,7 +3533,6 @@ impl Agent {
                         lightweight_index_vec = Some(lines);
                     }
                 }
-            }
         }
 
         let mut combined_system = crate::prompt_construction::HierarchicalPromptBuilder::new(
@@ -3952,8 +3928,8 @@ impl Agent {
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
-                if final_cfg.enable_sona_patterns {
-                    if let Some(matcher_arc) = &self_with_memory.sona_matcher {
+                if final_cfg.enable_sona_patterns
+                    && let Some(matcher_arc) = &self_with_memory.sona_matcher {
                         let mut matcher = matcher_arc.lock().await;
                         let mut successful_tools = Vec::new();
                         for msg in &messages {
@@ -3973,13 +3949,11 @@ impl Agent {
                             outcome_score: 1.0,
                         });
 
-                        if let Some(path_str) = &final_cfg.sona_patterns_path {
-                            if let Err(e) = matcher.save_to_disk(path_str).await {
+                        if let Some(path_str) = &final_cfg.sona_patterns_path
+                            && let Err(e) = matcher.save_to_disk(path_str).await {
                                 tracing::warn!("Failed to save SONA patterns to disk: {}", e);
                             }
-                        }
                     }
-                }
                 return Ok(last_assistant_content);
             }
 
@@ -4658,14 +4632,13 @@ impl Agent {
                     "Total mutating tools executed: {}",
                     mutating_calls.len()
                 ));
-                if let Ok(json_state) = serde_json::to_string_pretty(&pf) {
-                    if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
+                if let Ok(json_state) = serde_json::to_string_pretty(&pf)
+                    && tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
                         on_event(AgentEvent::CheckpointSaved {
                             iteration,
                             path: scratchpad_path.clone(),
                         });
                     }
-                }
             }
 
             // Cross-Department Memory Consolidation: Auto-store task result if successful
@@ -4884,8 +4857,8 @@ impl Agent {
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
         let mut args = tc.arguments.clone();
-        if tc.name == "spawn_subagent" {
-            if let Some(obj) = args.as_object_mut() {
+        if tc.name == "spawn_subagent"
+            && let Some(obj) = args.as_object_mut() {
                 let mode = obj.get("mode").and_then(|v| v.as_str()).unwrap_or("fork");
                 let task = obj.get("task").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -4936,7 +4909,6 @@ impl Agent {
                 }
                 return res;
             }
-        }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
             let args_str = match serde_json::to_string(&args) {
@@ -6374,7 +6346,7 @@ mod tests {
         let _ = agent.run(&cfg, "Hello", &mut |e| events.push(e)).await;
 
         let reqs = client.requests.lock().await;
-        assert!(reqs.len() > 0);
+        assert!(!reqs.is_empty());
         assert!(reqs[0].system.contains("You are an expert planner")); // LLMCompiler runs
         drop(reqs);
 
@@ -6421,8 +6393,8 @@ mod tests {
         assert!(!reqs_o3[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
         assert!(!reqs_o3[0].system.contains("You must think step by step"));
         // Assert that the explicit planning logic is routed correctly based on C. 7. metric.
-        assert_eq!(
-            cfg_o3.enable_llmcompiler_plan_and_execute, true,
+        assert!(
+            cfg_o3.enable_llmcompiler_plan_and_execute,
             "Config remains true initially"
         );
     }
@@ -6679,11 +6651,10 @@ mod tests {
 
         let mut tool_called = false;
         for e in events {
-            if let AgentEvent::ToolCall { name, .. } = e {
-                if name == "mock_read" {
+            if let AgentEvent::ToolCall { name, .. } = e
+                && name == "mock_read" {
                     tool_called = true;
                 }
-            }
         }
         assert!(tool_called, "The planned tool should have been executed");
     }
@@ -8657,28 +8628,28 @@ mod tests {
 
         let _ = std::process::Command::new("git")
             .current_dir(&temp_dir)
-            .args(&["init"])
+            .args(["init"])
             .output()
             .unwrap();
         let _ = std::process::Command::new("git")
             .current_dir(&temp_dir)
-            .args(&["config", "user.name", "Test User"])
+            .args(["config", "user.name", "Test User"])
             .output()
             .unwrap();
         let _ = std::process::Command::new("git")
             .current_dir(&temp_dir)
-            .args(&["config", "user.email", "test@example.com"])
+            .args(["config", "user.email", "test@example.com"])
             .output()
             .unwrap();
         std::fs::write(temp_dir.join("test.txt"), "hello").unwrap();
         let _ = std::process::Command::new("git")
             .current_dir(&temp_dir)
-            .args(&["add", "."])
+            .args(["add", "."])
             .output()
             .unwrap();
         let _ = std::process::Command::new("git")
             .current_dir(&temp_dir)
-            .args(&["commit", "-m", "init"])
+            .args(["commit", "-m", "init"])
             .output()
             .unwrap();
         std::fs::write(temp_dir.join("test.txt"), "hello modified").unwrap(); // Uncommitted change
@@ -8701,11 +8672,10 @@ mod tests {
         // Verify event was emitted
         let mut found_checkpoint_event = false;
         for e in events {
-            if let AgentEvent::CheckpointSaved { path, .. } = e {
-                if path.starts_with("git:") {
+            if let AgentEvent::CheckpointSaved { path, .. } = e
+                && path.starts_with("git:") {
                     found_checkpoint_event = true;
                 }
-            }
         }
         let _ = std::fs::remove_dir_all(&temp_dir);
         assert!(
@@ -8923,12 +8893,11 @@ mod tests {
         // Also ensure an AgentEvent::TaskComplete was emitted with the friendly prompt
         let mut found_task_complete = false;
         for e in events {
-            if let AgentEvent::TaskComplete { content } = e {
-                if content.contains("token budget") && content.contains("upgrade your plan") {
+            if let AgentEvent::TaskComplete { content } = e
+                && content.contains("token budget") && content.contains("upgrade your plan") {
                     found_task_complete = true;
                     break;
                 }
-            }
         }
         assert!(
             found_task_complete,

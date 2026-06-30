@@ -1,4 +1,4 @@
-#![allow(clippy::all)]
+
 use crate::agent::{Agent, AgentRunConfig};
 
 use serde::{Deserialize, Serialize};
