@@ -239,11 +239,30 @@
       <h1>Pricing Plans</h1>
       <div class="subtitle">Plain-language pricing — no hidden fees. Choose the best plan to grow your business.</div>
 
+      <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 32px; gap: 12px;">
+        <span style="font-size: 16px; font-weight: 500; color: #1d1d1f;">Monthly</span>
+        <label style="position: relative; display: inline-block; width: 50px; height: 28px;">
+          <input type="checkbox" id="billing-toggle" style="opacity: 0; width: 0; height: 0;">
+          <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #e5e5ea; transition: .4s; border-radius: 34px;"></span>
+          <span class="slider-circle" style="position: absolute; content: ''; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></span>
+        </label>
+        <span style="font-size: 16px; font-weight: 500; color: #1d1d1f;">Annually <span style="background-color: #E5F0FF; color: #0066FF; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 700; margin-left: 8px;">Subscribe & Save 20%</span></span>
+      </div>
+
+      <style>
+        #billing-toggle:checked + .slider {
+          background-color: #0066FF;
+        }
+        #billing-toggle:checked ~ .slider-circle {
+          transform: translateX(22px);
+        }
+      </style>
+
       <div class="pricing-grid">
         <!-- Free Plan -->
         <div class="ohc-growth-card glassmorphism app-card">
           <div class="plan-name">Free</div>
-          <div class="plan-price">$0<span>/month</span></div>
+          <div class="plan-price" data-monthly="0">$0<span>/month</span></div>
           <ul class="features-list">
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 1 Agent Limit</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 100 AI actions / month</li>
@@ -257,7 +276,7 @@
         <div class="ohc-growth-card recommended glassmorphism app-card">
           <div class="badge">Recommended</div>
           <div class="plan-name">Starter</div>
-          <div class="plan-price">$29<span>/month</span></div>
+          <div class="plan-price" data-monthly="29">$29<span>/month</span></div>
           <div style="color: #0066FF; font-size: 12px; font-weight: 600; margin-bottom: 16px;">Suggested for growing stores</div>
           <ul class="features-list">
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 3 Agents Limit</li>
@@ -271,7 +290,7 @@
         <!-- Pro Plan -->
         <div class="ohc-growth-card glassmorphism app-card">
           <div class="plan-name">Pro</div>
-          <div class="plan-price">$79<span>/month</span></div>
+          <div class="plan-price" data-monthly="79">$79<span>/month</span></div>
           <ul class="features-list">
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 10 Agents Limit</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited AI actions</li>
@@ -284,7 +303,7 @@
         <!-- Business Plan -->
         <div class="ohc-growth-card glassmorphism app-card">
           <div class="plan-name">Business</div>
-          <div class="plan-price">$299<span>/month</span></div>
+          <div class="plan-price" data-monthly="299">$299<span>/month</span></div>
           <ul class="features-list">
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Agents</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited AI actions</li>
@@ -318,6 +337,26 @@
 
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
+        const toggle = document.getElementById('billing-toggle');
+        const priceElements = document.querySelectorAll('.plan-price[data-monthly]');
+
+        if (toggle) {
+          toggle.addEventListener('change', () => {
+            const isAnnual = toggle.checked;
+            priceElements.forEach(el => {
+              const monthlyPrice = parseFloat(el.getAttribute('data-monthly'));
+              if (monthlyPrice > 0) {
+                if (isAnnual) {
+                  const annualPrice = Math.floor(monthlyPrice * 0.8);
+                  el.innerHTML = `$${annualPrice}<span>/month, billed annually</span>`;
+                } else {
+                  el.innerHTML = `$${monthlyPrice}<span>/month</span>`;
+                }
+              }
+            });
+          });
+        }
+
         const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         const token = localStorage.getItem('token');
         const headers = {};
@@ -419,12 +458,16 @@
               headers['Authorization'] = `Bearer ${token}`;
           }
 
+          const toggle = document.getElementById('billing-toggle');
+          const isAnnual = toggle ? toggle.checked : false;
+
           const response = await fetch('/api/billing/create-checkout-session', {
             method: 'POST',
             headers: headers,
             body: JSON.stringify({
               tier: tier,
-              is_subscription: true
+              is_subscription: true,
+              subscription_interval: isAnnual ? 'year' : 'month'
             })
           });
 
