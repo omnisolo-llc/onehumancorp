@@ -216,7 +216,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
           </div>
         )}
 
-        <form onSubmit={handleSend} className="relative flex items-center">
+        <form onSubmit={handleSend} className="relative flex items-center gap-2">
           <input
             type="text"
             value={input}
