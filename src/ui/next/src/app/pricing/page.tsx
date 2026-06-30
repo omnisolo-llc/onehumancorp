@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
+import { ViralTrialExtensionWidget } from '../components/ViralTrialExtensionWidget';
 
 export default function PricingPage() {
   const router = useRouter();
@@ -164,6 +165,9 @@ export default function PricingPage() {
               <button onClick={handleManageBilling} className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center hover:bg-gray-300 transition-colors">
                 Downgrade to Free
               </button>
+            )}
+            {(!loading && (currentPlan === 'Free' || !currentPlan)) && (
+              <ViralTrialExtensionWidget />
             )}
           </div>
 

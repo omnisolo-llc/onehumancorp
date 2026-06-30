@@ -16,6 +16,10 @@ vi.mock('../components/PoweredByOHC', () => ({
   PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
 }));
 
+vi.mock('../components/ViralTrialExtensionWidget', () => ({
+  ViralTrialExtensionWidget: () => <div data-testid="viral-trial-extension-widget" />,
+}));
+
 describe('PricingPage', () => {
   const mockPush = vi.fn();
 
@@ -146,6 +150,13 @@ describe('PricingPage', () => {
       render(<PricingPage />);
     });
     expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
+  });
+
+  it('renders the ViralTrialExtensionWidget when plan is Free', async () => {
+    await act(async () => {
+      render(<PricingPage />);
+    });
+    expect(screen.getByTestId('viral-trial-extension-widget')).toBeDefined();
   });
 
   it('renders the FAQ section with Stripe Billing integration info', async () => {
