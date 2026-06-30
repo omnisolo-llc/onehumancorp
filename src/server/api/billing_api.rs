@@ -192,7 +192,11 @@ pub async fn create_checkout_session_handler(
         };
         item_name = tier.clone();
         if req.is_subscription.unwrap_or(false) {
-            actual_interval = Some("month".to_string());
+            let interval = req.subscription_interval.as_deref().unwrap_or("month");
+            actual_interval = Some(interval.to_string());
+            if interval == "year" {
+                amount_usd = (amount_usd as f64 * 0.8 * 12.0).round();
+            }
         }
     } else if let Some(product_id) = &req.product_id {
         let mut conn = hub.pool.acquire().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -948,7 +952,7 @@ pub async fn download_invoice_handler(
                 }
             }
             Err(e) => {
-                tracing::error!("Failed to fetch invoices from Stripe: {}", e);
+                tracing::error!("Failed to fetch invoices from Stripe: {}", e); // pii-safe
             }
         }
     }

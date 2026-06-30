@@ -36,16 +36,16 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     await expect(page.locator('#unified-agent-feed-section')).toBeVisible();
 
     // Verify the newly seeded card is visible
-    const triageCard = page.locator('.triage-item', { hasText: 'Instagram DM' }).first();
+    const triageCard = page.locator('[data-testid^="triage-card-"], [data-testid="instagram-dm-card"]', { hasText: 'Instagram DM' }).first();
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
     // Check layout and glassmorphism styling
     await expect(triageCard).toHaveCSS('border-radius', '16px');
     await expect(triageCard).toHaveCSS('padding', '16px');
-    await expect(page.locator('.triage-item').first()).toHaveCSS('backdrop-filter', 'blur(30px) saturate(210%)');
+    await expect(page.locator('[data-testid^="triage-card-"], [data-testid="instagram-dm-card"]').first()).toHaveCSS('backdrop-filter', 'blur(30px) saturate(210%)');
 
     // 4. Approve the drafted response
-    const approveBtn = triageCard.getByTestId(/triage-approve-/);
+    const approveBtn = triageCard.locator('[data-testid*="approve"]');
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
@@ -73,7 +73,7 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
 
     await page.goto('/api/ui/dashboard.html');
 
-    const triageCard = page.locator('.triage-item', { hasText: 'WhatsApp' }).first();
+    const triageCard = page.locator('[data-testid^="triage-card-"], [data-testid="instagram-dm-card"]', { hasText: 'WhatsApp' }).first();
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
     const dismissBtn = triageCard.getByRole('button', { name: 'Dismiss' });
@@ -115,7 +115,7 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     await new Promise(resolve => setTimeout(resolve, 5000));
     await page.goto('/api/ui/dashboard.html');
 
-    const triageCard = page.locator('.triage-item', { hasText: 'Email' }).first();
+    const triageCard = page.locator('[data-testid^="triage-card-"], [data-testid="instagram-dm-card"]', { hasText: 'Email' }).first();
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
     const contextText = await triageCard.locator('.triage-context').textContent();
@@ -142,7 +142,7 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
    await new Promise(resolve => setTimeout(resolve, 5000));
    await page.goto('/api/ui/dashboard.html');
 
-   const triageCard = page.locator('.triage-item', { hasText: 'WhatsApp' }).first();
+   const triageCard = page.locator('[data-testid^="triage-card-"], [data-testid="instagram-dm-card"]', { hasText: 'WhatsApp' }).first();
    await expect(triageCard).toBeVisible({ timeout: 10000 });
 
    // Verify action button exists
