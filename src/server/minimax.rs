@@ -166,6 +166,38 @@ impl MinimaxClient {
                     "initial_products": [{"name": "Pipe Fix", "price": "80.00"}],
                     "suggested_features": ["booking"]
                 }"#.to_string());
+            } else if lower_prompt.contains("marketing_strategist") || lower_prompt.contains("marketing strategist") {
+                 return Ok(r#"{
+                    "agent_id": "marketing_strategist",
+                    "role": "Marketing Strategist",
+                    "contribution": "Plan accepted after repair with launch workstreams defined. The operations looks solid.",
+                    "handoff_to": ["sales_engineer"],
+                    "confidence": 0.95
+                }"#.to_string());
+            } else if lower_prompt.contains("sales_engineer") || lower_prompt.contains("sales engineer") {
+                 return Ok(r#"{
+                    "agent_id": "sales_engineer",
+                    "role": "Sales Engineer",
+                    "contribution": "Plan accepted after repair with launch workstreams defined. The operations looks solid.",
+                    "handoff_to": ["operations_planner"],
+                    "confidence": 0.95
+                }"#.to_string());
+            } else if lower_prompt.contains("operations_planner") || lower_prompt.contains("operations planner") {
+                 return Ok(r#"{
+                    "agent_id": "operations_planner",
+                    "role": "Operations Planner",
+                    "contribution": "Plan accepted after repair with launch workstreams defined. The operations looks solid.",
+                    "handoff_to": ["quality_reviewer"],
+                    "confidence": 0.95
+                }"#.to_string());
+            } else if lower_prompt.contains("quality_reviewer") || lower_prompt.contains("quality reviewer") {
+                return Ok(r#"{
+                    "agent_id": "quality_reviewer",
+                    "role": "Quality Reviewer",
+                    "contribution": "Final review resolves the prior agent contributions into launch steps.",
+                    "handoff_to": [],
+                    "confidence": 0.95
+                }"#.to_string());
             } else {
                 return Ok(r#"{
                     "business_name": "Generic Business",
