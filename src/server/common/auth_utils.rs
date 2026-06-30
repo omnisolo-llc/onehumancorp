@@ -37,7 +37,7 @@ where
     } else {
         // We use session scope (false) because set_org_context might be called on a raw connection outside a transaction.
         // Pool hooks (before_acquire / after_release) safely wipe session states using DISCARD ALL and SET app.current_tenant = ''.
-        query("SELECT set_config('role', session_user, false), set_config('app.current_tenant', $1, false);")
+        query("SELECT set_config('role', 'none', false), set_config('app.current_tenant', $1, false);")
             .bind(org_id)
             .execute(executor)
             .await?;
