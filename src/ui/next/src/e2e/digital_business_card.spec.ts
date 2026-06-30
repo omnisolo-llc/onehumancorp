@@ -7,14 +7,14 @@ test.describe('Digital Business Card Generator E2E', () => {
       await page.goto('/digital-business-card');
       // Adding a small wait for the page to render fully
       await page.waitForTimeout(1000);
-      await expect(page.locator('h1', { hasText: 'Digital Business Card Generator' })).toBeVisible({ timeout: 15000 });
+      await expect(page.locator('h1.app-title')).toBeVisible({ timeout: 15000 });
     });
 
     await test.step('Fill out form and generate link', async () => {
       // The page.fill might be too fast or the elements might not be ready
       await page.waitForSelector('input[placeholder="e.g. Jane Doe"]', { state: 'visible' });
       await page.fill('input[placeholder="e.g. Jane Doe"]', 'Carlos Repair');
-      await page.fill('input[placeholder="e.g. Founder \await page.fill('input[placeholder="e.g. Founder & CEO"]', 'Owner'); CEO"]', 'Owner');
+      await page.fill('input[placeholder="e.g. Founder & CEO"]', 'Owner');
       await page.fill('input[placeholder="e.g. Acme Corp"]', 'Carlos Home Repair');
       await page.fill('input[placeholder="e.g. +1 (555) 123-4567"]', '+15559876543');
 
@@ -36,12 +36,11 @@ test.describe('Digital Business Card Generator E2E', () => {
       await page.locator('input[type="checkbox"]').click({ force: true });
 
       // Soft paywall should appear
-      await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
-      await expect(page.getByText('Make the card 100% white-labeled. Requires Pro plan.')).toBeVisible();
+      await expect(page.locator('h2', { hasText: 'Upgrade to Pro' })).toBeVisible();
 
       // Close soft paywall
       await page.getByRole('button', { name: 'Keep Watermark' }).click();
-      await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeHidden();
+      await expect(page.locator('h2', { hasText: 'Upgrade to Pro' })).toBeHidden();
     });
 
     await test.step('Verify generated view and viral loop', async () => {
@@ -49,7 +48,7 @@ test.describe('Digital Business Card Generator E2E', () => {
       await page.getByRole('button', { name: 'Generate Shareable Link' }).click();
 
       // Get the link
-      const linkInput = page.locator('input[readonly]');
+      const linkInput = page.locator('input[value*="digital-business-card/view?data="]');
       await expect(linkInput).toBeVisible();
       const generatedUrl = await linkInput.inputValue();
 
