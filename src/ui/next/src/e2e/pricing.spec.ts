@@ -10,7 +10,16 @@ test.describe('Pricing Page Loop', () => {
     await expect(page.locator('h3', { hasText: 'Business' })).toBeVisible();
   });
 
-  test('Pricing page displays upgrade buttons', async ({ page }) => {
+  test('Pricing page displays My Plan usage statistics', async ({ page }) => {
+      await page.goto('/pricing');
+      await expect(page.locator('h2', { hasText: 'My Plan: Free' })).toBeVisible();
+      await expect(page.locator('p', { hasText: 'AI Actions Used' })).toBeVisible();
+      await expect(page.locator('p', { hasText: 'Storage Used' })).toBeVisible();
+      await expect(page.locator('p', { hasText: 'Estimated Next Bill' })).toBeVisible();
+      await expect(page.locator('button', { hasText: 'Manage Plan & Billing' })).toBeVisible();
+    });
+
+    test('Pricing page displays upgrade buttons', async ({ page }) => {
     await page.goto('/pricing');
     await expect(page.locator('button', { hasText: 'Upgrade to Starter via Stripe' })).toBeVisible();
     await expect(page.locator('button', { hasText: 'Upgrade to Pro via Stripe' })).toBeVisible();

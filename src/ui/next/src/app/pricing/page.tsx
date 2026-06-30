@@ -11,6 +11,7 @@ export default function PricingPage() {
   const router = useRouter();
 
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [planDetails, setPlanDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function PricingPage() {
         if (response.ok) {
           const json = await response.json();
           setCurrentPlan(json.current_plan);
+          setPlanDetails(json);
         }
       } catch (error) {
         console.error('Failed to fetch plan data:', error);
@@ -97,6 +99,44 @@ export default function PricingPage() {
       <main id="pricing-screen" className="p-4 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-6">
         <div className="text-center mb-4 md:mb-8 max-w-2xl mx-auto">
           <p className="text-base md:text-lg text-gray-600 leading-relaxed">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
+        </div>
+
+        {/* My Plan Section */}
+        <div className="mb-8 p-6 app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-indigo-200/50 shadow-xl rounded-2xl w-full">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold font-outfit text-gray-900">My Plan: {currentPlan || 'Free'}</h2>
+                    <p className="text-sm text-gray-500 mt-1">Cost transparency and usage tracking</p>
+                </div>
+                <button onClick={handleManageBilling} className="min-h-[44px] px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center whitespace-nowrap">
+                    Manage Plan & Billing
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">AI Actions Used</p>
+                    <p className="text-xl font-bold text-gray-900">
+                        {planDetails?.ai_actions_used || 0}
+                        <span className="text-sm font-normal text-gray-500 ml-1">/ {planDetails?.ai_actions_limit || '∞'}</span>
+                    </p>
+                </div>
+                <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Storage Used</p>
+                    <p className="text-xl font-bold text-gray-900">
+                        {planDetails?.storage_used_bytes ? (planDetails.storage_used_bytes / (1024 * 1024)).toFixed(1) : 0} MB
+                        <span className="text-sm font-normal text-gray-500 ml-1">
+                            / {planDetails?.storage_limit_bytes ? (planDetails.storage_limit_bytes / (1024 * 1024)).toFixed(0) + ' MB' : '∞'}
+                        </span>
+                    </p>
+                </div>
+                <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
+                    <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Estimated Next Bill</p>
+                    <p className="text-xl font-bold text-gray-900">
+                        ${((planDetails?.next_bill_estimated || 0) / 100).toFixed(2)}
+                    </p>
+                </div>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 w-full">
