@@ -120,8 +120,8 @@ export default function CostDashboardPage() {
       return (
           <AppShell title="Cost Transparency Dashboard" subtitle="Cost and tier usage signals.">
               <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 animate-pulse" data-testid="cost-dashboard-loading">
-                  <div className="h-48 bg-white/70 backdrop-blur-[30px] saturate-[210%] saturate-200 border border-white/40 rounded-2xl w-full"></div>
-                  <div className="h-64 bg-white/70 backdrop-blur-[30px] saturate-[210%] saturate-200 border border-white/40 rounded-2xl w-full"></div>
+                  <div className="h-48 glass-card backdrop-blur-[30px] saturate-[210%] saturate-200 border border-white/20 shadow-lg rounded-2xl w-full"></div>
+                  <div className="h-64 glass-card backdrop-blur-[30px] saturate-[210%] saturate-200 border border-white/20 shadow-lg rounded-2xl w-full"></div>
               </div>
           </AppShell>
       );
