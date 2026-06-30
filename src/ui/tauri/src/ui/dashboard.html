@@ -2159,6 +2159,67 @@
             `;
           }
 
+          if (item.action_type === 'PayoutSummary' || item.context_payload?.feature_type === 'payout_summary') {
+            let parsedPayload = item.proposed_action || item.context_payload || {};
+            let totalUsdEarned = parsedPayload.total_usd_earned || 0;
+            let totalEurEarned = parsedPayload.total_eur_earned || 0;
+            let totalUsdPayout = parsedPayload.total_usd_payout || 0;
+            return `
+              <div class="triage-item glassmorphism" data-testid="payout-summary-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
+                  <h3 class="text-lg font-semibold text-gray-900" style="margin: 0; font-size: 18px; font-weight: 600; color: #1d1d1f;">Your Payout Summary is ready.</h3>
+                  <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-700/10" style="background: #f0fdf4; color: #15803d; border: 1px solid rgba(21, 128, 61, 0.1); border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 500;">Pending</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-4" style="font-size: 14px; color: #64748b; margin-bottom: 16px;">
+                  You earned $${(totalUsdEarned / 100).toFixed(2)} USD and €${(totalEurEarned / 100).toFixed(2)} EUR this week. After conversion and fees, $${(totalUsdPayout / 100).toFixed(2)} USD will hit your Chase account tomorrow.
+                </p>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">View Details</button>
+                </div>
+              </div>
+            `;
+          }
+
+          if (item.action_type === 'ReviewDraftQuote' || item.context_payload?.feature_type === 'review_draft_quote') {
+            let parsedPayload = item.proposed_action || item.context_payload || {};
+            let customerName = parsedPayload.customer_name || 'Customer';
+            let projectDescription = parsedPayload.project_description || 'Project';
+            let totalCost = parsedPayload.total_cost || 0;
+            return `
+              <div class="triage-item glassmorphism" data-testid="review-draft-quote-card" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
+                  <h3 class="text-lg font-semibold text-gray-900" style="margin: 0; font-size: 18px; font-weight: 600; color: #1d1d1f;">Draft Quote Ready</h3>
+                  <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10" style="background: #eff6ff; color: #1d4ed8; border: 1px solid rgba(29, 78, 216, 0.1); border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 500;">Action Required</span>
+                </div>
+                <div id="triage-view-${item.id}">
+                  <p class="text-sm text-gray-600 mb-4" style="font-size: 14px; color: #64748b; margin-bottom: 16px;">
+                    ${projectDescription} for ${customerName}
+                  </p>
+                  <div class="bg-gray-50 rounded-[8px] p-3 mb-4 border border-gray-100" style="background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 16px; border: 1px solid #f1f5f9;">
+                    <div class="flex justify-between text-sm" style="display: flex; justify-content: space-between; font-size: 14px;">
+                      <span class="text-gray-500" style="color: #64748b;">Total Cost:</span>
+                      <span class="font-medium" style="font-weight: 500;">$${(totalCost / 100).toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between text-sm mt-1" style="display: flex; justify-content: space-between; font-size: 14px; margin-top: 4px;">
+                      <span class="text-gray-500" style="color: #64748b;">Deposit Required (33%):</span>
+                      <span class="font-medium" style="font-weight: 500;">$${((totalCost / 3) / 100).toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div class="triage-controls" style="display: flex; gap: 8px;">
+                    <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Approve & Send</button>
+                    <button class="triage-btn-dismiss" onclick="document.getElementById('triage-view-${item.id}').style.display='none'; document.getElementById('triage-edit-${item.id}').style.display='block';" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Edit</button>
+                  </div>
+                </div>
+                <div id="triage-edit-${item.id}" style="display: none;">
+                  <textarea id="triage-textarea-${item.id}" style="width: 100%; height: 100px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 16px; font-family: inherit; font-size: 14px; box-sizing: border-box;" onchange="window.updateTriagePayload('${item.id}', this.value)">${item.proposed_action?.message || ''}</textarea>
+                  <div class="triage-controls" style="display: flex; gap: 8px;">
+                    <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; min-height: 44px; min-width: 44px;">Save & Approve</button>
+                    <button class="triage-btn-dismiss" onclick="document.getElementById('triage-edit-${item.id}').style.display='none'; document.getElementById('triage-view-${item.id}').style.display='block';" style="flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; min-height: 44px; min-width: 44px;">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
           if (item.action_type === 'SocialPostDraft') {
             let parsedPayload = {};
             try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
