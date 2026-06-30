@@ -2766,9 +2766,9 @@ mod tests {
             hide_branding: Some("false".to_string()),
         };
         let response = super::handle_one_tap_referral_embed(axum::extract::Query(query)).await;
-        let mut response = response.into_response();
+        let response = response.into_response();
 
-        let bytes = axum::body::to_bytes(response.body_mut(), usize::MAX).await.unwrap();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(bytes.to_vec()).unwrap();
 
         assert!(html.contains("test_tenant"));
