@@ -1,4 +1,4 @@
-import { test, expect } from '../../../../e2e/fixtures';
+import { test, expect } from '../fixtures';
 
 test.describe('Offline-Tolerant Field Ops CUJ', () => {
   test('Owner completes a field ops job offline and syncs it back', async ({ page, loginAs, adminUser }) => {

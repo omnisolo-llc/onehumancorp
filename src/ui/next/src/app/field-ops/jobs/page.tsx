@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { SyncManager } from "../../../lib/sync/SyncManager";
+import { useQuery } from "@powersync/react";
+import { PowerSyncProvider } from "../../../lib/powersync/PowerSyncProvider";
 
 type Appointment = {
   id: string;
@@ -18,8 +20,9 @@ type Appointment = {
   actual_end_time?: string;
 };
 
-export default function FieldOpsJobsPage() {
+function FieldOpsJobsPageInner() {
   const [isOffline, setIsOffline] = useState(false);
+  const { data: dbJobs, isLoading: isDbLoading } = useQuery<Appointment>("SELECT * FROM appointments ORDER BY scheduled_start_time ASC");
   const [jobs, setJobs] = useState<Appointment[]>([]);
   const [agentSuggestion, setAgentSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,25 +47,35 @@ export default function FieldOpsJobsPage() {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Fetch initial schedule
-    fetch("/api/v1/field-ops/appointments")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.appointments) {
-          setJobs(data.appointments);
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to load appointments", err);
-        setLoading(false);
-      });
-
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isDbLoading) {
+        if (dbJobs && dbJobs.length > 0) {
+            // PowerSync has the jobs
+            setJobs(dbJobs);
+            setLoading(false);
+        } else {
+            // Fallback to fetch if DB is empty
+            fetch("/api/v1/field-ops/appointments")
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.appointments) {
+                  setJobs(data.appointments);
+                }
+                setLoading(false);
+              })
+              .catch((err) => {
+                console.error("Failed to load appointments", err);
+                setLoading(false);
+              });
+        }
+    }
+  }, [dbJobs, isDbLoading]);
 
   const handleStatusChange = async (jobId: string, newStatus: string) => {
     const now = new Date().toISOString();
@@ -555,5 +568,13 @@ export default function FieldOpsJobsPage() {
       )}
 
     </div>
+  );
+}
+
+export default function FieldOpsJobsPage() {
+  return (
+    <PowerSyncProvider fallback={<FieldOpsJobsPageInner />}>
+      <FieldOpsJobsPageInner />
+    </PowerSyncProvider>
   );
 }

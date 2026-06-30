@@ -32,8 +32,57 @@ const pendingActions = new Table({
   timestamp: column.integer
 });
 
+const appointments = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  customer_id: column.text,
+  job_template_id: column.text,
+  staff_profile_id: column.text,
+  status: column.text,
+  scheduled_start_time: column.text,
+  scheduled_end_time: column.text,
+  actual_start_time: column.text,
+  actual_end_time: column.text,
+  location_address: column.text,
+  location_lat: column.real,
+  location_lng: column.real,
+  notes: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const serviceRoutes = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  staff_profile_id: column.text,
+  route_date: column.text,
+  status: column.text,
+  start_location_lat: column.real,
+  start_location_lng: column.real,
+  end_location_lat: column.real,
+  end_location_lng: column.real,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const jobLocations = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  service_route_id: column.text,
+  appointment_id: column.text,
+  sequence_order: column.integer,
+  estimated_travel_time_mins: column.integer,
+  distance_to_next_km: column.real,
+  status: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
 export const AppSchema = new Schema({
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages,
-  pending_actions: pendingActions
+  pending_actions: pendingActions,
+  appointments: appointments,
+  service_routes: serviceRoutes,
+  job_locations: jobLocations
 });
