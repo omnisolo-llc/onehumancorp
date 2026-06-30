@@ -83,9 +83,11 @@ export default function MyPlanPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 justify-center items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        <p className="mt-4 text-gray-600">Loading your plan data...</p>
+      <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 justify-center items-center p-4">
+        <div className="flex flex-col items-center justify-center p-8 app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg rounded-2xl w-full max-w-sm animate-pulse">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <p className="mt-6 text-gray-600 font-medium">Loading your plan data...</p>
+        </div>
       </div>
     );
   }
@@ -94,7 +96,7 @@ export default function MyPlanPage() {
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden max-w-[100vw]">
       <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 app-panel-header backdrop-blur-md bg-white/70 shadow-sm w-full glass-panel">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-3 py-2 bg-gray-100 rounded-xl text-sm font-medium text-gray-800 hover:bg-gray-200 transition-colors flex items-center justify-center">
+          <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-3 py-2 glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-sm rounded-xl text-sm font-medium text-gray-800 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 flex items-center justify-center">
             Back
           </button>
           <WithTooltip id="my-plan-tooltip" defaultText="View and manage your subscription plan and usage.">
@@ -123,18 +125,18 @@ export default function MyPlanPage() {
             <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <button
                     onClick={() => router.push('/pricing')}
-                    className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all shadow-sm text-center">
+                    className="w-full sm:w-auto px-6 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
                     Upgrade
                 </button>
                 <button
                     onClick={handleManageBilling}
                     disabled={isManagingBilling}
-                    className="w-full sm:w-auto px-6 py-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl font-medium transition-all shadow-sm text-center disabled:opacity-75 disabled:cursor-not-allowed">
+                    className="w-full sm:w-auto px-6 py-3 bg-[#0f766e]/10 hover:bg-[#0f766e]/20 text-[#0f766e] rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm">
                     {isManagingBilling ? "Redirecting..." : "Manage Billing"}
                 </button>
                 <button
                     onClick={() => router.push('/cost-dashboard')}
-                    className="w-full sm:w-auto px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-xl font-medium transition-all shadow-sm text-center">
+                    className="w-full sm:w-auto px-6 py-3 glass-card backdrop-blur-xl bg-white/60 hover:bg-white/80 text-gray-700 border border-white/40 rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
                     View Detailed Costs
                 </button>
             </div>
