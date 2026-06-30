@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice | OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+        --bg-color: #f5f5f7;
+        --text-color: #1d1d1f;
+        --card-bg: rgba(255, 255, 255, 0.65);
+        --card-border: rgba(255, 255, 255, 0.4);
+        --primary: #0066FF;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --bg-color: #16161a;
+            --text-color: #f5f5f7;
+            --card-bg: rgba(22, 22, 26, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+        }
+    }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+    }
+
+    .glassmorphism {
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 40px;
+      border: 1px solid var(--card-border);
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+    }
+
+    h2 {
+      font-family: "Outfit", sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 30px;
+      letter-spacing: 2px;
+      color: #86868b;
+    }
+
+    .invoice-section {
+        margin-bottom: 25px;
+    }
+
+    .invoice-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #86868b;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+        font-weight: 600;
+    }
+
+    .invoice-value {
+        font-size: 18px;
+        font-weight: 500;
+    }
+
+    .invoice-amount-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 2px dashed rgba(134, 134, 139, 0.3);
+    }
+
+    .invoice-amount {
+        font-family: "Outfit", sans-serif;
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .pay-btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 30px;
+      font-family: "Outfit", sans-serif;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+    }
+
+    .pay-btn:hover { background-color: #0052cc; }
+    .pay-btn:active { transform: scale(0.98); }
+
+    footer {
+      margin-top: 40px;
+      text-align: center;
+    }
+
+    .footer-link {
+        color: #86868b;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: color 0.2s;
+        display: inline-block;
+        padding: 10px;
+    }
+
+    .footer-link:hover {
+        color: var(--text-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="container glassmorphism">
+    <h2>INVOICE</h2>
+
+    <div class="invoice-section">
+        <div class="invoice-label">Billed To</div>
+        <div class="invoice-value" id="display-client">Loading...</div>
+    </div>
+
+    <div class="invoice-section">
+        <div class="invoice-label">Description</div>
+        <div class="invoice-value" id="display-desc">Loading...</div>
+    </div>
+
+    <div class="invoice-amount-section">
+        <div class="invoice-label" style="margin-bottom: 0; font-size: 14px;">Total Due</div>
+        <div class="invoice-amount" id="display-amount">$0.00</div>
+    </div>
+
+    <button class="pay-btn" onclick="alert('Payment processing would happen here!')">Pay Invoice</button>
+  </div>
+
+  <footer>
+    <a href="/onboarding?ref=invoice&source=footer_widget" class="footer-link">⚡ Powered by OHC</a>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const dataParam = urlParams.get('data');
+
+        if (dataParam) {
+            try {
+                const jsonStr = decodeURIComponent(atob(dataParam));
+                const data = JSON.parse(jsonStr);
+
+                document.getElementById('display-client').textContent = data.client;
+                document.getElementById('display-desc').textContent = data.desc;
+
+                let amount = parseFloat(data.amount);
+                if (isNaN(amount)) amount = 0;
+                document.getElementById('display-amount').textContent = '$' + amount.toFixed(2);
+
+            } catch (e) {
+                console.error("Error parsing invoice data", e);
+                document.getElementById('display-client').textContent = "Error loading invoice.";
+                document.getElementById('display-desc').textContent = "";
+            }
+        } else {
+            document.getElementById('display-client').textContent = "No invoice data provided.";
+            document.getElementById('display-desc').textContent = "";
+        }
+    });
+  </script>
+</body>
+</html>
