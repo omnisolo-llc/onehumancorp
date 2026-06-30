@@ -785,7 +785,8 @@ mod parity_tests {
                 *a += 1;
 
                 // Simulate a lag (e.g. over slow network/disk) that exceeds the 60s timeout constraint
-                tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+                tokio::time::advance(std::time::Duration::from_secs(65)).await;
+                tokio::task::yield_now().await;
 
                 // We'll return an error so retry logic would theoretically kick in if not timed out
                 Err::<(), String>("database is locked".to_string())

@@ -132,11 +132,7 @@ export default function FeedPage() {
       return i;
     }));
 
-    if (isAmbassador) {
-       await handleAction(id, 'APPROVED', updatedProposed, updatedContext);
-    } else {
-       await handleAction(id, 'PENDING_APPROVAL', updatedProposed, updatedContext);
-    }
+    await handleAction(id, 'PENDING_APPROVAL', updatedProposed, updatedContext);
     setEditingId(null);
   };
 

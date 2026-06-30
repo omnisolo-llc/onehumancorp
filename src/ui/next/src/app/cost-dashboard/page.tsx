@@ -58,6 +58,52 @@ export default function CostDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
+  const handleCancelSubscription = async () => {
+    if (confirm('Are you sure you want to cancel your subscription?')) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/billing/cancel-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+        });
+        if (response.ok) {
+          setActionMessage('Subscription canceled successfully.');
+        } else {
+          setActionMessage('Failed to cancel subscription.');
+        }
+      } catch (error) {
+        setActionMessage('Error canceling subscription.');
+      }
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/billing/download-invoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.url) {
+          window.open(data.url, '_blank');
+        }
+        setActionMessage('Invoice download is ready for your current billing period.');
+      } else {
+        setActionMessage('Failed to download invoice.');
+      }
+    } catch (error) {
+      setActionMessage('Error downloading invoice.');
+    }
+  };
+
   const handleManageBilling = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -209,10 +255,13 @@ export default function CostDashboardPage() {
                       >
                           Manage Billing
                       </button>
+                      <button id="cancel-subscription-btn" onClick={handleCancelSubscription} className="px-6 py-2 bg-white text-red-600 hover:bg-red-50 border border-red-200 rounded-xl font-medium transition-all shadow-sm flex items-center justify-center">
+                          Cancel Subscription
+                      </button>
                   </div>
               )}
               {actionMessage && (
-                  <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/20 p-4 text-sm font-medium text-[#0f766e] dark:text-[#6ac5bd] shadow-sm" role="status">
+                  <div id="plan-message" className="mt-4 rounded-xl border border-teal-100 bg-teal-50/20 p-4 text-sm font-medium text-[#0f766e] dark:text-[#6ac5bd] shadow-sm" role="status">
                       {actionMessage}
                   </div>
               )}
@@ -222,8 +271,15 @@ export default function CostDashboardPage() {
         {/* Overview Section */}
         <section className="app-panel glass-panel hover:shadow-xl transition-shadow duration-300">
             <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4">
-               <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Transparency Dashboard</h2>
-               <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
+               <div className="flex justify-between items-center">
+                   <div>
+                       <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Transparency Dashboard</h2>
+                       <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
+                   </div>
+                   <button id="download-invoice-btn" onClick={handleDownloadInvoice} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors">
+                       Download Invoice
+                   </button>
+               </div>
             </div>
 
             <div className="app-panel-body p-6">
@@ -242,7 +298,7 @@ export default function CostDashboardPage() {
                     </div>
                     <div className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 rounded-2xl group">
                         <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
-                        <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
+                        <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">-{formatCurrency((data?.bandwidth_savings || 0))}</p>
                         <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
                     </div>
                 </div>

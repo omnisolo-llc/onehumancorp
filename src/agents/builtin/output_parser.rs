@@ -1075,34 +1075,28 @@ mod tests_clamped {
     }
 }
 
+fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(data: &serde_json::Value) -> Result<T, String> {
+    match T::deserialize(data) {
+        Ok(parsed) => Ok(parsed),
+        Err(e) => {
+            let args_str = serde_json::to_string(data).unwrap_or_default();
+            Err(crate::types::format_pydantic_error(
+                &e,
+                Some(&args_str),
+                Some("Please strictly follow the Pydantic-first tool schema and try again."),
+            ))
+        }
+    }
+}
+
 impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for AdvancedPydanticOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
-        match T::deserialize(data) {
-            Ok(parsed) => Ok(parsed),
-            Err(e) => {
-                let args_str = serde_json::to_string(data).unwrap_or_default();
-                Err(crate::types::format_pydantic_error(
-                    &e,
-                    Some(&args_str),
-                    Some("Please strictly follow the Pydantic-first tool schema and try again."),
-                ))
-            }
-        }
+        validate_pydantic_schema(data)
     }
 }
 
 impl<T: serde::de::DeserializeOwned> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
-        match T::deserialize(data) {
-            Ok(parsed) => Ok(parsed),
-            Err(e) => {
-                let args_str = serde_json::to_string(data).unwrap_or_default();
-                Err(crate::types::format_pydantic_error(
-                    &e,
-                    Some(&args_str),
-                    Some("Please strictly follow the Pydantic-first tool schema and try again."),
-                ))
-            }
-        }
+        validate_pydantic_schema(data)
     }
 }
