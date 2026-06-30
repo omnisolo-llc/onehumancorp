@@ -55,7 +55,7 @@
       color: white;
       border: none;
       padding: 14px 24px;
-      border-radius: 12px;
+      border-radius: 8px;
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
@@ -91,7 +91,7 @@
       background: rgba(255, 255, 255, 0.65);
       backdrop-filter: blur(30px) saturate(210%);
       -webkit-backdrop-filter: blur(30px) saturate(210%);
-      border-radius: 12px;
+      border-radius: 8px;
       padding: 20px;
       margin-bottom: 25px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -247,15 +247,24 @@
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
 
         // This simulates generating a program
-        const res = await fetch('/api/v1/growth/referrals/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+                let refId = tenantId;
+        try {
+            const res = await fetch('/api/v1/growth/referrals/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.referral_link) {
+                    refId = data.referral_link.split('/').pop();
+                }
             }
-        });
-        const data = await res.json();
-        const refId = data.referral_link ? data.referral_link.split('/').pop() : tenantId;
+        } catch (err) {
+            console.log('Backend API not available, simulating generation for demo UI', err);
+        }
 
         // Show result
         const baseUrl = window.location.origin;
