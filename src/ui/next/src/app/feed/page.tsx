@@ -25,6 +25,50 @@ export default function FeedPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
+  // Shipping specific state
+  const [shippingRates, setShippingRates] = useState<Record<string, any[]>>({});
+  const [fetchingRatesFor, setFetchingRatesFor] = useState<string | null>(null);
+  const [purchasedLabels, setPurchasedLabels] = useState<Record<string, string>>({});
+
+  const fetchRates = async (itemId: string, orderId: string, address: any) => {
+    setFetchingRatesFor(itemId);
+    try {
+      const res = await fetch('/api/shipping/rates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, weight: "1.0", dimensions: "10x8x4" })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setShippingRates(prev => ({ ...prev, [itemId]: data.rates }));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFetchingRatesFor(null);
+    }
+  };
+
+  const buyLabel = async (itemId: string, orderId: string, rateId: string) => {
+    setProcessingId(itemId);
+    try {
+      const res = await fetch('/api/shipping/label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, rateId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPurchasedLabels(prev => ({ ...prev, [itemId]: data.labelUrl }));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+
   useEffect(() => {
     async function fetchFeed() {
       try {
@@ -371,7 +415,53 @@ export default function FeedPage() {
                         </div>
                       </div>
 
-                    ) : isPromoter ? (
+
+                  ) : item.proposed_action?.action_type === 'Generate Shipping Label' ? (
+                    <div className="flex flex-col gap-3">
+                      {purchasedLabels[item.id] ? (
+                        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800/50 flex flex-col items-center">
+                          <p className="text-green-800 dark:text-green-300 font-bold mb-2">Label Generated Successfully</p>
+                          <a href={purchasedLabels[item.id]} target="_blank" rel="noreferrer" className="text-blue-600 underline text-sm mb-4">View/Print PDF</a>
+                          <button
+                            onClick={() => handleAction(item.id, 'APPROVED')}
+                            className="w-full min-h-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] rounded transition-all duration-200"
+                          >
+                            Mark as Done & Notify Customer
+                          </button>
+                        </div>
+                      ) : shippingRates[item.id] ? (
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">Select a shipping rate:</p>
+                          {shippingRates[item.id].slice(0, 3).map((rate: any) => (
+                            <div key={rate.id} className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                              <div>
+                                <p className="font-bold text-gray-900 dark:text-white">{rate.carrier} {rate.service}</p>
+                                <p className="text-xs text-gray-500">Est. {rate.days} days</p>
+                              </div>
+                              <button
+                                onClick={() => buyLabel(item.id, item.context_payload?.order_id || 'unknown', rate.id)}
+                                disabled={processingId === item.id}
+                                className="min-h-[44px] px-4 bg-[#1D1D1F] dark:bg-white text-white dark:text-black font-semibold rounded"
+                              >
+                                Buy {rate.amount}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => fetchRates(item.id, item.context_payload?.order_id || 'unknown', item.context_payload?.address)}
+                            disabled={fetchingRatesFor === item.id}
+                            className="flex-1 min-h-[44px] px-4 bg-[#1D1D1F] dark:bg-white text-white dark:text-black font-semibold rounded flex items-center justify-center"
+                          >
+                            {fetchingRatesFor === item.id ? 'Loading Rates...' : 'Fetch Live Rates'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                  ) : isPromoter ? (
                       <div className="flex flex-col gap-3">
                         <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
                           <p className="text-[13px] text-indigo-700 dark:text-indigo-300 font-medium mb-1">Generated Marketing Posts</p>

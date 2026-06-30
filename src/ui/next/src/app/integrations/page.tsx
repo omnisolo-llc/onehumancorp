@@ -31,6 +31,8 @@ export default function Integrations() {
   const [showTwilioModal, setShowTwilioModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [showWhatsAppCloudApiModal, setShowWhatsAppCloudApiModal] = useState(false);
+  const [showShippoModal, setShowShippoModal] = useState(false);
+  const [shippoToken, setShippoToken] = useState("");
   const [whatsappTwilioCreds, setWhatsappTwilioCreds] = useState({ accountSid: '', authToken: '', phoneNumber: '' });
   const [twilioChannels, setTwilioChannels] = useState({
     whatsapp: true,
@@ -68,6 +70,11 @@ export default function Integrations() {
       setStatusMessage("Continue with Meta to connect WhatsApp Cloud API.");
       return;
     }
+    if (id === 'shippo') {
+      setShowShippoModal(true);
+      setStatusMessage("Provide your Shippo API Token.");
+      return;
+    }
     setStatusMessage(`Connecting ${integration?.name || id}...`);
     try {
       const res = await fetch(`/api/integrations/${id}/connect`, { method: "POST" });
@@ -97,6 +104,33 @@ export default function Integrations() {
     setShowTwilioModal(false);
     setStatusMessage("Twilio Conversations connected.");
     router.push('/inbox');
+  };
+
+  const saveShippoIntegration = async () => {
+    try {
+      const res = await fetch(`/api/integrations/shippo/connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integration_id: 'shippo',
+          api_token: shippoToken,
+          base_url: 'https://api.goshippo.com',
+          bot_token: '',
+          from_phone: ''
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to connect Shippo");
+
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === 'shippo' ? { ...integration, status: "connected" } : integration
+      ));
+      setShowShippoModal(false);
+      setStatusMessage("Shippo connected successfully.");
+    } catch (e) {
+      console.error(e);
+      setStatusMessage("Error connecting to Shippo.");
+    }
   };
 
   const saveWhatsAppIntegration = async () => {
@@ -256,6 +290,50 @@ export default function Integrations() {
           </div>
         )}
 
+
+        {/* Shippo Connect Modal */}
+        {showShippoModal && (
+          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-[30px] saturate-[210%]">
+            <div className="app-card glassmorphism w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-white/40 dark:border-white/10 bg-white/90 dark:bg-zinc-900/90">
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-12 h-12 bg-teal-50/10 rounded-xl flex items-center justify-center text-2xl text-teal-600 border border-teal-100/30">
+                  📦
+                </div>
+                <button
+                  onClick={() => setShowShippoModal(false)}
+                  className="min-h-[44px] p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Connect Shippo</h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
+                Provide your Shippo Live API Token to enable automated label generation.
+              </p>
+
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Live API Token</label>
+                  <input
+                    type="password"
+                    value={shippoToken}
+                    onChange={(e) => setShippoToken(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#0f766e] focus:border-transparent outline-none"
+                    placeholder="shippo_live_..."
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={saveShippoIntegration}
+                className="w-full bg-[#0f766e] hover:bg-[#0d645d] text-white py-3 rounded-xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2"
+              >
+                Save & Connect
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Twilio Conversations Connect Modal */}
         {showTwilioModal && (
