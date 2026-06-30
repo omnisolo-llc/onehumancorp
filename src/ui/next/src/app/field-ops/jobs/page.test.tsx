@@ -14,6 +14,12 @@ vi.mock('../../../lib/powersync/PowerSyncProvider', () => ({
   PowerSyncProvider: ({ children }: any) => <div data-testid="powersync-provider">{children}</div>,
   isPowerSyncSupportedForLocation: () => true
 }));
+vi.mock('../../../lib/powersync/db', () => ({
+  getPowerSyncDB: vi.fn(() => Promise.resolve({
+    execute: vi.fn()
+  }))
+}));
+
 vi.mock('@powersync/react', () => ({
   useQuery: vi.fn(() => ({ data: [] })),
   PowerSyncContext: { Provider: ({ children }: any) => <div>{children}</div> }
