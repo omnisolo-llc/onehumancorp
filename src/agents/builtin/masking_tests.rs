@@ -282,7 +282,7 @@ fn test_plain_text_masking_fallback() {
     masker.apply_masking(&mut messages);
 
     let masked = &messages[0].tool_results[0].content;
-    assert!(masked.contains("[Observation Masked to save context. Output was"));
+    assert!(masked.contains("[Observation Masked:"));
     assert!(masked.contains("plain_test"));
 }
 
@@ -392,6 +392,6 @@ fn test_plain_text_masking_exact_boundary() {
     masker.apply_masking(&mut messages);
 
     let masked = &messages[0].tool_results[0].content;
-    assert!(masked.contains("[Observation Masked to save context. Output was"));
+    assert!(masked.contains("[Observation Masked:"));
     assert!(masked.contains("plain_test"));
 }

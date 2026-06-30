@@ -139,6 +139,7 @@ impl JetBrainsObservationMasker {
                     );
                 }
             }
+
             _ => {}
         }
         modified
@@ -244,8 +245,16 @@ impl JetBrainsObservationMasker {
                                             bytes, tr.tool_call_id
                                         )
                                     };
-                                    // For plain text, we preserve it as a plain string rather than forcing a JSON wrapper, unless we explicitly parsed it as JSON previously.
-                                    tr.content = raw_msg;
+                                    // Graceful text log masking: preserve start and end for non-JSON contents
+                                    let char_count = tr.content.chars().count();
+                                    let keep = std::cmp::max(self.size_limit / 5, 20);
+                                    if char_count > keep * 2 {
+                                        let start: String = tr.content.chars().take(keep).collect();
+                                        let end: String = tr.content.chars().skip(char_count - keep).collect();
+                                        tr.content = format!("{}... [Observation Masked: {} bytes truncated. Use RecallObservation ID '{}'] ...{}", start, bytes, tr.tool_call_id, end);
+                                    } else {
+                                        tr.content = raw_msg;
+                                    }
                                 }
                             }
                         }
