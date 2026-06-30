@@ -367,6 +367,52 @@ pub async fn stripe_webhook_handler(
                     // It's a normal online payment intent, handled elsewhere or ignored here
                     return StatusCode::OK.into_response();
                 }
+
+                // Extract the tenant_id and idempotency_key for ledger updates
+                let tenant_id_opt = obj.get("metadata").and_then(|m| m.get("tenant_id")).and_then(|id| id.as_str());
+                let idempotency_key_opt = obj.get("metadata").and_then(|m| m.get("idempotency_key")).and_then(|id| id.as_str());
+
+                if let (Some(tenant_id), Some(idempotency_key)) = (tenant_id_opt, idempotency_key_opt) {
+                    let pool = crate::db::get_pool();
+                    let existing: Option<(String,)> = sqlx::query_as("SELECT status FROM payment_intents WHERE idempotency_key = $1 AND tenant_id = $2")
+                        .bind(idempotency_key)
+                        .bind(tenant_id)
+                        .fetch_optional(&pool)
+                        .await.unwrap_or(None);
+
+                    if let Some((status,)) = existing {
+                        if status != "succeeded" {
+                            if let Ok(mut tx) = pool.begin().await {
+                                let payment_intent_id = obj.get("id").and_then(|id| id.as_str()).unwrap_or("");
+                                let amount_cents = obj.get("amount").and_then(|a| a.as_i64()).unwrap_or(0);
+                                let amount_f64 = (amount_cents as f64) / 100.0;
+                                let currency = obj.get("currency").and_then(|c| c.as_str()).unwrap_or("usd").to_string();
+                                let tx_id = uuid::Uuid::new_v4().to_string();
+                                let entry_id = uuid::Uuid::new_v4().to_string();
+                                let account_id = "default_revenue";
+
+                                if let Err(e) = sqlx::query("UPDATE payment_intents SET status = 'succeeded', stripe_payment_intent_id = $1 WHERE idempotency_key = $2 AND tenant_id = $3")
+                                    .bind(payment_intent_id).bind(idempotency_key).bind(tenant_id).execute(&mut *tx).await { tracing::error!("Failed to update payment_intents: {}", e); let _ = tx.rollback().await; return StatusCode::INTERNAL_SERVER_ERROR.into_response(); }
+
+                                if let Err(e) = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
+                                    .bind(tenant_id).bind(&tx_id).bind(amount_f64).bind(&currency).execute(&mut *tx).await { tracing::error!("Failed to insert ledger_transactions: {}", e); let _ = tx.rollback().await; return StatusCode::INTERNAL_SERVER_ERROR.into_response(); }
+
+                                if let Err(e) = sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                                    .bind(tenant_id).bind(account_id).bind(&currency).bind(0.0).execute(&mut *tx).await { tracing::error!("Failed to insert ledger_accounts: {}", e); let _ = tx.rollback().await; return StatusCode::INTERNAL_SERVER_ERROR.into_response(); }
+
+                                if let Err(e) = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
+                                    .bind(tenant_id).bind(&entry_id).bind(&tx_id).bind(account_id).bind(amount_f64).execute(&mut *tx).await { tracing::error!("Failed to insert ledger_entries: {}", e); let _ = tx.rollback().await; return StatusCode::INTERNAL_SERVER_ERROR.into_response(); }
+
+                                if let Err(e) = sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
+                                    .bind(amount_f64).bind(tenant_id).bind(account_id).execute(&mut *tx).await { tracing::error!("Failed to update ledger_accounts: {}", e); let _ = tx.rollback().await; return StatusCode::INTERNAL_SERVER_ERROR.into_response(); }
+
+                                if let Err(e) = tx.commit().await {
+                                    tracing::error!("Failed to commit tap-to-pay ledger update: {}", e);
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             let tenant_id_opt = obj.get("metadata")

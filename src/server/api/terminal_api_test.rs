@@ -147,7 +147,7 @@ async fn test_create_payment_intent_authenticated() {
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
-    assert!(body_str.contains("Stripe API key is required") || body_str.contains("Stripe API error") || body_str.contains("Stripe Terminal connection token request failed"));
+    assert!(body_str.contains("Stripe API key is required") || body_str.contains("Stripe API error") || body_str.contains("Stripe API request failed"));
 }
 
 #[tokio::test]
@@ -278,5 +278,5 @@ async fn test_create_payment_intent_authenticated_via_router() {
 
     let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
-    assert!(body_str.contains("Stripe API key is required") || body_str.contains("Stripe API error") || body_str.contains("Stripe Terminal connection token request failed"));
+    assert!(body_str.contains("Stripe API key is required") || body_str.contains("Stripe API error") || body_str.contains("Stripe API request failed"));
 }
