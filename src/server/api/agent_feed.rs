@@ -327,16 +327,32 @@ async fn update_feed_item_state(
 
             if payload.state == "APPROVED" {
                 if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
+                    let mut is_incident = false;
+                    let mut feature_type = None;
+                    let mut dispatch_payload = None;
+
                     if item.event_source == "incident_resolution" {
-                        if let Some(ref payload) = item.context_payload {
-                            let _ = crate::domain::incidents::handle_incident_resolution(&tenant_id, payload, &pool).await;
-                        }
+                         is_incident = true;
+                         dispatch_payload = item.context_payload.clone().map(|p| p.0);
+                    } else if let Some(ref pl) = item.proposed_action.clone().or(item.context_payload.clone()) {
+                         if let Some(ft) = pl.get("feature_type").and_then(|v| v.as_str()) {
+                             feature_type = Some(ft.to_string());
+                             dispatch_payload = Some(pl.0.clone());
+                         }
                     }
 
-                    if let Some(ref payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
-                        if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
-                            let _ = crate::domain::action_router::dispatch_action(feature_type, &tenant_id, payload, &pool).await;
-                        }
+                    if is_incident || feature_type.is_some() {
+                        let job_payload = serde_json::json!({
+                             "action_id": id,
+                             "tenant_id": tenant_id,
+                             "is_incident": is_incident,
+                             "feature_type": feature_type,
+                             "payload": dispatch_payload,
+                             "event_source": item.event_source
+                        });
+                        let pool_arc = std::sync::Arc::new(pool.clone());
+                        let job_queue = crate::orchestration::queue::OHCJobQueue::new(pool_arc);
+                        let _ = job_queue.enqueue(&tenant_id, "agent_feed_action", &job_payload).await;
                     }
                 }
             }
