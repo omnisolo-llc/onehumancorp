@@ -659,11 +659,11 @@ impl DB {
         let mut backoff = std::time::Duration::from_millis(1);
 
         // Enforce the 60-second ML-Resilience rule for database operations
-        let start_time = std::time::Instant::now();
+        let start_time = tokio::time::Instant::now();
         let timeout_duration = std::time::Duration::from_secs(60);
 
         loop {
-            // Note: Since std::time::Instant does not interact with paused time during tests,
+            // Note: Since tokio::time::Instant does not interact with paused time during tests,
             // it accurately tracks real elapsed time without causing false timeouts in simulated time tests.
             if start_time.elapsed() >= timeout_duration {
                 return Err(E::from(format!(
