@@ -403,6 +403,16 @@ impl InventoryService {
                 let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
                 self.locker.clear(&lock_key).await;
             }
+        } else {
+            let lock_key = Self::get_lock_key(tenant_id, product_id);
+            let current_lock_id = self.locker.get_lock_id(&lock_key).await;
+            if current_lock_id != Some(lock_id.to_string()) && !lock_id.is_empty() {
+                return Ok(CommitResult {
+                    success: false,
+                    error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
+                });
+            }
+            self.locker.clear(&lock_key).await;
         }
 
         let pool = crate::db::get_pool();

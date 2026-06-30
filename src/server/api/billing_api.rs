@@ -19,6 +19,8 @@ pub struct MyPlanResponse {
     pub storage_used_bytes: i64,
     pub storage_limit_bytes: Option<i64>,
     pub next_bill_estimated: i32,
+    pub soft_limit_reached: bool,
+    pub user_message: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -406,6 +408,32 @@ pub async fn my_plan_handler(
     let base_bill = tier.base_price();
     let next_bill_estimated = (base_bill * 100.0).round() as i32 + projected_cents as i32;
 
+    let mut soft_limit_reached = false;
+    let mut user_message = None;
+
+    if let Some(limit) = ai_limit {
+        if ai_used as i32 >= limit {
+            soft_limit_reached = true;
+            user_message = Some(format!(
+                "You've reached your {} tier limit of {} AI actions. Upgrade to unlock more power!",
+                plan_name, limit
+            ));
+        }
+    }
+
+    if !soft_limit_reached {
+        if let Some(limit) = storage_limit {
+            if storage_used_bytes >= limit {
+                soft_limit_reached = true;
+                let limit_mb = limit / (1024 * 1024);
+                user_message = Some(format!(
+                    "You've reached your {} tier limit of {}MB storage. Upgrade to unlock more capacity!",
+                    plan_name, limit_mb
+                ));
+            }
+        }
+    }
+
     let resp = MyPlanResponse {
         current_plan: plan_name,
         ai_actions_used: ai_used as i32,
@@ -413,6 +441,8 @@ pub async fn my_plan_handler(
         storage_used_bytes,
         storage_limit_bytes: storage_limit,
         next_bill_estimated,
+        soft_limit_reached,
+        user_message,
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Ok(Json(resp))
