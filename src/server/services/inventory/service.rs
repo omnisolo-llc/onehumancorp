@@ -378,7 +378,7 @@ impl InventoryService {
     ) -> Result<CommitResult, String> {
         let mut all_match = true;
         let mut valid_indices = Vec::new();
-        let mut lock_id_base = "";
+        let lock_id_base;
 
         let parts: Vec<&str> = lock_id.split(':').collect();
         if parts.len() == 2 {

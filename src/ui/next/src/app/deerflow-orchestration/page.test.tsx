@@ -1,65 +1,65 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import ExpertTeamPage from "./page";
+import DeerFlowOrchestrationPage from "./page";
 import { vi, describe, it, expect } from "vitest";
 
 global.fetch = vi.fn();
 
-describe("ExpertTeamPage", () => {
+describe("DeerFlowOrchestrationPage", () => {
   it("renders correctly", () => {
-    render(<ExpertTeamPage />);
-    expect(screen.getByText("Collaborative Expert Team")).toBeInTheDocument();
+    render(<DeerFlowOrchestrationPage />);
+    expect(screen.getByText("DeerFlow Sub-agent Orchestration")).toBeInTheDocument();
   });
 
-  it("handles valid execution", async () => {
+  it("handles execution", async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ result: "Final Expert Synthesis Output" }),
+      json: async () => ({ result: "Final Synthesis" }),
     });
 
-    render(<ExpertTeamPage />);
+    render(<DeerFlowOrchestrationPage />);
 
     // Set text to enable the button
     const textareas = screen.getAllByRole("textbox");
     fireEvent.change(textareas[0], {
-      target: { value: 'Analyze new trends' }
+      target: { value: 'Analyze market' }
     });
 
     // Click button
     const buttons = screen.getAllByRole("button");
-    const runBtn = buttons.find(b => b.textContent?.includes("Execute Task via Expert Team"));
+    const runBtn = buttons.find(b => b.textContent?.includes("Execute Task via DeerFlow"));
     if (runBtn) {
         fireEvent.click(runBtn);
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Final Delivered Output/i)).toBeInTheDocument();
+      expect(screen.getByText(/Final Synthesis/i)).toBeInTheDocument();
     });
   });
 
-  it("handles validation error execution", async () => {
+  it("handles error", async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: false,
-      json: async () => ({ error: "Pre-flight failed" }),
+      json: async () => ({ error: "Orchestration Failed" }),
     });
 
-    render(<ExpertTeamPage />);
+    render(<DeerFlowOrchestrationPage />);
 
     // Set text to enable the button
     const textareas = screen.getAllByRole("textbox");
     fireEvent.change(textareas[0], {
-      target: { value: 'Analyze new trends' }
+      target: { value: 'Analyze market' }
     });
 
     // Click button
     const buttons = screen.getAllByRole("button");
-    const runBtn = buttons.find(b => b.textContent?.includes("Execute Task via Expert Team"));
+    const runBtn = buttons.find(b => b.textContent?.includes("Execute Task via DeerFlow"));
 
     if (runBtn) {
         fireEvent.click(runBtn);
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Pre-flight failed/i)).toBeInTheDocument();
+      expect(screen.getByText(/Orchestration Failed/i)).toBeInTheDocument();
     });
   });
 });

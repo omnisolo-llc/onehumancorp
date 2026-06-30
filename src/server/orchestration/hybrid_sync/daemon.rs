@@ -442,23 +442,26 @@ impl HybridSyncDaemon {
     }
 
     pub async fn prune_stuck_agent_missions(&self) -> Result<(), Box<dyn std::error::Error>> {
+        const SQLITE_WHERE_CLAUSE: &str = "(status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hours') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hours')))";
+        const PG_WHERE_CLAUSE: &str = "(status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))";
+
+        let sqlite_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_failed', 'agent_missions', json_object('id', id, 'payload', json(COALESCE(payload, '{{}}'))), '[cleanup] Mission became stuck' FROM agent_missions WHERE {}", SQLITE_WHERE_CLAUSE);
+        let sqlite_delete = format!("DELETE FROM agent_missions WHERE {}", SQLITE_WHERE_CLAUSE);
+
+        let pg_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_failed', 'agent_missions', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{{}}'::jsonb))::text, '[cleanup] Mission became stuck' FROM agent_missions WHERE {}", PG_WHERE_CLAUSE);
+        let pg_delete = format!("DELETE FROM agent_missions WHERE {}", PG_WHERE_CLAUSE);
+
         // SQLite
-        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_failed', 'agent_missions', json_object('id', id, 'payload', json(COALESCE(payload, '{}'))), '[cleanup] Mission became stuck' FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hours') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hours')))").execute(&self.sqlite_pool).await;
-        let res_sqlite = sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hours') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hours')))")
-            .execute(&self.sqlite_pool)
-            .await;
-        if let Ok(res) = res_sqlite {
+        let _ = sqlx::query(&sqlite_insert).execute(&self.sqlite_pool).await;
+        if let Ok(res) = sqlx::query(&sqlite_delete).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from SQLite", res.rows_affected());
             }
         }
 
         // PG
-        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_failed', 'agent_missions', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{}'::jsonb))::text, '[cleanup] Mission became stuck' FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))").execute(&self.pg_pool).await;
-        let res_pg = sqlx::query("DELETE FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))")
-            .execute(&self.pg_pool)
-            .await;
-        if let Ok(res) = res_pg {
+        let _ = sqlx::query(&pg_insert).execute(&self.pg_pool).await;
+        if let Ok(res) = sqlx::query(&pg_delete).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from PostgreSQL", res.rows_affected());
             }
@@ -468,41 +471,42 @@ impl HybridSyncDaemon {
     }
 
     pub async fn prune_stuck_sub_agent_queue(&self) -> Result<(), Box<dyn std::error::Error>> {
+        const SQLITE_RUNNING_WHERE: &str = "status = 'RUNNING' AND updated_at < datetime('now', '-1 hours')";
+        const SQLITE_QUEUED_WHERE: &str = "status = 'QUEUED' AND created_at < datetime('now', '-24 hours')";
+        const PG_RUNNING_WHERE: &str = "status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'";
+        const PG_QUEUED_WHERE: &str = "status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'";
+
+        let sqlite_running_update = format!("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_RUNNING_WHERE);
+        let sqlite_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'sub_agent_queue', json_object('id', id, 'payload', json(COALESCE(payload, '{{}}'))), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE {}", SQLITE_QUEUED_WHERE);
+        let sqlite_queued_delete = format!("DELETE FROM sub_agent_queue WHERE {}", SQLITE_QUEUED_WHERE);
+
+        let pg_running_update = format!("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_RUNNING_WHERE);
+        let pg_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'sub_agent_queue', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{{}}'::jsonb))::text, '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE {}", PG_QUEUED_WHERE);
+        let pg_queued_delete = format!("DELETE FROM sub_agent_queue WHERE {}", PG_QUEUED_WHERE);
+
         // SQLite queue
-        let res_running_sqlite = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < datetime('now', '-1 hours')")
-            .execute(&self.sqlite_pool)
-            .await;
-        if let Ok(res) = res_running_sqlite {
+        if let Ok(res) = sqlx::query(&sqlite_running_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck RUNNING jobs from SQLite sub_agent_queue", res.rows_affected());
             }
         }
 
-        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'sub_agent_queue', json_object('id', id, 'payload', json(COALESCE(payload, '{}'))), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hours')").execute(&self.sqlite_pool).await;
-        let res_queued_sqlite = sqlx::query("DELETE FROM sub_agent_queue WHERE status = 'QUEUED' AND created_at < datetime('now', '-24 hours')")
-            .execute(&self.sqlite_pool)
-            .await;
-        if let Ok(res) = res_queued_sqlite {
+        let _ = sqlx::query(&sqlite_queued_insert).execute(&self.sqlite_pool).await;
+        if let Ok(res) = sqlx::query(&sqlite_queued_delete).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck QUEUED jobs from SQLite sub_agent_queue", res.rows_affected());
             }
         }
 
         // PG queue
-        let res_running_pg = sqlx::query("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'")
-            .execute(&self.pg_pool)
-            .await;
-        if let Ok(res) = res_running_pg {
+        if let Ok(res) = sqlx::query(&pg_running_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck RUNNING jobs from PostgreSQL sub_agent_queue", res.rows_affected());
             }
         }
 
-        let _ = sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'sub_agent_queue', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{}'::jsonb))::text, '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'").execute(&self.pg_pool).await;
-        let res_queued_pg = sqlx::query("DELETE FROM sub_agent_queue WHERE status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'")
-            .execute(&self.pg_pool)
-            .await;
-        if let Ok(res) = res_queued_pg {
+        let _ = sqlx::query(&pg_queued_insert).execute(&self.pg_pool).await;
+        if let Ok(res) = sqlx::query(&pg_queued_delete).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck QUEUED jobs from PostgreSQL sub_agent_queue", res.rows_affected());
             }
