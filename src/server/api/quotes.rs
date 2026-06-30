@@ -159,7 +159,7 @@ async fn create_quote(
     let required_deposit_cents = payload.required_deposit_cents.unwrap_or(total_amount_cents / 3);
 
     let quote_res = sqlx::query(
-        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
+        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, service_id, proposed_slot_id, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, $7, $8, NOW(), NOW())"
     )
     .bind(quote_id)
     .bind(&payload.tenant_id)
@@ -167,6 +167,8 @@ async fn create_quote(
     .bind(payload.total_amount_cents.unwrap_or(total_amount_cents))
     .bind(required_deposit_cents)
     .bind(&payload.stripe_payment_link)
+    .bind(&payload.service_id)
+    .bind(&payload.proposed_slot_id)
     .execute(&mut *tx)
     .await;
 

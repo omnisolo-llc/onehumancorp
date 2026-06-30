@@ -359,6 +359,8 @@ pub struct Quote {
     pub total_amount_cents: Option<i64>,
     pub required_deposit_cents: Option<i64>,
     pub stripe_payment_link: Option<String>,
+    pub service_id: Option<String>,
+    pub proposed_slot_id: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
