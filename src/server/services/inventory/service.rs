@@ -224,7 +224,7 @@ impl InventoryService {
                 return Ok(ReserveResult {
                     success: false,
                     lock_id: "".to_string(),
-                    error_message: "Item is currently being checked out.".to_string(),
+                    error_message: "Item is currently being checked out by another customer.".to_string(),
                 });
             }
 
@@ -699,7 +699,7 @@ mod tests {
         if std::env::var("OHC_REDIS_URL").is_ok() {
             assert_eq!(success_count, 1, "Only one concurrent request should acquire the lock");
             let failed_res = if res1.success { res2 } else { res1 };
-            assert_eq!(failed_res.error_message, "Item is currently being checked out.");
+            assert_eq!(failed_res.error_message, "Item is currently being checked out by another customer.");
         }
     }
 }
