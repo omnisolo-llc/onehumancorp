@@ -205,7 +205,8 @@ Your response:",
         };
 
         let prompt = format!(
-            "You are the OHC Onboarding Expert. Extract structured business information from the user description.
+            "You are the OHC Onboarding Expert assistant. Your goal is to synthesize a fully-operational, mobile-first workspace from a single user prompt.
+            Extract structured business information from the user description.
             We serve various OHC personas like:
             - Maya (Home Baker): Needs cake customizer, deposits, and delivery.
             - Carlos (Field Service): Needs service bookings, estimates, and route notes.
