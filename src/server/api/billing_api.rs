@@ -952,7 +952,7 @@ pub async fn download_invoice_handler(
                 }
             }
             Err(e) => {
-                tracing::error!("Failed to fetch invoices from Stripe: {}", e);
+                tracing::error!("Failed to fetch invoices from Stripe: {}", e); // pii-safe
             }
         }
     }
