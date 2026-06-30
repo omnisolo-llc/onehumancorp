@@ -26,6 +26,28 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
   });
 
+  test('should display cost dashboard properly on a mobile viewport (375px)', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+
+    // Set viewport to 375px width (iPhone SE size)
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    await page.goto('/cost-dashboard');
+
+    // Verify main widget renders
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
+
+    // Verify mobile responsiveness: No horizontal scroll should exist
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+
+    // Verify the touch targets for buttons meet 44px requirement
+    const backButton = page.locator('a', { hasText: 'Back to My Plan' });
+    const box = await backButton.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  });
+
   test('should display my plan limits and route to pricing', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
@@ -48,6 +70,18 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
 
     // Expect to land on pricing
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible({ timeout: 15000 });
+  });
+
+  test('should display pricing correctly on mobile viewport and verify touch targets', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/pricing');
+
+    await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible({ timeout: 15000 });
+    const starterButton = page.getByRole('button', { name: 'Upgrade to Starter via Stripe' }).first();
+    const box = await starterButton.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
   });
 
   test('should verify checkout routing works from pricing', async ({ page, adminUser, loginAs }) => {
