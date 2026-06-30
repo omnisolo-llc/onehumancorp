@@ -602,7 +602,7 @@ impl VectorRepository {
     ) -> Result<(), String> {
         self.delete(&loser.id).await?;
         let mut updated_winner = winner.clone();
-        updated_winner.reference_count += loser.reference_count + 1;
+        updated_winner.reference_count += loser.reference_count;
         updated_winner.last_referenced_at = chrono::Utc::now();
         updated_winner.reliability_score =
             std::cmp::max(winner.reliability_score, loser.reliability_score);
@@ -1667,7 +1667,7 @@ mod get_conflicts_tests {
         let ref_count: i32 = rows[0].get("reference_count");
 
         assert_eq!(id, "winner");
-        assert_eq!(ref_count, 2 + 5 + 1); // winner.ref_count + loser.ref_count + 1
+        assert_eq!(ref_count, 2 + 5); // winner.ref_count + loser.ref_count
     }
 
     #[tokio::test]
@@ -1814,9 +1814,9 @@ mod get_conflicts_tests {
         }
 
         assert_eq!(results.len(), 3);
-        assert_eq!(results.get("rec1_b"), Some(&4));
-        assert_eq!(results.get("rec2_a"), Some(&9));
-        assert_eq!(results.get("rec3_b"), Some(&2));
+        assert_eq!(results.get("rec1_b"), Some(&3));
+        assert_eq!(results.get("rec2_a"), Some(&8));
+        assert_eq!(results.get("rec3_b"), Some(&1));
     }
 
     #[tokio::test]
@@ -2021,8 +2021,8 @@ mod get_conflicts_tests {
 
         // It will pick `r1` as winner arbitrarily (since a=r1, b=r2, and we return (&a, &b))
         assert_eq!(id, "rec4_a");
-        // new ref count = r1.reference_count (1) + r2.reference_count (2) + 1 = 4
-        assert_eq!(ref_count, 4);
+        // new ref count = r1.reference_count (1) + r2.reference_count (2) = 3
+        assert_eq!(ref_count, 3);
     }
 
     #[tokio::test]
@@ -3211,8 +3211,8 @@ mod e2e_consolidation_tests {
         );
         assert_eq!(
             results[0].reference_count,
-            2 + 1 + 1,
-            "reference count should be sum + 1"
+            2 + 1,
+            "reference count should be sum"
         );
     }
 
