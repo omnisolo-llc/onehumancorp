@@ -85,6 +85,8 @@ pub struct CreateQuoteRequest {
     pub total_amount_cents: Option<i64>,
     pub required_deposit_cents: Option<i64>,
     pub stripe_payment_link: Option<String>,
+    pub proposed_slot_id: Option<String>,
+    pub service_id: Option<String>,
     pub line_items: Vec<QuoteLineItemRequest>,
 }
 
@@ -155,7 +157,7 @@ async fn create_quote(
     let required_deposit_cents = payload.required_deposit_cents.unwrap_or(total_amount_cents / 3);
 
     let quote_res = sqlx::query(
-        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
+        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, $7, $8, NOW(), NOW())"
     )
     .bind(quote_id)
     .bind(&payload.tenant_id)
@@ -163,6 +165,8 @@ async fn create_quote(
     .bind(payload.total_amount_cents.unwrap_or(total_amount_cents))
     .bind(required_deposit_cents)
     .bind(&payload.stripe_payment_link)
+    .bind(&payload.proposed_slot_id)
+    .bind(&payload.service_id)
     .execute(&mut *tx)
     .await;
 
@@ -246,6 +250,8 @@ async fn draft_quote_agent(
         total_amount_cents: Some(total_amount_cents),
         required_deposit_cents: Some(required_deposit_cents),
         stripe_payment_link: None,
+        proposed_slot_id: None,
+        service_id: None,
         line_items,
     };
 
@@ -270,6 +276,50 @@ async fn update_quote(
         }
     };
 
+    let current_quote = match sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+        .bind(quote_id)
+        .fetch_optional(&mut *tx)
+        .await
+    {
+        Ok(Some(q)) => q,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch quote: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let mut new_stripe_link = payload.stripe_payment_link.clone();
+
+    // If status is being updated to SENT, generate stripe link and soft-lock calendar slot
+    if payload.status.as_deref() == Some("SENT") && current_quote.stripe_payment_link.is_none() {
+        let amount_usd = (payload.total_amount_cents.unwrap_or(current_quote.total_amount_cents.unwrap_or(0)) as f64) / 100.0;
+        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+        match stripe_client.create_checkout_session(
+            &format!("Quote #{}", quote_id),
+            &current_quote.customer_id.to_string(),
+            amount_usd,
+            None,
+            None
+        ).await {
+            Ok(url) => {
+                new_stripe_link = Some(url);
+            },
+            Err(e) => {
+                tracing::error!("Failed to create Stripe checkout session: {}", e); // pii-safe
+            }
+        }
+
+        if let Some(slot_id) = &current_quote.proposed_slot_id {
+            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+            if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url) {
+                let _ = redis_lock.acquire_lock(&current_quote.tenant_id, "booking_slot", slot_id, 1800).await;
+            }
+        }
+    }
+
     // we can't easily bind dynamic number of parameters in simple query string building
     // so we'll do it securely:
     let update_res = sqlx::query(
@@ -278,7 +328,7 @@ async fn update_quote(
     .bind(payload.total_amount_cents)
     .bind(payload.required_deposit_cents)
     .bind(&payload.status)
-    .bind(&payload.stripe_payment_link)
+    .bind(&new_stripe_link)
     .bind(quote_id)
     .execute(&mut *tx)
     .await;
@@ -398,6 +448,8 @@ mod tests {
             total_amount_cents: None,
             required_deposit_cents: None,
             stripe_payment_link: None,
+            proposed_slot_id: None,
+            service_id: None,
             created_at: Some(chrono::Utc::now()),
             updated_at: Some(chrono::Utc::now()),
         };
