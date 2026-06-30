@@ -91,18 +91,20 @@ pub struct ToolResult {
 }
 
 /// Formats an LLM-Recoverable error string according to the LangGraph 4-tier error handling mechanic.
-pub fn format_llm_recoverable_error(msg: &str) -> String {
-    format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg)
+pub fn format_llm_recoverable_error(tool_name: &str, msg: &str) -> String {
+    format!("LLM-Recoverable Tool Error ({}): {}
+
+SOTA Recovery Protocol: Please deeply analyze this validation/execution error, verify your previous arguments against the tool's strict Pydantic JSON schema, correct the arguments, and call the tool again.", tool_name, msg)
 }
 
 impl ToolResult {
     /// Creates a standard LLM-Recoverable ToolResult for the LangGraph 4-tier error handling mechanic.
     /// This strictly standardizes how self-correcting feedback is structured to the model.
-    pub fn new_llm_recoverable(tool_call_id: String, msg: &str) -> Self {
+    pub fn new_llm_recoverable(tool_call_id: String, tool_name: &str, msg: &str) -> Self {
         Self {
             tool_call_id,
             content: String::new(),
-            error: format_llm_recoverable_error(msg),
+            error: format_llm_recoverable_error(tool_name, msg),
         }
     }
 }
