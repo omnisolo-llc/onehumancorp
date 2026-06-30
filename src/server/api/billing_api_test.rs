@@ -78,7 +78,17 @@ async fn test_download_invoice_unauthenticated() {
 #[tokio::test]
 async fn test_download_invoice_authenticated_success() {
     let hub = create_mock_hub().await;
-    let app = crate::api::billing_api::router(hub);
+    let router = crate::api::billing_api::router(hub);
+    let app = axum::Router::new()
+        .merge(router)
+        .route_layer(axum::middleware::from_fn(|mut req: Request<Body>, next: axum::middleware::Next| async move {
+            req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test-spiffe".to_string(),
+                org_id: "test-tenant".to_string(),
+                agent_id: "test-agent".to_string(),
+            });
+            Ok::<axum::http::Response<axum::body::Body>, StatusCode>(next.run(req).await)
+        }));
 
     let response = app
         .oneshot(

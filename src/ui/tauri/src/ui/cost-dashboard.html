@@ -465,6 +465,10 @@
             document.getElementById('download-invoice-btn').addEventListener('click', async () => {
                 const res = await fetch('/api/billing/download-invoice', { method: 'POST', headers });
                 if (res.ok) {
+                    const data = await res.json();
+                    if (data.url) {
+                        window.open(data.url, '_blank');
+                    }
                     planMessageDiv.innerText = 'Invoice download is ready for your current billing period.';
                     planMessageDiv.style.color = '#34C759';
                     planMessageDiv.style.display = 'block';
