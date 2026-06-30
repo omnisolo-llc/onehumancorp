@@ -75,6 +75,7 @@ pub async fn apply_dynamic_pricing(
     result.price_cents
 }
 
+#[inline]
 pub fn calculate_heuristic_yield(start_time: DateTime<Utc>, base_price_cents: i64) -> i64 {
     if start_time.hour() >= 17 && start_time.hour() <= 20 {
         (base_price_cents as f64 * 1.15) as i64
