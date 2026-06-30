@@ -122,7 +122,7 @@ export default function QRCodeGeneratorPage() {
 
              <div className="text-center flex flex-col items-center">
                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-6">Scan to test</h3>
-                 <div className="p-4 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] rounded-[16px] shadow-sm border border-white/40-sm border border-gray-100 inline-block mb-6">
+                 <div className="p-4 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm border border-white/40-sm border border-gray-100 inline-block mb-6">
                     {/* Fallback svg while loading image from api */}
                     <img src={qrImageUrl} alt="QR Code" width={256} height={256} className="mx-auto" style={{ width: '256px', height: '256px' }} />
                  </div>

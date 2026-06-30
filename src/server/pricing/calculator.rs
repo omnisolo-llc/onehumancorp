@@ -18,6 +18,7 @@ pub struct ModelPricing {
     pub cached_cost: f64,
 }
 
+#[inline]
 pub fn get_pricing(model: &str) -> ModelPricing {
     match model {
         // Anthropic — Claude 3 family
@@ -79,11 +80,13 @@ pub fn get_pricing(model: &str) -> ModelPricing {
     }
 }
 
+#[inline]
 pub fn calculate_cost_cents(model: &str, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64) -> i64 {
     let cost = calculate_cost(model, input_tokens, output_tokens, cached_input_tokens);
     (cost * 100.0).round() as i64
 }
 
+#[inline]
 pub fn calculate_cost(model: &str, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64) -> f64 {
     let pricing = get_pricing(model);
 
@@ -96,11 +99,13 @@ pub fn calculate_cost(model: &str, input_tokens: i64, output_tokens: i64, cached
     (total * 10000.0).round() / 10000.0
 }
 
+#[inline]
 pub fn calculate_cost_with_config_cents(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> i64 {
     let cost = calculate_cost_with_config(input_tokens, output_tokens, cached_input_tokens, local_embedding_tokens, config);
     (cost * 100.0).round() as i64
 }
 
+#[inline]
 pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> f64 {
     let input_cost = input_tokens as f64 * config.cost_per_input_token;
     let output_cost = output_tokens as f64 * config.cost_per_output_token;
@@ -110,11 +115,13 @@ pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_
     (total * 10000.0).round() / 10000.0
 }
 
+#[inline]
 pub fn calculate_storage_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
     let cost = calculate_storage_savings(original_bytes, compressed_bytes, config);
     (cost * 100.0).round() as i64
 }
 
+#[inline]
 pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
     if original_bytes < 0 || compressed_bytes < 0 {
         return 0.0;
@@ -126,11 +133,13 @@ pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, con
     (savings * 10000.0).round() / 10000.0
 }
 
+#[inline]
 pub fn calculate_bandwidth_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
     let cost = calculate_bandwidth_savings(original_bytes, compressed_bytes, config);
     (cost * 100.0).round() as i64
 }
 
+#[inline]
 pub fn calculate_bandwidth_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
     if original_bytes < 0 || compressed_bytes < 0 {
         return 0.0;
@@ -142,11 +151,13 @@ pub fn calculate_bandwidth_savings(original_bytes: i64, compressed_bytes: i64, c
     (savings * 10000.0).round() / 10000.0
 }
 
+#[inline]
 pub fn calculate_compute_cost_cents(hours: f64, config: &CostConfig) -> i64 {
     let cost = calculate_compute_cost(hours, config);
     (cost * 100.0).round() as i64
 }
 
+#[inline]
 pub fn calculate_compute_cost(hours: f64, config: &CostConfig) -> f64 {
     if hours < 0.0 {
         return 0.0;
@@ -155,11 +166,13 @@ pub fn calculate_compute_cost(hours: f64, config: &CostConfig) -> f64 {
     (cost * 10000.0).round() / 10000.0
 }
 
+#[inline]
 pub fn calculate_network_cost_cents(bytes: i64, config: &CostConfig) -> i64 {
     let cost = calculate_network_cost(bytes, config);
     (cost * 100.0).round() as i64
 }
 
+#[inline]
 pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
     if bytes < 0 {
         return 0.0;
@@ -169,11 +182,13 @@ pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
     (cost * 10000.0).round() / 10000.0
 }
 
+#[inline]
 pub fn calculate_storage_cost_cents(bytes: i64, config: &CostConfig) -> i64 {
     let cost = calculate_storage_cost(bytes, config);
     (cost * 100.0).round() as i64
 }
 
+#[inline]
 pub fn calculate_storage_cost(bytes: i64, config: &CostConfig) -> f64 {
     if bytes < 0 {
         return 0.0;
@@ -183,6 +198,7 @@ pub fn calculate_storage_cost(bytes: i64, config: &CostConfig) -> f64 {
     (cost * 10000.0).round() / 10000.0
 }
 
+#[inline]
 pub fn calculate_roi(cost: f64, revenue: f64) -> f64 {
     if cost <= 0.0 {
         return 0.0;
@@ -190,6 +206,7 @@ pub fn calculate_roi(cost: f64, revenue: f64) -> f64 {
     (revenue - cost) / cost * 100.0
 }
 
+#[inline]
 pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
     if cost <= 0.0 {
         return 0.0;
@@ -198,6 +215,7 @@ pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
 }
 
 // Advanced heuristic: estimate savings when fallback logic kicks in or tokens are dynamically truncated
+#[inline]
 pub fn calculate_heuristic_token_efficiency(original_tokens: i64, truncated_tokens: i64, model: &str) -> f64 {
     tracing::info!("💰 Miser telemetry: Calculating token efficiency for model: {}", model); // pii-safe
     if original_tokens <= truncated_tokens || original_tokens == 0 {
@@ -209,11 +227,13 @@ pub fn calculate_heuristic_token_efficiency(original_tokens: i64, truncated_toke
     (estimated_savings * 10000.0).round() / 10000.0
 }
 
+#[inline]
 pub fn calculate_projected_monthly_cost_cents(current_cost: f64, days_elapsed: u32, total_days: u32) -> i64 {
     let projected = calculate_projected_monthly_cost(current_cost, days_elapsed, total_days);
     (projected * 100.0).round() as i64
 }
 
+#[inline]
 pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, total_days: u32) -> f64 {
     if days_elapsed == 0 || current_cost < 0.0 {
         return 0.0;
@@ -310,7 +330,7 @@ mod tests {
         };
 
         let original = 2 * 1024 * 1024 * 1024; // 2GB
-        let compressed = 1 * 1024 * 1024 * 1024; // 1GB
+        let compressed = 1024 * 1024 * 1024; // 1GB
         let savings = calculate_bandwidth_savings(original, compressed, &config);
         assert_eq!(savings, 0.50);
 
@@ -329,7 +349,7 @@ mod tests {
         };
 
         let original = 2 * 1024 * 1024 * 1024; // 2GB
-        let compressed = 1 * 1024 * 1024 * 1024; // 1GB
+        let compressed = 1024 * 1024 * 1024; // 1GB
         let savings = calculate_storage_savings(original, compressed, &config);
         assert_eq!(savings, 0.10);
 

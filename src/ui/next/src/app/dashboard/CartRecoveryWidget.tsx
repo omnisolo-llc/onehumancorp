@@ -32,7 +32,7 @@ export function CartRecoveryWidget() {
   }, []);
 
   return (
-    <div className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 hover:shadow-xl transition-all h-full flex flex-col justify-between group">
+    <div className="glassmorphism p-6 border border-white/40 dark:border-white/10 hover:shadow-xl transition-all h-full flex flex-col justify-between group">
       <div>
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-2">

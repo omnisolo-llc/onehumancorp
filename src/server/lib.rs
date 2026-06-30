@@ -201,7 +201,6 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
     m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
     m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
-    m.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
     m.insert("pos-walkthrough-btn".to_string(), "Take a tour of Quick Charge POS".to_string());
     m.insert("assistant-walkthrough-btn".to_string(), "Take a tour of the Assistant Workspace".to_string());
     m.insert("remove-branding-tooltip".to_string(), "Upgrade to Premium to remove OHC branding.".to_string());
@@ -2722,6 +2721,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+    let agent_action_worker = std::sync::Arc::new(crate::workers::agent_action_worker::AgentActionWorker::new(db.pool.clone(), std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string())));
+    agent_action_worker.start();
     let _ = crate::workers::invoice_followup_worker::start_invoice_followup_worker(db.clone(), dept_orchestrator.clone());
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
@@ -3082,6 +3083,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 pub struct TriageActionPayload {
     pub triage_item_id: String,
     pub approved: bool,
+    #[serde(default)]
+    pub edited_payload: Option<String>,
 }
 
 pub async fn create_ui_triage_item_handler(
@@ -3804,6 +3807,10 @@ pub async fn update_ui_triage_action_handler(
                             action_payload_opt = Some(row.try_get::<String, _>("draft_reply").unwrap_or_default());
                         }
                     }
+                }
+
+                if let Some(edited) = &payload.edited_payload {
+                    action_payload_opt = Some(edited.clone());
                 }
 
                 if let (Some(action_type), Some(action_payload)) = (action_type_opt, action_payload_opt) {
@@ -6872,6 +6879,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/v1/booking/reserve", api::booking::reserve::router(db.clone()))
         .nest("/api/v1/booking/available_slots", api::booking::available_slots::router(db.clone()))
+        .nest("/api/v1/booking/services", api::booking::create_service::router(db.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
 
 
@@ -7129,9 +7137,11 @@ async fn create_ui_bom_item_handler(
                     }
                     let job_queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
                     if let Err(e) = job_queue.cleanup_stale_jobs().await {
+                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale ohc jobs");
                         tracing::trace!("failed to cleanup stale ohc jobs: {}", e);
                     }
                     if let Err(e) = sub_agent_queue_prune.cleanup_stale_jobs().await {
+                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale sub agent jobs");
                         tracing::trace!("failed to cleanup stale sub agent jobs: {}", e);
                     }
                 }

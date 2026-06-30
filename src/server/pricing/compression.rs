@@ -9,6 +9,7 @@ use std::sync::OnceLock;
 
 const COMPRESSION_PREFIX: &str = "gz_b64:";
 
+#[inline]
 pub fn compress_lossless(data: &str) -> Result<String, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
@@ -18,6 +19,7 @@ pub fn compress_lossless(data: &str) -> Result<String, String> {
     Ok(format!("{}{}", COMPRESSION_PREFIX, b64))
 }
 
+#[inline]
 pub fn decompress_lossless(data: &str) -> Result<String, String> {
     if !data.starts_with(COMPRESSION_PREFIX) {
         return Ok(data.to_string());

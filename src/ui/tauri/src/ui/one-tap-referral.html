@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>One-Tap Referral Generator | OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #F5F5F7;
+      --panel-bg: rgba(255, 255, 255, 0.65);
+      --panel-border: rgba(255, 255, 255, 0.4);
+      --text-main: #1D1D1F;
+      --text-muted: #86868b;
+      --accent: #0066FF;
+      --accent-hover: #0052cc;
+      --success: #34C759;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+
+    /* Header */
+    header {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--panel-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      border-bottom: 1px solid var(--panel-border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    header h1 { margin: 0; font-size: 24px; letter-spacing: -0.02em; }
+    .btn-secondary {
+      padding: 8px 16px;
+      background: #e5e5ea;
+      color: var(--text-main);
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: #d1d1d6; }
+
+    /* Main Layout */
+    main {
+      flex: 1;
+      padding: 32px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      gap: 32px;
+    }
+    @media (max-width: 768px) {
+      main { flex-direction: column; }
+    }
+
+    /* Panels */
+    .panel {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid #f2f2f7;
+    }
+    .panel h2 { margin-top: 0; margin-bottom: 20px; font-size: 20px; }
+
+    .config-panel { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    .preview-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #f5f5f7;
+      border: 1px solid #e5e5ea;
+      position: relative;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .preview-label {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Form Controls */
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    label { font-size: 14px; font-weight: 500; color: #48484a; }
+    input[type="text"], select {
+      padding: 12px 16px;
+      border: 1px solid #d1d1d6;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, select:focus { border-color: var(--accent); }
+
+    .branding-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      margin-top: 8px;
+    }
+
+    .primary-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 12px;
+    }
+    .primary-btn:hover { background: var(--accent-hover); }
+
+    /* Custom Checkbox Toggle */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #d1d1d6;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px; width: 20px;
+      left: 2px; bottom: 2px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    /* Widget Preview styling */
+    .widget-preview-box {
+      width: 100%;
+      max-width: 320px;
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+      border: 1px solid #eaeaea;
+    }
+    .widget-preview-box.dark {
+      background: #1d1d1f;
+      color: white;
+      border-color: #333;
+    }
+    .widget-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+    .widget-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+    }
+    .widget-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0 0 20px 0;
+      line-height: 1.4;
+    }
+    .widget-preview-box.dark .widget-desc { color: #a1a1aa; }
+    .widget-input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #e5e5ea;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      text-align: left;
+    }
+    .widget-preview-box.dark .widget-input {
+      background: #2c2c2e;
+      border-color: #3a3a3c;
+      color: white;
+    }
+    .widget-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .widget-brand {
+      display: inline-block;
+      margin-top: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      position: relative;
+      transform: translateY(20px);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.active .modal-content {
+      transform: translateY(0);
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: none; border: none;
+      font-size: 24px; color: #86868b;
+      cursor: pointer;
+    }
+    .modal-title { font-size: 22px; margin: 0 0 8px 0; }
+    .modal-desc { font-size: 14px; color: var(--text-muted); margin: 0 0 20px 0; line-height: 1.5; }
+    .code-block {
+      width: 100%;
+      height: 120px;
+      padding: 16px;
+      background: #f5f5f7;
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      resize: none;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .modal-actions { display: flex; gap: 12px; }
+
+    .paywall-icon {
+      font-size: 48px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .paywall-modal .modal-title { text-align: center; }
+    .paywall-modal .modal-desc { text-align: center; }
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1 class="font-outfit">One-Tap Referral Generator 🎁</h1>
+    <a href="dashboard.html" class="btn-secondary">Back to Dashboard</a>
+  </header>
+
+  <main>
+    <div class="panel config-panel">
+      <h2 class="font-outfit">Configure Widget</h2>
+
+      <div class="form-group">
+        <label>Reward Text</label>
+        <input type="text" id="reward-text" value="Give $10, Get $10">
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="desc-text" value="Enter your friend's email. They get $10 off, and you get $10 when they buy!">
+      </div>
+
+      <div class="form-group">
+        <label>Theme</label>
+        <select id="theme-select">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+
+      <div class="branding-toggle">
+        <div>
+          <label style="margin-bottom: 0;">Remove "Powered by OHC" Badge</label>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Requires Pro subscription</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="remove-branding">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <button class="primary-btn" id="generate-btn">Generate Embed Code</button>
+    </div>
+
+    <div class="panel preview-panel">
+      <div class="preview-label">Live Preview</div>
+
+      <div class="widget-preview-box" id="widget-preview">
+        <div class="widget-icon">🎁</div>
+        <h3 class="widget-title font-outfit" id="preview-title">Give $10, Get $10</h3>
+        <p class="widget-desc" id="preview-desc">Enter your friend's email. They get $10 off, and you get $10 when they buy!</p>
+        <input type="email" class="widget-input" placeholder="Friend's email address" readonly>
+        <button class="widget-btn">Send Invite</button>
+        <div id="preview-branding">
+          <a href="#" class="widget-brand">⚡ Powered by OHC</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Embed Modal -->
+  <div class="modal-overlay" id="embed-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-embed">&times;</button>
+      <h2 class="modal-title font-outfit">Embed Widget</h2>
+      <p class="modal-desc">Copy and paste this HTML snippet into your website.</p>
+      <textarea class="code-block" id="embed-code" readonly></textarea>
+      <div class="modal-actions">
+        <button class="primary-btn" style="margin-top: 0;" id="copy-btn">Copy Code</button>
+        <button class="btn-secondary" style="flex: 1; padding: 14px; text-align: center;" id="close-embed-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paywall Modal -->
+  <div class="modal-overlay paywall-modal" id="paywall-modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <button class="modal-close" id="close-paywall">&times;</button>
+      <div class="paywall-icon">✨</div>
+      <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
+      <p class="modal-desc">Make the widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+        <button class="primary-btn" id="share-to-unlock-btn" style="background-color: #1DA1F2; margin-top: 0;">Share on X to Unlock 7 Days</button>
+        <button class="primary-btn" id="upgrade-btn" style="margin-top: 0;">Upgrade to Pro</button>
+      </div>
+      <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500; text-align: center;">Verifying...</p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      let state = {
+        tenant: (() => { try { return localStorage.getItem('tenant') || 'my-store'; } catch(e) { return 'my-store'; } })(),
+        hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
+        reward: 'Give $10, Get $10',
+        desc: "Enter your friend's email. They get $10 off, and you get $10 when they buy!",
+        theme: 'light',
+        removeBranding: false
+      };
+
+      const rewardInput = document.getElementById('reward-text');
+      const descInput = document.getElementById('desc-text');
+      const themeSelect = document.getElementById('theme-select');
+      const removeBrandingCheckbox = document.getElementById('remove-branding');
+      const generateBtn = document.getElementById('generate-btn');
+
+      const previewBox = document.getElementById('widget-preview');
+      const previewTitle = document.getElementById('preview-title');
+      const previewDesc = document.getElementById('preview-desc');
+      const previewBranding = document.getElementById('preview-branding');
+
+      const embedModal = document.getElementById('embed-modal');
+      const embedCode = document.getElementById('embed-code');
+      const copyBtn = document.getElementById('copy-btn');
+      const closeEmbedBtns = [document.getElementById('close-embed'), document.getElementById('close-embed-btn')];
+
+      const paywallModal = document.getElementById('paywall-modal');
+      const closePaywallBtn = document.getElementById('close-paywall');
+      const upgradeBtn = document.getElementById('upgrade-btn');
+      const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
+      const softPaywallStatus = document.getElementById('soft-paywall-status');
+
+      function updatePreview() {
+        previewTitle.textContent = state.reward;
+        previewDesc.textContent = state.desc;
+
+        if (state.theme === 'dark') {
+          previewBox.classList.add('dark');
+        } else {
+          previewBox.classList.remove('dark');
+        }
+
+        previewBranding.style.display = state.removeBranding ? 'none' : 'block';
+      }
+
+      rewardInput.addEventListener('input', (e) => {
+        state.reward = e.target.value;
+        updatePreview();
+      });
+
+      descInput.addEventListener('input', (e) => {
+        state.desc = e.target.value;
+        updatePreview();
+      });
+
+      themeSelect.addEventListener('change', (e) => {
+        state.theme = e.target.value;
+        updatePreview();
+      });
+
+      removeBrandingCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked && !state.hasPro) {
+          e.target.checked = false;
+          paywallModal.classList.add('active');
+          return;
+        }
+        state.removeBranding = e.target.checked;
+        updatePreview();
+      });
+
+      generateBtn.addEventListener('click', () => {
+        const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
+        const url = `${origin}/api/v1/growth/one-tap-referral/embed?tenant=${encodeURIComponent(state.tenant)}&reward=${encodeURIComponent(state.reward)}&desc=${encodeURIComponent(state.desc)}&theme=${state.theme}&hide_branding=${state.removeBranding}`;
+
+        const code = `<iframe src="${url}" width="100%" height="280" style="border:none;border-radius:16px;overflow:hidden;max-width:320px;" title="OHC One-Tap Referral"></iframe>`;
+
+        embedCode.value = code;
+        embedModal.classList.add('active');
+        copyBtn.textContent = 'Copy Code';
+      });
+
+      closeEmbedBtns.forEach(btn => {
+        btn.addEventListener('click', () => embedModal.classList.remove('active'));
+      });
+
+      copyBtn.addEventListener('click', () => {
+        embedCode.select();
+        document.execCommand('copy');
+        copyBtn.textContent = 'Copied!';
+      });
+
+      closePaywallBtn.addEventListener('click', () => paywallModal.classList.remove('active'));
+
+      upgradeBtn.addEventListener('click', () => {
+        window.location.href = 'pricing.html';
+      });
+
+      if (shareToUnlockBtn) {
+        shareToUnlockBtn.addEventListener('click', async () => {
+          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out my new One-Tap Referral Widget built with OneHumanCorp! 🚀 https://ohc.app')}`;
+          window.open(shareUrl, '_blank');
+
+          shareToUnlockBtn.style.display = 'none';
+          softPaywallStatus.style.display = 'block';
+          softPaywallStatus.innerText = 'Verifying Share...';
+
+          try {
+            let url = '/api/v1/growth/trial-extension/claim';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+            }
+            const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+
+            if (response.ok) {
+              softPaywallStatus.innerText = 'Unlocked!';
+              state.hasPro = true;
+              localStorage.setItem('has_pro', 'true');
+
+              setTimeout(() => {
+                paywallModal.classList.remove('active');
+                removeBrandingCheckbox.checked = true;
+                state.removeBranding = true;
+                updatePreview();
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 1500);
+            } else {
+              softPaywallStatus.innerText = 'Failed to claim trial extension.';
+              setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 3000);
+            }
+          } catch (e) {
+            softPaywallStatus.innerText = 'Error claiming trial extension.';
+            setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+            }, 3000);
+          }
+        });
+      }
+
+      updatePreview();
+    });
+  </script>
+</body>
+</html>

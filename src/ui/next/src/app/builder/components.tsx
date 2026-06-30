@@ -8,7 +8,7 @@ import React from 'react';
 export function SkeletonBlock() {
   return (
     <div className="w-full p-6 animate-pulse">
-      <div className="h-40 glassmorphism rounded-[16px] mb-4" />
+      <div className="h-40 glassmorphism mb-4" />
       <div className="h-4 w-3/4 glassmorphism rounded-[8px] mb-2" />
       <div className="h-4 w-1/2 glassmorphism rounded-[8px]" />
     </div>
@@ -98,7 +98,7 @@ export function DraggableBlock({
 
 export function QRCode({ value }: { value: string }) {
   return (
-    <div className="glassmorphism p-4 rounded-[16px] shadow-sm inline-block">
+    <div className="glassmorphism p-4 shadow-sm inline-block">
       <svg className="w-32 h-32 rounded-[8px]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="100" rx="12" fill="white" className="dark:fill-[#1D1D1F]"/>
         <rect x="10" y="10" width="20" height="20" fill="black"/>
@@ -131,7 +131,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         >
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
         </div>
-        <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white m-4 rounded-[16px] glassmorphism shadow-lg">
+        <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white m-4 glassmorphism shadow-lg">
           <h1 className="text-3xl font-bold font-outfit mb-3 tracking-tight">{props.headline}</h1>
           <p className="text-sm font-inter opacity-90 max-w-[280px]">{props.copy}</p>
         </div>
@@ -145,7 +145,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         <h2 className="text-xl font-bold font-outfit mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-white/40 dark:border-white/10 pb-2">Our Services</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {props.items.map((item: any, i: number) => (
-            <div key={i} className="glassmorphism shadow-sm p-4 rounded-[16px] flex flex-col">
+            <div key={i} className="glassmorphism shadow-sm p-4 flex flex-col">
               {item.image && (
                 <div className="w-full h-32 bg-gray-200 mb-3 rounded-[8px] bg-cover bg-center" style={{ backgroundImage: `url(${item.image})` }} />
               )}

@@ -369,6 +369,7 @@ where
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
+        .route("/one-tap-referral/embed", get(handle_one_tap_referral_embed))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/quiz/generate", post(handle_generate_viral_quiz))
         .route("/referrals/generate", post(handle_referral_generate))
@@ -1400,6 +1401,183 @@ async fn handle_customer_referral_embed(
     </div>
 </body>
 </html>"#
+    );
+
+    axum::response::Html(html)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OneTapReferralEmbedQuery {
+    pub tenant: Option<String>,
+    pub reward: Option<String>,
+    pub desc: Option<String>,
+    pub theme: Option<String>,
+    #[serde(rename = "hide_branding")]
+    pub hide_branding: Option<String>,
+}
+
+pub async fn handle_one_tap_referral_embed(
+    axum::extract::Query(query): axum::extract::Query<OneTapReferralEmbedQuery>,
+) -> impl axum::response::IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let reward = query.reward.as_deref().unwrap_or("Give $10, Get $10");
+    let desc = query.desc.as_deref().unwrap_or("Enter your friend's email. They get $10 off, and you get $10 when they buy!");
+    let theme = query.theme.as_deref().unwrap_or("light");
+    let hide_branding = query.hide_branding.as_deref().unwrap_or("false") == "true";
+
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
+    let muted_color = if theme == "dark" { "#a1a1aa" } else { "#6b7280" };
+    let input_bg = if theme == "dark" { "#2d2d30" } else { "#f9fafb" };
+    let border_color = if theme == "dark" { "#3f3f46" } else { "#e5e7eb" };
+
+    let safe_tenant = escape_html(tenant);
+    let safe_reward = escape_html(reward);
+    let safe_desc = escape_html(desc);
+
+    let branding_html = if hide_branding {
+        "".to_string()
+    } else {
+        format!(
+            r#"<div style="margin-top: 16px; font-size: 11px; text-align: center;">
+                <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=one_tap_referral_embed" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+            </div>"#,
+            safe_tenant, muted_color
+        )
+    };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: {bg_color};
+      color: {text_color};
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      height: 100%;
+    }}
+    .widget-container {{
+      max-width: 320px;
+      width: 100%;
+      text-align: center;
+    }}
+    .icon {{
+      font-size: 40px;
+      margin-bottom: 12px;
+    }}
+    h3 {{
+      margin: 0 0 8px 0;
+      font-size: 18px;
+      font-weight: 700;
+    }}
+    p {{
+      margin: 0 0 20px 0;
+      font-size: 13px;
+      color: {muted_color};
+      line-height: 1.4;
+    }}
+    .input-group {{
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }}
+    input {{
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid {border_color};
+      border-radius: 8px;
+      font-size: 13px;
+      background: {input_bg};
+      color: {text_color};
+      outline: none;
+      text-align: left;
+    }}
+    input:focus {{
+      border-color: #0066FF;
+    }}
+    button {{
+      width: 100%;
+      background: #0066FF;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }}
+    button:hover {{
+      background: #0052cc;
+    }}
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <div class="icon">🎁</div>
+    <h3>{safe_reward}</h3>
+    <p>{safe_desc}</p>
+
+    <div class="input-group">
+      <input type="email" placeholder="Friend's email address" id="email-input" />
+      <button id="invite-btn">Send Invite</button>
+    </div>
+
+    <div id="success-message" style="display: none; padding: 10px; background: rgba(52, 199, 89, 0.1); color: #34C759; border-radius: 8px; margin-top: 12px; font-size: 13px; font-weight: 500;">
+      Invite sent!
+    </div>
+
+    {branding_html}
+  </div>
+
+  <script>
+    document.getElementById('invite-btn').addEventListener('click', function() {{
+      const email = document.getElementById('email-input').value;
+      if (!email) return;
+
+      const btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+
+      fetch('/api/v1/growth/lead-magnet/capture', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          tenant_id: '{safe_tenant}',
+          email: email,
+          source: 'one_tap_referral',
+          campaign: '{safe_reward}'
+        }})
+      }}).then(() => {{
+        document.querySelector('.input-group').style.display = 'none';
+        document.getElementById('success-message').style.display = 'block';
+      }}).catch(err => {{
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = 'Send Invite';
+      }});
+    }});
+  </script>
+</body>
+</html>"#,
+        bg_color = bg_color,
+        text_color = text_color,
+        muted_color = muted_color,
+        input_bg = input_bg,
+        border_color = border_color,
+        safe_reward = safe_reward,
+        safe_desc = safe_desc,
+        branding_html = branding_html,
+        safe_tenant = safe_tenant
     );
 
     axum::response::Html(html)
@@ -2576,6 +2754,28 @@ mod tests {
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB");
         pool
+    }
+
+    #[tokio::test]
+    async fn test_handle_one_tap_referral_embed() {
+        let query = OneTapReferralEmbedQuery {
+            tenant: Some("test_tenant".to_string()),
+            reward: Some("15% Off".to_string()),
+            desc: Some("Send to your buddy!".to_string()),
+            theme: Some("dark".to_string()),
+            hide_branding: Some("false".to_string()),
+        };
+        let response = super::handle_one_tap_referral_embed(axum::extract::Query(query)).await;
+        let response = response.into_response();
+
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(bytes.to_vec()).unwrap();
+
+        assert!(html.contains("test_tenant"));
+        assert!(html.contains("15% Off"));
+        assert!(html.contains("Send to your buddy!"));
+        assert!(html.contains("#1d1d1f")); // Dark theme bg
+        assert!(html.contains("Powered by OHC"));
     }
 
     #[tokio::test]

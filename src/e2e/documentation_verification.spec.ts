@@ -6,7 +6,7 @@ test.describe('Documentation UI Verification', () => {
     await page.goto('/api/ui/help.html');
 
     // Make sure the title renders properly
-    await expect(page.locator('h1')).toContainText('Help Center');
+    await expect(page.locator('h1')).toContainText('In-App Help Center');
 
     // Open videos tab
     const videosTab = page.locator('[data-target="tab-videos"]');

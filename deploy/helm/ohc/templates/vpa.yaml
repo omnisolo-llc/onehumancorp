@@ -11,7 +11,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
   updatePolicy:
+    {{- if .Values.backend.autoscaling.enabled }}
+    updateMode: "Off"
+    {{- else }}
     updateMode: "Auto"
+    {{- end }}
   resourcePolicy:
     containerPolicies:
       - containerName: backend
@@ -32,7 +36,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-core
   updatePolicy:
+    {{- if .Values.ohcCore.autoscaling.enabled }}
+    updateMode: "Off"
+    {{- else }}
     updateMode: "Auto"
+    {{- end }}
   resourcePolicy:
     containerPolicies:
       - containerName: ohc-core
@@ -53,7 +61,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-chatwoot
   updatePolicy:
+    {{- if .Values.chatwoot.autoscaling.enabled }}
+    updateMode: "Off"
+    {{- else }}
     updateMode: "Auto"
+    {{- end }}
   resourcePolicy:
     containerPolicies:
       - containerName: chatwoot
@@ -74,7 +86,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-powersync
   updatePolicy:
+    {{- if .Values.powersync.autoscaling.enabled }}
+    updateMode: "Off"
+    {{- else }}
     updateMode: "Auto"
+    {{- end }}
   resourcePolicy:
     containerPolicies:
       - containerName: powersync

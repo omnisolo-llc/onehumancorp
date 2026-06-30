@@ -65,8 +65,13 @@ test.describe('Triage Action Feed UI', () => {
     while (count > 0) {
       const firstCard = listItems.nth(0);
       const testId = await firstCard.getAttribute('data-testid');
-      const approveBtn = firstCard.locator('button', { hasText: /Approve|Yes, draft it!/i }).first();
-      const dismissBtn = firstCard.locator('button', { hasText: /Dismiss|Deny/i }).first();
+      const approveBtn = firstCard.locator('button[data-testid="approve-triage-btn"]').first();
+      const dismissBtn = firstCard.locator('button[data-testid="dismiss-triage-btn"]').first();
+
+      // We will wait for the API response after clicking
+      const responsePromise = page.waitForResponse(response =>
+        response.url().includes('/api/triage/action') && response.status() === 200
+      );
 
       if (await approveBtn.isVisible()) {
         await approveBtn.click();
@@ -75,6 +80,8 @@ test.describe('Triage Action Feed UI', () => {
       } else {
         break;
       }
+
+      await responsePromise;
 
       // 5. Verify the card disappears (Optimistic UI + backend update)
       if (testId) {

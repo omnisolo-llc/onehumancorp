@@ -434,6 +434,15 @@ function CheckoutContent() {
                 onShareComplete={() => setShareDiscountApplied(true)}
               />
 
+              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                <span className="font-semibold text-gray-700">
+                  Taxes and Fees
+                </span>
+                <span className="text-sm font-medium text-gray-500">
+                  Calculated at checkout
+                </span>
+              </div>
+
               {deliveryFee !== null && (
                 <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                   <span className="font-semibold text-gray-700">

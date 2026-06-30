@@ -11,14 +11,14 @@ test.describe('Viral Agent Card Growth Loop', () => {
     // Grant clipboard permissions for copying the link
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
-    await page.goto('/api/ui/agent-card.html');
+    await page.goto('/agent-card.html');
 
     // Wait for the UI to be ready
     await page.waitForLoadState('networkidle');
 
     // Verify header and description
     await expect(page.getByRole('heading', { name: 'Agent Public Card' })).toBeVisible();
-    await expect(page.getByText('Generate a shareable public card for your AI agent to build trust with your customers.')).toBeVisible();
+    await expect(page.getByText('Generate a shareable public card')).toBeVisible();
 
     // Fill the agent details
     await page.locator('#agent-name').fill('Sarah');

@@ -86,7 +86,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   return (
     <div
       key={approval.id}
-      className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal ${approval.event_source?.includes("marketing") ? "!border-t-[4px] !border-t-pink-500" : approval.event_source?.includes("operations") ? "!border-t-[4px] !border-t-blue-500" : approval.event_source?.includes("sales") || approval.event_source?.includes("triage") ? "!border-t-[4px] !border-t-green-500" : ""}`}
+      className={`glassmorphism app-list-item bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 shadow-sm flex flex-col gap-4 transition-all duration-300 overflow-hidden break-words whitespace-normal ${approval.event_source?.includes("marketing") ? "!border-t-[4px] !border-t-pink-500" : approval.event_source?.includes("operations") ? "!border-t-[4px] !border-t-blue-500" : approval.event_source?.includes("sales") || approval.event_source?.includes("triage") ? "!border-t-[4px] !border-t-green-500" : ""}`}
       data-testid={`triage-card-${approval.id}`}
     >
       <div className="flex flex-col gap-1">
@@ -147,7 +147,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "incident_resolution" && (
               <div
-                className="mb-4 p-4 rounded-[16px] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3"
+                className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3"
                 data-testid="incident-resolution-card"
               >
                 <div className="flex items-center gap-2 text-red-600 font-semibold text-sm">
@@ -176,7 +176,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "onboarding_welcome" && (
               <div
-                className="mb-4 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
+                className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
                 data-testid="onboarding-welcome-card"
               >
                 <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
@@ -261,7 +261,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "order" && (
-              <div className="mb-4 p-4 rounded-[16px] bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 flex flex-col gap-3">
+              <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-yellow-600 font-semibold text-sm">
                   <span className="w-5 h-5 flex items-center justify-center">
                     📦
@@ -306,7 +306,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "triage" && (
-              <div className="mb-4 p-4 rounded-[16px] bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex flex-col gap-3">
+              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-blue-600 font-semibold text-sm">
                   <span className="w-5 h-5 flex items-center justify-center">
                     ✉️
@@ -351,7 +351,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "proactive_ops" && (
-              <div className="mb-4 p-4 rounded-[16px] bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 flex flex-col gap-3 relative overflow-hidden">
+              <div className="mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 flex flex-col gap-3 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-[#FF9500]"></div>
                 <div className="flex items-center gap-2 text-orange-600 font-semibold text-sm">
                   <span className="w-5 h-5 flex items-center justify-center">
@@ -392,7 +392,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "task" && (
-              <div className="mb-4 p-4 rounded-[16px] bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 flex flex-col gap-3">
+              <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-purple-600 font-semibold text-sm">
                   <span className="w-5 h-5 flex items-center justify-center">
                     ✅
@@ -438,7 +438,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "autonomous_booking_quote" && (
               <div
-                className="mb-4 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
+                className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
                 data-testid="autonomous-booking-quote-card"
               >
                 <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
@@ -465,7 +465,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     role="dialog"
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
                   >
-                    <div className="bg-white dark:bg-gray-900 rounded-[16px] p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col gap-4">
+                    <div className="bg-white dark:bg-gray-900 p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col gap-4">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                         Review Booking Quote
                       </h3>
@@ -595,7 +595,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "quote_draft" && (
               <div
-                className="mb-4 p-4 rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
+                className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
                 data-testid="quote-draft-card"
               >
                 <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
