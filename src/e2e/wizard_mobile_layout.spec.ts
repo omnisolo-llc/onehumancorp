@@ -8,7 +8,7 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.goto('/website-builder');
 
     // Check elements
-    const heading = page.getByRole('heading', { name: '10-Minute Setup Wizard' });
+    const heading = page.getByRole('heading', { name: 'Tell us about your business' });
     await expect(heading).toBeVisible();
 
     // Verify it doesn't overflow horizontally
@@ -16,18 +16,17 @@ test.describe('Wizard and Onboarding flows', () => {
     const windowWidth = await page.evaluate(() => window.innerWidth);
     expect(htmlWidth).toBeLessThanOrEqual(windowWidth);
 
-    await page.getByRole('button', { name: 'Instant Build' }).click();
-    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Generate My Workspace' })).toBeVisible();
   });
 
   test('Builder mobile UI test', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/builder');
 
-    await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
+    await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
 
     // Check click routing inside builder
-    await page.locator('text="Start My Business"').click();
+    await page.locator('text="Step-by-Step Setup"').click();
 
     await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
     await page.getByText("I'm a Baker").click();
@@ -37,15 +36,15 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.locator('#business-categories').selectOption('Bakery');
     await page.locator('#step-categories .next-step-btn').click();
 
-    await expect(page.getByRole('heading', { name: /What's the name of your business?/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /What's the name of your business\?/ })).toBeVisible();
   });
 
   test('Main Onboarding multi-step wizard mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/setup.html');
 
-    await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
-    await page.locator('text="Start My Business"').click();
+    await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
+    await page.locator('text="Step-by-Step Setup"').click();
 
     await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
 
@@ -56,7 +55,7 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.locator('#business-categories').selectOption('Bakery');
     await page.locator('#step-categories .next-step-btn').click();
 
-    await expect(page.getByRole('heading', { name: /What's the name of your business?/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /What's the name of your business\?/ })).toBeVisible();
     await page.getByPlaceholder('e.g. Maya\'s Custom Cakes').fill('Cakes By Maya');
     await page.locator('#step-name .next-step-btn').click();
 
@@ -67,15 +66,15 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.goto('/business-setup');
 
     // Should immediately reroute to onboarding
-    await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
+    await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
   });
 
   test('Onboarding allows full traversal on standard layout', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/setup.html');
 
-    await expect(page.locator('text="10-Minute Setup Wizard"').first()).toBeVisible();
-    await page.locator('text="Start My Business"').click();
+    await expect(page.locator('text="Tell us about your business"').first()).toBeVisible();
+    await page.locator('text="Step-by-Step Setup"').click();
 
     await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
     await page.getByText("I'm a Baker").click();
