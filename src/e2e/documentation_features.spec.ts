@@ -129,7 +129,7 @@ test.describe('AppShell Help Button', () => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/api/ui/dashboard.html');
 
-    const helpButton = page.getByRole('link', { name: 'In-App Help Center' });
+    const helpButton = page.locator('#help-center-nav-btn');
     await expect(helpButton).toBeVisible();
 
     await Promise.all([
