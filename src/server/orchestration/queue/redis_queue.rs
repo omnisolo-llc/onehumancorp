@@ -88,6 +88,10 @@ impl TaskQueue for RedisTaskQueue {
                     // Not right role, put it back
                     let _ = self.enqueue(job).await;
                 }
+            } else {
+                // Corrupted data - log error and gracefully discard the bad payload.
+                tracing::warn!("Redis mailbox corruption detected: Dropping malformed JSON payload.");
+                // Since ZPOPMIN already removed it, doing nothing drops the bad message.
             }
         }
         Ok(None)
