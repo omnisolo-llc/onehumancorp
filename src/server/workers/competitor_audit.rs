@@ -111,7 +111,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            pool: crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
             store: crate::db::DbStore::Sqlite(pool),
         });
 
