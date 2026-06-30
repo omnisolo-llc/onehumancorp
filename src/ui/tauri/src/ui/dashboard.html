@@ -1573,19 +1573,19 @@
 
       async function checkWrapped() {
         try {
-          const res = await fetch('/api/v1/growth/wrapped');
+          const res = await fetch(`/api/v1/growth/wrapped?tenant_id=${encodeURIComponent(localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default')}`);
           if (res.ok) {
             const data = await res.json();
-            if (data.total_sales > 0 || data.total_orders > 0) {
+            if (data.stats) {
               document.getElementById('wrapped-widget').style.display = 'block';
-              document.getElementById('wrapped-sales').innerText = '$' + data.total_sales.toFixed(2);
-              document.getElementById('wrapped-orders').innerText = data.total_orders;
-              document.getElementById('wrapped-customers').innerText = data.total_customers;
-              document.getElementById('wrapped-ai-hours').innerText = data.ai_hours_saved;
+              document.getElementById('wrapped-sales').innerText = data.stats.totalSales || data.stats.total_sales;
+              document.getElementById('wrapped-orders').innerText = data.stats.totalOrders || data.stats.total_orders;
+              document.getElementById('wrapped-customers').innerText = data.stats.newCustomers || data.stats.new_customers;
+              document.getElementById('wrapped-ai-hours').innerText = data.stats.aiHoursSaved || data.stats.ai_hours_saved;
 
               const shareBtn = document.getElementById('wrapped-share-btn');
               shareBtn.onclick = () => {
-                const text = `I crushed 2026 with OHC! $${data.total_sales.toFixed(2)} in sales and ${data.ai_hours_saved} AI hours saved. 🚀 Powered by OneHumanCorp`;
+                const text = `I crushed 2026 with OHC! ${data.stats.totalSales || data.stats.total_sales} in sales and ${data.stats.aiHoursSaved || data.stats.ai_hours_saved} AI hours saved. 🚀 Powered by OneHumanCorp`;
                 navigator.clipboard.writeText(text).then(() => {
                   shareBtn.innerText = 'Copied to Clipboard! ✨';
                   setTimeout(() => shareBtn.innerText = 'Share 2026 Success', 2000);

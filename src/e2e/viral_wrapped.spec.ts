@@ -8,13 +8,6 @@ test('viral wrapped: verify year in review widget is dynamically rendered and sh
     localStorage.setItem('tenant', 'e2e_tenant_id');
   });
 
-  // Mock the API response to avoid real network call in test if needed, although it should exist.
-  // Since we don't have the API running locally in e2e sometimes, we mock it.
-  await page.route('**/api/v1/growth/wrapped*', async route => {
-    const json = { year: 2024, title: "Your Year in Review 🎉", subtitle: "You crushed it this year! See your impact and share with your community.", stats: { totalSales: "$14,250", totalOrders: 342, newCustomers: 128, topProduct: "Custom Logo Design", aiHoursSaved: 42 }, shareText: "I just reviewed my 2024 business stats on OHC and I'm blown away! I saved 42 hours using AI and served 128 new customers. Start growing your business on OHC:" };
-    await route.fulfill({ json });
-  });
-
   // Load the dashboard - real data will flow from backend
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
   await page.reload({ waitUntil: 'domcontentloaded' });
