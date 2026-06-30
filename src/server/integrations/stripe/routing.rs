@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PaymentMethod {
     CreditCard,
@@ -9,6 +11,8 @@ pub enum PaymentMethod {
 
 pub struct PaymentRouter;
 
+static ACH_MIN_CACHE: OnceLock<f64> = OnceLock::new();
+
 impl PaymentRouter {
     pub const CARD_FEE_PERCENTAGE: f64 = 0.029;
     pub const CARD_FEE_FIXED: f64 = 0.30;
@@ -16,6 +20,15 @@ impl PaymentRouter {
     pub const ACH_FEE_CAP: f64 = 5.0;
     pub const ACH_MIN_AMOUNT: f64 = 50.0;
     pub const BATCH_PAYOUT_THRESHOLD_CENTS: i64 = 10000;
+
+    fn get_ach_min_amount() -> f64 {
+        *ACH_MIN_CACHE.get_or_init(|| {
+            std::env::var("ACH_MIN_AMOUNT")
+                .ok()
+                .and_then(|v| v.parse::<f64>().ok())
+                .unwrap_or(Self::ACH_MIN_AMOUNT)
+        })
+    }
 
     pub fn should_batch_payout(amount_cents: i64) -> bool {
         // Transaction Fee Optimization
@@ -45,7 +58,8 @@ impl PaymentRouter {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
+        let ach_min = Self::get_ach_min_amount();
+        if ach_fee < card_fee && amount_usd >= ach_min {
             PaymentMethod::Ach
         } else {
             PaymentMethod::CreditCard
@@ -58,7 +72,8 @@ impl PaymentRouter {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
+        let ach_min = Self::get_ach_min_amount();
+        if ach_fee < card_fee && amount_usd >= ach_min {
             let savings = card_fee - ach_fee;
             (savings * 100.0).round() / 100.0
         } else {
