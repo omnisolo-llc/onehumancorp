@@ -2732,6 +2732,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
     let translation_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::translation_agent::TranslationAgent::new(dept_orchestrator.clone())));
+    let strategist_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::strategist_agent::StrategistAgent::new(dept_orchestrator.clone())));
 
     tokio::join!(
         dept_orchestrator.register_department(ops_agent),
@@ -2741,7 +2742,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         dept_orchestrator.register_department(finance_agent),
         dept_orchestrator.register_department(legal_agent),
         dept_orchestrator.register_department(advisory_agent),
-        dept_orchestrator.register_department(translation_agent)
+        dept_orchestrator.register_department(translation_agent),
+        dept_orchestrator.register_department(strategist_agent)
     );
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
@@ -6465,6 +6467,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
                 .route("/api/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
         .route("/api/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
+        .route("/api/ui/strategist/objective", axum::routing::post(crate::api::strategist::create_objective_handler).with_state(crate::api::strategist::StrategistApiState { db: db.clone(), orchestrator: dept_orchestrator.clone() }))
+        .route("/api/ui/strategist/objectives/{tenant_id}", axum::routing::get(crate::api::strategist::get_objectives_handler).with_state(crate::api::strategist::StrategistApiState { db: db.clone(), orchestrator: dept_orchestrator.clone() }))
         .route("/api/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
         .route("/api/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
         .route("/api/dev/simulate-triage-item", axum::routing::post(simulate_ui_triage_item_handler).with_state(db.clone()))

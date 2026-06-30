@@ -1,9 +1,4 @@
-
-exports_files([
-        "work_triage.rs",
-        "perplexity.rs","chaos.rs", "sync_gateway.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
-
 
 exports_files(
     [
@@ -30,7 +25,7 @@ exports_files(
         "twilio_webhook_test.rs",
         "twilio_voice.rs",
         "docs.rs",
-    "field_ops.rs",
+        "field_ops.rs",
         "storefront_delivery.rs",
         "subscription.rs",
         "integrations_settings.rs",
@@ -54,8 +49,10 @@ exports_files(
         "incidents.rs",
         "audio_command.rs",
         "invoice.rs",
-    "quotes.rs",
+        "quotes.rs",
         "tool_integrations.rs",
+        "strategist.rs",
+        "sync_gateway.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -87,7 +84,7 @@ rust_library(
         "meta_webhook.rs",
         "twilio_voice.rs",
         "docs.rs",
-    "field_ops.rs",
+        "field_ops.rs",
         "storefront_delivery.rs",
         "subscription.rs",
         "integrations_settings.rs",
@@ -111,11 +108,12 @@ rust_library(
         "incidents.rs",
         "audio_command.rs",
         "invoice.rs",
-    "quotes.rs",
+        "quotes.rs",
         "tool_integrations.rs",
+        "strategist.rs",
         "sync_gateway.rs",
         "//src/server/api/inbox:srcs",
-    "//src/server/api/ohc_job_queue:srcs",
+        "//src/server/api/ohc_job_queue:srcs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
         "//src/server/api/agents:hire.rs",

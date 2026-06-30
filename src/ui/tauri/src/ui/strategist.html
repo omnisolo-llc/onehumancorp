@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategist: Business Vitality & Goals</title>
+    <style>
+        body {
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f5f5f7;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 375px;
+            width: 100%;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        }
+        h1 { font-size: 24px; font-weight: 800; margin-bottom: 8px; color: #1d1d1f; }
+        .subtitle { font-size: 14px; color: #86868b; margin-bottom: 24px; }
+
+        .vitality-signal {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .signal-icon { font-size: 24px; }
+        .signal-text { font-size: 14px; font-weight: 600; color: #1d1d1f; }
+
+        .goal-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        textarea {
+            width: 100%;
+            height: 80px;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.8);
+            font-family: inherit;
+            font-size: 15px;
+            box-sizing: border-box;
+            resize: none;
+        }
+        .btn-primary {
+            background: #0066FF;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,102,255,0.3);
+        }
+
+        .plan-card {
+            border-left: 4px solid #0066FF;
+        }
+        .plan-task {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .plan-task:last-child { border-bottom: none; }
+        .task-dept { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #0066FF; margin-bottom: 4px; }
+        .task-desc { font-size: 14px; color: #1d1d1f; line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Business Vitality</h1>
+        <p class="subtitle">Chief of Staff active. Focus on your goals.</p>
+
+        <div class="glass-card">
+            <div class="vitality-signal">
+                <span class="signal-icon">🍪</span>
+                <span class="signal-text">Winter cookie sales are 30% lower than usual.</span>
+            </div>
+            <div class="vitality-signal">
+                <span class="signal-icon">📅</span>
+                <span class="signal-text">You have 4 open slots for next Tuesday.</span>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h2 style="font-size: 18px; margin-top: 0;">Set a Business Objective</h2>
+            <div class="goal-input-container">
+                <textarea id="goal-input" placeholder="e.g., Sell out of winter cookies by Friday"></textarea>
+                <button class="btn-primary" onclick="setObjective()">Ask Strategist to Architect Plan</button>
+            </div>
+        </div>
+
+        <div id="active-objectives">
+            <!-- Objectives will load here -->
+        </div>
+    </div>
+
+    <script>
+        const tenant_id = localStorage.getItem('tenant_id') || 'maya-baker';
+
+        async function loadObjectives() {
+            try {
+                const res = await fetch(`/api/ui/strategist/objectives/${tenant_id}`);
+                const data = await res.json();
+                const container = document.getElementById('active-objectives');
+                container.innerHTML = data.map(obj => `
+                    <div class="glass-card plan-card">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <h3 style="font-size: 16px; margin: 0 0 12px 0;">Goal: ${obj.goal}</h3>
+                            <span style="font-size: 10px; padding: 4px 8px; background: rgba(0,102,255,0.1); color: #0066FF; border-radius: 8px; font-weight: 800;">${obj.status}</span>
+                        </div>
+                        <p style="font-size: 12px; color: #86868b;">Strategist is coordinating with departments...</p>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function setObjective() {
+            const goal = document.getElementById('goal-input').value;
+            if (!goal) return;
+
+            try {
+                const res = await fetch('/api/ui/strategist/objective', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenant_id, goal })
+                });
+                if (res.ok) {
+                    document.getElementById('goal-input').value = '';
+                    loadObjectives();
+                    alert("Strategist has received your goal and is architecting a plan.");
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        loadObjectives();
+    </script>
+</body>
+</html>
