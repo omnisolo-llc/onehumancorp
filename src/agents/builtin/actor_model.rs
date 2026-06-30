@@ -73,19 +73,29 @@ impl ActorSystem {
         mb.insert(name, sender);
     }
 
-    pub async fn broadcast(&self, mut msg: ActorMessage) -> Result<(), String> {
+    pub async fn broadcast(&self, msg: ActorMessage) -> Result<(), String> {
         let senders = {
             let mb = self.mailboxes.lock().await;
             mb.clone()
         };
 
-        let mut errors = Vec::new();
-        for (name, sender) in senders {
-            msg.recipient = name.clone();
-            if let Err(e) = sender.send(msg.clone()).await {
-                errors.push(format!("Failed to send to {}: {}", name, e));
+        let futures = senders.into_iter().map(|(name, sender)| {
+            let mut clone_msg = msg.clone();
+            clone_msg.recipient = name.clone();
+            async move {
+                if let Err(e) = sender.send(clone_msg).await {
+                    Some(format!("Failed to send to {}: {}", name, e))
+                } else {
+                    None
+                }
             }
-        }
+        });
+
+        let errors: Vec<String> = futures::future::join_all(futures)
+            .await
+            .into_iter()
+            .flatten()
+            .collect();
 
         if errors.is_empty() {
             Ok(())
