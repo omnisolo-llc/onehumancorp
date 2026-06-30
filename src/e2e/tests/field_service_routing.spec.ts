@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
 test.describe('Field Service Routing Mobile App', () => {
   test('Carlos views today route and updates job status', async ({ page }) => {
@@ -28,13 +28,13 @@ test.describe('Field Service Routing Mobile App', () => {
     await expect(job2Card).toBeVisible();
 
     // 5. CUJ Action: "Start Travel" (change status from pending -> en_route)
-    const startTravelBtn = job1Card.locator('button', { hasText: 'Start Travel' });
+    const startTravelBtn = job1Card.locator('[data-testid="btn-start-travel-e2e-job-1"]');
     await expect(startTravelBtn).toBeVisible();
     await startTravelBtn.click();
 
     // 6. Verify status updated to 'en_route' and button changed to 'Arrived On-Site'
     await expect(job1Card.locator('.job-status')).toHaveText('en route', { timeout: 10000 });
-    const arriveBtn = job1Card.locator('button', { hasText: 'Arrived On-Site' });
+    const arriveBtn = job1Card.locator('[data-testid="btn-arrived-e2e-job-1"]');
     await expect(arriveBtn).toBeVisible();
 
     // 7. CUJ Action: "Arrived On-Site" (change status from en_route -> on_site)
@@ -44,12 +44,39 @@ test.describe('Field Service Routing Mobile App', () => {
     await expect(job1Card.locator('.job-status')).toHaveText('on site', { timeout: 10000 });
 
     // 9. CUJ Action: "Job Done" (change status from on_site -> done)
-    const doneBtn = job1Card.locator('button', { hasText: 'Job Done' });
+    const doneBtn = job1Card.locator('[data-testid="btn-job-done-e2e-job-1"]');
     await doneBtn.click();
 
     // 10. Verify status updated to 'done' and 'Tap to Pay' button is shown
     await expect(job1Card.locator('.job-status')).toHaveText('done', { timeout: 10000 });
     const payBtn = job1Card.locator('button', { hasText: 'Tap to Pay' });
     await expect(payBtn).toBeVisible();
+
+    // Go offline
+    await page.context().setOffline(true);
+    await page.waitForTimeout(500);
+
+    // CUJ Action: "Start Travel" (change status from pending -> en_route) on job2 while offline
+    const startTravelBtn2 = job2Card.locator('[data-testid="btn-start-travel-e2e-job-2"]');
+    await expect(startTravelBtn2).toBeVisible();
+    await startTravelBtn2.click();
+
+    // Verify optimistic UI update while offline
+    await expect(job2Card.locator('.job-status')).toHaveText('en route', { timeout: 10000 });
+
+    // Check that network status indicator shows offline sync state
+    const offlineIndicator = page.locator('#network-status-indicator');
+    await expect(offlineIndicator).toBeVisible();
+    await expect(offlineIndicator.locator('#network-status-text')).toHaveText('Working Offline - Changes Saved');
+
+    // Go back online
+    await page.context().setOffline(false);
+
+    // Wait for the queue to sync and UI to refresh
+    await expect(offlineIndicator).toBeHidden({ timeout: 10000 });
+
+    // Verify status persisted and refreshed from server
+    await expect(job2Card.locator('.job-status')).toHaveText('en route', { timeout: 10000 });
+
   });
 });
