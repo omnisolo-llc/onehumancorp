@@ -106,7 +106,7 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
       await saveBtn.click();
 
       await expect(textarea).not.toBeVisible();
-      await expect(feedCard).toContainText('I can set aside one for you');
+      await expect(feedCard.getByText('I can set aside one for you')).toBeVisible({ timeout: 5000 });
     }
 
     // Click 'Approve'
