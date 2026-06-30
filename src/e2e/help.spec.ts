@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Help Center', () => {
+test.describe('In-App Help Center', () => {
   test.beforeEach(async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
   });
@@ -19,7 +19,7 @@ test.describe('Help Center', () => {
     await page.goto('/api/ui/help.html');
 
     // Help center title should be visible
-    await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'In-App Help Center' })).toBeVisible();
 
     // Search bar should be functional
     const searchInput = page.locator('input[placeholder*="Search"]');

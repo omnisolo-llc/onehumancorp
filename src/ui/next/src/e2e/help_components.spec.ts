@@ -76,7 +76,7 @@ test.describe('Help Components', () => {
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
     await chatButton.click();
-    await expect(page.locator('text=Ask AI Help').first()).toBeVisible();
+    await expect(page.locator('text=Ask anything').first()).toBeVisible();
 
     // Fill message and send
     const input = page.locator('input[placeholder="Ask anything..."]');

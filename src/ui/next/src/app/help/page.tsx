@@ -85,7 +85,7 @@ export default function HelpCenterPage() {
                 window.dispatchEvent(event);
               }}
             >
-              Ask AI Support Agent
+              Ask anything
             </button>
             </WithTooltip>
           </div>

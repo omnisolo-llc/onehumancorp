@@ -24,14 +24,14 @@ describe('HelpChat Component', () => {
   it('renders the floating button by default', () => {
     render(<HelpChat />);
     expect(screen.getByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Ask AI Help' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeInTheDocument();
   });
 
   it('opens the chat interface when the button is clicked', () => {
     render(<HelpChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
 
-    expect(screen.getByRole('heading', { name: 'Ask AI Help' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Ask anything...')).toBeInTheDocument();
   });
 
@@ -39,10 +39,10 @@ describe('HelpChat Component', () => {
     render(<HelpChat />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
-    expect(screen.getByRole('heading', { name: 'Ask AI Help' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Close help chat' }));
-    expect(screen.queryByRole('heading', { name: 'Ask AI Help' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeInTheDocument();
   });
 
   it('sends a message and displays the response', async () => {
@@ -162,13 +162,13 @@ describe('HelpChat Component', () => {
 
   it('opens the chat interface when open-help-chat event is dispatched', () => {
     render(<HelpChat />);
-    expect(screen.queryByRole('heading', { name: 'Ask AI Help' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeInTheDocument();
 
     act(() => {
       window.dispatchEvent(new CustomEvent('open-help-chat'));
     });
 
-    expect(screen.getByRole('heading', { name: 'Ask AI Help' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ask anything' })).toBeInTheDocument();
   });
 });
 
