@@ -2621,6 +2621,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Daily Ops Routine Worker
     let daily_ops_routine_worker = crate::workers::daily_ops_routine_worker::DailyOpsRoutineWorker::new(db.clone());
+    let inventory_deduction_worker = crate::workers::inventory_deduction_worker::InventoryDeductionWorker::new(db.clone());
+    inventory_deduction_worker.start();
     daily_ops_routine_worker.start();
 
     if matches!(&db.store, crate::db::DbStore::Postgres) {

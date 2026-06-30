@@ -463,7 +463,7 @@ impl InventoryService {
                 "lock_id": lock_id,
             }).to_string();
 
-            let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
+            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, 'INVENTORY_DEDUCTION_LEDGER', $3::jsonb, 'PENDING', CURRENT_TIMESTAMP); -- INSERT INTO ohc_universal_ledger")
                 .bind(Uuid::new_v4().to_string())
                 .bind(tenant_id)
                 .bind(&payload_str)

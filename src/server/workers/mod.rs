@@ -22,3 +22,4 @@ pub mod daily_ops_routine_worker;
 #[cfg(test)]
 mod invoice_followup_worker_test;
 pub mod proactive_operations_worker;
+pub mod inventory_deduction_worker;
