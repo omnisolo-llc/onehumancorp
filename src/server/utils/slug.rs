@@ -39,5 +39,8 @@ mod tests {
         assert_eq!(slugify("   hello   world   "), "hello-world");
         assert_eq!(slugify("!"), "");
         assert_eq!(slugify("-"), "");
+        assert_eq!(slugify("   "), "");
+        assert_eq!(slugify("a"), "a");
+        assert_eq!(slugify(" A "), "a");
     }
 }
