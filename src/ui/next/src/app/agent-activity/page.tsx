@@ -75,7 +75,7 @@ export default function AgentActivityPage() {
         </header>
 
         <section className="space-y-4">
-            <div className="glassmorphism rounded-[16px] p-6 border border-white/40 dark:border-white/10 shadow-sm">
+            <div className="glassmorphism p-6 border border-white/40 dark:border-white/10 shadow-sm">
                 <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
                     <h2 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2">
                         <span className="text-xl">⚙️</span> Active Operations
@@ -89,7 +89,7 @@ export default function AgentActivityPage() {
                         <div className="text-[#86868B] dark:text-[#A1A1A6] text-sm py-4">No active or recent tasks found. Your agents are standing by.</div>
                     ) : (
                         jobs.map((job) => (
-                            <div key={job.id} className={`glassmorphism rounded-[16px] p-4 border ${job.status === 'PROCESSING' ? 'border-blue-200 dark:border-blue-800' : 'border-white/40 dark:border-white/10'} shadow-md flex flex-col sm:flex-row gap-4 items-start sm:items-center relative overflow-hidden transition-shadow`}>
+                            <div key={job.id} className={`glassmorphism p-4 border ${job.status === 'PROCESSING' ? 'border-blue-200 dark:border-blue-800' : 'border-white/40 dark:border-white/10'} shadow-md flex flex-col sm:flex-row gap-4 items-start sm:items-center relative overflow-hidden transition-shadow`}>
                                 {job.status === 'PROCESSING' && (
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#0066FF] rounded-l-[16px]"></div>
                                 )}

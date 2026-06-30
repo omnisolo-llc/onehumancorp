@@ -332,7 +332,7 @@ export default function FieldOpsJobsPage() {
         {jobs.map((job) => (
           <div
             key={job.id}
-            className="bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] rounded-[16px] shadow-sm border border-white/40 overflow-hidden"
+            className="bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm border border-white/40 overflow-hidden"
           >
             <div className="p-5 border-b border-gray-100 bg-gray-50/50">
               <div className="flex justify-between items-start mb-2">
@@ -508,7 +508,7 @@ export default function FieldOpsJobsPage() {
                   data-testid="generate-quote-btn"
                   onClick={handleDraftVoiceQuote}
                   disabled={draftingQuote || !voiceTranscript.trim()}
-                  className="w-full bg-[#0066FF] text-white font-semibold py-3 rounded-[16px] disabled:opacity-50 min-h-[44px]"
+                  className="w-full bg-[#0066FF] text-white font-semibold py-3 disabled:opacity-50 min-h-[44px]"
                 >
                   {draftingQuote ? "Drafting..." : "Generate Draft Quote"}
                 </button>
@@ -543,7 +543,7 @@ export default function FieldOpsJobsPage() {
                         setDraftQuoteResult(null);
                         setVoiceTranscript("");
                      }}
-                     className="flex-1 bg-[#0066FF] text-white font-semibold py-3 rounded-[16px] min-h-[44px]"
+                     className="flex-1 bg-[#0066FF] text-white font-semibold py-3 min-h-[44px]"
                    >
                      Approve & Send
                    </button>

@@ -85,7 +85,7 @@ export default function WaitlistPage() {
             </p>
 
             {referralLink && (
-              <div className="w-full mt-4 mb-6 p-6 rounded-[16px] bg-gradient-to-br from-indigo-50/50 to-purple-50/50 border border-indigo-100/50">
+              <div className="w-full mt-4 mb-6 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 border border-indigo-100/50">
                 <h3 className="font-semibold text-gray-900 mb-2">
                   Move up the list!
                 </h3>

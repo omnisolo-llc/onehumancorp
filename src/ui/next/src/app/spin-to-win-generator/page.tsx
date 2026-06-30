@@ -92,7 +92,7 @@ export default function SpinToWinGeneratorPage() {
 
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col md:flex-row gap-8">
         <div className="w-full md:w-1/2 flex flex-col gap-6">
-            <div className="app-card rounded-[16px] p-6 shadow-sm border border-gray-100 bg-white">
+            <div className="app-card p-6 shadow-sm border border-gray-100 bg-white">
                 <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900">Configure Wheel</h2>
 
                 <div className="space-y-4">
@@ -131,7 +131,7 @@ export default function SpinToWinGeneratorPage() {
 
         {/* Live Preview */}
         <div className="w-full md:w-1/2">
-            <div className="p-8 rounded-[16px] h-full flex flex-col items-center justify-center relative overflow-hidden bg-white border border-gray-200 shadow-sm">
+            <div className="p-8 h-full flex flex-col items-center justify-center relative overflow-hidden bg-white border border-gray-200 shadow-sm">
                 <div className="absolute top-4 left-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Preview</div>
 
                 <div className="w-full max-w-sm border border-dashed border-gray-300 p-6 rounded-xl text-center bg-gray-50">
@@ -153,7 +153,7 @@ export default function SpinToWinGeneratorPage() {
       {/* Embed Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
-            <div className="app-card rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in bg-white">
+            <div className="app-card p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in bg-white">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
@@ -171,20 +171,20 @@ export default function SpinToWinGeneratorPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-40 p-4 bg-gray-50 border border-gray-200 rounded-[16px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                        className="w-full h-40 p-4 bg-gray-50 border border-gray-200 font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                     />
                 </div>
 
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-[16px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium transition-colors"
                     >
                         Close
                     </button>

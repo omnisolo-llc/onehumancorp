@@ -210,7 +210,7 @@ function InboxWorkspace({
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none">
         <div className="app-grid two gap-4">
-          <section className="app-panel glassmorphism rounded-[16px] overflow-hidden">
+          <section className="app-panel glassmorphism overflow-hidden">
             <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
               <div>
                 <div className="app-panel-title font-bold text-gray-900 dark:text-white">Message Queue</div>
@@ -240,7 +240,7 @@ function InboxWorkspace({
             </div>
           </section>
 
-          <section className="app-panel glassmorphism rounded-[16px] overflow-hidden">
+          <section className="app-panel glassmorphism overflow-hidden">
             <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
               <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
             </div>
@@ -339,7 +339,7 @@ function InboxWorkspace({
                   <div className="mt-4">
                     <button
                       onClick={() => handleDraftQuoteWithAI(selected)}
-                      className="app-button w-full min-h-[44px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-[16px] shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                      className="app-button w-full min-h-[44px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
                     >✨ Draft Quote with AI</button>
                   </div>
                 )}
@@ -347,7 +347,7 @@ function InboxWorkspace({
                   <div className="mt-4">
                     <button
                       onClick={() => handleDraftQuoteWithAI(selected)}
-                      className="w-full min-h-[44px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-[16px] shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                      className="w-full min-h-[44px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
                     >✨ Draft Quote with AI</button>
                   </div>
                 )}
