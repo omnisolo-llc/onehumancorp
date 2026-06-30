@@ -23,6 +23,7 @@ pub struct CreatePaymentIntentRequest {
     pub amount: f64,
     pub currency: String,
     pub source: String,
+    pub capture_method: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -76,10 +77,12 @@ async fn create_payment_intent(
     let idempotency_key = Uuid::new_v4().to_string();
 
     let pool = crate::db::get_pool();
+    let capture_method = payload.capture_method.unwrap_or_else(|| "automatic".to_string());
+
     let res = sqlx::query(
         r#"
-        INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, source)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, source, capture_method)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#
     )
     .bind(&tenant_id)
@@ -88,6 +91,7 @@ async fn create_payment_intent(
     .bind(payload.amount)
     .bind(&payload.currency)
     .bind(&payload.source)
+    .bind(&capture_method)
     .execute(&pool)
     .await;
 

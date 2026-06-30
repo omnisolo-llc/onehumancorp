@@ -26,6 +26,16 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
               remaining_stock: 5,
               suggested_action: 'Restock Item'
           }
+        },
+        {
+          id: 'mock-receipt-draft',
+          tenant_id: 'default',
+          action_type: 'Send Receipt',
+          status: 'Pending',
+          payload: {
+              customer_contact: '555-0199',
+              suggested_action: 'Send Digital Receipt via SMS'
+          }
         }
       ];
       await route.fulfill({ json: body });
@@ -76,6 +86,9 @@ test.describe('Universal Mobile POS & Tap-to-Pay with Agentic Inventory Sync', (
     await page.goto('/dashboard');
     await expect(page.locator('text=Sell In Person')).toBeVisible();
     await expect(page.locator('text=Review and approve restock order').or(page.locator('text=Restock Item'))).toBeVisible();
+
+    // 5. Verify the Customer Success Agent drafted a digital receipt
+    await expect(page.locator('text=Send Digital Receipt via SMS').or(page.locator('text=Send Receipt'))).toBeVisible();
 
   });
 });

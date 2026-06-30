@@ -377,30 +377,53 @@ pub async fn stripe_webhook_handler(
                 .and_then(|m| m.get("product_id"))
                 .and_then(|id| id.as_str());
 
-            if let (Some(tenant_id), Some(product_id)) = (tenant_id_opt, product_id_opt) {
-                let quantity = obj.get("metadata")
-                    .and_then(|m| m.get("quantity"))
-                    .and_then(|q| q.as_str())
-                    .and_then(|q| q.parse::<i32>().ok())
-                    .unwrap_or(1);
+            if let Some(tenant_id) = tenant_id_opt {
+                if let Some(product_id) = product_id_opt {
+                    let quantity = obj.get("metadata")
+                        .and_then(|m| m.get("quantity"))
+                        .and_then(|q| q.as_str())
+                        .and_then(|q| q.parse::<i32>().ok())
+                        .unwrap_or(1);
 
-                let inventory_service = crate::services::inventory::InventoryService::new(None);
+                    let inventory_service = crate::services::inventory::InventoryService::new(None);
 
-                let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, "").await;
+                    let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, "").await;
 
-                // Notify KAIROS Orchestrator for Sales and Operations AI agents
-                let orch = webhook_state.orchestrator.clone();
-                let payload_val = obj.clone();
-                let tenant_id_val = tenant_id.to_string();
-                tokio::spawn(async move {
-                    let evt = crate::orchestration::departments::types::DepartmentEvent {
-                        id: uuid::Uuid::new_v4().to_string(),
-                        tenant_id: tenant_id_val,
-                        event_type: "POS_SALE_COMPLETED".to_string(),
-                        payload: payload_val,
-                    };
-                    let _ = orch.dispatch_event(evt).await;
-                });
+                    // Notify KAIROS Orchestrator for Sales and Operations AI agents
+                    let orch = webhook_state.orchestrator.clone();
+                    let payload_val = obj.clone();
+                    let tenant_id_val = tenant_id.to_string();
+                    tokio::spawn(async move {
+                        let evt = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id_val,
+                            event_type: "POS_SALE_COMPLETED".to_string(),
+                            payload: payload_val,
+                        };
+                        let _ = orch.dispatch_event(evt).await;
+                    });
+                }
+
+                // Notify Customer Success Agent to send digital receipt if source was in_person
+                let source = obj.get("metadata").and_then(|m| m.get("source")).and_then(|s| s.as_str());
+                if source == Some("in_person") {
+                    let customer_id = obj.get("customer").and_then(|c| c.as_str()).map(|s| s.to_string());
+                    // Only dispatch if we have contact info (which might be in metadata or customer)
+                    if customer_id.is_some() || obj.get("receipt_email").is_some() || obj.get("metadata").and_then(|m| m.get("receipt_phone")).is_some() {
+                        let orch = webhook_state.orchestrator.clone();
+                        let payload_val = obj.clone();
+                        let tenant_id_val = tenant_id.to_string();
+                        tokio::spawn(async move {
+                            let evt = crate::orchestration::departments::types::DepartmentEvent {
+                                id: uuid::Uuid::new_v4().to_string(),
+                                tenant_id: tenant_id_val,
+                                event_type: "SEND_DIGITAL_RECEIPT".to_string(),
+                                payload: payload_val,
+                            };
+                            let _ = orch.dispatch_event(evt).await;
+                        });
+                    }
+                }
             }
 
             // Also try to update the order status to Paid if order_id is present
