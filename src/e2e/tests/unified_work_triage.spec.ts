@@ -29,9 +29,12 @@ test.describe('AI Unified Work Triage Architecture', () => {
         await expect(page.locator('div', { hasText: 'Draft Reply:' }).first()).toBeVisible();
         await expect(page.locator('div', { hasText: 'Hi there! Thanks for your message' }).first()).toBeVisible();
 
-        const approveBtn = page.locator('button.triage-btn-approve', { hasText: 'Send Draft' }).first();
+        const approveBtn = page.locator('button[data-testid^=triage-review-]', { hasText: 'Review AI Draft' }).first();
         await expect(approveBtn).toBeVisible();
         await approveBtn.click();
+        const confirmBtn = page.getByTestId('bottom-sheet-approve');
+        await expect(confirmBtn).toBeVisible();
+        await confirmBtn.click();
         await page.waitForTimeout(1000);
     });
 });

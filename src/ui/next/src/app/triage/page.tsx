@@ -55,6 +55,8 @@ export default function TriagePage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
+  const [selectedItem, setSelectedItem] = useState<TriageItem | null>(null);
+  const [editedPayload, setEditedPayload] = useState("");
 
 
   useEffect(() => {
@@ -116,12 +118,17 @@ export default function TriagePage() {
     ["urgent", "high"].includes((item.priority || "").toLowerCase()),
   ).length;
 
-  async function handleDecision(id: string, approved: boolean) {
+  function openBottomSheet(item: TriageItem) {
+    setSelectedItem(item);
+    setEditedPayload(item.action_payload || "");
+  }
+
+  async function handleDecision(id: string, approved: boolean, finalPayload?: string) {
     if (isOffline) {
       await SyncManager.getInstance().enqueue({
         id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
         type: 'triage_action',
-        payload: { triage_item_id: id, approved },
+        payload: { triage_item_id: id, approved, action_payload: finalPayload },
         timestamp: Date.now()
       });
       const newItems = items.filter((i) => i.id !== id);
@@ -139,12 +146,13 @@ export default function TriagePage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ triage_item_id: id, approved }),
+          body: JSON.stringify({ triage_item_id: id, approved, action_payload: finalPayload }),
         },
       );
       if (!res.ok) throw new Error("Failed to update action");
 
       setActionStatus(approved ? "Approved!" : "Dismissed.");
+      setSelectedItem(null);
 
       // Optimistic UI update
       const newItems = items.filter((i) => i.id !== id);
@@ -217,10 +225,10 @@ export default function TriagePage() {
               <div
                 key={item.id}
                 data-testid={`triage-card-${item.id}`}
-                className="ohc-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
+                className="ohc-card w-full glass-card rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
               >
                 {/* Header Context */}
-                <div className="p-5 border-b border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] backdrop-blur-[30px] backdrop-saturate-[210%]">
+                <div className="p-5 border-b border-[rgba(255,255,255,0.2)] bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{getSourceIcon(item.source || "")}</span>
@@ -260,16 +268,16 @@ export default function TriagePage() {
                   <button
                     disabled={isProcessing}
                     className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
-                    data-testid={`triage-approve-${item.id}`}
-                    onClick={() => handleDecision(item.id, true)}
+                    data-testid={`triage-review-${item.id}`}
+                    onClick={() => openBottomSheet(item)}
                   >
-                    {isProcessing ? "Processing..." : "Approve & Send"}
+                    {isProcessing ? "Processing..." : "Review AI Draft"}
                   </button>
                   <button
                     disabled={isProcessing}
                     className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
                     data-testid={`triage-dismiss-${item.id}`}
-                    onClick={() => handleDecision(item.id, false)}
+                    onClick={() => handleDecision(item.id, false, item.action_payload)}
                   >
                     Dismiss
                   </button>
@@ -279,6 +287,32 @@ export default function TriagePage() {
           })
         )}
       </div>
+
+      {selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setSelectedItem(null)}>
+          <div className="w-full max-w-md bg-white dark:bg-[#1D1D1F] rounded-t-[24px] shadow-2xl flex flex-col p-6 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-6"></div>
+            <h2 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Action</h2>
+            <p className="text-sm text-gray-500 mb-4">Edit the drafted {selectedItem.action_type || "action"} before approving.</p>
+
+            <textarea
+              className="w-full h-32 p-3 mb-6 bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-gray-700 rounded-[16px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all resize-none text-[15px]"
+              value={editedPayload}
+              onChange={(e) => setEditedPayload(e.target.value)}
+              data-testid="bottom-sheet-textarea"
+            />
+
+            <div className="flex gap-3 mt-auto">
+              <button className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200" onClick={() => setSelectedItem(null)}>
+                Cancel
+              </button>
+              <button className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[16px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md" data-testid="bottom-sheet-approve" onClick={() => handleDecision(selectedItem.id, true, editedPayload)}>
+                Approve &amp; Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

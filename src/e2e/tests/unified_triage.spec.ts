@@ -45,9 +45,12 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
     await expect(page.locator('.triage-item').first()).toHaveCSS('backdrop-filter', 'blur(30px) saturate(210%)');
 
     // 4. Approve the drafted response
-    const approveBtn = triageCard.getByTestId(/triage-approve-/);
+    const approveBtn = triageCard.getByTestId(/triage-review-/);
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
+    const confirmBtn = page.getByTestId('bottom-sheet-approve');
+    await expect(confirmBtn).toBeVisible();
+    await confirmBtn.click();
 
     // 5. Verify the item is marked as approved and visually dismissed/dimmed
     await expect(triageCard).not.toBeVisible();
