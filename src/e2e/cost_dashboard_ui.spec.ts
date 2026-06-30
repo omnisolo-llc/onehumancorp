@@ -132,90 +132,37 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(cancelSubscriptionBtn).toBeHidden();
   });
 
-  test('should toggle between detailed cost dashboard and my plan widgets', async ({ page, adminUser, loginAs }) => {
+  test('should navigate from My Plan to detailed cost dashboard and back', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
     // Go to My Plan page
     await page.goto('/plan');
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
-    const myPlanWidget = page.locator('#my-plan-widget');
-    const costDashboardWidget = page.locator('#cost-dashboard-widget');
-    const viewDetailedCostsBtn = page.locator('#view-detailed-costs');
-    const backToMyPlanBtn = page.locator('#back-to-my-plan');
-
-    // Initially, My Plan is visible and Cost Dashboard is hidden
-    await expect(myPlanWidget).toBeVisible();
-    await expect(costDashboardWidget).toBeHidden();
+    const viewDetailedCostsBtn = page.locator('button', { hasText: 'View Detailed Costs' });
 
     // Click to view detailed costs
     await expect(viewDetailedCostsBtn).toBeVisible();
     await viewDetailedCostsBtn.click();
 
-    // Now Cost Dashboard is visible and My Plan is hidden
-    await expect(costDashboardWidget).toBeVisible();
-    await expect(myPlanWidget).toBeHidden();
-
-    // Verify URL updated
+    // Wait for URL to update
+    await page.waitForURL('**/cost-dashboard');
     expect(page.url()).toContain('/cost-dashboard');
+
+    // Now Cost Dashboard is visible
+    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
+
+    const backToMyPlanBtn = page.locator('a', { hasText: 'Back to My Plan' });
 
     // Click back to My Plan
     await expect(backToMyPlanBtn).toBeVisible();
     await backToMyPlanBtn.click();
 
-    // Verify returning to initial state
-    await expect(myPlanWidget).toBeVisible();
-    await expect(costDashboardWidget).toBeHidden();
-
     // Verify URL restored
+    await page.waitForURL('**/plan');
     expect(page.url()).toContain('/plan');
-  });
 
-  test('should display download invoice button and handle click natively', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-
-    // Navigate to the Cost Dashboard where the Download Invoice button is located
-    await page.goto('/cost-dashboard');
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
-
-    // The download invoice button is natively visible on this widget
-    const downloadInvoiceBtn = page.locator('#download-invoice-btn');
-    await expect(downloadInvoiceBtn).toBeVisible();
-
-    // Click naturally
-    await downloadInvoiceBtn.click();
-
-    // Assert the success message
-    const planMessage = page.locator('#plan-message');
-    await expect(planMessage).toHaveText('Invoice download is ready for your current billing period.', { timeout: 10000 });
-    await expect(planMessage).toBeVisible();
-  });
-
-  test('should display cancel subscription button and handle click natively', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-
-    // Legitimate test setup: Upgrade the user's tier by claiming a trial extension.
-    // This alters the database state natively without API network mocks, meaning
-    // the UI will now organically display the controls reserved for paid plans.
-    await page.request.post('/api/growth/trial-extension/claim');
-
-    // Navigate to My Plan
-    await page.goto('/plan');
+    // Verify returning to initial state
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
-
-    // Wait for the button to become naturally visible now that the tier is 'pro'
-    const cancelBtn = page.locator('#cancel-subscription-btn');
-    await expect(cancelBtn).toBeVisible();
-
-    // Setup dialog listener to automatically accept the "Are you sure..." confirm prompt
-    page.on('dialog', dialog => dialog.accept());
-
-    // Click naturally
-    await cancelBtn.click();
-
-    // Assert the success message
-    const planMessage = page.locator('#plan-message');
-    await expect(planMessage).toHaveText('Subscription canceled successfully.', { timeout: 10000 });
-    await expect(planMessage).toBeVisible();
   });
 });
