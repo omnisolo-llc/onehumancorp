@@ -484,12 +484,13 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
                 // Search Customers
                 let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
-                    .fetch_all(sqlite_pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -513,7 +514,7 @@ impl DB {
                     .bind(&query_lower)
                     .bind(&query_lower)
                     .bind(&query_lower)
-                    .fetch_all(sqlite_pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -536,9 +537,10 @@ impl DB {
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
-                    .fetch_all(sqlite_pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
+                tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
 
                 for row in message_rows {
                     use sqlx::Row;
