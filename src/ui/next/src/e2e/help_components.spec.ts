@@ -1,48 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Help Components', () => {
-  test.beforeEach(async ({ page }) => {
-    // Mock the backend API responses required for the help center to load correctly
-    await page.route('**/api/help', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { category: "Getting Started", id: "getting-started-1", title: "Getting Started with Your Store", desc: "Welcome to OneHumanCorp!", link: "/help/getting-started-1" }
-        ])
-      });
-    });
-
-    await page.route('**/api/videos', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([{ id: 1, title: "Set up your store", duration: "1:15", video_url: "https://example.com/video.mp4" }])
-      });
-    });
-
-    await page.route('**/api/tooltips', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          "pricing-tier-tooltip": "Select the plan that best fits your business needs."
-        })
-      });
-    });
-
-    await page.route('**/api/walkthrough/dashboard', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { target_id: "sales-card-target", title: "Business Analytics", content: "This panel shows your current sales and customer counts.", position: "bottom" },
-          { target_id: "operations-map-target", title: "Operations Map", content: "Use this area to see the live state of your orders, messages, and inventory.", position: "bottom" }
-        ])
-      });
-    });
-  });
-
   test('Help Center page loads with articles', async ({ page }) => {
     await page.goto('/help');
 
@@ -123,7 +81,7 @@ test.describe('Help Components', () => {
     await startTourBtn.click();
 
     // Verify the first walkthrough step appears
-    const firstStepTitle = page.getByRole('dialog').getByText('Business Analytics');
+    const firstStepTitle = page.getByRole('dialog').getByText('Welcome to your dashboard! This is your control center.');
     await expect(firstStepTitle).toBeVisible();
 
     // Advance to the next step
@@ -132,7 +90,7 @@ test.describe('Help Components', () => {
     await nextBtn.click();
 
     // Verify the second walkthrough step appears
-    const secondStepTitle = page.getByRole('dialog').getByText('Operations Map');
+    const secondStepTitle = page.getByRole('dialog').getByText('Here you can see the time and effort your agents have saved you.');
     await expect(secondStepTitle).toBeVisible();
 
     // Finish the walkthrough

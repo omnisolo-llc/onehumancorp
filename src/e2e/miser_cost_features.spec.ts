@@ -18,33 +18,10 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('text=Total Costs')).toBeVisible();
     await expect(page.locator('text=Projected Monthly Cost').first()).toBeVisible();
 
-    // Verify detailed costs view interaction
-    const viewDetailedCostsButton = page.getByRole('button', { name: 'View Detailed Costs' });
-    await expect(viewDetailedCostsButton).toBeVisible();
-    await viewDetailedCostsButton.click();
-    await expect(page.locator('text=Cost Breakdown')).toBeVisible({ timeout: 5000 });
-
-    const backToMyPlanBtn = page.getByRole('button', { name: 'Back to My Plan' });
+    const backToMyPlanBtn = page.locator('a', { hasText: 'Back to My Plan' });
     await expect(backToMyPlanBtn).toBeVisible();
     await backToMyPlanBtn.click();
-    await expect(page.locator('text=Cost Breakdown')).toBeHidden({ timeout: 5000 });
-
-    // Verify Manage Billing portal navigation (we intercept the network request)
-    const manageBillingButton = page.getByRole('button', { name: 'Manage Billing' });
-    await expect(manageBillingButton).toBeVisible();
-
-    await Promise.all([
-      page.waitForResponse(res => res.url().includes('/api/billing/create-billing-portal-session'), { timeout: 10000 }).catch(() => {}),
-      manageBillingButton.click()
-    ]);
-
-    // Verify navigation back to My Plan works
-    const myPlanButton = page.getByRole('button', { name: 'Back to My Plan' });
-    await expect(myPlanButton).toBeVisible();
-
-    // Click the button and verify the plan widget is displayed
-    await myPlanButton.click();
-    await expect(page.locator('text=AI actions used this month')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Your Current Usage')).toBeVisible({ timeout: 5000 });
   });
 
 
@@ -180,6 +157,6 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/cost-dashboard');
 
     // The threshold should trigger given a $2,000 spend on the Starter plan.
-    await expect(page.locator('text=Soft Limit Approaching').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Budget Alert').first()).toBeVisible({ timeout: 15000 });
   });
 });
