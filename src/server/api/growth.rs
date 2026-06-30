@@ -351,6 +351,7 @@ where
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
+        .route("/spin-to-win/embed", get(handle_spin_to_win_embed))
         .route("/milestone", get(handle_get_milestone))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/promoter/generate", post(handle_promoter_generate))
@@ -2125,6 +2126,13 @@ pub struct MilestoneQuery {
     pub tenant_id: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct SpinToWinQuery {
+    pub tenant: Option<String>,
+    pub campaign: Option<String>,
+    pub reward: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MilestoneResponse {
     pub title: String,
@@ -3459,6 +3467,28 @@ async fn handle_cloud_bridge_invite(
 mod cloud_bridge_tests {
 
     #[tokio::test]
+    async fn test_spin_to_win_embed() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+
+        let query = super::SpinToWinQuery { tenant: Some("test-tenant".to_string()), campaign: Some("Summer Spin".to_string()), reward: Some("Free Coffee".to_string()) };
+        let res = super::handle_spin_to_win_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+        assert!(html.contains("Summer Spin"));
+        assert!(html.contains("test-tenant"));
+        assert!(html.contains("Free Coffee"));
+        assert!(html.contains("Powered by OHC"));
+    }
+
+    #[tokio::test]
     async fn test_customer_referral_embed() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
@@ -3661,6 +3691,151 @@ pub async fn handle_zero_click_generate(
         user_id: _start_res.user_id,
         message: "Storefront generated successfully".to_string()
     }))
+}
+
+async fn handle_spin_to_win_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<SpinToWinQuery>,
+) -> impl IntoResponse {
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("\'", "&#x27;")
+    };
+
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let campaign = escape_html(query.campaign.as_deref().unwrap_or("Spin to Win"));
+    let reward = escape_html(query.reward.as_deref().unwrap_or("10% Off"));
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #ffffff;
+            color: #1d1d1f;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }}
+        .wheel-container {{
+            margin: 20px auto;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 8px solid #0066FF;
+            position: relative;
+            background: conic-gradient(
+                #0066FF 0deg 60deg,
+                #3385ff 60deg 120deg,
+                #0066FF 120deg 180deg,
+                #3385ff 180deg 240deg,
+                #0066FF 240deg 300deg,
+                #3385ff 300deg 360deg
+            );
+            transition: transform 3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }}
+        .pointer {{
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #FF3B30;
+            z-index: 10;
+        }}
+        .form-container {{
+            margin-top: 20px;
+        }}
+        input[type="email"] {{
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            width: 80%;
+            max-width: 300px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }}
+        button {{
+            background-color: #0066FF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 80%;
+            max-width: 300px;
+        }}
+        .reward-box {{
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f3f4f6;
+            border-radius: 8px;
+            border: 1px dashed #9ca3af;
+        }}
+    </style>
+</head>
+<body>
+    <h2 style="margin-top:0;">{campaign}</h2>
+    <p>Spin the wheel to win a special reward!</p>
+
+    <div style="position: relative; width: max-content; margin: 0 auto;">
+        <div class="pointer"></div>
+        <div class="wheel-container" id="wheel"></div>
+    </div>
+
+    <div class="form-container" id="form-container">
+        <input type="email" id="email" placeholder="Enter your email" required>
+        <button id="spin-btn">Spin to Win</button>
+    </div>
+
+    <div class="reward-box" id="reward-box">
+        <h3>🎉 You won: {reward}! 🎉</h3>
+        <p>Use code <strong>SPINWIN</strong> at checkout.</p>
+    </div>
+
+    <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
+        <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+    </div>
+
+    <script>
+        document.getElementById('spin-btn').addEventListener('click', function() {{
+            var email = document.getElementById('email').value;
+            if (!email) {{
+                alert('Please enter your email to spin!');
+                return;
+            }}
+
+            var wheel = document.getElementById('wheel');
+            // Spin multiple times then stop
+            var deg = Math.floor(Math.random() * 360) + 1440;
+            wheel.style.transform = 'rotate(' + deg + 'deg)';
+
+            this.disabled = true;
+            this.innerText = 'Spinning...';
+
+            setTimeout(function() {{
+                document.getElementById('form-container').style.display = 'none';
+                document.getElementById('reward-box').style.display = 'block';
+            }}, 3000);
+        }});
+    </script>
+</body>
+</html>"#
+    );
+
+    axum::response::Html(html)
 }
 
 pub async fn handle_embed_widget(
