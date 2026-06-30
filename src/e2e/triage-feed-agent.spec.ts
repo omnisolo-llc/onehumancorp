@@ -29,7 +29,7 @@ test.describe('Agentic Work Triage Feed', () => {
     await expect(card).toContainText('Hi! Yes, we have 2 vegan chocolate cakes left for this weekend');
 
     // 6. Click Approve & Execute
-    const approveButton = page.locator(`[data-testid="approve-instagram-dm"]`);
+    const approveButton = card.locator(`[data-testid="feed-approve-btn"]`);
     await approveButton.click();
 
     // 7. Verify the item is removed from the feed
@@ -48,7 +48,7 @@ test.describe('Agentic Work Triage Feed', () => {
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.click();
 
-    const dismissButton = page.locator(`[data-testid="dismiss-instagram-dm"]`);
+    const dismissButton = card.locator(`[data-testid="feed-dismiss-btn"]`);
     await dismissButton.click();
 
     await expect(card).not.toBeVisible({ timeout: 5000 });

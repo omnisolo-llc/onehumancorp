@@ -8,7 +8,7 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     await page.goto('/dashboard');
     await page.waitForLoadState('domcontentloaded');
 
-    const feedSection = page.locator('#unified-agent-feed-section').first();
+    const feedSection = page.locator('#unified-agent-feed-container').first();
     await expect(feedSection).toBeVisible({ timeout: 15000 });
 
     // Ensure there is no horizontal scroll on the body
@@ -33,11 +33,11 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const feedContainer = page.locator('#unified-agent-feed-section').first();
+    const feedContainer = page.locator('#unified-agent-feed-container').first();
     await expect(feedContainer).toBeVisible({ timeout: 15000 });
 
     // Look for approve buttons in the feed
-    const approveButtons = feedContainer.locator('button:has-text("Approve")');
+    const approveButtons = feedContainer.locator('[data-testid="feed-approve-btn"]');
     // We expect there to be at least one card generated for triage
     await expect(approveButtons.first()).toBeVisible({ timeout: 15000 });
 
@@ -55,7 +55,7 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
 
     // Expect the card to disappear or change state, count should be less
     await expect(async () => {
-       const newCount = await page.locator('#unified-agent-feed-section').locator('button:has-text("Approve")').count();
+       const newCount = await page.locator('#unified-agent-feed-container').locator('[data-testid="feed-approve-btn"]').count();
        expect(newCount).toBeLessThan(initialCount);
     }).toPass({ timeout: 10000 });
   });
@@ -67,11 +67,11 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const feedContainer = page.locator('#unified-agent-feed-section').first();
+    const feedContainer = page.locator('#unified-agent-feed-container').first();
     await expect(feedContainer).toBeVisible({ timeout: 15000 });
 
     // Look for dismiss/reject buttons in the feed
-    const rejectButtons = feedContainer.locator('button:has-text("Dismiss"), button:has-text("Reject"), button:has-text("Deny")');
+    const rejectButtons = feedContainer.locator('[data-testid="feed-dismiss-btn"]');
     // We expect there to be at least one card generated for triage
     await expect(rejectButtons.first()).toBeVisible({ timeout: 15000 });
 
@@ -82,7 +82,7 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
 
     // Expect the card to disappear or change state, count should be less
     await expect(async () => {
-       const newCount = await page.locator('#unified-agent-feed-section').locator('button:has-text("Dismiss"), button:has-text("Reject"), button:has-text("Deny")').count();
+       const newCount = await page.locator('#unified-agent-feed-container').locator('[data-testid="feed-dismiss-btn"]').count();
        expect(newCount).toBeLessThan(initialCount);
     }).toPass({ timeout: 10000 });
   });
