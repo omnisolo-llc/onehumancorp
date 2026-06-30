@@ -251,9 +251,9 @@ mod tests {
         let ref_count: i32 = rows[0].try_get("reference_count").unwrap();
 
         assert_eq!(id, "conflict_winner", "The winner must be preserved");
-        // Loser has 1, winner has 2, logic increments winner by loser + 1 -> 2 + 1 + 1 = 4.
+        // Loser has 1, winner has 2, logic increments winner by loser -> 2 + 1 = 3.
         assert_eq!(
-            ref_count, 4,
+            ref_count, 3,
             "The winner should inherit the loser's reference count"
         );
         handle.abort();
