@@ -3,13 +3,13 @@ import { test, expect } from '@playwright/test';
 test.describe('Zero-Click Onboarding to Agent Feed', () => {
   test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
     // Navigate to the setup route
-    await page.goto('/onboarding/zero-click');
+    await page.goto('/setup.html');
 
     // Make sure we're on a mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
 
     // Click Conversational Setup
-    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
+    const conversationalSetupBtn = page.locator('text=Conversational Setup').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
@@ -35,10 +35,10 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup prevents empty submissions', async ({ page }) => {
-    await page.goto('/onboarding/zero-click');
+    await page.goto('/setup.html');
 
     // Click Conversational Setup
-    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
+    const conversationalSetupBtn = page.locator('text=Conversational Setup').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
@@ -54,10 +54,10 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup opens image upload input when toggled', async ({ page }) => {
-    await page.goto('/onboarding/zero-click');
+    await page.goto('/setup.html');
 
     // Click Conversational Setup
-    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
+    const conversationalSetupBtn = page.locator('text=Conversational Setup').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
@@ -74,10 +74,10 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup maintains history after reload', async ({ page }) => {
-    await page.goto('/onboarding/zero-click');
+    await page.goto('/setup.html');
 
     // Start conversational flow
-    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
+    const conversationalSetupBtn = page.locator('text=Conversational Setup').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
@@ -103,10 +103,10 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup renders user messages correctly', async ({ page }) => {
-    await page.goto('/onboarding/zero-click');
+    await page.goto('/setup.html');
 
     // Start conversational flow
-    const conversationalSetupBtn = page.locator('text=Zero-Click Business Generator').first();
+    const conversationalSetupBtn = page.locator('text=Conversational Setup').first();
     await expect(conversationalSetupBtn).toBeVisible();
     await conversationalSetupBtn.click();
 
