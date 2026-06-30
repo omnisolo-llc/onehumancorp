@@ -7129,9 +7129,11 @@ async fn create_ui_bom_item_handler(
                     }
                     let job_queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
                     if let Err(e) = job_queue.cleanup_stale_jobs().await {
+                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale ohc jobs");
                         tracing::trace!("failed to cleanup stale ohc jobs: {}", e);
                     }
                     if let Err(e) = sub_agent_queue_prune.cleanup_stale_jobs().await {
+                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale sub agent jobs");
                         tracing::trace!("failed to cleanup stale sub agent jobs: {}", e);
                     }
                 }
