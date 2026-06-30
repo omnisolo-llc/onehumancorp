@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     });
 
     if (!backendRes.ok) {
-       return NextResponse.json({ success: true, agent, enabled });
+       return NextResponse.json({ error: 'Failed to toggle agent' }, { status: 500 });
     }
 
     const data = await backendRes.json();
