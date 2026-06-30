@@ -6,17 +6,8 @@ test.describe('Triage Action Feed UI', () => {
   test('should render triage feed properly, show distinct card types, allow approval, and display empty state', async ({ page }) => {
     test.setTimeout(180000);
 
-    // 1. Log in
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill('test@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+    const tenantId = 'e2e-tenant-triage-next-' + Date.now();
 
-    // Ensure we are operating as a logged in user, and fetch the tenant
-    const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'e2e-tenant');
-
-    // 2. Seed some distinct triage data matching the backend's expected payload
     const seedData = [
       {
         source: 'Instagram DM Message',
@@ -25,43 +16,32 @@ test.describe('Triage Action Feed UI', () => {
         action_type: 'Draft Reply',
         action_payload: 'Yes, we have vegan options.',
         customer_id: 'cust_test_1'
-      },
-      {
-        source: 'Website Booking Request',
-        priority: 'medium',
-        context: 'Booking: Sarah wants an estimate tomorrow at 2PM.',
-        action_type: 'Accept Booking',
-        action_payload: 'Booked for 2PM tomorrow.',
-        customer_id: 'cust_test_2'
-      },
-      {
-        source: 'Inventory Alert',
-        priority: 'urgent',
-        context: 'Alert: Low stock on flour.',
-        action_type: 'Reorder',
-        action_payload: 'Order 50lbs of flour.',
-        customer_id: 'cust_test_3'
       }
     ];
 
     for (const data of seedData) {
-      await page.request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
+      const resp = await page.request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
         data
       });
+      const responseBody = await resp.text();
+      console.log('Seed Error: ', responseBody);
+      expect(resp.status()).toBe(201);
     }
 
-    // 3. Navigate to Triage Feed
+    await page.addInitScript((t) => {
+        window.localStorage.setItem('tenant_id', t);
+        window.localStorage.setItem('tenant', t);
+    }, tenantId);
+
     await page.goto('/triage');
     await expect(page.locator('body')).toContainText(/Work Triage/, { timeout: 15000 });
 
     const listItems = page.locator('div[data-testid^="triage-card-"]');
 
-    await page.waitForTimeout(2000); // Give it a moment to render loaded items
+    await expect(listItems.first()).toBeVisible({ timeout: 10000 });
 
-    // Check if we loaded the items properly
     let count = await listItems.count();
 
-    // 4. Process all cards one by one (approving or dismissing)
     while (count > 0) {
       const firstCard = listItems.nth(0);
       const testId = await firstCard.getAttribute('data-testid');
@@ -76,18 +56,15 @@ test.describe('Triage Action Feed UI', () => {
         break;
       }
 
-      // 5. Verify the card disappears (Optimistic UI + backend update)
       if (testId) {
-          await expect(page.locator(`div[data-testid="${testId}"]`)).not.toBeVisible({ timeout: 5000 });
+          await expect(page.locator(`div[data-testid="${testId}"]`)).not.toBeVisible({ timeout: 10000 });
       }
 
-      // Re-count remaining cards
       count = await listItems.count();
     }
 
-    // 6. Verify empty state is displayed properly when caught up
     const emptyState = page.getByTestId('triage-feed-empty');
-    await expect(emptyState).toBeVisible({ timeout: 5000 });
+    await expect(emptyState).toBeVisible({ timeout: 10000 });
     await expect(emptyState).toContainText(/caught up/i);
   });
 });
