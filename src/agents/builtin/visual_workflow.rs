@@ -302,7 +302,7 @@ impl WorkflowExecutor {
                     let result_str = match result {
                         Ok(res) => res,
                         Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                            ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg)
+                            ohc_builtin_agent_core::types::format_llm_recoverable_error(&tool_name, &msg)
                         }
                         Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE: {}", msg));
@@ -526,7 +526,7 @@ impl WorkflowExecutor {
                         let result_str = match result {
                             Ok(res) => res,
                             Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg)
+                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&tool_name, &msg)
                             }
                             Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE: {}", msg));

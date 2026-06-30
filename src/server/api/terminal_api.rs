@@ -689,6 +689,8 @@ pub async fn create_payment_intent_handler(
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     let session_manager = crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
 
+    let idempotency_key = uuid::Uuid::new_v4().to_string();
+
     match crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default()).require_api_key() {
         Ok(_) => match session_manager.create_terminal_payment_intent(
             &tenant_id,
@@ -697,9 +699,25 @@ pub async fn create_payment_intent_handler(
             req_data.product_id.as_deref(),
             req_data.quantity,
             req_data.order_id.as_deref(),
+            &idempotency_key,
         ).await {
-            Ok(client_secret) => {
+            Ok((payment_intent_id, client_secret)) => {
                 let pool = crate::db::get_pool();
+
+                let amount_float = (req_data.amount_cents as f64) / 100.0;
+                let _ = sqlx::query(
+                    "INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, source, stripe_payment_intent_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                )
+                .bind(&tenant_id)
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&idempotency_key)
+                .bind(amount_float)
+                .bind(&req_data.currency)
+                .bind("in_person")
+                .bind(&payment_intent_id)
+                .execute(&pool)
+                .await;
+
                 let device_id = "default_device"; // Fallback device id for web terminal intent creation without active explicit session.
                 if let Err(e) = sqlx::query(
                     "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
@@ -713,6 +731,26 @@ pub async fn create_payment_intent_handler(
                 .await {
                     tracing::warn!("Failed to update pos terminal session for generic intent: {}", e);
                 }
+
+                let payment_intent_id = client_secret.split("_secret_").next().unwrap_or("").to_string();
+                let payment_id = uuid::Uuid::new_v4().to_string();
+                let idempotency_key = uuid::Uuid::new_v4().to_string();
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, status, source, stripe_payment_intent_id)
+                     VALUES ($1, $2, $3, $4, $5, 'pending', 'in_person', $6)"
+                )
+                .bind(&tenant_id)
+                .bind(&payment_id)
+                .bind(&idempotency_key)
+                .bind(req_data.amount_cents as f64 / 100.0)
+                .bind(&req_data.currency)
+                .bind(&payment_intent_id)
+                .execute(&pool)
+                .await {
+                    tracing::warn!("Failed to create payment_intent record for terminal: {}", e);
+                }
+
                 Json(Ok(PaymentIntentResponse { client_secret, lock_id: lock_id_out }))
             },
             Err(e) => {

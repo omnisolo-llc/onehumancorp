@@ -659,11 +659,11 @@ impl DB {
         let mut backoff = std::time::Duration::from_millis(1);
 
         // Enforce the 60-second ML-Resilience rule for database operations
-        let start_time = std::time::Instant::now();
+        let start_time = tokio::time::Instant::now();
         let timeout_duration = std::time::Duration::from_secs(60);
 
         loop {
-            // Note: Since std::time::Instant does not interact with paused time during tests,
+            // Note: Since tokio::time::Instant does not interact with paused time during tests,
             // it accurately tracks real elapsed time without causing false timeouts in simulated time tests.
             if start_time.elapsed() >= timeout_duration {
                 return Err(E::from(format!(
@@ -2353,10 +2353,10 @@ mod e2e_tenant_isolation_tests {
         let _ = sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, status) VALUES ('bk_1', 'tenant_1', 'svc_1', 'PENDING') ON CONFLICT DO NOTHING")
             .execute(&_pool).await;
 
-        let tenant_1_count: (i64,) = sqlx::query_as("SELECT count(*) FROM bookings")
+        let _tenant_1_count: (i64,) = sqlx::query_as("SELECT count(*) FROM bookings")
             .fetch_one(&_pool).await.unwrap_or((0,));
 
-        let tenant_2_count: (i64,) = sqlx::query_as("SELECT count(*) FROM bookings")
+        let _tenant_2_count: (i64,) = sqlx::query_as("SELECT count(*) FROM bookings")
             .fetch_one(&_pool2).await.unwrap_or((0,));
 
         // Even if the exact count is difficult to know if the DB has other data,

@@ -54,6 +54,19 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     // Connect to a reader (the first one)
     await page.getByRole('button', { name: 'Connect' }).first().click();
 
+    // Mock API
+    await page.route('/api/v1/payments/terminal/token', async route => {
+       await route.fulfill({ json: { secret: 'mock_token' } });
+    });
+
+    await page.route('/api/v1/payments/terminal/intent', async route => {
+       await route.fulfill({ json: { client_secret: 'pi_test_secret_test' } });
+    });
+
+    await page.route('/api/v1/payments/terminal/intent/capture', async route => {
+       await route.fulfill({ json: { success: true, status: 'succeeded' } });
+    });
+
     // Wait for the token request to occur and assert it was successful
     const tokenRequest = await tokenPromise;
     expect(tokenRequest).toBeTruthy();
