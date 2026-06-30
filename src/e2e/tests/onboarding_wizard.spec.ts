@@ -15,13 +15,10 @@ test.describe('Onboarding Wizard Flow', () => {
   });
 
   test('successfully completes the wizard with drafting and instant image url', async ({ page }) => {
-    await expect(page.locator('body')).toContainText('10-Minute Setup Wizard');
+    await expect(page.locator('body')).toContainText('Tell us about your business');
 
-    // Sometimes there might be a loading transition, wait for the Instant Build button to be ready
+    // Sometimes there might be a loading transition, wait for it
     await page.waitForTimeout(2000);
-
-    // There are multiple ways to click Instant Build, we added ID "instant-build-btn-text"
-    await page.getByText('Instant Build').click();
 
     const bioInput = page.locator('#instant-bio');
     await expect(bioInput).toBeVisible();
@@ -38,13 +35,13 @@ test.describe('Onboarding Wizard Flow', () => {
   });
 
   test('successfully navigates through the wizard steps', async ({ page }) => {
-    await expect(page.locator('body')).toContainText('10-Minute Setup Wizard');
+    await expect(page.locator('body')).toContainText('Tell us about your business');
 
-    await page.getByTestId('next-step-btn').click();
-    await expect(page.locator('body')).toContainText('work context');
+    await page.getByTestId('next-step-btn').first().click();
+    await expect(page.locator('body')).toContainText('How do you work');
 
     // Make a choice for context
-    await page.locator('input[value="field"]').click({ force: true });
+    await page.getByTestId('context-storefront').click();
     await page.getByTestId('next-step-btn').nth(1).click();
 
     await expect(page.locator('body')).toContainText('category');
@@ -55,10 +52,10 @@ test.describe('Onboarding Wizard Flow', () => {
   });
 
   test('prevents progression if categories input is empty', async ({ page }) => {
-    await expect(page.locator('body')).toContainText('10-Minute Setup Wizard');
+    await expect(page.locator('body')).toContainText('Tell us about your business');
 
-    await page.getByTestId('next-step-btn').click();
-    await page.locator('input[value="field"]').click({ force: true });
+    await page.getByTestId('next-step-btn').first().click();
+    await page.getByTestId('context-storefront').click();
     await page.getByTestId('next-step-btn').nth(1).click();
 
     await expect(page.locator('body')).toContainText('category');
@@ -69,10 +66,10 @@ test.describe('Onboarding Wizard Flow', () => {
   });
 
   test('validates business name correctly', async ({ page }) => {
-    await expect(page.locator('body')).toContainText('10-Minute Setup Wizard');
+    await expect(page.locator('body')).toContainText('Tell us about your business');
 
-    await page.getByTestId('next-step-btn').click();
-    await page.locator('input[value="field"]').click({ force: true });
+    await page.getByTestId('next-step-btn').first().click();
+    await page.getByTestId('context-storefront').click();
     await page.getByTestId('next-step-btn').nth(1).click();
 
     await page.locator('#business-categories').selectOption('Other');
@@ -87,20 +84,20 @@ test.describe('Onboarding Wizard Flow', () => {
     // valid submission
     await page.locator('#business-name').fill('My Awesome Business');
     await page.getByTestId('next-step-btn').nth(3).click();
-    await expect(page.locator('body')).toContainText('Hire Your First Agent');
+    await expect(page.locator('body')).toContainText('Set up your Assistant');
   });
 
   test('saves state to localStorage when clicking Save Draft', async ({ page }) => {
-    await expect(page.locator('body')).toContainText('10-Minute Setup Wizard');
+    await expect(page.locator('body')).toContainText('Tell us about your business');
 
-    await page.getByTestId('next-step-btn').click();
-    await page.locator('input[value="field"]').click({ force: true });
+    await page.getByTestId('next-step-btn').first().click();
+    await page.getByTestId('context-storefront').click();
 
     await page.getByTestId('save-draft-btn').nth(0).click();
 
     // wait for localstorage to populate
     await page.waitForTimeout(1000);
     const storedData = await page.evaluate(() => window.localStorage.getItem('onboardingState'));
-    expect(storedData).toContain('field');
+    expect(storedData).toContain('Storefront');
   });
 });
