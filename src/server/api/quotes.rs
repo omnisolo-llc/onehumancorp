@@ -19,6 +19,8 @@ pub struct DraftAgentRequest {
     pub inquiry: String,
     pub customer_id: String,
     pub tenant_id: String,
+    pub service_id: Option<String>,
+    pub suggested_time: Option<String>,
 }
 
 // Production-ready adapter that wraps the real LLM provider logic
@@ -86,6 +88,8 @@ pub struct CreateQuoteRequest {
     pub required_deposit_cents: Option<i64>,
     pub stripe_payment_link: Option<String>,
     pub line_items: Vec<QuoteLineItemRequest>,
+    pub service_id: Option<String>,
+    pub proposed_slot_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -240,13 +244,27 @@ async fn draft_quote_agent(
     let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
     let required_deposit_cents = total_amount_cents / 3;
 
+    let mut proposed_slot_id = None;
+    if let (Some(sid), Some(stime)) = (&payload.service_id, &payload.suggested_time) {
+        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
+            if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url) {
+                // Soft-lock for 30 minutes (1800 seconds)
+                if let Ok(Some(lock_id)) = redis_lock.acquire_booking_slot_lock(&payload.tenant_id, &format!("{}_{}", sid, stime), 1800).await {
+                    proposed_slot_id = Some(lock_id);
+                }
+            }
+        }
+    }
+
     let create_req = CreateQuoteRequest {
-        tenant_id: payload.tenant_id,
+        tenant_id: payload.tenant_id.clone(),
         customer_id: payload.customer_id,
         total_amount_cents: Some(total_amount_cents),
         required_deposit_cents: Some(required_deposit_cents),
         stripe_payment_link: None,
         line_items,
+        service_id: payload.service_id,
+        proposed_slot_id,
     };
 
     create_quote(State(pool), Json(create_req)).await.into_response()

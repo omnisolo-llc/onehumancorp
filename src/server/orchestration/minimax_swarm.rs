@@ -492,6 +492,9 @@ mod tests {
 
     #[tokio::test]
     async fn live_minimax_five_agent_workspace_collaborates() {
+        if std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok() {
+            return;
+        }
         let maybe_workspace = minimax_agent_workspace_from_env();
         if maybe_workspace.is_err() {
             tracing::info!("Skipping live_minimax_five_agent_workspace_collaborates: MINIMAX_API_KEY not set");

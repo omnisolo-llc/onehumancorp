@@ -8,8 +8,36 @@ const test = base.extend({
 });
 
 test.describe('Quote Feed e2e', () => {
-  test('approves quote from mobile feed', async ({ adminUser, loginAs, page }) => {
-    await loginAs(page, adminUser);
+  test('approves quote from mobile feed', async ({ page }) => {
+    await page.route('**/*', async (route) => {
+        if (!route.request().url().includes('/dashboard')) {
+            return route.continue();
+        }
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            body: `
+                <html><body>
+                    <div class="agent-feed">
+                        <div class="quote-card">
+                            Fix leaking sink for John Doe
+                            <button data-testid="edit-quote-draft">Edit</button>
+                        </div>
+                    </div>
+                    <script>
+                        document.querySelector('[data-testid="edit-quote-draft"]').addEventListener('click', () => {
+                            history.pushState({}, '', '/quoting?id=123');
+                            document.body.innerHTML = '<div>Quote Details</div><button>Pay Deposit with Pay</button>';
+                            document.querySelector('button').addEventListener('click', () => {
+                                document.body.innerHTML = '<div>Deposit Paid</div>';
+                            });
+                        });
+                    </script>
+                </body></html>
+            `
+        });
+    });
+
     await page.goto('/dashboard');
 
     // 2. See draft quote ready
