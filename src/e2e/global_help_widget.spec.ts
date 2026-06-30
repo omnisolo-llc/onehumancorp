@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Global Help Widget', () => {
   test('should be present and functional on dashboard', async ({ page }) => {
-    await page.goto('/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
 
     // The floating help button should be visible
     const helpBtn = page.locator('#ohc-floating-help-btn');
@@ -29,7 +29,7 @@ test.describe('Global Help Widget', () => {
   });
 
   test('should be present and functional on POS', async ({ page }) => {
-    await page.goto('/pos.html');
+    await page.goto('/api/ui/pos.html');
 
     // The floating help button should be visible here too
     const helpBtn = page.locator('#ohc-floating-help-btn');
