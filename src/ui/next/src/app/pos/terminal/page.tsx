@@ -379,7 +379,7 @@ export default function POSTerminal() {
              ) : (
                <button
                  onClick={() => handleClockAction('CLOCK_IN')}
-                 className="charge-btn w-full py-4 rounded-[16px] bg-[#0071E3] text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px]"
+                 className="charge-btn w-full py-4 bg-[#0071E3] text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px]"
                >
                  {t('Clock In')}
                </button>

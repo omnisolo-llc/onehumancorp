@@ -214,7 +214,7 @@ function AutoCatalogContent() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-[16px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        <div className="mb-4 border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </div>
       )}
@@ -232,7 +232,7 @@ function AutoCatalogContent() {
             type="button"
             onClick={handleGenerate}
             disabled={!promptText.trim()}
-            className="w-full py-3.5 bg-[#0066FF] text-white font-bold rounded-[16px] shadow-md hover:bg-[#0071E3] transition-colors disabled:opacity-50"
+            className="w-full py-3.5 bg-[#0066FF] text-white font-bold shadow-md hover:bg-[#0071E3] transition-colors disabled:opacity-50"
           >
             Generate
           </button>
@@ -251,7 +251,7 @@ function AutoCatalogContent() {
           <button
             type="button"
             onClick={() => setSubscriptionMode(true)}
-            className={`mb-5 w-full rounded-[16px] px-4 py-3 text-sm font-bold shadow-sm transition-colors ${subscriptionMode ? 'bg-[#0071E3] text-white' : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'}`}
+            className={`mb-5 w-full px-4 py-3 text-sm font-bold shadow-sm transition-colors ${subscriptionMode ? 'bg-[#0071E3] text-white' : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'}`}
           >
             Subscription Box
           </button>
@@ -296,7 +296,7 @@ function AutoCatalogContent() {
            </div>
 
            {/* Glassmorphism Card */}
-           <div className="p-5 rounded-[16px] shadow-lg flex flex-col gap-4 relative overflow-hidden"
+           <div className="p-5 shadow-lg flex flex-col gap-4 relative overflow-hidden"
                 style={{
                    background: 'rgba(255, 255, 255, 0.65)',
                    backdropFilter: 'blur(30px) saturate(210%)',
@@ -311,7 +311,7 @@ function AutoCatalogContent() {
                     type="text"
                     value={productData.title}
                     onChange={(e) => setProductData({...productData, title: e.target.value})}
-                    className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                    className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                   />
               </div>
               <div>
@@ -320,7 +320,7 @@ function AutoCatalogContent() {
                     value={productData.description}
                     onChange={(e) => setProductData({...productData, description: e.target.value})}
                     rows={4}
-                    className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                    className="w-full bg-white/50 border border-white/60 px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                   />
               </div>
               <div className="flex gap-4">
@@ -332,7 +332,7 @@ function AutoCatalogContent() {
                             type="text"
                             value={productData.price}
                             onChange={(e) => setProductData({...productData, price: e.target.value})}
-                            className="w-full bg-white/50 border border-white/60 rounded-[16px] pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                            className="w-full bg-white/50 border border-white/60 pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                           />
                       </div>
                   </div>
@@ -342,7 +342,7 @@ function AutoCatalogContent() {
                         type="text"
                         value={productData.category}
                         onChange={(e) => setProductData({...productData, category: e.target.value})}
-                        className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                        className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                       />
                   </div>
               </div>
@@ -368,7 +368,7 @@ function AutoCatalogContent() {
                                   placeholder="e.g. Sarah (Artist)"
                                   value={splitContact}
                                   onChange={(e) => setSplitContact(e.target.value)}
-                                  className="w-full bg-white/80 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                                  className="w-full bg-white/80 border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                               />
                           </div>
                           <div className="mb-3">
@@ -414,7 +414,7 @@ function AutoCatalogContent() {
                                     setSubscriptionInterval(e.target.value);
                                     setProductData({...productData, subscriptionInterval: e.target.value});
                                   }}
-                                  className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                                  className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                               >
                                   <option value="weekly">weekly</option>
                                   <option value="monthly">monthly</option>
@@ -427,7 +427,7 @@ function AutoCatalogContent() {
                                   type="number"
                                   value={productData?.subscriptionDiscount || ''}
                                   onChange={(e) => setProductData({...productData, subscriptionDiscount: e.target.value})}
-                                  className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                                  className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                               />
                           </div>
                       </div>
@@ -437,7 +437,7 @@ function AutoCatalogContent() {
 
            <button
              onClick={handlePublish}
-             className="w-full py-[11px] min-h-[44px] bg-[#0066FF] text-white font-bold rounded-[16px] shadow-md hover:bg-[#0071E3] transition-colors text-lg flex items-center justify-center gap-2"
+             className="w-full py-[11px] min-h-[44px] bg-[#0066FF] text-white font-bold shadow-md hover:bg-[#0071E3] transition-colors text-lg flex items-center justify-center gap-2"
            >
              Looks Good
            </button>

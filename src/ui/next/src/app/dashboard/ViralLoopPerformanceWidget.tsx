@@ -34,7 +34,7 @@ export function ViralLoopPerformanceWidget() {
   }, []);
 
   return (
-    <section className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20 mb-6">
+    <section className="glassmorphism p-6 border border-white/40 dark:border-white/10 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20 mb-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-1">Viral Loop Performance</h2>

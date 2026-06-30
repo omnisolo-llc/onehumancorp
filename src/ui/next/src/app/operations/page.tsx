@@ -10,7 +10,7 @@ export default function OperationsPage() {
           <p className="text-[#86868B] dark:text-[#A1A1A6] text-lg mt-2 font-inter">Your daily schedule and operations overview.</p>
         </header>
 
-        <section className="glassmorphism rounded-[16px] p-6 border border-white/40 dark:border-white/10 shadow-sm relative overflow-hidden">
+        <section className="glassmorphism p-6 border border-white/40 dark:border-white/10 shadow-sm relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-900/10 dark:to-purple-900/10 -z-10" />
           <h2 className="text-lg font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4 flex items-center gap-2">
             <span className="text-xl">☀️</span> Morning Briefing
@@ -23,7 +23,7 @@ export default function OperationsPage() {
         <section className="space-y-4">
             <div className="flex flex-col gap-4">
                 {/* Past Appointment */}
-                <div className="glassmorphism rounded-[16px] p-4 border border-white/40 dark:border-white/10 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center opacity-60">
+                <div className="glassmorphism p-4 border border-white/40 dark:border-white/10 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center opacity-60">
                     <div className="w-16 flex flex-col items-center justify-center shrink-0">
                         <span className="text-sm font-medium text-[#86868B] dark:text-[#A1A1A6]">9:00 AM</span>
                     </div>
@@ -37,7 +37,7 @@ export default function OperationsPage() {
                 </div>
 
                 {/* Current Appointment */}
-                <div className="glassmorphism rounded-[16px] p-4 border border-blue-200 dark:border-blue-800 shadow-md flex flex-col sm:flex-row gap-4 items-start sm:items-center relative overflow-hidden">
+                <div className="glassmorphism p-4 border border-blue-200 dark:border-blue-800 shadow-md flex flex-col sm:flex-row gap-4 items-start sm:items-center relative overflow-hidden">
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#0066FF] rounded-l-[16px]"></div>
                     <div className="w-16 flex flex-col items-center justify-center shrink-0">
                         <span className="text-sm font-bold text-[#0071E3] dark:text-blue-400">11:00 AM</span>
@@ -57,7 +57,7 @@ export default function OperationsPage() {
                 </div>
 
                  {/* Future Appointment */}
-                 <div className="glassmorphism rounded-[16px] p-4 border border-white/40 dark:border-white/10 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:shadow-md transition-shadow">
+                 <div className="glassmorphism p-4 border border-white/40 dark:border-white/10 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:shadow-md transition-shadow">
                     <div className="w-16 flex flex-col items-center justify-center shrink-0">
                         <span className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">2:00 PM</span>
                     </div>

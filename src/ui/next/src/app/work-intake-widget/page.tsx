@@ -78,7 +78,7 @@ export default function WorkIntakeWidgetPage() {
              <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">Lead Capture Loop</span>
          </div>
          <div className="flex items-center gap-3">
-             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
+             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
                Back to Dashboard
              </button>
          </div>
@@ -96,14 +96,14 @@ export default function WorkIntakeWidgetPage() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -158,7 +158,7 @@ export default function WorkIntakeWidgetPage() {
                <p className="text-sm text-gray-600">Copy this code snippet to add the widget directly to your own site, Notion document, or blog.</p>
                <button
                   onClick={() => setShowModal(true)}
-                  className="w-full py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm"
+                  className="w-full py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm"
                >
                   Get Widget Code
                </button>
@@ -215,7 +215,7 @@ export default function WorkIntakeWidgetPage() {
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[16px] p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
+          <div className="bg-white w-full max-w-md p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-end mb-2">
@@ -227,7 +227,7 @@ export default function WorkIntakeWidgetPage() {
               </button>
             </div>
 
-            <div className="w-16 h-16 bg-indigo-100 rounded-[16px] flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6">
+            <div className="w-16 h-16 bg-indigo-100 flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6">
               ✨
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
@@ -237,7 +237,7 @@ export default function WorkIntakeWidgetPage() {
 
             <button
               onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
-              className="w-full py-4 rounded-[16px] min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
+              className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
             >
               Upgrade to Pro
             </button>
@@ -245,7 +245,7 @@ export default function WorkIntakeWidgetPage() {
             <button
               onClick={handleShareToUnlock}
               disabled={isUnlocking}
-              className="w-full py-4 rounded-[16px] min-h-[44px] min-w-[44px] font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+              className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
               {isUnlocking ? 'Verifying Share...' : 'Share on X to Unlock'}
@@ -259,7 +259,7 @@ export default function WorkIntakeWidgetPage() {
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => setShowModal(false)}></div>
-            <div className="app-card rounded-[16px] shadow-2xl p-8 max-w-xl w-full relative z-10 animate-fade-in-up">
+            <div className="app-card shadow-2xl p-8 max-w-xl w-full relative z-10 animate-fade-in-up">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
@@ -277,7 +277,7 @@ export default function WorkIntakeWidgetPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
@@ -293,13 +293,13 @@ export default function WorkIntakeWidgetPage() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium min-h-[44px] min-w-[44px] transition-colors"
                     >
                         Close
                     </button>

@@ -82,7 +82,7 @@ export default function NewOfferingPage() {
 
       {offeringData && !loading && (
         <div className="flex-1 flex flex-col gap-6 animate-fade-in-up">
-           <div className="p-5 rounded-[16px] shadow-lg flex flex-col gap-4 relative overflow-hidden"
+           <div className="p-5 shadow-lg flex flex-col gap-4 relative overflow-hidden"
                 style={{
                    background: 'rgba(255, 255, 255, 0.65)',
                    backdropFilter: 'blur(30px) saturate(210%)',
@@ -98,7 +98,7 @@ export default function NewOfferingPage() {
                     type="text"
                     value={offeringData.title}
                     onChange={(e) => setOfferingData({...offeringData, title: e.target.value})}
-                    className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                    className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                   />
               </div>
 
@@ -108,7 +108,7 @@ export default function NewOfferingPage() {
                     value={offeringData.description}
                     onChange={(e) => setOfferingData({...offeringData, description: e.target.value})}
                     rows={4}
-                    className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                    className="w-full bg-white/50 border border-white/60 px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                   />
               </div>
 
@@ -119,7 +119,7 @@ export default function NewOfferingPage() {
                         type="text"
                         value={offeringData.type}
                         onChange={(e) => setOfferingData({...offeringData, type: e.target.value})}
-                        className="w-full bg-white/50 border border-white/60 rounded-[16px] px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                        className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                       />
                   </div>
                   <div className="flex-1">
@@ -130,7 +130,7 @@ export default function NewOfferingPage() {
                             type="text"
                             value={offeringData.price}
                             onChange={(e) => setOfferingData({...offeringData, price: e.target.value})}
-                            className="w-full bg-white/50 border border-white/60 rounded-[16px] pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                            className="w-full bg-white/50 border border-white/60 pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                           />
                       </div>
                   </div>
@@ -139,7 +139,7 @@ export default function NewOfferingPage() {
 
            <button
              onClick={handlePublish}
-             className="w-full py-3.5 bg-[#0066FF] text-white font-bold rounded-[16px] shadow-md hover:bg-[#0071E3] transition-colors text-lg"
+             className="w-full py-3.5 bg-[#0066FF] text-white font-bold shadow-md hover:bg-[#0071E3] transition-colors text-lg"
            >
              Publish Offering
            </button>

@@ -205,7 +205,7 @@ export default function EmbedBuilderPage() {
                             <div className="flex-1 p-8 md:p-12 bg-gray-100/50 flex items-center justify-center relative overflow-hidden" style={{ backgroundImage: 'radial-gradient(#d1d5db 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
                                 {/* Mock Widget Container */}
                                 <div
-                                    className="w-full max-w-[400px] h-[500px] rounded-[16px] shadow-2xl relative flex flex-col overflow-hidden transition-all duration-300"
+                                    className="w-full max-w-[400px] h-[500px] shadow-2xl relative flex flex-col overflow-hidden transition-all duration-300"
                                     style={{ ...getPreviewThemeStyles(), border: theme === 'dark' ? '1px solid #374151' : '1px solid #e5e7eb' }}
                                 >
                                     <iframe
