@@ -40,6 +40,11 @@ test.describe('Intelligent Owner Triage Inbox (Mobile First)', () => {
     const itemCard = page.getByTestId('triage-card-triage-item-1');
     await expect(itemCard).toBeVisible({ timeout: 15000 });
 
+    // Click the card header to expand detail view
+    const cardHeader = page.getByTestId('triage-card-header-triage-item-1');
+    await expect(cardHeader).toBeVisible();
+    await cardHeader.click();
+
     // Verify glassmorphism style or contents
     await expect(itemCard.locator('text=Needs attention right away')).toBeVisible();
     await expect(itemCard.locator('text=Draft Reply')).toBeVisible();
@@ -82,6 +87,11 @@ test.describe('Intelligent Owner Triage Inbox (Mobile First)', () => {
     const itemCard = page.getByTestId('triage-card-triage-item-3');
     await expect(itemCard).toBeVisible({ timeout: 15000 });
 
+    // Click the card header to expand detail view
+    const cardHeader = page.getByTestId('triage-card-header-triage-item-3');
+    await expect(cardHeader).toBeVisible();
+    await cardHeader.click();
+
     const reviewButton = page.getByTestId('triage-review-btn-triage-item-3');
     await expect(reviewButton).toBeVisible();
 
@@ -117,6 +127,11 @@ test.describe('Intelligent Owner Triage Inbox (Mobile First)', () => {
 
     const itemCard = page.getByTestId('triage-card-triage-item-2');
     await expect(itemCard).toBeVisible({ timeout: 15000 });
+
+    // Click the card header to expand detail view
+    const cardHeader = page.getByTestId('triage-card-header-triage-item-2');
+    await expect(cardHeader).toBeVisible();
+    await cardHeader.click();
 
     const dismissButton = page.getByTestId('triage-dismiss-triage-item-2');
     await expect(dismissButton).toBeVisible();

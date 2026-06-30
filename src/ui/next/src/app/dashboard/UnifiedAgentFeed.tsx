@@ -245,7 +245,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             if (unifiedData.triage && Array.isArray(unifiedData.triage)) {
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.triage.map((ti: any) => {
+                ...unifiedData.triage.slice(0, 3).map((ti: any) => {
                   let featureType = "triage";
 
                   if (ti.source?.toLowerCase() === "instagram dm") {
