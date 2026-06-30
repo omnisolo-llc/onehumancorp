@@ -197,3 +197,28 @@ console.error = (...args: any[]) => {
 
 // Set IS_REACT_ACT_ENVIRONMENT
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+// Mock Worker
+class Worker {
+  constructor(stringUrl: string) {}
+  onmessage: (this: Worker, ev: MessageEvent) => any = () => {};
+  postMessage(message: any): void {}
+  terminate(): void {}
+  addEventListener(): void {}
+  removeEventListener(): void {}
+  dispatchEvent(): boolean { return false; }
+}
+global.Worker = Worker as any;
+
+// Mock navigator.locks
+if (typeof navigator !== 'undefined') {
+  Object.defineProperty(navigator, 'locks', {
+    value: {
+      request: vi.fn(),
+      query: vi.fn()
+    },
+    writable: true
+  });
+}
+if (typeof navigator !== 'undefined' && navigator.locks) {
+  navigator.locks.request = vi.fn().mockImplementation(async (name, cb) => cb());
+}
