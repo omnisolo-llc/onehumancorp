@@ -60,7 +60,7 @@ export default function ZeroClickBuilderPage() {
             </div>
 
             <div className="space-y-6">
-              <div className="w-full h-[500px] rounded-[16px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%]">
+              <div className="w-full h-[500px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%]">
                 <iframe
                   src={`/builder?tenant=${generatedStore.organization_id}&preview=true`}
                   className="w-full h-full border-none"

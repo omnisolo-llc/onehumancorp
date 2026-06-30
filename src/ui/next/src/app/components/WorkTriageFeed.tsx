@@ -43,7 +43,7 @@ export function WorkTriageFeed({
 }) {
   if (error) {
     return (
-      <div className="w-full mb-4 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center min-h-[44px] flex items-center justify-center">
+      <div className="w-full mb-4 p-4 glassmorphism border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center min-h-[44px] flex items-center justify-center">
         {error}
       </div>
     );
@@ -98,7 +98,7 @@ export function WorkTriageFeed({
         .map((item) => (
           <div
             key={item.id}
-            className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-[#FF9500]/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden"
+            className="mb-6 p-6 glassmorphism border border-orange-400/50 dark:border-[#FF9500]/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden"
             data-testid={`triage-card-${item.id}`}
           >
             <div className="absolute top-0 left-0 w-1 h-full bg-[#FF9500]"></div>
@@ -130,14 +130,14 @@ export function WorkTriageFeed({
             <div className="flex flex-col gap-3 mt-2 w-full">
               <button
                 onClick={() => onDecision(item.id, true)}
-                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-[#FF9500] hover:bg-orange-600 text-white font-medium shadow-sm transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] bg-[#FF9500] hover:bg-orange-600 text-white font-medium shadow-sm transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                 data-testid={`triage-approve-${item.id}`}
               >
                 Approve & Execute
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
-                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
+                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
                 data-testid={`triage-dismiss-${item.id}`}
               >
                 Dismiss
@@ -151,7 +151,7 @@ export function WorkTriageFeed({
         .map((item) => (
           <div
             key={item.id}
-            className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden flex flex-col gap-4"
+            className="mb-6 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden flex flex-col gap-4"
             data-testid={`triage-card-${item.id}`}
           >
             <div className="flex justify-between items-start">
@@ -184,14 +184,14 @@ export function WorkTriageFeed({
             <div className="flex flex-col sm:flex-row gap-3 w-full pt-2">
               <button
                 onClick={() => onDecision(item.id, true)}
-                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium shadow-md transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium shadow-md transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                 data-testid={`triage-approve-${item.id}`}
               >
                 ✨ Approve & Execute
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
-                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/40 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
+                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/40 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
                 data-testid={`triage-dismiss-${item.id}`}
               >
                 Dismiss

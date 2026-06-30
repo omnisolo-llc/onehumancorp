@@ -66,7 +66,7 @@ export default function GrowthReferralWidget() {
 
   return (
     <div className="ohc-growth-card flex flex-col gap-8">
-      <div className="p-6 rounded-[16px] backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 shadow-xl mb-6">
+      <div className="p-6 backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 shadow-xl mb-6">
         <div className="flex flex-col md:flex-row gap-6 items-center">
         <div className="flex-1">
           <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-sm font-semibold">
@@ -126,7 +126,7 @@ export default function GrowthReferralWidget() {
         </div>
       </div>
 
-      <div className="p-6 rounded-[16px] backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 shadow-xl">
+      <div className="p-6 backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 shadow-xl">
         <div className="flex flex-col md:flex-row gap-6 items-center">
           <div className="flex-1">
             <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-semibold">

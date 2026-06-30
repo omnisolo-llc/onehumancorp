@@ -115,7 +115,7 @@ export default function PrepForecast() {
                       <div className="text-sm opacity-70 mt-1">Stockout expected: {new Date(prediction.predicted_stockout_date).toLocaleDateString()} (Confidence: {Math.round(prediction.confidence_score * 100)}%)</div>
                     </div>
                     <div className="flex items-center gap-4 w-full sm:w-auto mt-2 sm:mt-0">
-                      <div className="flex items-center border border-[var(--border-subtle)] rounded-[16px] overflow-hidden bg-white/80 w-full sm:w-auto">
+                      <div className="flex items-center border border-[var(--border-subtle)] overflow-hidden bg-white/80 w-full sm:w-auto">
                         <button
                           className="px-3 py-1 bg-black/5 hover:bg-black/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center font-bold text-lg cursor-pointer"
                           onClick={() => adjustQuantity(prediction.id, -1)}
@@ -133,7 +133,7 @@ export default function PrepForecast() {
                         </button>
                       </div>
                       <button
-                        className="app-btn primary min-h-[44px] rounded-[16px] px-6 font-semibold bg-[#0066FF] hover:bg-[#0052cc] text-white transition-colors cursor-pointer w-full sm:w-auto"
+                        className="app-btn primary min-h-[44px] px-6 font-semibold bg-[#0066FF] hover:bg-[#0052cc] text-white transition-colors cursor-pointer w-full sm:w-auto"
                         onClick={() => approvePlan(prediction)}
                       >
                         Approve

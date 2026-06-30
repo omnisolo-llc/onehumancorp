@@ -115,7 +115,7 @@ export default function GiveawayGeneratorPage() {
           </div>
 
           {giveawayLink && (
-            <div className="p-6 shadow-md bg-white border border-green-200 rounded-[16px]">
+            <div className="p-6 shadow-md bg-white border border-green-200">
               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2 flex items-center gap-2">
                 <span className="text-[#34C759]">✅</span> Link Ready!
               </h3>

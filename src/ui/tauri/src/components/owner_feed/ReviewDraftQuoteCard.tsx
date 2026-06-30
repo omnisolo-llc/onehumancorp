@@ -17,7 +17,7 @@ export const ReviewDraftQuoteCard: React.FC<ReviewDraftQuoteCardProps> = ({
   onEdit
 }) => {
   return (
-    <div className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-[16px] p-4 shadow-sm border border-white/40 dark:border-white/10">
+    <div className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] p-4 shadow-sm border border-white/40 dark:border-white/10">
       <div className="flex justify-between items-start mb-2">
         <h3 className="text-lg font-semibold text-gray-900">Draft Quote Ready</h3>
         <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">Action Required</span>

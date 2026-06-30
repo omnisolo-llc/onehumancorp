@@ -133,7 +133,7 @@ export default function InteractiveQuoteGeneratorPage() {
                     </div>
                     <button
                         onClick={handleCopy}
-                        className="mt-4 w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-[16px] min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2 shadow-md"
+                        className="mt-4 w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2 shadow-md"
                     >
                         {copied ? 'Code Copied!' : 'Copy Embed Code'}
                     </button>

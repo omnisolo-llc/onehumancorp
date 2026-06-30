@@ -69,7 +69,7 @@ export default function ProposalGeneratorPage() {
           <p className="text-gray-600">Generate a beautiful, shareable proposal link for your client. When they view it, they can approve the project directly.</p>
         </div>
 
-        <div className="glassmorphism glass-card rounded-[16px] p-6 md:p-8">
+        <div className="glassmorphism glass-card p-6 md:p-8">
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Client or Company Name</label>

@@ -70,7 +70,7 @@ export default function AiTimeSavingsWidget() {
 
   if (hasClaimed) {
     return (
-      <div className="glassmorphism p-6 rounded-[16px] border border-green-200 dark:border-green-900/30 shadow-lg mb-6 flex items-center justify-between bg-green-50/50 dark:bg-green-900/10">
+      <div className="glassmorphism p-6 border border-green-200 dark:border-green-900/30 shadow-lg mb-6 flex items-center justify-between bg-green-50/50 dark:bg-green-900/10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-300 flex items-center justify-center text-2xl shadow-inner">
             🎉
@@ -85,7 +85,7 @@ export default function AiTimeSavingsWidget() {
   }
 
   return (
-    <div className="glassmorphism p-6 rounded-[16px] border border-indigo-200 dark:border-indigo-900/30 shadow-lg mb-6 relative overflow-hidden group">
+    <div className="glassmorphism p-6 border border-indigo-200 dark:border-indigo-900/30 shadow-lg mb-6 relative overflow-hidden group">
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
 
       <div className="flex flex-col md:flex-row gap-6 items-center justify-between relative z-10">

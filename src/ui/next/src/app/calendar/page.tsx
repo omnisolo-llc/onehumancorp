@@ -96,7 +96,7 @@ export default function CalendarPage() {
              </div>
           )}
 
-          <section className="app-card rounded-[16px] shadow-sm p-6 bg-white" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+          <section className="app-card shadow-sm p-6 bg-white" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Today</h2>
             <div className="space-y-4">
               {isLoading ? (
@@ -133,7 +133,7 @@ export default function CalendarPage() {
 
         {/* Appointment Details Column */}
         <div className="md:col-span-1 space-y-6">
-          <section className="app-card rounded-[16px] shadow-sm p-6 bg-white sticky top-24" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+          <section className="app-card shadow-sm p-6 bg-white sticky top-24" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Appointment Details</h2>
             {!selectedAppointment ? (
               <p className="text-sm text-gray-500 text-center py-8">Select an appointment to view details.</p>

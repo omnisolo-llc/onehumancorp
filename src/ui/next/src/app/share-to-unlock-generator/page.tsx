@@ -41,7 +41,7 @@ export default function ShareToUnlockGeneratorPage() {
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Share-to-Unlock Generator 🔓</h1>
         <button
           onClick={() => router.push('/dashboard')}
-          className="px-4 py-2 bg-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors"
+          className="px-4 py-2 bg-gray-200 min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors"
         >
           Back to Dashboard
         </button>
@@ -50,7 +50,7 @@ export default function ShareToUnlockGeneratorPage() {
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
         {/* Settings Panel */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 rounded-[16px] shadow-lg bg-white/80 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+            <div className="p-6 shadow-lg bg-white/80 backdrop-blur-[30px] saturate-[210%] border border-white/40">
                 <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Campaign Settings</h2>
 
                 <div className="mb-4">
@@ -59,7 +59,7 @@ export default function ShareToUnlockGeneratorPage() {
                         type="text"
                         value={campaignTitle}
                         onChange={(e) => setCampaignTitle(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         placeholder="e.g. Secret Weekend Deal"
                     />
                 </div>
@@ -70,7 +70,7 @@ export default function ShareToUnlockGeneratorPage() {
                         type="text"
                         value={reward}
                         onChange={(e) => setReward(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         placeholder="e.g. 20% Off Your Entire Order"
                     />
                 </div>
@@ -81,7 +81,7 @@ export default function ShareToUnlockGeneratorPage() {
                         type="text"
                         value={hiddenCode}
                         onChange={(e) => setHiddenCode(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] uppercase"
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] uppercase"
                         placeholder="e.g. SECRET20"
                     />
                 </div>
@@ -91,7 +91,7 @@ export default function ShareToUnlockGeneratorPage() {
                     <textarea
                         value={shareMessage}
                         onChange={(e) => setShareMessage(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         rows={2}
                         placeholder="e.g. I just unlocked a secret 20% discount!"
                     />
@@ -99,7 +99,7 @@ export default function ShareToUnlockGeneratorPage() {
 
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-                    <div className="flex gap-2 border p-1 rounded-[16px] min-h-[44px] min-w-[44px] bg-gray-50 border-gray-200">
+                    <div className="flex gap-2 border p-1 min-h-[44px] min-w-[44px] bg-gray-50 border-gray-200">
                         <button
                             onClick={() => setTheme('light')}
                             className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
@@ -117,7 +117,7 @@ export default function ShareToUnlockGeneratorPage() {
 
             </div>
 
-            <div className="p-6 rounded-[16px] shadow-lg bg-indigo-50 border border-indigo-100">
+            <div className="p-6 shadow-lg bg-indigo-50 border border-indigo-100">
                 <h3 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
                     <span className="text-xl">🚀</span> Share Your Link
                 </h3>
@@ -125,7 +125,7 @@ export default function ShareToUnlockGeneratorPage() {
                     Post this link on social media. When customers click it, they'll have to share your business to unlock the discount!
                 </p>
 
-                <div className="flex items-center gap-2 bg-white rounded-[16px] min-h-[44px] min-w-[44px] border border-indigo-200 p-1 mb-4 overflow-hidden">
+                <div className="flex items-center gap-2 bg-white min-h-[44px] min-w-[44px] border border-indigo-200 p-1 mb-4 overflow-hidden">
                     <div className="px-2 py-1 text-xs text-gray-500 truncate flex-1 font-mono">
                         {generatedLink}
                     </div>
@@ -133,7 +133,7 @@ export default function ShareToUnlockGeneratorPage() {
 
                 <button
                     onClick={handleCopy}
-                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors"
+                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors"
                 >
                     {copied ? 'Copied!' : 'Copy Link'}
                 </button>
@@ -142,7 +142,7 @@ export default function ShareToUnlockGeneratorPage() {
 
         {/* Live Preview Panel */}
         <div className="w-full md:w-2/3 flex flex-col">
-            <div className="flex-1 rounded-[16px] shadow-xl overflow-hidden flex flex-col bg-gray-100 border border-gray-200 relative">
+            <div className="flex-1 shadow-xl overflow-hidden flex flex-col bg-gray-100 border border-gray-200 relative">
                 <div className="bg-gray-200 py-3 px-4 flex items-center gap-2 border-b border-gray-300">
                     <div className="flex gap-1.5">
                         <div className="w-3 h-3 rounded-full bg-red-400"></div>
@@ -157,7 +157,7 @@ export default function ShareToUnlockGeneratorPage() {
                 <div className="flex-1 flex items-center justify-center p-8 bg-gray-50 overflow-y-auto">
                     {/* Simulated Widget Preview */}
                     <div
-                        className="w-full max-w-sm rounded-[16px] shadow-2xl p-8 flex flex-col items-center relative overflow-hidden transition-all duration-300"
+                        className="w-full max-w-sm shadow-2xl p-8 flex flex-col items-center relative overflow-hidden transition-all duration-300"
                         style={getThemeStyles()}
                     >
                         <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-3xl mb-6 shadow-inner">
@@ -171,7 +171,7 @@ export default function ShareToUnlockGeneratorPage() {
                             <strong id="preview-reward-text" className="text-purple-500">{reward || '20% Off'}</strong>
                         </p>
 
-                        <div className="w-full p-4 rounded-[16px] min-h-[44px] min-w-[44px] border-2 border-dashed flex items-center justify-center mb-8 relative"
+                        <div className="w-full p-4 min-h-[44px] min-w-[44px] border-2 border-dashed flex items-center justify-center mb-8 relative"
                              style={{ borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db', background: theme === 'dark' ? '#1f2937' : '#f3f4f6' }}>
                              <span id="preview-code" className="font-mono text-xl tracking-widest font-bold filter blur-sm select-none opacity-50" style={{ color: theme === 'dark' ? '#fff' : '#000' }}>
                                  {hiddenCode || 'SECRET'}
@@ -184,10 +184,10 @@ export default function ShareToUnlockGeneratorPage() {
                         </div>
 
                         <div className="w-full space-y-3 mb-6">
-                            <button className="w-full py-3 px-4 bg-black hover:bg-gray-800 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2">
+                            <button className="w-full py-3 px-4 bg-black hover:bg-gray-800 text-white font-medium min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2">
                                 Share on X to Unlock
                             </button>
-                            <button className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2">
+                            <button className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2">
                                 Share on WhatsApp
                             </button>
                         </div>

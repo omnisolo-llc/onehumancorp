@@ -79,7 +79,7 @@ export function AIUsageLimitWidget() {
   };
 
   return (
-    <div className="mb-6 ohc-growth-card glassmorphism p-6 rounded-[16px] border border-orange-200/60 dark:border-orange-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden" data-testid="ai-usage-limit-widget">
+    <div className="mb-6 ohc-growth-card glassmorphism p-6 border border-orange-200/60 dark:border-orange-800/60 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden" data-testid="ai-usage-limit-widget">
       {/* Blurred background effect */}
       <div className="absolute inset-0 pointer-events-none opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+CjxjaXJjbGUgY3g9IjIiIGN5PSIyIiByPSIyIiBmaWxsPSIjZjU5ZTBiIiBvcGFjaXR5PSIwLjQiLz4KPC9zdmc+')]"></div>
 

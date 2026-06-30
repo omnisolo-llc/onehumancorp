@@ -331,7 +331,7 @@ export default function Integrations() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredIntegrations.map(integration => (
               <div key={integration.id}
-                   className="rounded-[16px] p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md glassmorphism border border-white/40 dark:border-white/10"
+                   className="p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md glassmorphism border border-white/40 dark:border-white/10"
                    style={{ background: 'rgba(255, 255, 255, 0.65)' }}
               >
                 <div className="flex justify-between items-start mb-4">
@@ -349,7 +349,7 @@ export default function Integrations() {
 
                 <button
                   onClick={() => handleConnect(integration.id)}
-                  className={`min-h-[44px] w-full py-3 rounded-[16px] font-semibold text-sm transition-transform active:scale-[0.98] ${
+                  className={`min-h-[44px] w-full py-3 font-semibold text-sm transition-transform active:scale-[0.98] ${
                     integration.status === 'connected'
                       ? "bg-gray-50 dark:bg-zinc-800 text-gray-750 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-zinc-700"
                       : "text-white shadow-sm bg-[#0f766e] hover:bg-[#0d645d] border-none"

@@ -73,7 +73,7 @@ export default function MenuGeneratorPage() {
       </header>
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-3xl mx-auto">
-        <div className="glassmorphism p-6 md:p-8 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-8 bg-white/50 dark:bg-black/30">
+        <div className="glassmorphism p-6 md:p-8 border border-white/40 dark:border-white/10 shadow-lg mb-8 bg-white/50 dark:bg-black/30">
           <div className="mb-6">
             <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Menu Details</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -138,7 +138,7 @@ export default function MenuGeneratorPage() {
         </div>
 
         {menuLink && (
-          <div className="glassmorphism p-6 rounded-[16px] border border-green-200 dark:border-green-900/30 shadow-lg bg-green-50/50 dark:bg-green-900/10 animate-fade-in">
+          <div className="glassmorphism p-6 border border-green-200 dark:border-green-900/30 shadow-lg bg-green-50/50 dark:bg-green-900/10 animate-fade-in">
             <h3 className="text-lg font-bold font-outfit text-gray-900 dark:text-white mb-2">Link Ready! 🎉</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               Your digital menu is ready to be shared. Customers who view it will see a built-in referral link!

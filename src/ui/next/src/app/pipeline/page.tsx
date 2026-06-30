@@ -85,7 +85,7 @@ export default function PipelinePage() {
         { label: "Active Deals", value: String(opportunities.filter(o => !["Won", "Lost"].includes(o.stage)).length), tone: "good" }
       ]}
     >
-      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
+      <div className="mb-6 p-6 glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Deal Pipeline</h2>
         <p className="text-gray-600 dark:text-gray-400">Manage high-consideration projects from inquiry to revenue.</p>
       </div>

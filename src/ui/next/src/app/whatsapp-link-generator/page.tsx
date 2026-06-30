@@ -88,7 +88,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
       <main className="max-w-6xl mx-auto p-6 pt-12 flex flex-col md:flex-row gap-12">
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-8 rounded-[16px] shadow-xl border border-gray-100 bg-white/60 backdrop-blur-[30px] saturate-[210%]">
+            <div className="p-8 shadow-xl border border-gray-100 bg-white/60 backdrop-blur-[30px] saturate-[210%]">
                 <h1 className="text-3xl font-bold font-outfit mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                     WhatsApp Link Generator 📱
                 </h1>
@@ -101,7 +101,7 @@ export default function WhatsAppLinkGeneratorPage() {
                     <input
                         id="phoneNumber"
                         type="text"
-                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all font-inter"
+                        className="w-full px-4 py-3 bg-white border border-gray-200 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all font-inter"
                         placeholder="e.g. 1234567890"
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
@@ -113,7 +113,7 @@ export default function WhatsAppLinkGeneratorPage() {
                     <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">Pre-filled Message</label>
                     <textarea
                         id="message"
-                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all font-inter resize-none h-32"
+                        className="w-full px-4 py-3 bg-white border border-gray-200 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all font-inter resize-none h-32"
                         placeholder="Hello, I would like to inquire about your services."
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
@@ -145,7 +145,7 @@ export default function WhatsAppLinkGeneratorPage() {
                             aria-label="Light theme"
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
@@ -153,7 +153,7 @@ export default function WhatsAppLinkGeneratorPage() {
                             aria-label="Dark theme"
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -163,13 +163,13 @@ export default function WhatsAppLinkGeneratorPage() {
                 <button
                     onClick={() => setShowModal(true)}
                     disabled={!phoneNumber}
-                    className={`w-full py-3 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm ${phoneNumber ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-300 cursor-not-allowed'}`}
+                    className={`w-full py-3 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm ${phoneNumber ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-indigo-300 cursor-not-allowed'}`}
                 >
                     Get Link
                 </button>
             </div>
 
-            <div className="p-6 rounded-[16px] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm">
+            <div className="p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm">
                 <h3 className="text-md font-semibold font-outfit mb-2 flex items-center gap-2">
                     <span className="text-xl">🚀</span> Instant Chat
                 </h3>
@@ -181,11 +181,11 @@ export default function WhatsAppLinkGeneratorPage() {
 
         {/* Live Preview */}
         <div className="w-full md:w-2/3">
-            <div className="p-8 rounded-[16px] h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-white/50 shadow-inner">
+            <div className="p-8 h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 border border-white/50 shadow-inner">
                 <div className="absolute top-4 left-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Preview</div>
 
                 {/* The Widget Preview */}
-                <div className="relative w-full max-w-sm rounded-[16px] shadow-xl overflow-hidden font-inter flex flex-col" style={getThemeStyles()}>
+                <div className="relative w-full max-w-sm shadow-xl overflow-hidden font-inter flex flex-col" style={getThemeStyles()}>
                     <div className="bg-[#075e54] p-4 flex items-center gap-3 text-white">
                         <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
                             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -214,7 +214,7 @@ export default function WhatsAppLinkGeneratorPage() {
       {/* Embed Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
-            <div className="bg-white rounded-[16px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
@@ -232,20 +232,20 @@ export default function WhatsAppLinkGeneratorPage() {
                     <textarea
                         readOnly
                         value={generatedLink}
-                        className="w-full h-24 p-4 bg-gray-50 border border-gray-200 rounded-[16px] min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
+                        className="w-full h-24 p-4 bg-gray-50 border border-gray-200 min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-indigo-500 transition-all"
                     />
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
                         {copied ? 'Copied!' : 'Copy Link'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-[16px] min-h-[44px] min-w-[44px] transition-colors"
+                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium min-h-[44px] min-w-[44px] transition-colors"
                     >
                         Close
                     </button>
@@ -257,7 +257,7 @@ export default function WhatsAppLinkGeneratorPage() {
       {/* Paywall Modal */}
       {showPaywall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
-            <div className="bg-white rounded-[16px] p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close modal"
                     onClick={() => setShowPaywall(false)}
@@ -268,7 +268,7 @@ export default function WhatsAppLinkGeneratorPage() {
                     </svg>
                 </button>
 
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 rounded-[16px] flex items-center justify-center mb-6 shadow-inner border border-amber-200/50">
+                <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center mb-6 shadow-inner border border-amber-200/50">
                     <span className="text-3xl">⭐</span>
                 </div>
 
@@ -293,7 +293,7 @@ export default function WhatsAppLinkGeneratorPage() {
                 </div>
 
                 <div className="flex gap-3">
-                    <button className="flex-1 py-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white font-medium rounded-[16px] min-h-[44px] min-w-[44px] hover:from-black hover:to-gray-900 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                    <button className="flex-1 py-3 bg-gradient-to-r from-gray-900 to-gray-800 text-white font-medium min-h-[44px] min-w-[44px] hover:from-black hover:to-gray-900 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                         Upgrade Now
                     </button>
                 </div>

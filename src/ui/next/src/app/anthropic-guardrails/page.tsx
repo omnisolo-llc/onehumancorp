@@ -52,7 +52,7 @@ export default function AnthropicGuardrailsPage() {
         Trust establishment, Session permissions, and High-risk user confirmation.
       </p>
 
-      <div className="space-y-6 bg-white/65 backdrop-blur-[30px] p-6 rounded-[16px] shadow-sm border border-white/40">
+      <div className="space-y-6 bg-white/65 backdrop-blur-[30px] p-6 shadow-sm border border-white/40">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Tool to Execute

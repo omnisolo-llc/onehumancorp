@@ -51,7 +51,7 @@ export function PostPurchaseShareWidget({ tenantId, orderId, storeName = 'Our St
   };
 
   return (
-    <div className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mt-6 mb-6">
+    <div className="glassmorphism p-6 border border-white/40 dark:border-white/10 shadow-lg mt-6 mb-6">
       {unlocked ? (
         <div className="flex flex-col md:flex-row gap-6 items-center bg-gradient-to-r from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 p-4 rounded-xl border border-green-400/50">
            <div className="w-12 h-12 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center shrink-0">

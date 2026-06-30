@@ -66,7 +66,7 @@ export default function SmartPricingPage() {
         <div className="flex items-center min-h-[44px]">
           <button
             onClick={() => router.push("/dashboard")}
-            className="px-4 py-2 bg-gray-200 rounded-[16px] text-sm font-medium hover:bg-gray-300 transition-colors"
+            className="px-4 py-2 bg-gray-200 text-sm font-medium hover:bg-gray-300 transition-colors"
           >
             Back to Dashboard
           </button>
@@ -81,7 +81,7 @@ export default function SmartPricingPage() {
           </p>
         </div>
 
-        <div className="p-6 shadow-sm rounded-[16px] flex items-center justify-between bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
+        <div className="p-6 shadow-sm flex items-center justify-between bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
           <div>
             <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F]">
               Enable Smart Pricing
@@ -106,7 +106,7 @@ export default function SmartPricingPage() {
         </div>
 
         {enabled && (
-          <div className="p-6 shadow-sm rounded-[16px] flex flex-col gap-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
+          <div className="p-6 shadow-sm flex flex-col gap-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
             <h3 className="text-lg font-semibold font-outfit border-b pb-2 text-[#1D1D1F] border-black/10">
               Configuration
             </h3>

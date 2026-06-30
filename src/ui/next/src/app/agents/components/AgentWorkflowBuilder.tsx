@@ -79,7 +79,7 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
   };
 
   return (
-    <div className="rounded-[16px] border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4 shadow-sm dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)]" data-testid="visual-workflow-builder">
+    <div className="border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4 shadow-sm dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)]" data-testid="visual-workflow-builder">
       <h3 className="mb-4 text-lg font-bold text-zinc-900 dark:text-zinc-100">Visual Workflow Builder (Visual/low-code orchestration --&gt; democratizing agent construction)</h3>
 
       {error && (
@@ -127,7 +127,7 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 rounded-[16px] border-2 border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 p-4 min-h-[300px]">
+        <div className="flex-1 border-2 border-dashed border-zinc-300 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-900/50 p-4 min-h-[300px]">
           <h4 className="mb-4 text-sm font-bold text-zinc-800 dark:text-zinc-200">Workflow Canvas</h4>
 
           {workflowBlocks.length === 0 ? (
@@ -138,7 +138,7 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
             <div className="flex flex-col items-center gap-2 relative">
               {workflowBlocks.map((block, index) => (
                 <React.Fragment key={block.id}>
-                  <div className="w-full max-w-sm flex items-center justify-between rounded-[16px] border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] p-3 shadow-sm" data-testid={`canvas-block-${index}`}>
+                  <div className="w-full max-w-sm flex items-center justify-between border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] p-3 shadow-sm" data-testid={`canvas-block-${index}`}>
                     <div>
                       <span className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">{block.type}</span>
                       <p className="font-semibold text-zinc-900 dark:text-zinc-100">{block.label}</p>

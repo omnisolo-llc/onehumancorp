@@ -217,7 +217,7 @@ export default function PreOrderWidgetPage() {
         {/* Soft Paywall Modal */}
         {showSoftPaywall && (
           <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-[16px] p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 dark:border-indigo-900 text-center">
+            <div className="bg-white dark:bg-gray-900 w-full max-w-md p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 dark:border-indigo-900 text-center">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 dark:bg-indigo-900/20 rounded-bl-full -z-10"></div>
 
               <div className="flex justify-end mb-2">
@@ -229,7 +229,7 @@ export default function PreOrderWidgetPage() {
                 </button>
               </div>
 
-              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 rounded-[16px] flex items-center justify-center text-3xl shadow-inner text-indigo-600 dark:text-indigo-400 mx-auto mb-6">
+              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-3xl shadow-inner text-indigo-600 dark:text-indigo-400 mx-auto mb-6">
                 ✨
               </div>
               <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-3">Upgrade to Pro</h2>
@@ -239,7 +239,7 @@ export default function PreOrderWidgetPage() {
 
               <button
                 onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
-                className="w-full py-4 rounded-[16px] min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
+                className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
               >
                 Upgrade to Pro
               </button>
@@ -247,7 +247,7 @@ export default function PreOrderWidgetPage() {
               <button
                 onClick={handleShareToUnlock}
                 disabled={isUnlocking}
-                className="w-full py-4 rounded-[16px] min-h-[44px] min-w-[44px] font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                 {isUnlocking ? 'Verifying Share...' : 'Share on X to Unlock'}
