@@ -37,6 +37,12 @@ pub async fn compact_context(
             if !m.tool_results.is_empty() {
                 middle_text.push_str("Tool Results:\n");
                 for tr in &m.tool_results {
+                    // Self-Reflective Context Anchoring mechanic: preserve anchors directly
+                    if tr.content.contains("[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]") {
+                        middle_text.push_str(&format!("  tool_call_id: {} -> Preserved Anchor: {}\n", tr.tool_call_id, tr.content));
+                        continue;
+                    }
+
                     // Discard redundant/raw tool outputs, but preserve errors if any
                     let status = if tr.error.is_empty() {
                         "Success (raw output discarded during compaction)".to_string()
@@ -88,7 +94,7 @@ pub async fn compact_context(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
+    use crate::types::{ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -198,5 +204,51 @@ mod tests {
         );
         assert!(compacted[1].content.contains("This is a summary"));
         assert_eq!(compacted[2].content, "Message 4");
+    }
+    #[tokio::test]
+    async fn test_compact_context_preserves_anchor() {
+        use crate::types::{ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
+        use std::sync::Arc;
+        use tokio::sync::Mutex;
+        let llm: Arc<dyn LlmClient> = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![ChatResponse {
+                message: Message::assistant("This is a summary"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id1".to_string()),
+            }]),
+        });
+
+        let mut msg_tool = Message::assistant("I am calling a tool");
+        msg_tool.tool_calls.push(ToolCall {
+            id: "call_1".to_string(),
+            name: "AnchorContext".to_string(),
+            arguments: serde_json::json!({}),
+        });
+
+        let mut msg_result = Message::user("");
+        msg_result.role = Role::Tool;
+        msg_result.tool_results.push(ToolResult {
+            tool_call_id: "call_1".to_string(),
+            content: "[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]\nAnchored Text: IMPORTANT".to_string(),
+            error: "".to_string(),
+        });
+
+        let messages = vec![
+            Message::user("Message 0 (Start)"),
+            Message::assistant("Message 1"),
+            msg_tool,
+            msg_result,
+            Message::user("Message 4"),
+            Message::assistant("Message 5"),
+            Message::user("Message 6"),
+        ];
+
+        let compacted = compact_context(&messages, "test-model", &llm)
+            .await
+            .unwrap();
+
+        assert_eq!(compacted.len(), 5);
+        assert!(compacted[1].content.contains("This is a summary"));
     }
 }

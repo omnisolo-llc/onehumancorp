@@ -38,6 +38,7 @@ impl AconStrategy {
                     for tr in &mut msg.tool_results {
                         if tr.error.is_empty()
                             && !tr.content.starts_with("[ACON:")
+                            && !tr.content.contains("[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]")
                             && !tr.content.is_empty()
                         {
                             tr.content =
@@ -122,8 +123,64 @@ mod tests {
             messages[1].content,
             "I'm thinking about the massive log output..."
         );
-
-        // Second tool message is within the recent preserved count
         assert_eq!(messages[2].tool_results[0].content, "Another tool result");
     }
 }
+
+    #[test]
+    fn test_apply_acon_strategy_preserves_anchor() {
+        use crate::types::ToolResult;
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_1".to_string(),
+                    content: "[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]\nAnchored!".to_string(),
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "I'm thinking...".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_2".to_string(),
+                    content: "Another tool result".to_string(),
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Final reasoning".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let config = AconConfig {
+            preserve_recent_messages_count: 2,
+        };
+        apply_acon_strategy(&mut messages, &config);
+
+        // First tool message should NOT be masked because it's an anchor
+        assert_eq!(
+            messages[0].tool_results[0].content,
+            "[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]\nAnchored!"
+        );
+    }

@@ -36,6 +36,7 @@ pub mod restic;
 pub mod anthropic_memory;
 pub mod repo_map;
 pub mod lazy_load;
+pub mod anchor;
 pub mod screenshot;
 pub mod generative_visibility;
 pub mod magentic;
@@ -140,6 +141,7 @@ pub fn all_tools(
         booking::booking_reschedule_tool(booking_store.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
         toolsearch::toolsearch_tool(),
+        anchor::anchor_tool(),
         task::task_create_tool(task_store.clone()),
         task::task_get_tool(task_store.clone()),
         task::task_list_tool(task_store.clone()),

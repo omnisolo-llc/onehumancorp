@@ -85,3 +85,44 @@ pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
         execute: Arc::new(PydanticAdapter::new(SendMessageExecutor { mailbox })),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[tokio::test]
+    async fn test_sendmessage_basic() {
+        let mailbox = Arc::new(RwLock::new(Mailbox::default()));
+        let tool = sendmessage_tool(mailbox.clone());
+        let args = serde_json::json!({
+            "to": "boss",
+            "message": "hello world"
+        });
+
+        let result = tool.execute.execute(args).await.unwrap();
+        assert_eq!(result, "Message sent to boss.");
+
+        let msgs = mailbox.write().await.receive_all();
+        assert_eq!(msgs.len(), 1);
+        assert_eq!(msgs[0].to, "boss");
+        assert_eq!(msgs[0].content, "hello world");
+    }
+
+    #[tokio::test]
+    async fn test_sendmessage_default_to() {
+        let mailbox = Arc::new(RwLock::new(Mailbox::default()));
+        let tool = sendmessage_tool(mailbox.clone());
+        let args = serde_json::json!({
+            "message": "hello world"
+        });
+
+        let result = tool.execute.execute(args).await.unwrap();
+        assert_eq!(result, "Message sent to coordinator.");
+
+        let msgs = mailbox.write().await.receive_all();
+        assert_eq!(msgs.len(), 1);
+        assert_eq!(msgs[0].to, "coordinator");
+    }
+}
