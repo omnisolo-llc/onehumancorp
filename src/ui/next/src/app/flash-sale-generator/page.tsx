@@ -302,6 +302,13 @@ export default function FlashSaleGeneratorPage() {
           background: rgba(255, 255, 255, 0.65);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        @media (prefers-color-scheme: dark) {
+          .glassmorphism {
+            background: rgba(22, 22, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+          }
         }
       `}} />
     </div>
