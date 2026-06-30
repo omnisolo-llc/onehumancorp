@@ -1,154 +1,72 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { useState, useEffect } from "react";
 
-export default function KnowledgePage() {
-  const t = (s: string) => s;
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isReady, setIsReady] = useState(true);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+interface KnowledgeDoc {
+  id: string;
+  title: string;
+  status: string;
+}
 
-  const fetchDocuments = async () => {
-    try {
-      const token = localStorage.getItem("auth_token"); // ensure a token is sent in local dev
-      const res = await fetch("/api/memory", {
-        headers: {
-            "Authorization": token ? `Bearer ${token}` : ""
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setDocuments(data.map((m: any) => ({
-          id: m.id,
-          name: m.source_type || "Document",
-          status: "Active",
-          content: m.content
-        })));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
+export default function KnowledgeHub() {
+  const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    fetchDocuments();
+    // Mock fetch documents
+    setDocs([
+      { id: "1", title: "Store Policy.pdf", status: "LEARNED" },
+      { id: "2", title: "Employee Handbook.docx", status: "PENDING" },
+    ]);
   }, []);
 
-  const handleDelete = async (id: string) => {
-    try {
-      const token = localStorage.getItem("auth_token");
-      await fetch(`/api/memory/${id}`, {
-          method: "DELETE",
-          headers: {
-              "Authorization": token ? `Bearer ${token}` : ""
-          }
-      });
-      fetchDocuments();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsSyncing(true);
-    setIsReady(false);
-
-    try {
-      let content = "";
-
-      if (file.type === "application/pdf") {
-          const reader = new FileReader();
-          content = await new Promise((resolve) => {
-              reader.onload = () => resolve((reader.result as string).split(",")[1]);
-              reader.readAsDataURL(file);
-          });
-      } else {
-          content = await file.text();
-      }
-
-      const token = localStorage.getItem("auth_token");
-      await fetch("/api/memory/upload", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : ""
-        },
-        body: JSON.stringify({ content, source_type: file.name }),
-      });
-      await fetchDocuments();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSyncing(false);
-      setIsReady(true);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+  const handleUpload = () => {
+    setUploading(true);
+    setTimeout(() => {
+      setDocs([
+        { id: Math.random().toString(), title: "New Document.txt", status: "PENDING" },
+        ...docs,
+      ]);
+      setUploading(false);
+    }, 1000);
   };
 
   return (
-    <div className="app-page">
-      <PageHeader title={t("Knowledge & Documents")} />
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Knowledge Hub</h1>
 
-      <div className="p-4">
-        <div className="glassmorphism p-6 rounded-2xl mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Document Library</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-            Upload policies, FAQs, and business documents. The Knowledge Assistant will use these to answer customer questions and draft accurate responses.
-          </p>
+        <div className="bg-white/80 backdrop-blur-md shadow-sm rounded-xl p-6 mb-8 border border-gray-100">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Learned Documents</h2>
+            <button
+              onClick={handleUpload}
+              disabled={uploading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium transition-colors"
+            >
+              {uploading ? "Uploading..." : "+ Add Document"}
+            </button>
+          </div>
 
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleUpload}
-            className="hidden"
-            accept=".txt,.md,.csv,.pdf"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isSyncing}
-            className="w-full md:w-auto px-6 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium rounded-xl transition-all shadow-sm disabled:opacity-50 min-h-[44px]"
-          >
-            {isSyncing ? "Syncing..." : "Upload New Document"}
-          </button>
-        </div>
-
-        <div className="glassmorphism rounded-2xl overflow-hidden">
-          {documents.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
-              No documents uploaded yet.
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {documents.map((doc, idx) => (
-                <div key={idx} className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-[#0071E3] dark:text-blue-400">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900 dark:text-white">{doc.name}</h3>
-                      <p className="text-xs text-gray-500">Updated just now</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                      Active
-                    </span>
-                    <button onClick={() => handleDelete(doc.id)} className="text-[#FF3B30] hover:text-red-700 text-sm font-medium ml-2">
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <ul className="divide-y divide-gray-100">
+            {docs.map((doc) => (
+              <li key={doc.id} className="py-4 flex justify-between items-center">
+                <span className="text-gray-700 font-medium">{doc.title}</span>
+                <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                  doc.status === "LEARNED" ? "bg-green-100 text-green-800" :
+                  doc.status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
+                  "bg-gray-100 text-gray-800"
+                }`}>
+                  {doc.status === "PENDING" ? "Learning..." : doc.status}
+                </span>
+              </li>
+            ))}
+            {docs.length === 0 && (
+              <li className="py-8 text-center text-gray-500">
+                No documents uploaded yet.
+              </li>
+            )}
+          </ul>
         </div>
       </div>
     </div>
