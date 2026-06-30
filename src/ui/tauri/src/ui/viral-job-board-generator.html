@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Viral Job Board Widget</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+      color: #1d1d1f;
+    }
+
+    .container {
+      max-width: 450px;
+      width: 100%;
+      box-sizing: border-box;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    p {
+      font-size: 15px;
+      margin-bottom: 25px;
+      line-height: 1.4;
+      color: #86868b;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.2);
+      background: rgba(255, 255, 255, 0.9);
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 15px;
+    }
+
+    .form-group input:focus {
+      outline: 2px solid #0066FF;
+      outline-offset: 2px;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    button {
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      min-height: 44px;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+      margin-top: 10px;
+    }
+
+    button:hover { background-color: #0052cc; }
+    button:active { transform: scale(0.98); }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 25px;
+      color: #0066FF;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      transition: opacity 0.2s;
+    }
+
+    .back-link:hover { opacity: 0.8; }
+
+    #result-area {
+      display: none;
+      margin-top: 25px;
+      padding-top: 25px;
+      border-top: 1px solid rgba(134, 134, 139, 0.2);
+    }
+
+    #result-area p {
+      color: #1d1d1f;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.2);
+      background: rgba(255, 255, 255, 0.65);
+      box-sizing: border-box;
+      font-family: monospace;
+      font-size: 13px;
+      resize: vertical;
+    }
+
+    textarea:focus {
+      outline: 2px solid #0066FF;
+      outline-offset: 2px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #16161a;
+        color: #F5F5F7;
+      }
+      .container {
+        background: rgba(22, 22, 26, 0.7);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      p {
+        color: #a1a1a6;
+      }
+      .form-group input, textarea {
+        background-color: #1c1c1e !important;
+        color: #F5F5F7 !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      }
+      #result-area {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      #result-area h2, #result-area p {
+        color: inherit;
+      }
+      #copy-btn {
+        background-color: #333 !important;
+        color: white !important;
+      }
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 30px;
+      border-radius: 16px;
+      max-width: 400px;
+      width: 90%;
+      position: relative;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .modal-content {
+        background: #1c1c1e;
+        color: #F5F5F7;
+      }
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 15px; right: 15px;
+      background: none; border: none;
+      font-size: 24px; color: #888;
+      cursor: pointer; box-shadow: none;
+      width: auto; min-height: auto;
+      padding: 0; margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="font-size: 48px; text-align: center; margin-bottom: 10px;">📋</div>
+    <h1>Viral Job Board Widget</h1>
+    <p>Embed an interactive job board on your website. Share your open roles and attract talent while growing your brand.</p>
+
+    <div class="form-group">
+      <label for="company-name">Company Name</label>
+      <input type="text" id="company-name" placeholder="e.g. Acme Corp" value="My Company" />
+    </div>
+
+    <div class="form-group">
+      <label class="checkbox-label">
+        <input type="checkbox" id="remove-branding" />
+        Remove "Powered by OHC" Badge (Pro)
+      </label>
+    </div>
+
+    <button id="generate-btn">Generate Widget Code</button>
+
+    <div id="result-area">
+      <h2 style="font-size: 18px; margin-bottom: 10px;">Widget Ready!</h2>
+      <p style="margin-bottom: 15px; font-weight: 500;">Copy and paste this code onto your website:</p>
+
+      <textarea id="embed-code" readonly></textarea>
+
+      <button id="copy-btn" style="margin-top: 10px; background-color: #1d1d1f; box-shadow: none;">Copy Embed Code</button>
+    </div>
+  </div>
+
+  <a href="/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <!-- Paywall Modal -->
+  <div class="modal-overlay" id="paywall-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-paywall">&times;</button>
+      <div style="font-size: 48px; margin-bottom: 10px;">✨</div>
+      <h2 style="margin-top:0; font-family:'Outfit'">Upgrade to Pro</h2>
+      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "Powered by OHC" branding is a Pro feature. Upgrade your account or share OHC on social media to unlock a 7-day Pro trial.</p>
+
+      <button id="upgrade-btn" style="margin-bottom: 10px;">Upgrade to Pro</button>
+      <button id="share-unlock-btn" style="background-color: #1d1d1f; box-shadow: none;">Share on X to Unlock</button>
+    </div>
+  </div>
+
+  <script>
+    const removeBrandingCb = document.getElementById('remove-branding');
+    const paywallModal = document.getElementById('paywall-modal');
+    const closePaywallBtn = document.getElementById('close-paywall');
+
+    removeBrandingCb.addEventListener('change', (e) => {
+      const hasPro = localStorage.getItem('has_pro') === 'true';
+      if (e.target.checked && !hasPro) {
+        e.preventDefault();
+        e.target.checked = false;
+        paywallModal.style.display = 'flex';
+      }
+    });
+
+    closePaywallBtn.addEventListener('click', () => {
+      paywallModal.style.display = 'none';
+    });
+
+    document.getElementById('upgrade-btn').addEventListener('click', () => {
+      window.location.href = '/pricing.html';
+    });
+
+    document.getElementById('share-unlock-btn').addEventListener('click', () => {
+      localStorage.setItem('has_pro', 'true');
+      alert('Thanks for sharing! Pro trial activated.');
+      paywallModal.style.display = 'none';
+      removeBrandingCb.checked = true;
+    });
+
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('generate-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      const companyName = document.getElementById('company-name').value || 'Company';
+      const hideBranding = removeBrandingCb.checked;
+
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+
+        let baseUrl = window.location.origin;
+        if (baseUrl === 'file://' || baseUrl.includes('localhost') || baseUrl === 'null') {
+          baseUrl = 'https://app.onehumancorp.com';
+        }
+
+        const embedUrl = `${baseUrl}/ui/job-board-embed.html?tenant=${tenantId}&company=${encodeURIComponent(companyName)}&hideBranding=${hideBranding}`;
+
+        let embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea; background: transparent;"></iframe>`;
+
+        if (!hideBranding) {
+            embedCode += `\n<div style="text-align: center; font-size: 12px; margin-top: 8px;"><a href="${baseUrl}/setup.html?ref=${tenantId}" target="_blank" style="color: #888; text-decoration: none;">⚡ Powered by OHC</a></div>`;
+        }
+
+        document.getElementById('embed-code').value = embedCode;
+        document.getElementById('result-area').style.display = 'block';
+
+      } catch (err) {
+        console.error("Error generating job board:", err);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Widget Code';
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+        const textarea = document.getElementById('embed-code');
+        textarea.select();
+        try {
+            await navigator.clipboard.writeText(textarea.value);
+            const btn = document.getElementById('copy-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy Embed Code'; }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+    });
+  </script>
+</body>
+</html>
