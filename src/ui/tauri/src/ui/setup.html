@@ -3908,7 +3908,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "dashboard.html";
+              window.location.href = "success.html";
               return;
             }
 
@@ -3952,7 +3952,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "dashboard.html";
+              window.location.href = "success.html";
             } else {
               const errData = await response.json().catch(() => ({}));
               throw new Error(
@@ -4259,7 +4259,7 @@
                   localStorage.removeItem("onboardingState");
                   localStorage.setItem("has_onboarded", "true");
 
-                  window.location.href = "dashboard.html";
+                  window.location.href = "success.html";
                 })
                 .catch((err) => {
                   console.error(err);
@@ -4301,7 +4301,7 @@
                     }
                     localStorage.removeItem("onboardingState");
                     localStorage.setItem("has_onboarded", "true");
-                    window.location.href = "dashboard.html";
+                    window.location.href = "success.html";
                   } else {
                     const errData = await response.json().catch(() => ({}));
                     throw new Error(

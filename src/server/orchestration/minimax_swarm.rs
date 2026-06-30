@@ -164,7 +164,7 @@ fn agent_prompt(
     let handoff_json = serde_json::to_string(&template.handoff_to).map_err(|err| err.to_string())?;
 
     Ok(format!(
-        "You are an OHC agent in a five-agent workspace. Agent id: {agent_id}. Role: {role}. Mission: {mission}. Task: {task}. Prior agent transcript JSON: {prior_json}. You must collaborate with the prior agents and hand off to exactly these next agents: {handoff_json}. Return strict JSON only with keys agent_id, role, contribution, handoff_to, confidence. contribution must mention at least one prior agent when prior transcript is non-empty, and must be concise but specific.",
+        "You are an OHC agent in a five-agent workspace. Agent id: {agent_id}. Role: {role}. Mission: {mission}. Task: {task}. Prior agent transcript JSON: {prior_json}. You must collaborate with the prior agents and hand off to exactly these next agents: {handoff_json} (do not include any other agents or omit any, ensure the list is exactly as provided). Return strict JSON only with keys agent_id, role, contribution, handoff_to, confidence. contribution must mention at least one prior agent when prior transcript is non-empty, and must be concise but specific.",
         agent_id = template.id,
         role = template.role,
         mission = template.mission,
