@@ -96,7 +96,7 @@ async fn get_today_routes(
     use sqlx::Row;
     let routes_result = sqlx::query(
         r#"
-        SELECT id, staff_id, route_date, status
+        SELECT id, staff_profile_id as staff_id, route_date, status
         FROM service_routes
         WHERE tenant_id = $1 AND route_date = $2
         "#,
@@ -112,10 +112,22 @@ async fn get_today_routes(
             let r_id: String = r_row.get("id");
             let jobs_result = sqlx::query(
                 r#"
-                SELECT id, customer_id, job_title, address, lat, lng, scheduled_start, scheduled_end, status, order_index
-                FROM job_locations
-                WHERE tenant_id = $1 AND service_route_id = $2
-                ORDER BY order_index ASC, scheduled_start ASC
+                SELECT
+                    jl.id,
+                    a.customer_id,
+                    COALESCE(jt.name, 'Service Job') as job_title,
+                    COALESCE(a.location_address, 'No Address Provided') as address,
+                    a.location_lat as lat,
+                    a.location_lng as lng,
+                    COALESCE(a.scheduled_start_time, NOW()) as scheduled_start,
+                    a.scheduled_end_time as scheduled_end,
+                    jl.status,
+                    jl.sequence_order as order_index
+                FROM job_locations jl
+                JOIN appointments a ON jl.appointment_id = a.id
+                LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+                WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
+                ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
                 "#,
             )
             .bind(&tenant_id)

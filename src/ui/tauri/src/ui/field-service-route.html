@@ -481,16 +481,16 @@
 
         if (job.status === 'pending') {
           actionButtons = `
-            <button class="btn btn-primary" onclick="updateJobStatus('${job.id}', 'en_route')">Start Travel</button>
+            <button class="btn btn-primary" data-testid="btn-start-travel-${job.id}" onclick="updateJobStatus('${job.id}', 'en_route')">Start Travel</button>
           `;
         } else if (job.status === 'en_route') {
           actionButtons = `
-            <button class="btn btn-primary" onclick="updateJobStatus('${job.id}', 'on_site')">Arrived On-Site</button>
+            <button class="btn btn-primary" data-testid="btn-arrived-${job.id}" onclick="updateJobStatus('${job.id}', 'on_site')">Arrived On-Site</button>
           `;
         } else if (job.status === 'on_site') {
           actionButtons = `
             <button class="btn btn-secondary">Generate Quote</button>
-            <button class="btn btn-primary" onclick="updateJobStatus('${job.id}', 'done')">Job Done</button>
+            <button class="btn btn-primary" data-testid="btn-job-done-${job.id}" onclick="updateJobStatus('${job.id}', 'done')">Job Done</button>
           `;
         } else if (job.status === 'done') {
           actionButtons = `
@@ -500,7 +500,7 @@
 
         return `
           <div class="route-card" data-testid="job-card-${job.id}">
-            <div class="job-status status-${job.status}">${job.status.replace('_', ' ')}</div>
+            <div class="job-status status-${job.status}" data-testid="job-status-${job.id}">${job.status.replace('_', ' ')}</div>
             <h2 class="job-title">${job.job_title}</h2>
             <div class="job-address">📍 ${job.address}</div>
             <div class="job-time">
