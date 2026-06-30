@@ -24,7 +24,7 @@ export function DailyWorkCard({ item, onApprove, onDismiss }: Props) {
 
   return (
     <div
-      data-testid="daily-work-card"
+      data-testid={`triage-card-${item.id}`}
       className="glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4 mb-4"
     >
       <div className="flex justify-between items-start">
@@ -50,7 +50,7 @@ export function DailyWorkCard({ item, onApprove, onDismiss }: Props) {
       <div className="flex flex-col sm:flex-row gap-3 mt-2">
         <button
           onClick={() => onApprove(item.id)}
-          data-testid={`approve-${item.id}`}
+          data-testid={`triage-approve-${item.id}`}
           className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
         >
           Approve

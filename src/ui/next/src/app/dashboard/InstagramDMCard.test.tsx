@@ -58,7 +58,7 @@ describe('InstagramDMCard', () => {
 
     render(<InstagramDMCard approval={approval} onApprove={onApprove} />);
 
-    const btn = screen.getByTestId('approve-instagram-dm');
+    const btn = screen.getByTestId(`triage-approve-${approval.id}`);
     fireEvent.click(btn);
 
     expect(onApprove).toHaveBeenCalledTimes(1);
@@ -70,7 +70,7 @@ describe('InstagramDMCard', () => {
 
     render(<InstagramDMCard approval={approval} onDismiss={onDismiss} />);
 
-    const btn = screen.getByTestId('dismiss-instagram-dm');
+    const btn = screen.getByTestId(`triage-dismiss-${approval.id}`);
     fireEvent.click(btn);
 
     expect(onDismiss).toHaveBeenCalledTimes(1);

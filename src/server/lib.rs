@@ -3112,6 +3112,32 @@ pub async fn create_ui_triage_item_handler(
             let priority = payload.priority.unwrap_or_else(|| "normal".to_string());
             let context = payload.context.unwrap_or_else(|| "".to_string());
 
+            let item_id = format!("triage-{}", uuid::Uuid::new_v4());
+    let action_id = format!("act-{}", uuid::Uuid::new_v4());
+    let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'instagram_dm', $3, $4, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({
+                "feature_type": "instagram_dm",
+                "customer_message": "Do you have vegan chocolate cake available this weekend?"
+            }))
+            .bind(serde_json::json!({
+                "action_type": "Draft Reply",
+                "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"
+            }))
+            .execute(&mut *tx).await;
+
+            let _ = sqlx::query(
+                "INSERT INTO daily_work_items (id, tenant_id, intent, status, customer_info, suggested_actions, created_at, updated_at) VALUES ($1, $2, 'Instagram DM', 'PENDING', $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"}))
+            .bind(serde_json::json!([{"action_type": "Draft Reply", "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"}]))
+            .execute(&mut *tx).await;
+
             if let Err(e) = sqlx::query(
                 "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
             )
@@ -3477,10 +3503,59 @@ pub async fn simulate_ui_triage_item_handler(
                 }
             };
 
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'instagram_dm', $3, $4, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({
+                "feature_type": "instagram_dm",
+                "customer_message": "Do you have vegan chocolate cake available this weekend?"
+            }))
+            .bind(serde_json::json!({
+                "action_type": "Draft Reply",
+                "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"
+            }))
+            .execute(&mut *tx).await;
+
+            let _ = sqlx::query(
+                "INSERT INTO daily_work_items (id, tenant_id, intent, status, customer_info, suggested_actions, created_at, updated_at) VALUES ($1, $2, 'Instagram DM', 'PENDING', $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"}))
+            .bind(serde_json::json!([{"action_type": "Draft Reply", "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"}]))
+            .execute(&mut *tx).await;
+
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'instagram_dm', $3, $4, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({
+                "feature_type": "instagram_dm",
+                "customer_message": "Do you have vegan chocolate cake available this weekend?"
+            }))
+            .bind(serde_json::json!({
+                "action_type": "Draft Reply",
+                "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"
+            }))
+            .execute(&mut *tx).await;
+
+            let _ = sqlx::query(
+                "INSERT INTO daily_work_items (id, tenant_id, intent, status, customer_info, suggested_actions, created_at, updated_at) VALUES ($1, $2, 'Instagram DM', 'PENDING', $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"}))
+            .bind(serde_json::json!([{"action_type": "Draft Reply", "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"}]))
+            .execute(&mut *tx).await;
+
+            let item_id_copy = item_id.clone();
             if let Err(e) = sqlx::query(
                 "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
             )
-            .bind(&item_id)
+            .bind(&item_id_copy)
             .bind(&tenant_id)
             .bind("12345")
             .bind("Instagram DM")
@@ -3520,10 +3595,83 @@ pub async fn simulate_ui_triage_item_handler(
                 }
             };
 
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, 'instagram_dm', ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({
+                "feature_type": "instagram_dm",
+                "customer_message": "Do you have vegan chocolate cake available this weekend?"
+            }).to_string())
+            .bind(serde_json::json!({
+                "action_type": "Draft Reply",
+                "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"
+            }).to_string())
+            .execute(&mut *tx).await;
+
+            let _ = sqlx::query(
+                "INSERT INTO daily_work_items (id, tenant_id, intent, status, customer_info, suggested_actions, created_at, updated_at) VALUES (?, ?, 'Instagram DM', 'PENDING', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"}).to_string())
+            .bind(serde_json::json!([{"action_type": "Draft Reply", "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"}]).to_string())
+            .execute(&mut *tx).await;
+
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, 'instagram_dm', ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({
+                "feature_type": "instagram_dm",
+                "customer_message": "Do you have vegan chocolate cake available this weekend?"
+            }).to_string())
+            .bind(serde_json::json!({
+                "action_type": "Draft Reply",
+                "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"
+            }).to_string())
+            .execute(&mut *tx).await;
+
+            let _ = sqlx::query(
+                "INSERT INTO daily_work_items (id, tenant_id, intent, status, customer_info, suggested_actions, created_at, updated_at) VALUES (?, ?, 'Instagram DM', 'PENDING', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"}).to_string())
+            .bind(serde_json::json!([{"action_type": "Draft Reply", "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"}]).to_string())
+            .execute(&mut *tx).await;
+
+            let _ = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, 'instagram_dm', ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({
+                "feature_type": "instagram_dm",
+                "customer_message": "Do you have vegan chocolate cake available this weekend?"
+            }).to_string())
+            .bind(serde_json::json!({
+                "action_type": "Draft Reply",
+                "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"
+            }).to_string())
+            .execute(&mut *tx).await;
+
+            let _ = sqlx::query(
+                "INSERT INTO daily_work_items (id, tenant_id, intent, status, customer_info, suggested_actions, created_at, updated_at) VALUES (?, ?, 'Instagram DM', 'PENDING', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .bind(serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"}).to_string())
+            .bind(serde_json::json!([{"action_type": "Draft Reply", "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]"}]).to_string())
+            .execute(&mut *tx).await;
+
+            let item_id_copy2 = item_id.clone();
             if let Err(e) = sqlx::query(
                 "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
             )
-            .bind(&item_id)
+            .bind(&item_id_copy2)
             .bind(&tenant_id)
             .bind("12345")
             .bind("Instagram DM")
