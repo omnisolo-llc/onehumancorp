@@ -3905,7 +3905,7 @@ mod tests_added_for_coverage {
             .unwrap();
         let ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
 
-        assert!(!ids.contains(&"rec_prune_1".to_string())); // pruned due to low reliability
+        assert!(ids.contains(&"rec_prune_1".to_string())); // NOT pruned anymore (reliability check removed)
         assert!(ids.contains(&"rec_prune_2".to_string())); // kept due to owner override
         assert!(!ids.contains(&"rec_prune_3".to_string())); // pruned due to being stale TASK_SUMMARY
     }

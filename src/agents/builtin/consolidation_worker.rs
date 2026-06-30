@@ -29,6 +29,18 @@ impl ConsolidationWorker {
 
     /// Run a single consolidation pass manually. Useful for testing.
     pub async fn run_once(&self) -> Result<(usize, bool), String> {
+        let threshold_date = Utc::now() - chrono::Duration::days(self.pruning_threshold_days);
+        let pruning_success = match self.repository.prune_stale(threshold_date).await {
+            Ok(_) => true,
+            Err(e) => {
+                tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
+                if let Some(ref cb) = self.telemetry_error_callback {
+                    cb("Consolidation Worker: Failed to prune stale context", &e);
+                }
+                return Err(e);
+            }
+        };
+
         let conflicts_resolved = match self.repository.auto_resolve_conflicts().await {
             Ok(count) => count,
             Err(e) => {
@@ -41,18 +53,6 @@ impl ConsolidationWorker {
                         "Consolidation Worker: Failed to resolve memory conflicts",
                         &e,
                     );
-                }
-                return Err(e);
-            }
-        };
-
-        let threshold_date = Utc::now() - chrono::Duration::days(self.pruning_threshold_days);
-        let pruning_success = match self.repository.prune_stale(threshold_date).await {
-            Ok(_) => true,
-            Err(e) => {
-                tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
-                if let Some(ref cb) = self.telemetry_error_callback {
-                    cb("Consolidation Worker: Failed to prune stale context", &e);
                 }
                 return Err(e);
             }
