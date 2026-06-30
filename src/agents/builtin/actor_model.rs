@@ -198,7 +198,7 @@ impl Actor for ToolActor {
                                             if count > 2 {
                                                 format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg)
                                             } else {
-                                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &msg).error
+                                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable("".to_string(), &tc.name, &msg).error
                                             }
                                         },
                                         ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => msg,
