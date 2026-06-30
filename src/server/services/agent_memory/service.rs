@@ -96,6 +96,43 @@ impl AgentMemoryService {
         }
         Ok(None)
     }
+    pub async fn retrieve_tenant_memory(&self, tenant_id: &str) -> Result<Vec<EpisodicMemory>, String> {
+        let pattern = format!("ohc:mem:{}:*", tenant_id);
+        let mut memories = Vec::new();
+
+        if let Some(mut conn) = self.get_redis_conn().await {
+            use redis::AsyncCommands;
+            let mut keys = Vec::new();
+            {
+                let mut iter: redis::AsyncIter<String> = conn.scan_match(&pattern).await.map_err(|e| e.to_string())?;
+                while let Some(key) = iter.next_item().await {
+                    keys.push(key);
+                }
+            }
+            for key in keys {
+                if let Ok(Some(serialized)) = conn.get::<_, Option<String>>(&key).await {
+                    if let Ok(memory) = serde_json::from_str::<EpisodicMemory>(&serialized) {
+                        if memory.tenant_id == tenant_id {
+                            memories.push(memory);
+                        }
+                    }
+                }
+            }
+            return Ok(memories);
+        }
+
+        // Fallback to in-memory store
+        for entry in self.fallback_cache.iter() {
+            let key = entry.key();
+            let memory = entry.value();
+            if key.starts_with(&format!("ohc:mem:{}:", tenant_id)) && memory.tenant_id == tenant_id {
+                memories.push(memory.clone());
+            }
+        }
+
+        Ok(memories)
+    }
+
 }
 
 #[cfg(test)]

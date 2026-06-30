@@ -101,14 +101,14 @@ impl VectorRepository {
                     "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
                      VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12) \
                      ON CONFLICT(id) DO UPDATE SET \
-                         content=excluded.content, \
-                         embedding=excluded.embedding, \
-                         created_at=excluded.created_at, \
+                         content=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.content WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.content ELSE consolidated_memory.content END, \
+                         embedding=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.embedding WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.embedding ELSE consolidated_memory.embedding END, \
+                         created_at=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.created_at WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.created_at ELSE consolidated_memory.created_at END, \
                          last_referenced_at=excluded.last_referenced_at, \
                          reference_count=excluded.reference_count, \
-                         reliability_score=excluded.reliability_score, \
-                         owner_override=excluded.owner_override, \
-                         metadata=excluded.metadata"
+                         reliability_score=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.reliability_score WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.reliability_score ELSE consolidated_memory.reliability_score END, \
+                         owner_override=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.owner_override WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.owner_override ELSE consolidated_memory.owner_override END, \
+                         metadata=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.metadata WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.metadata ELSE consolidated_memory.metadata END"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
@@ -131,14 +131,14 @@ impl VectorRepository {
                     "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
                      ON CONFLICT(id) DO UPDATE SET \
-                         content=excluded.content, \
-                         embedding=excluded.embedding, \
-                         created_at=excluded.created_at, \
+                         content=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.content WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.content ELSE consolidated_memory.content END, \
+                         embedding=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.embedding WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.embedding ELSE consolidated_memory.embedding END, \
+                         created_at=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.created_at WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.created_at ELSE consolidated_memory.created_at END, \
                          last_referenced_at=excluded.last_referenced_at, \
                          reference_count=excluded.reference_count, \
-                         reliability_score=excluded.reliability_score, \
-                         owner_override=excluded.owner_override, \
-                         metadata=excluded.metadata"
+                         reliability_score=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.reliability_score WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.reliability_score ELSE consolidated_memory.reliability_score END, \
+                         owner_override=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.owner_override WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.owner_override ELSE consolidated_memory.owner_override END, \
+                         metadata=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.metadata WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.metadata ELSE consolidated_memory.metadata END"
                 )
                 .bind(&record.id)
                 .bind(&record.tenant_id)
@@ -3828,8 +3828,8 @@ mod reliability_score_tests {
         assert_eq!(results.len(), 1, "Only the winner should remain");
         assert_eq!(results[0].id, "winner_low_score");
         assert_eq!(
-            results[0].reliability_score, 95,
-            "Winner should have inherited the maximum reliability score (95)"
+            results[0].reliability_score, 60,
+            "Winner should retain its own reliability score (60)"
         );
     }
 }
@@ -4171,4 +4171,103 @@ mod list_recent_tests {
         assert_eq!(results_limited[0].id, "now");
         assert_eq!(results_limited[1].id, "earlier");
     }
+}
+#[tokio::test]
+async fn test_conflict_resolution() {
+    use std::str::FromStr;
+    let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect_with(conn_opts)
+        .await
+        .unwrap();
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS consolidated_memory (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            agent_id TEXT,
+            content TEXT NOT NULL,
+            embedding TEXT,
+            source_type TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            reference_count INTEGER DEFAULT 0,
+            reliability_score INTEGER DEFAULT 50,
+            owner_override BOOLEAN DEFAULT FALSE,
+            metadata TEXT
+        );"
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let repo = VectorRepository::new_sqlite(pool.clone());
+
+    let rec1 = EmbeddingRecord {
+        id: "conflict_1".to_string(),
+        tenant_id: "org1".to_string(),
+        agent_id: "agent1".to_string(),
+        content: "Original value: 50".to_string(),
+        embedding: vec![0.1],
+        source_type: "SESSION_DATA".to_string(),
+        created_at: chrono::Utc::now(),
+        last_referenced_at: chrono::Utc::now(),
+        reference_count: 1,
+        reliability_score: 50,
+        owner_override: false,
+        metadata: None,
+    };
+    repo.upsert(&rec1).await.unwrap();
+
+    let mut rec2 = rec1.clone();
+    rec2.content = "New value lower score: 55".to_string();
+    rec2.reliability_score = 40;
+    rec2.created_at = chrono::Utc::now();
+    repo.upsert(&rec2).await.unwrap();
+
+    let row = sqlx::query("SELECT content FROM consolidated_memory WHERE id = 'conflict_1'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let content: String = row.get("content");
+    assert_eq!(content, "Original value: 50");
+
+    let mut rec3 = rec1.clone();
+    rec3.content = "New value higher score: 60".to_string();
+    rec3.reliability_score = 60;
+    rec3.created_at = chrono::Utc::now();
+    repo.upsert(&rec3).await.unwrap();
+
+    let row = sqlx::query("SELECT content FROM consolidated_memory WHERE id = 'conflict_1'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let content: String = row.get("content");
+    assert_eq!(content, "New value higher score: 60");
+
+    let mut rec4 = rec3.clone();
+    rec4.content = "Owner override value".to_string();
+    rec4.owner_override = true;
+    rec4.reliability_score = 10;
+    repo.upsert(&rec4).await.unwrap();
+
+    let row = sqlx::query("SELECT content FROM consolidated_memory WHERE id = 'conflict_1'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let content: String = row.get("content");
+    assert_eq!(content, "Owner override value");
+
+    let mut rec5 = rec4.clone();
+    rec5.content = "High score but no override".to_string();
+    rec5.owner_override = false;
+    rec5.reliability_score = 100;
+    repo.upsert(&rec5).await.unwrap();
+
+    let row = sqlx::query("SELECT content FROM consolidated_memory WHERE id = 'conflict_1'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    let content: String = row.get("content");
+    assert_eq!(content, "Owner override value");
 }
