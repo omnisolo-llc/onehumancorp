@@ -42,58 +42,93 @@ async fn handle_create_service(
         _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
 
-    let pool = db.pool.clone();
-
-    let mut tx = match pool.begin().await {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::error!("failed to begin tx: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(CreateServiceResponse {
-                    success: false,
-                    service_id: None,
-                    error: Some("internal error".to_string()),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    let _ = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
     let service_id = uuid::Uuid::new_v4().to_string();
     let price = payload.price_cents.unwrap_or(0);
     let desc = payload.description.unwrap_or_else(|| "".to_string());
 
-    let res = sqlx::query(
-        r#"
-        INSERT INTO services (id, tenant_id, title, description, price_cents, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-        "#,
-    )
-    .bind(&service_id)
-    .bind(&tenant_id)
-    .bind(&payload.title)
-    .bind(&desc)
-    .bind(price)
-    .execute(&mut *tx)
-    .await;
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let pool = db.pool.clone();
+            let mut tx = match pool.begin().await {
+                Ok(t) => t,
+                Err(e) => {
+                    tracing::error!("failed to begin tx: {}", e);
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(CreateServiceResponse {
+                            success: false,
+                            service_id: None,
+                            error: Some("internal error".to_string()),
+                        }),
+                    )
+                        .into_response();
+                }
+            };
 
-    if let Err(e) = res {
-        tracing::error!("failed to create service: {}", e);
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(CreateServiceResponse {
-                success: false,
-                service_id: None,
-                error: Some("failed to create service".to_string()),
-            }),
-        )
-            .into_response();
+            let _ = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
+
+            let res = sqlx::query(
+                r#"
+                INSERT INTO services (id, tenant_id, title, description, price_cents, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+                "#,
+            )
+            .bind(&service_id)
+            .bind(&tenant_id)
+            .bind(&payload.title)
+            .bind(&desc)
+            .bind(price)
+            .execute(&mut *tx)
+            .await;
+
+            if let Err(e) = res {
+                tracing::error!("failed to create service: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(CreateServiceResponse {
+                        success: false,
+                        service_id: None,
+                        error: Some("failed to create service".to_string()),
+                    }),
+                )
+                    .into_response();
+            }
+            let _ = tx.commit().await;
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let _ = sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES (?, 'Test Tenant', 'starter') ON CONFLICT (id) DO NOTHING")
+                .bind(&tenant_id)
+                .execute(pool)
+                .await;
+
+            let res = sqlx::query(
+                r#"
+                INSERT INTO services (id, tenant_id, title, description, price_cents, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                "#,
+            )
+            .bind(&service_id)
+            .bind(&tenant_id)
+            .bind(&payload.title)
+            .bind(&desc)
+            .bind(price)
+            .execute(pool)
+            .await;
+
+            if let Err(e) = res {
+                tracing::error!("failed to create service in sqlite: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(CreateServiceResponse {
+                        success: false,
+                        service_id: None,
+                        error: Some("failed to create service".to_string()),
+                    }),
+                )
+                    .into_response();
+            }
+        }
     }
-
-    let _ = tx.commit().await;
 
     (
         StatusCode::OK,
@@ -116,7 +151,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_service_success() {
-        let db = Arc::new(DB::new_for_test().await);
+        let pool = crate::db::create_sqlite_pool_for_test().await;
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, business_name TEXT, plan_tier TEXT)")
+            .execute(&pool)
+            .await;
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS services (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, price_cents BIGINT, created_at TEXT, updated_at TEXT)")
+            .execute(&pool)
+            .await;
+
+        let db = Arc::new(DB {
+            pool: crate::db::get_pool(),
+            store: crate::db::DbStore::Sqlite(pool),
+        });
         let app = router(db.clone());
 
         let payload = json!({
@@ -143,7 +191,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_service_unauthorized() {
-        let db = Arc::new(DB::new_for_test().await);
+        let pool = crate::db::create_sqlite_pool_for_test().await;
+        let db = Arc::new(DB {
+            pool: crate::db::get_pool(),
+            store: crate::db::DbStore::Sqlite(pool),
+        });
         let app = router(db.clone());
 
         let payload = json!({
