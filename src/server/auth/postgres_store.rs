@@ -412,8 +412,6 @@ impl UserRepository for PgUserRepository {
 
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
-        let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
@@ -433,11 +431,7 @@ impl UserRepository for PgUserRepository {
 
 
         let now = chrono::Utc::now();
-        let _ = if should_bypass {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
-        } else {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = current_setting('app.current_tenant')::text").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
-        };
+        sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = current_setting('app.current_tenant')::text").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
