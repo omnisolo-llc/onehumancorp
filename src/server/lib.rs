@@ -5359,6 +5359,121 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
     }
 }
 
+
+async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: &str, mobile_optimized: bool) -> serde_json::Value {
+    let m_key = format!("ui_dashboard_metrics:{}:mobile:{}", tenant_id, mobile_optimized);
+    let o_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
+    let i_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
+    let t_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
+    let p_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
+    let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
+    let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
+
+    let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res) = tokio::join!(
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let m_key_clone = m_key.clone();
+            async move {
+                if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&m_key_clone).await { return v; }
+                }
+                load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
+            }
+        }),
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let o_key_clone = o_key.clone();
+            async move {
+                if let Some(c) = UI_ORDERS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&o_key_clone).await { return v; }
+                }
+                load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            }
+        }),
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let i_key_clone = i_key.clone();
+            async move {
+                if let Some(c) = UI_INBOX_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&i_key_clone).await { return v; }
+                }
+                load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            }
+        }),
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let t_key_clone = t_key.clone();
+            async move {
+                if let Some(c) = UI_TRIAGE_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&t_key_clone).await { return v; }
+                }
+                load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            }
+        }),
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let p_key_clone = p_key.clone();
+            async move {
+                if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&p_key_clone).await { return v; }
+                }
+                load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+            }
+        }),
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let a_key_clone = a_key.clone();
+            async move {
+                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&a_key_clone).await { return v; }
+                }
+                let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
+                for approval in &mut res {
+                    if let Some(obj) = approval.as_object_mut() {
+                        if !obj.contains_key("lifecycle_state") {
+                            let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                            let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                            obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                        }
+                    }
+                }
+                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
+                res
+            }
+        }),
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let f_key_clone = f_key.clone();
+            async move {
+                if let Some(c) = UI_AGENT_FEED_CACHE.get() {
+                    if let Some((v, _)) = c.get_with_swr(&f_key_clone).await { return v; }
+                }
+                let res = load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
+                if let Some(c) = UI_AGENT_FEED_CACHE.get() { c.set(&f_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
+                res
+            }
+        })
+    );
+
+    serde_json::json!({
+        "metrics": metrics_res.unwrap_or_default(),
+        "orders": orders_res.unwrap_or_default(),
+        "inbox": inbox_res.unwrap_or_default(),
+        "triage": triage_res.unwrap_or_default(),
+        "pending_approvals": approvals_res.unwrap_or_default(),
+        "agent_feed": agent_feed_res.unwrap_or_default(),
+        "priority_tasks": priority_tasks_res.unwrap_or_default(),
+    })
+}
+
+
 async fn ui_dashboard_unified_feed_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
@@ -5390,97 +5505,7 @@ async fn ui_dashboard_unified_feed_handler(
         let t_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let m_key = format!("ui_dashboard_metrics:{}:mobile:{}", t_bg, mobile_optimized);
-            let o_key = format!("ui_orders:{}:mobile:{}", t_bg, mobile_optimized);
-            let i_key = format!("ui_inbox:{}:mobile:{}", t_bg, mobile_optimized);
-            let t_key = format!("ui_triage:{}:mobile:{}", t_bg, mobile_optimized);
-            let p_key = format!("ui_priority_tasks:{}:mobile:{}", t_bg, mobile_optimized);
-
-            let db_bg_1 = db_bg.clone(); let t_bg_1 = t_bg.clone(); let m_key_1 = m_key.clone();
-            let db_bg_2 = db_bg.clone(); let t_bg_2 = t_bg.clone(); let o_key_2 = o_key.clone();
-            let db_bg_3 = db_bg.clone(); let t_bg_3 = t_bg.clone(); let i_key_3 = i_key.clone();
-            let db_bg_4 = db_bg.clone(); let t_bg_4 = t_bg.clone(); let t_key_4 = t_key.clone();
-            let db_bg_5 = db_bg.clone(); let t_bg_5 = t_bg.clone(); let p_key_5 = p_key.clone();
-            let a_key = format!("ui_approvals:{}:mobile:{}", t_bg, mobile_optimized);
-            let f_key = format!("ui_agent_feed:{}:mobile:{}", t_bg, mobile_optimized);
-            let db_bg_6 = db_bg.clone(); let t_bg_6 = t_bg.clone(); let a_key_6 = a_key.clone();
-            let db_bg_7 = db_bg.clone(); let t_bg_7 = t_bg.clone(); let f_key_7 = f_key.clone();
-
-            let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res) = tokio::join!(
-                tokio::spawn(async move {
-                    if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&m_key_1).await { return v; }
-                    }
-                    load_ui_dashboard_metrics(&db_bg_1, &t_bg_1, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
-                }),
-                tokio::spawn(async move {
-                    if let Some(c) = UI_ORDERS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&o_key_2).await { return v; }
-                    }
-                    load_ui_orders_from_db(&db_bg_2, &t_bg_2, mobile_optimized).await.unwrap_or_default()
-                }),
-                tokio::spawn(async move {
-                    if let Some(c) = UI_INBOX_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&i_key_3).await { return v; }
-                    }
-                    load_ui_inbox_from_db(&db_bg_3, &t_bg_3, mobile_optimized).await.unwrap_or_default()
-                }),
-                tokio::spawn(async move {
-                    if let Some(c) = UI_TRIAGE_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&t_key_4).await { return v; }
-                    }
-                    load_ui_triage_from_db(&db_bg_4, &t_bg_4, mobile_optimized).await.unwrap_or_default()
-                }),
-                tokio::spawn(async move {
-                    if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&p_key_5).await { return v; }
-                    }
-                    load_ui_priority_tasks_from_db(&db_bg_5, &t_bg_5, mobile_optimized).await.unwrap_or_default()
-                }),
-                tokio::spawn(async move {
-                    if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&a_key_6).await { return v; }
-                    }
-                    let mut res = load_ui_agent_approvals_from_db(&db_bg_6, &t_bg_6, mobile_optimized).await.unwrap_or_default();
-                    for approval in &mut res {
-                        if let Some(obj) = approval.as_object_mut() {
-                            if !obj.contains_key("lifecycle_state") {
-                                let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
-                                let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
-                                obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
-                            }
-                        }
-                    }
-                    if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_6, res.clone(), std::time::Duration::from_secs(10)).await; }
-                    res
-                }),
-                tokio::spawn(async move {
-                    if let Some(c) = UI_AGENT_FEED_CACHE.get() {
-                        if let Some((v, _)) = c.get_with_swr(&f_key_7).await { return v; }
-                    }
-                    let res = load_ui_agent_feed_from_db(&db_bg_7, &t_bg_7, mobile_optimized).await.unwrap_or_default();
-                    if let Some(c) = UI_AGENT_FEED_CACHE.get() { c.set(&f_key_7, res.clone(), std::time::Duration::from_secs(10)).await; }
-                    res
-                })
-            );
-
-            let metrics_val = metrics_res.unwrap_or_default();
-            let orders = orders_res.unwrap_or_default();
-            let inbox = inbox_res.unwrap_or_default();
-            let triage = triage_res.unwrap_or_default();
-            let priority_tasks = priority_tasks_res.unwrap_or_default();
-            let approvals = approvals_res.unwrap_or_default();
-            let agent_feed = agent_feed_res.unwrap_or_default();
-
-            let result = serde_json::json!({
-                "metrics": metrics_val,
-                "orders": orders,
-                "inbox": inbox,
-                "triage": triage,
-                "pending_approvals": approvals,
-                "agent_feed": agent_feed,
-                "priority_tasks": priority_tasks,
-            });
+            let result = fetch_unified_feed_data(&db_bg, &t_bg, mobile_optimized).await;
             if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
             }
@@ -5496,128 +5521,12 @@ async fn ui_dashboard_unified_feed_handler(
         return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
     }
 
-    let m_key = format!("ui_dashboard_metrics:{}:mobile:{}", tenant_id, mobile_optimized);
-    let o_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
-    let i_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
-    let t_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
-    let p_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
-    let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
-    let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
-
-    let (metrics_res, orders_res, inbox_res, triage_res, priority_tasks_res, approvals_res, agent_feed_res, supply_res) = tokio::join!(
-        tokio::spawn({
-            let db_clone = db.clone();
-            let t_clone = tenant_id.clone();
-            let m_key_clone = m_key.clone();
-            async move {
-                if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&m_key_clone).await { return v; }
-                }
-                load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
-            }
-        }),
-        tokio::spawn({
-            let db_clone = db.clone();
-            let t_clone = tenant_id.clone();
-            let o_key_clone = o_key.clone();
-            async move {
-                if let Some(c) = UI_ORDERS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&o_key_clone).await { return v; }
-                }
-                load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-            }
-        }),
-        tokio::spawn({
-            let db_clone = db.clone();
-            let t_clone = tenant_id.clone();
-            let i_key_clone = i_key.clone();
-            async move {
-                if let Some(c) = UI_INBOX_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&i_key_clone).await { return v; }
-                }
-                load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-            }
-        }),
-        tokio::spawn({
-            let db_clone = db.clone();
-            let t_clone = tenant_id.clone();
-            let t_key_clone = t_key.clone();
-            async move {
-                if let Some(c) = UI_TRIAGE_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&t_key_clone).await { return v; }
-                }
-                load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-            }
-        }),
-        tokio::spawn({
-            let db_clone = db.clone();
-            let t_clone = tenant_id.clone();
-            let p_key_clone = p_key.clone();
-            async move {
-                if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&p_key_clone).await { return v; }
-                }
-                load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
-            }
-        }),
-        tokio::spawn({
-            let db_clone = db.clone();
-            let t_clone = tenant_id.clone();
-            let a_key_clone = a_key.clone();
-            async move {
-                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&a_key_clone).await { return v; }
-                }
-                let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
-                for approval in &mut res {
-                    if let Some(obj) = approval.as_object_mut() {
-                        if !obj.contains_key("lifecycle_state") {
-                            let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
-                            let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
-                            obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
-                        }
-                    }
-                }
-                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
-                res
-            }
-        }),
-        tokio::spawn({
-            let db_clone = db.clone();
-            let t_clone = tenant_id.clone();
-            let f_key_clone = f_key.clone();
-            async move {
-                if let Some(c) = UI_AGENT_FEED_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&f_key_clone).await { return v; }
-                }
-                let res = load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
-                if let Some(c) = UI_AGENT_FEED_CACHE.get() { c.set(&f_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
-                res
-            }
-        }),
+    let (cacheable_result, supply_res) = tokio::join!(
+        fetch_unified_feed_data(&db, &tenant_id, mobile_optimized),
         supply_future
     );
 
-    let metrics_val = metrics_res.unwrap_or_default();
-    let orders = orders_res.unwrap_or_default();
-    let inbox = inbox_res.unwrap_or_default();
-    let triage = triage_res.unwrap_or_default();
-    let priority_tasks = priority_tasks_res.unwrap_or_default();
-    let approvals = approvals_res.unwrap_or_default();
-    let agent_feed = agent_feed_res.unwrap_or_default();
-
     let supply_val = supply_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
-
-
-    let cacheable_result = serde_json::json!({
-        "metrics": metrics_val,
-        "orders": orders,
-        "inbox": inbox,
-        "triage": triage,
-        "pending_approvals": approvals,
-        "agent_feed": agent_feed,
-        "priority_tasks": priority_tasks,
-    });
 
     if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
         let cache_key_set = cache_key.clone();
@@ -5633,6 +5542,35 @@ async fn ui_dashboard_unified_feed_handler(
 
     (axum::http::StatusCode::OK, axum::Json(final_result)).into_response()
 }
+
+
+async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: &str, mobile_optimized: bool) -> serde_json::Value {
+    let (approvals_res, ledger_res, agent_feed_res) = tokio::join!(
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.to_string(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.to_string(); async move { load_ui_ledger_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.to_string(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } })
+    );
+
+    let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    for approval in &mut pending_approvals {
+        if let Some(obj) = approval.as_object_mut() {
+            if !obj.contains_key("lifecycle_state") {
+                let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+            }
+        }
+    }
+    let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+
+    serde_json::json!({
+        "pending_approvals": pending_approvals,
+        "entries": entries,
+        "agent_feed": agent_feed
+    })
+}
+
 
 async fn ui_dashboard_unified_agent_feed_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
@@ -5653,30 +5591,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         let t = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let (approvals_res, ledger_res, agent_feed_res) = tokio::join!(
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } })
-            );
-
-            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            for approval in &mut pending_approvals {
-                if let Some(obj) = approval.as_object_mut() {
-                    if !obj.contains_key("lifecycle_state") {
-                        let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
-                        let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
-                        obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
-                    }
-                }
-            }
-            let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-
-            let result = serde_json::json!({
-                "pending_approvals": pending_approvals,
-                "entries": entries,
-                "agent_feed": agent_feed
-            });
+            let result = fetch_unified_agent_feed_data(&db, &t, mobile_optimized).await;
             if let Some(c) = UI_UNIFIED_AGENT_FEED_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
             }
@@ -5684,30 +5599,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let (approvals_res, ledger_res, agent_feed_res) = tokio::join!(
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t, mobile_optimized).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } })
-    );
-
-            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            for approval in &mut pending_approvals {
-                if let Some(obj) = approval.as_object_mut() {
-                    if !obj.contains_key("lifecycle_state") {
-                        let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
-                        let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
-                        obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
-                    }
-                }
-            }
-    let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-
-    let result = serde_json::json!({
-        "pending_approvals": pending_approvals,
-        "entries": entries,
-        "agent_feed": agent_feed
-    });
+    let result = fetch_unified_agent_feed_data(&db, &tenant_id, mobile_optimized).await;
 
     let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
