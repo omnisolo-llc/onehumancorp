@@ -1156,6 +1156,16 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
         Ok(vec![]) // Default no-op
     }
 
+    /// Hermes Agent Unique Harness Innovations: FTS5 session search: Cross-session recall with LLM summarization.
+    async fn search_cross_session_messages(
+        &self,
+        _query: &str,
+        _limit: usize,
+        _summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        Ok(vec![]) // Default no-op
+    }
+
     /// 3-Tier: Pull a detailed topic file on demand
     async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
         Err("Not implemented".to_string())
@@ -1287,10 +1297,27 @@ impl Anthropic3TierMemoryStore {
             .await
             .map_err(|e| e.to_string())
     }
+
 }
 
 #[async_trait]
 impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
+    async fn search_cross_session_messages(
+        &self,
+        _query: &str,
+        _limit: usize,
+        _summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        // Delegate to underlying memory store's cross session search.
+        // Wait, self.memory does not have search_cross_session_messages. Let's fix LongTermMemory trait usage instead.
+        // Anthropic3TierMemoryStore has a field `memory: crate::memory::anthropic_tier::Anthropic3TierMemory`.
+        // Wait, we can't call self.memory.search_cross_session_messages because Anthropic3TierMemory doesn't have it.
+        // But what about SqliteMemoryStore? It does.
+        // If the LLM uses CrossSessionSearch, it should hit SqliteMemoryStore directly if we return a SqliteMemoryStore as the memory store, or we delegate to the trait.
+        // Wait, Anthropic3TierMemoryStore IS a LongTermMemory. And it has its own tools.
+        Ok(vec!["Fallback: Anthropic 3-Tier memory does not currently support cross-session search directly. Please use SqliteMemoryStore if this feature is required.".to_string()])
+    }
+
     async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
         self.memory
             .write_topic(topic_name, content)

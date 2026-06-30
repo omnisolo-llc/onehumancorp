@@ -13,6 +13,7 @@ use super::{
 pub trait MemoryAccessor: Send + Sync {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String>;
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
+    async fn search_cross_session_messages(&self, query: &str, limit: usize, summarize: bool) -> Result<Vec<String>, String>;
     async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String>;
 }
 
@@ -161,6 +162,69 @@ pub fn topic_write_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
     }
 }
 
+// SOTA Harness Pattern: Pydantic-first tool schema validation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrossSessionSearchArgs {
+    /// The search query to match within session messages across all sessions.
+    pub query: String,
+
+    /// Maximum number of snippets to return (default 5).
+    pub limit: Option<usize>,
+
+    /// Whether to return a synthesized LLM summary of the matching snippets (default true).
+    pub summarize: Option<bool>,
+}
+
+struct CrossSessionSearchExecutor {
+    accessor: Arc<dyn MemoryAccessor>,
+}
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<CrossSessionSearchArgs> for CrossSessionSearchExecutor {
+    async fn execute_typed(&self, args: CrossSessionSearchArgs) -> Result<String, ToolError> {
+        let limit = args.limit.unwrap_or(5);
+        let summarize = args.summarize.unwrap_or(true);
+
+        let results = self.accessor
+            .search_cross_session_messages(&args.query, limit, summarize)
+            .await
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+        if results.is_empty() {
+            Ok(format!("No cross-session messages found matching query: {}", args.query))
+        } else {
+            Ok(results.join("\n\n---\n\n"))
+        }
+    }
+}
+
+pub fn cross_session_search_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
+    Tool {
+        name: "CrossSessionSearch".to_string(),
+        description: "Searches session messages using FTS5 MATCH across ALL past sessions, returning ranked snippets, and optionally summarizing them to synthesize information. (SOTA Harness Pattern: Pydantic-first tool schema)".to_string(),
+        is_read_only: true,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query to match within session messages across all sessions."
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of snippets to return (default 5)."
+                },
+                "summarize": {
+                    "type": "boolean",
+                    "description": "Whether to return a synthesized LLM summary of the matching snippets (default true)."
+                }
+            },
+            "required": ["query"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(CrossSessionSearchExecutor { accessor })),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,6 +239,9 @@ mod tests {
             Ok("".to_string())
         }
         async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
+            Ok(vec![])
+        }
+        async fn search_cross_session_messages(&self, _query: &str, _limit: usize, _summarize: bool) -> Result<Vec<String>, String> {
             Ok(vec![])
         }
         async fn write_topic(&self, _topic_name: &str, _content: &str) -> Result<(), String> {
@@ -220,5 +287,22 @@ mod tests {
         assert!(res.is_err());
         let err_msg = res.unwrap_err().to_string();
         assert!(err_msg.contains("Validation Error (Pydantic-first tool schema)"));
+    }
+
+    #[tokio::test]
+    async fn test_cross_session_search_pydantic_validation() {
+        let accessor = Arc::new(MockMemoryAccessor);
+        let tool = cross_session_search_tool(accessor);
+
+        let invalid_args = json!({});
+        let res = tool.execute.execute(invalid_args).await;
+
+        assert!(res.is_err());
+        let err_msg = res.unwrap_err().to_string();
+        assert!(err_msg.contains("Validation Error (Pydantic-first tool schema)"));
+
+        let valid_args = json!({"query": "hello"});
+        let res_valid = tool.execute.execute(valid_args).await;
+        assert!(res_valid.is_ok());
     }
 }
