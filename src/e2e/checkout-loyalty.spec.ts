@@ -13,8 +13,9 @@ test.describe('Checkout Loyalty UI', () => {
     await expect(loyaltyToggle).toBeVisible();
 
     // Verify translucent glass styling is somewhat present or text is exact
-    await expect(page.locator('text=-10% off')).toBeVisible();
-    await expect(page.locator('text=You have 50 points available')).toBeVisible();
+    // The discount is dynamic, so we just check for the text containing '% off' and 'points available'
+    await expect(page.locator('text=% off').first()).toBeVisible();
+    await expect(page.locator('text=points available').first()).toBeVisible();
 
     // The toggle should change background/appearance when clicked
     const toggleContainer = loyaltyToggle.locator('..');
@@ -39,5 +40,21 @@ test.describe('Checkout Loyalty UI', () => {
 
     // In a real e2e we'd check the background color or class changes, e.g.:
     // await expect(toggleButton).toHaveCSS('background', 'rgba(99, 102, 241, 0.1)');
+  });
+
+  test('should display Taxes and Fees', async ({ page }) => {
+    // Navigate to checkout
+    await page.goto('/checkout');
+
+    // Wait for the page to load by waiting for a visible element
+    await page.waitForSelector('text=Total');
+
+    // Check if Taxes and Fees line item exists
+    const taxesAndFees = page.locator('text=Taxes and Fees');
+    await expect(taxesAndFees).toBeVisible();
+
+    // Check if Calculated at checkout exists
+    const calculatedAtCheckout = page.locator('text=Calculated at checkout');
+    await expect(calculatedAtCheckout).toBeVisible();
   });
 });
