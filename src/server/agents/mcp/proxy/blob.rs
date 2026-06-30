@@ -15,7 +15,7 @@ pub struct LocalBlobProvider {
 impl LocalBlobProvider {
     pub fn new() -> Self {
         Self {
-            base_dir: "/var/tmp/ohc/blobs".to_string(),
+            base_dir: std::env::temp_dir().join("ohc/blobs").to_string_lossy().into_owned(),
         }
     }
 
