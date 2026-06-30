@@ -315,6 +315,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                 .iter()
                 .map(|tc| crate::types::ToolResult::new_llm_recoverable(
                     tc.id.clone(),
+                    &tc.name,
                     &detailed_error,
                 ))
                 .collect();
@@ -344,7 +345,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                 role: crate::types::Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![crate::types::ToolResult::new_llm_recoverable("".to_string(), &error_context)],
+                tool_results: vec![crate::types::ToolResult::new_llm_recoverable("".to_string(), "unknown", &error_context)],
                 response_id: None,
                 previous_response_id: None,
             };

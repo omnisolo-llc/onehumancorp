@@ -218,7 +218,7 @@ impl PlanAndExecuteOrchestrator {
                         Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
                             Ok::<_, String>((
                                 task.task_id,
-                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg),
+                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&task.tool_name, &msg),
                             ))
                         }
                         Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
@@ -260,7 +260,7 @@ impl PlanAndExecuteOrchestrator {
                 let final_res = match res {
                     Ok(r) => r,
                     Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                        ohc_builtin_agent_core::types::format_llm_recoverable_error(&msg)
+                        ohc_builtin_agent_core::types::format_llm_recoverable_error(&task.tool_name, &msg)
                     }
                     Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
                         return Err(format!("USER_FIXABLE: {}", msg));

@@ -16,4 +16,4 @@ tonic = { workspace = true }
 tonic-build = "0.12"
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(ohc_bazel)'] }
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(ohc_bazel)', 'cfg(ohc_bazel_package)', 'cfg(ohc_bazel_tauri_context)'] }
