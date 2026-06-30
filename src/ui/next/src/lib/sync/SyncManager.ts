@@ -139,7 +139,7 @@ export class SyncManager {
              mutation_type: 'agent_intent',
              payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
           };
-        } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status') {
+        } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'generate_invoice') {
             return m; // keep them for specific APIs
         }
         return m;
@@ -232,7 +232,7 @@ export class SyncManager {
       }
 
       // Sync general mutations
-      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status');
+      const generalGenMutations = generalMutations.filter(m => m.type !== 'UPDATE_ORDER_STATUS' && m.type !== 'TOGGLE_SOLD_OUT' && m.type !== 'update_quote' && m.type !== 'approve_quote' && m.type !== 'CRDT_MUTATION' && m.type !== 'triage_action' && m.type !== 'advisory_action' && m.type !== 'field_ops_status' && m.type !== 'generate_invoice');
       if (generalGenMutations.length > 0) {
         const resGen = await fetch('/api/v1/sync/offline', {
           method: 'POST',
@@ -300,6 +300,30 @@ export class SyncManager {
           }
         } catch (err) {
           console.error("Advisory Action Sync error:", err);
+          allOk = false;
+        }
+      }
+
+
+      // Sync generate invoice actions
+      const invoiceActions = generalMutations.filter(m => m.type === 'generate_invoice');
+      for (const action of invoiceActions) {
+        try {
+          const res = await fetch(`/api/v1/invoices/generate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-tenant-id': tenantId,
+              'Idempotency-Key': action.id
+            },
+            body: JSON.stringify(action.payload)
+          });
+          if (!res.ok) {
+            console.error(`Generate Invoice Sync failed with status ${res.status}`);
+            if (res.status >= 500) allOk = false;
+          }
+        } catch (err) {
+          console.error("Generate Invoice Sync error:", err);
           allOk = false;
         }
       }
