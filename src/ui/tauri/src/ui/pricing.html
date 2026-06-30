@@ -352,13 +352,16 @@
                             btn.onclick = managePlan;
                             btn.innerText = 'Manage Plan';
                         }
-                    } else if (plan === 'Free') {
+                    } else if (plan === 'Free' && currentPlan !== 'Free') {
                         // User is on a paid plan, but looking at Free
                         btn.className = 'btn-secondary';
                         btn.style.backgroundColor = '';
                         btn.style.boxShadow = '';
                         btn.disabled = false;
                         btn.innerText = 'Downgrade to Free';
+                        btn.onclick = managePlan;
+                    } else if (plan !== currentPlan && plan !== 'Free' && currentPlan !== 'Free') {
+                        btn.innerText = 'Manage Plan';
                         btn.onclick = managePlan;
                     }
                 });
