@@ -172,13 +172,29 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(&state.db.pool).await;
 
-            let draft_reply = format!(
-                "Hi there! Thanks for your message: '{}'. How can we help?",
-                payload.message
+            let prompt = format!(
+                "You are the Ambassador Agent for tenant {}. You received a message from {} via {}. Context: {}. Message: {}. Draft a short, helpful, context-aware reply.",
+                tenant_id, customer_id, payload.source, context_summary, payload.message
             );
+
+            let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+                Ok("minimax") => {
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                    if api_key.is_empty() {
+                        Ok(format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message))
+                    } else {
+                        crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
+                    }
+                }
+                _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+            };
+
+            let draft_reply = llm_res.unwrap_or_else(|_| format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message));
+
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
-                context_summary,
+                context_summary: context_summary.clone(),
                 draft_reply,
             })
             .unwrap();
@@ -226,13 +242,29 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(sqlite_pool).await;
 
-            let draft_reply = format!(
-                "Hi there! Thanks for your message: '{}'. How can we help?",
-                payload.message
+            let prompt = format!(
+                "You are the Ambassador Agent for tenant {}. You received a message from {} via {}. Context: {}. Message: {}. Draft a short, helpful, context-aware reply.",
+                tenant_id, customer_id, payload.source, context_summary, payload.message
             );
+
+            let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+                Ok("minimax") => {
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                    if api_key.is_empty() {
+                        Ok(format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message))
+                    } else {
+                        crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
+                    }
+                }
+                _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+            };
+
+            let draft_reply = llm_res.unwrap_or_else(|_| format!("Hi there! Thanks for your message: '{}'. How can we help?", payload.message));
+
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
-                context_summary,
+                context_summary: context_summary.clone(),
                 draft_reply,
             })
             .unwrap();
