@@ -377,16 +377,82 @@ pub async fn stripe_webhook_handler(
                 .and_then(|m| m.get("product_id"))
                 .and_then(|id| id.as_str());
 
-            if let (Some(tenant_id), Some(product_id)) = (tenant_id_opt, product_id_opt) {
-                let quantity = obj.get("metadata")
-                    .and_then(|m| m.get("quantity"))
-                    .and_then(|q| q.as_str())
-                    .and_then(|q| q.parse::<i32>().ok())
-                    .unwrap_or(1);
+            if let Some(tenant_id) = tenant_id_opt {
+                if let Some(payment_intent_id) = obj.get("id").and_then(|id| id.as_str()) {
+                    let mut tx = webhook_state.db.pool.begin().await.unwrap();
+                    let update_res = sqlx::query("UPDATE payment_intents SET status = 'succeeded' WHERE stripe_payment_intent_id = $1 AND tenant_id = $2")
+                        .bind(payment_intent_id)
+                        .bind(tenant_id)
+                        .execute(&mut *tx)
+                        .await;
 
-                let inventory_service = crate::services::inventory::InventoryService::new(None);
+                    if update_res.is_ok() {
+                        let payment_info: Option<(f64, String)> = sqlx::query_as("SELECT amount, currency FROM payment_intents WHERE stripe_payment_intent_id = $1")
+                            .bind(payment_intent_id)
+                            .fetch_optional(&mut *tx)
+                            .await.unwrap_or(None);
 
-                let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, "").await;
+                        if let Some((amount, currency)) = payment_info {
+                            let tx_id = uuid::Uuid::new_v4().to_string();
+                            if let Err(e) = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
+                                .bind(tenant_id)
+                                .bind(&tx_id)
+                                .bind(amount)
+                                .bind(&currency)
+                                .execute(&mut *tx)
+                                .await {
+                                tracing::error!("Failed to insert ledger_transactions: {}", e);
+                            } else {
+                                let account_id = "default_revenue";
+                                if let Err(e) = sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                                    .bind(tenant_id)
+                                    .bind(account_id)
+                                    .bind(&currency)
+                                    .bind(0.0)
+                                    .execute(&mut *tx)
+                                    .await {
+                                    tracing::error!("Failed to insert ledger_accounts: {}", e);
+                                } else {
+                                    let entry_id = uuid::Uuid::new_v4().to_string();
+                                    if let Err(e) = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
+                                        .bind(tenant_id)
+                                        .bind(&entry_id)
+                                        .bind(&tx_id)
+                                        .bind(account_id)
+                                        .bind(amount)
+                                        .execute(&mut *tx)
+                                        .await {
+                                        tracing::error!("Failed to insert ledger_entries: {}", e);
+                                    } else {
+                                        if let Err(e) = sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
+                                            .bind(amount)
+                                            .bind(tenant_id)
+                                            .bind(account_id)
+                                            .execute(&mut *tx)
+                                            .await {
+                                            tracing::error!("Failed to update ledger_accounts balance: {}", e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if let Err(e) = tx.commit().await {
+                        tracing::error!("Failed to commit transaction: {}", e);
+                    }
+                }
+
+                if let Some(product_id) = product_id_opt {
+                    let quantity = obj.get("metadata")
+                        .and_then(|m| m.get("quantity"))
+                        .and_then(|q| q.as_str())
+                        .and_then(|q| q.parse::<i32>().ok())
+                        .unwrap_or(1);
+
+                    let inventory_service = crate::services::inventory::InventoryService::new(None);
+
+                    let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, "").await;
+                }
 
                 // Notify KAIROS Orchestrator for Sales and Operations AI agents
                 let orch = webhook_state.orchestrator.clone();
@@ -395,11 +461,20 @@ pub async fn stripe_webhook_handler(
                 tokio::spawn(async move {
                     let evt = crate::orchestration::departments::types::DepartmentEvent {
                         id: uuid::Uuid::new_v4().to_string(),
-                        tenant_id: tenant_id_val,
+                        tenant_id: tenant_id_val.clone(),
                         event_type: "POS_SALE_COMPLETED".to_string(),
-                        payload: payload_val,
+                        payload: payload_val.clone(),
                     };
                     let _ = orch.dispatch_event(evt).await;
+
+                    // Dispatch event for customer success agent to send a receipt
+                    let receipt_evt = crate::orchestration::departments::types::DepartmentEvent {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        tenant_id: tenant_id_val,
+                        event_type: "CUSTOMER_SUCCESS_RECEIPT".to_string(),
+                        payload: payload_val,
+                    };
+                    let _ = orch.dispatch_event(receipt_evt).await;
                 });
             }
 

@@ -713,6 +713,26 @@ pub async fn create_payment_intent_handler(
                 .await {
                     tracing::warn!("Failed to update pos terminal session for generic intent: {}", e);
                 }
+
+                let payment_intent_id = client_secret.split("_secret_").next().unwrap_or("").to_string();
+                let payment_id = uuid::Uuid::new_v4().to_string();
+                let idempotency_key = uuid::Uuid::new_v4().to_string();
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, status, source, stripe_payment_intent_id)
+                     VALUES ($1, $2, $3, $4, $5, 'pending', 'in_person', $6)"
+                )
+                .bind(&tenant_id)
+                .bind(&payment_id)
+                .bind(&idempotency_key)
+                .bind(req_data.amount_cents as f64 / 100.0)
+                .bind(&req_data.currency)
+                .bind(&payment_intent_id)
+                .execute(&pool)
+                .await {
+                    tracing::warn!("Failed to create payment_intent record for terminal: {}", e);
+                }
+
                 Json(Ok(PaymentIntentResponse { client_secret, lock_id: lock_id_out }))
             },
             Err(e) => {
