@@ -53,19 +53,20 @@
   "liveNow": true,
   "panels": [
     {
-      "type": "text",
-      "title": "OHC Aesthetics",
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 24,
         "x": 0,
         "y": 0
       },
+      "id": 281482,
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry"
       },
-      "transparent": true
+      "title": "Aesthetic Mandate Injector",
+      "transparent": true,
+      "type": "text"
     },
     {
       "title": "Agent Violations Feed",

@@ -11,7 +11,7 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetics",
+      "title": "Aesthetic Mandate Injector",
       "gridPos": {
         "h": 2,
         "w": 24,
@@ -20,25 +20,9 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry"
       },
       "transparent": true
-    },
-    {
-      "gridPos": {
-        "h": 3,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 100,
-      "options": {
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry",
-        "mode": "html"
-      },
-      "title": "Aesthetic Mandate Injector",
-      "transparent": true,
-      "type": "text"
     },
     {
       "datasource": {
