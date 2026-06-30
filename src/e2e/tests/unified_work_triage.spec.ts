@@ -22,14 +22,21 @@ test.describe('AI Unified Work Triage Architecture', () => {
         });
         expect(response.status()).toBe(200);
 
-        await page.reload();
+        await page.goto('/triage');
 
-        await expect(page.locator('strong', { hasText: 'Instagram DM' }).first()).toBeVisible();
-        await expect(page.locator('div.triage-context', { hasText: 'vegan chocolate cakes?' }).first()).toBeVisible();
-        await expect(page.locator('div', { hasText: 'Draft Reply:' }).first()).toBeVisible();
+        // Wait for the item to appear in the list
+        await expect(page.locator('span', { hasText: 'Instagram DM' }).first()).toBeVisible({ timeout: 15000 });
+
+        // The context should be visible on the card
+        await expect(page.locator('.ohc-card', { hasText: 'vegan chocolate cakes?' }).first()).toBeVisible();
+
+        // Click to expand the card
+        await page.locator('.ohc-card .p-5').first().click();
+
+        // The draft reply text should be visible after the card expands
         await expect(page.locator('div', { hasText: 'Hi there! Thanks for your message' }).first()).toBeVisible();
 
-        const approveBtn = page.locator('button.triage-btn-approve', { hasText: 'Send Draft' }).first();
+        const approveBtn = page.getByTestId(/triage-approve-.*/).first();
         await expect(approveBtn).toBeVisible();
         await approveBtn.click();
         await page.waitForTimeout(1000);

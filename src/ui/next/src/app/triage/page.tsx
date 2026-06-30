@@ -302,7 +302,14 @@ export default function TriagePage() {
                           Proposed Action: {item.action_type}
                         </div>
                         <div className="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
-                          {item.action_payload || "No specific payload"}
+                          {(() => {
+                            try {
+                              const payload = JSON.parse(item.action_payload || "{}");
+                              return payload.draft_reply || item.action_payload || "No specific payload";
+                            } catch (e) {
+                              return item.action_payload || "No specific payload";
+                            }
+                          })()}
                         </div>
                       </div>
                     )}
