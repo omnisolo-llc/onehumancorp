@@ -270,6 +270,80 @@ async fn update_quote(
         }
     };
 
+    // Check if we are sending the quote, so we can generate the stripe link and soft-lock the calendar slot
+    let mut stripe_payment_link = payload.stripe_payment_link.clone();
+
+    if let Some(status) = &payload.status {
+        if status == "SENT" {
+            let quote_opt = sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
+                .bind(quote_id)
+                .fetch_optional(&mut *tx)
+                .await;
+
+            if let Ok(Some(existing_quote)) = quote_opt {
+                let amount_usd = (payload.required_deposit_cents.unwrap_or(existing_quote.required_deposit_cents.unwrap_or(0)) as f64) / 100.0;
+
+                // Only generate stripe link if it's > 0
+                if amount_usd > 0.0 {
+                    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+                    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+                    if let Ok(url) = stripe_client.create_checkout_session(
+                        &format!("Deposit for Quote #{}", quote_id),
+                        &existing_quote.customer_id.to_string(),
+                        amount_usd,
+                        None,
+                        None
+                    ).await {
+                        stripe_payment_link = Some(url);
+                    }
+                }
+
+                // Attempt to find and reserve an available slot
+                #[derive(sqlx::FromRow)]
+                struct BookingSlot {
+                    id: String,
+                }
+
+                let slot = sqlx::query_as::<_, BookingSlot>(
+                    "SELECT id FROM booking_slots WHERE tenant_id = $1 AND status = 'available' ORDER BY start_time ASC LIMIT 1"
+                )
+                .bind(&existing_quote.tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(None);
+
+                if let Some(s) = slot {
+                    // Attempt to acquire Redis Redlock
+                    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+                    if let Ok(redis_lock) = crate::orchestration::queue::RedisLock::new(&redis_url) {
+                        if let Ok(Some(_val)) = redis_lock.acquire_lock(&existing_quote.tenant_id, "booking_slot", &s.id, 1800).await {
+                            // Lock acquired, update slot status to soft_locked
+                            let updated = sqlx::query(
+                                "UPDATE booking_slots SET status = 'soft_locked' WHERE id = $1 AND tenant_id = $2 AND status = 'available'"
+                            )
+                            .bind(&s.id)
+                            .bind(&existing_quote.tenant_id)
+                            .execute(&mut *tx)
+                            .await;
+
+                            if let Ok(res) = updated {
+                                if res.rows_affected() > 0 {
+                                    let _proposed_slot_id = Some(s.id.clone());
+                                    // Because the quotes table does not have proposed_slot_id column,
+                                    // we only soft lock it without persisting it directly to quotes here.
+                                    // In the schema, proposed_slot_id was removed in a subsequent migration:
+                                    // 156_booking_slots.sql: ALTER TABLE quotes DROP COLUMN IF EXISTS proposed_slot_id;
+                                    // so we cannot bind it to the update query.
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // we can't easily bind dynamic number of parameters in simple query string building
     // so we'll do it securely:
     let update_res = sqlx::query(
@@ -278,7 +352,7 @@ async fn update_quote(
     .bind(payload.total_amount_cents)
     .bind(payload.required_deposit_cents)
     .bind(&payload.status)
-    .bind(&payload.stripe_payment_link)
+    .bind(&stripe_payment_link)
     .bind(quote_id)
     .execute(&mut *tx)
     .await;

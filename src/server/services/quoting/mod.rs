@@ -279,52 +279,6 @@ Task: Extract the scope of work and identify the closest matching service from t
         }
     }
 
-    // Agent parsing: Attempt to find and reserve an available slot
-    let mut proposed_slot_id = None;
-    let mut _lock_val = None;
-
-    // Find first available booking slot for this tenant
-    #[derive(FromRow)]
-    struct BookingSlot {
-        id: String,
-    }
-
-    let slot = sqlx::query_as::<_, BookingSlot>(
-        "SELECT id FROM booking_slots WHERE tenant_id = $1 AND status = 'available' ORDER BY start_time ASC LIMIT 1"
-    )
-    .bind(&claims.organization_id)
-    .fetch_optional(&pool)
-    .await
-    .unwrap_or(None);
-
-    if let Some(s) = slot {
-        // Attempt to acquire Redis Redlock
-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-        if let Ok(redis_lock) = crate::orchestration::queue::RedisLock::new(&redis_url) {
-            let org_id = claims.organization_id.clone().unwrap_or_default();
-            if let Ok(Some(val)) = redis_lock.acquire_lock(&org_id, "booking_slot", &s.id, 600).await {
-                // Lock acquired, update slot status to soft_locked
-                let updated = sqlx::query(
-                    "UPDATE booking_slots SET status = 'soft_locked' WHERE id = $1 AND tenant_id = $2 AND status = 'available'"
-                )
-                .bind(&s.id)
-                .bind(&org_id)
-                .execute(&pool)
-                .await;
-
-                if let Ok(res) = updated {
-                    if res.rows_affected() > 0 {
-                        proposed_slot_id = Some(s.id.clone());
-                        _lock_val = Some(val);
-                    } else {
-                        // Slot was snatched before we updated the DB, release the redis lock
-                        let _ = redis_lock.release_lock(&org_id, "booking_slot", &s.id, &val).await;
-                    }
-                }
-            }
-        }
-    }
-
     let create_req = CreateQuoteReq {
         customer_id: request.customer_id.unwrap_or_else(Uuid::new_v4),
         status: "DRAFT".to_string(),
@@ -336,7 +290,7 @@ Task: Extract the scope of work and identify the closest matching service from t
                 is_optional: false,
             }
         ],
-        proposed_slot_id,
+        proposed_slot_id: None,
     };
 
     // 3. Create the quote
@@ -383,7 +337,7 @@ async fn create_quote(
     let required_deposit_cents = total_amount_cents / 3; // Default 33% deposit
 
     let quote = sqlx::query_as::<_, Quote>(
-        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, proposed_slot_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"
+        "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"
     )
     .bind(quote_id)
     .bind(&tenant_id)
@@ -391,7 +345,6 @@ async fn create_quote(
     .bind(&payload.status)
     .bind(total_amount_cents)
     .bind(required_deposit_cents)
-    .bind(payload.proposed_slot_id)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| {
