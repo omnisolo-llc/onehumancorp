@@ -4885,12 +4885,12 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                         for row in rows {
                             use sqlx::Row;
                             let item = if mobile_optimized {
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                    })
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                    "created_at": match row.try_get::<String, _>("created_at") { Ok(dt) => dt.to_string(), Err(_) => match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() } },
+                                    "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                })
                             } else {
                                 serde_json::json!({
                                         "id": row.get::<String, _>("id"),
@@ -4919,12 +4919,12 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                         for row in rows {
                             use sqlx::Row;
                             let item = if mobile_optimized {
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                    })
+                                serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                    "created_at": match row.try_get::<String, _>("created_at") { Ok(dt) => dt.to_string(), Err(_) => match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() } },
+                                    "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                })
                             } else {
                                 serde_json::json!({
                                         "id": row.get::<String, _>("id"),

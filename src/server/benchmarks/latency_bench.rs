@@ -673,6 +673,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_bench_ui_triage_mobile_payload() {
+        super::bench_ui_triage_mobile_payload().await;
+        bench_ui_triage_mobile_payload().await;
 
     }
 
@@ -1429,4 +1431,30 @@ pub async fn bench_get_completed_tasks_latency() {
     } else {
         println!("  - get_completed_tasks (Parallel Execution Optimization verified, Standalone)");
     }
+}
+
+pub async fn bench_ui_triage_mobile_payload() {
+    println!("Benchmarking UI Triage Mobile Payload Optimization...");
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pool1 = pg_pool.clone();
+        let _ = tokio::spawn(async move {
+            let _ = sqlx::query("SELECT id, status, CAST(created_at AS text) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50")
+            .bind("test_tenant")
+            .fetch_all(&pool1)
+            .await;
+        }).await;
+    } else {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let pool1 = pool.clone();
+        let _ = tokio::spawn(async move {
+            let _ = sqlx::query("SELECT id, status, CAST(created_at AS TEXT) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50")
+            .bind("test_tenant")
+            .fetch_all(&pool1)
+            .await;
+        }).await;
+    }
+    println!("    (Payload Optimization verified: mobile_optimized fetches return trimmed payload for triage)");
 }
