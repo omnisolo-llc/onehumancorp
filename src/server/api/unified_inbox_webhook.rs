@@ -34,6 +34,7 @@ pub struct DraftedResponse {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedThread {
     pub id: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub tenant_id: String,
     pub customer_id: Option<String>,
     pub channel: String,
@@ -45,6 +46,7 @@ pub struct UnifiedThread {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedMessage {
     pub id: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub tenant_id: String,
     pub thread_id: String,
     pub sender_type: String,
@@ -55,6 +57,7 @@ pub struct UnifiedMessage {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiedTriageAction {
     pub id: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub tenant_id: String,
     pub thread_id: String,
     pub action_type: String,
@@ -75,6 +78,7 @@ pub struct UnifiedFeedItem {
 pub struct LocalUiTenantQuery {
     pub tenant_id: Option<String>,
     pub tenant: Option<String>,
+    pub mobile_optimized: Option<bool>,
 }
 
 fn get_ui_tenant_id(query: &LocalUiTenantQuery) -> String {
@@ -262,8 +266,9 @@ pub async fn get_unified_feed(
     Query(query): Query<LocalUiTenantQuery>,
 ) -> impl IntoResponse {
     let tenant_id = get_ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_webhook_feed:{}", tenant_id);
+    let cache_key = format!("ui_webhook_feed:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_WEBHOOK_FEED_CACHE.get_or_init(|| {
         let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         let redis_client = match redis::Client::open(redis_url) {
@@ -287,7 +292,7 @@ pub async fn get_unified_feed(
         let cache_key_bg = cache_key.clone();
 
         tokio::spawn(async move {
-            let items = fetch_unified_feed_items(&state_bg, &tenant_id_bg).await;
+            let items = fetch_unified_feed_items(&state_bg, &tenant_id_bg, mobile_optimized).await;
             cache_bg
                 .set(&cache_key_bg, items, std::time::Duration::from_secs(30))
                 .await;
@@ -296,7 +301,7 @@ pub async fn get_unified_feed(
         return (StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let feed_items = fetch_unified_feed_items(&state, &tenant_id).await;
+    let feed_items = fetch_unified_feed_items(&state, &tenant_id, mobile_optimized).await;
     cache
         .set(
             &cache_key,
@@ -308,7 +313,7 @@ pub async fn get_unified_feed(
     (StatusCode::OK, axum::Json(feed_items)).into_response()
 }
 
-async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str) -> Vec<UnifiedFeedItem> {
+async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_optimized: bool) -> Vec<UnifiedFeedItem> {
     let mut feed_items: Vec<UnifiedFeedItem> = vec![];
 
     let threads_res_mapped: Result<Vec<UnifiedThread>, sqlx::Error>;
@@ -426,10 +431,20 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str) -> Vec<Unif
             }
         }
 
-        for thread in threads_rows {
+        for mut thread in threads_rows {
             let thread_id = thread.id.clone();
-            let messages = messages_map.remove(&thread_id).unwrap_or_default();
-            let triage_actions = triage_actions_map.remove(&thread_id).unwrap_or_default();
+            let mut messages = messages_map.remove(&thread_id).unwrap_or_default();
+            let mut triage_actions = triage_actions_map.remove(&thread_id).unwrap_or_default();
+
+            if mobile_optimized {
+                thread.tenant_id = String::new();
+                for msg in &mut messages {
+                    msg.tenant_id = String::new();
+                }
+                for action in &mut triage_actions {
+                    action.tenant_id = String::new();
+                }
+            }
 
             feed_items.push(UnifiedFeedItem {
                 thread,
