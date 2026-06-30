@@ -558,12 +558,12 @@
         try {
           // If approved is false, status should be DISMISSED
           const action_status = approved ? "APPROVED" : "DISMISSED";
-          let payload = { action_status };
+          let payload = { triage_item_id: id, approved: approved };
           if (approved && editValue !== null) {
              payload.edited_payload = editValue;
           }
 
-          const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}&id=${encodeURIComponent(id)}`, {
+          const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
