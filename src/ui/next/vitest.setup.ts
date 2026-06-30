@@ -197,6 +197,7 @@ console.error = (...args: any[]) => {
 
 // Set IS_REACT_ACT_ENVIRONMENT
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
 // Mock Worker
 class Worker {
   constructor(stringUrl: string) {}
@@ -220,5 +221,9 @@ if (typeof navigator !== 'undefined') {
   });
 }
 if (typeof navigator !== 'undefined' && navigator.locks) {
-  navigator.locks.request = vi.fn().mockImplementation(async (name, cb) => cb());
+  navigator.locks.request = vi.fn().mockImplementation(async (name, cb) => {
+    if (typeof cb === 'function') {
+      return cb();
+    }
+  });
 }
