@@ -310,6 +310,16 @@ Output JSON format:
 
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
+            let mut past_orders = String::new();
+            if let Some(cid) = customer_id_val {
+                if let Ok(orders) = sqlx::query_as::<_, (f64,)>("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
+                    .bind(&tenant_id).bind(&cid).fetch_all(&self.db.pool).await {
+                    if !orders.is_empty() {
+                        past_orders = format!("Returning Customer ({} past orders).", orders.len());
+                    }
+                }
+            }
+
             let mut quote_id_opt: Option<String> = None;
             let mut _quote_total_amount_cents: Option<i64> = None;
 
@@ -544,6 +554,7 @@ Output JSON format:
                         "feature_type": event_source,
                         "priority": priority,
                         "context": context_summary,
+                        "past_orders": past_orders,
                         "inbox_message_id": message_id,
                         "customer_id": customer_id_val
                     }))
@@ -672,6 +683,7 @@ Output JSON format:
                         "feature_type": event_source,
                         "priority": priority,
                         "context": context_summary,
+                        "past_orders": past_orders,
                         "inbox_message_id": message_id,
                         "customer_id": customer_id_val
                     }).to_string())
