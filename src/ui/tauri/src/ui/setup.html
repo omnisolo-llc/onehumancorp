@@ -204,7 +204,7 @@
         }
       }
       .old-glassmorphism {
-        border-radius: 8px !important;
+        border-radius: 16px !important;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -3973,24 +3973,6 @@
         chatSendBtn.addEventListener("click", sendChatMessage);
       }
 
-
-      const instantBioInputEl2 = document.getElementById("instant-bio");
-      const generateStorefrontBtn2 = document.getElementById("generate-storefront-btn");
-      if (instantBioInputEl2 && generateStorefrontBtn2) {
-        instantBioInputEl2.addEventListener("input", (e) => {
-          generateStorefrontBtn2.disabled = e.target.value.trim().length === 0;
-        });
-      }
-
-
-      const instantBioInputEl2 = document.getElementById("instant-bio");
-      const generateStorefrontBtn2 = document.getElementById("generate-storefront-btn");
-      if (instantBioInputEl2 && generateStorefrontBtn2) {
-        instantBioInputEl2.addEventListener("input", (e) => {
-          generateStorefrontBtn2.disabled = e.target.value.trim().length === 0;
-        });
-      }
-
       if (generateStorefrontBtn) {
         generateStorefrontBtn.addEventListener("click", async (e) => {
           e.preventDefault();
@@ -4132,7 +4114,7 @@
             }, 1500);
           } catch (err) {
             console.error(err);
-            goToStep("step-instant");
+            goToStep("step-initial");
             const errorMsg = err.message || "Network Error: Failed to fetch";
             instantErrorEl.innerText = errorMsg;
             instantErrorEl.style.display = "block";
