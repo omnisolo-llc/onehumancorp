@@ -54,7 +54,7 @@ export default function HelpArticlePage() {
             </Link>
         </div>
 
-        <article className="app-card backdrop-blur-xl saturate-[210%] bg-white/80 dark:bg-black/50 shadow-2xl border border-white/50 dark:border-white/20 rounded-[32px] p-8 sm:p-12">
+        <article className="app-card backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-2xl rounded-[32px] p-8 sm:p-12">
             <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-gray-900 dark:text-gray-100 mb-8 tracking-tight">{article.title}</h1>
             <div
                 className="prose prose-lg prose-blue max-w-none prose-headings:font-outfit prose-headings:font-bold prose-headings:text-gray-800 dark:prose-headings:text-gray-200 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed"
