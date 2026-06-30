@@ -572,8 +572,14 @@ export default function ApprovalInbox({
                         <div className="space-y-2">
                           <div className="flex justify-between">
                             <span className="text-xs text-gray-500">Calculated Total:</span>
-                            <span className="text-xs font-semibold text-gray-900">${req.payload.suggested_price}</span>
+                            <span className="text-xs font-semibold text-gray-900">${req.payload.suggested_price} Estimate</span>
                           </div>
+                          {req.payload.deposit_amount_cents && (
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Required Deposit:</span>
+                              <span className="text-xs font-semibold text-gray-900">${(req.payload.deposit_amount_cents / 100).toFixed(2)} Deposit</span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
                             <span className="text-xs text-gray-500">Scope of Work:</span>
                             <span className="text-xs font-medium text-gray-800">{req.payload.scope}</span>

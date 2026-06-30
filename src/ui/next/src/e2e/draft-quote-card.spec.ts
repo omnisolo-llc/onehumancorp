@@ -26,6 +26,8 @@ test.describe('Draft Quote Action Card CUJ', () => {
     // 4. Verify card contents
     await expect(page.getByText('Draft Quote: Plumbing Fix for Customer')).toBeVisible();
     await expect(page.getByText('Calculated Total:')).toBeVisible();
+    await expect(page.getByText('Required Deposit:')).toBeVisible();
+    await expect(page.getByText('$50.00 Deposit')).toBeVisible();
 
     // 5. Tap "Edit"
     const editBtn = page.getByRole('button', { name: 'Edit' }).first();

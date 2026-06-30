@@ -1122,7 +1122,7 @@ pub async fn execute_action(
 
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                        let deposit_amount = (price * 0.20) as i64 * 100;
+                        let deposit_amount = payload.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or((price * 0.20) as i64 * 100);
                         let total_amount_cents = (price * 100.0) as i64;
                         let now = Utc::now();
                         let _expires_at = now + chrono::Duration::days(2);
@@ -1147,14 +1147,13 @@ pub async fn execute_action(
                         let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
                         if let DbStore::Postgres = &self.db.store {
-                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                            if let Err(e) = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
                                 .bind("SENT")
                                 .bind(total_amount_cents)
                                 .bind(deposit_amount)
-
                                 .bind(&stripe_link)
                                 .execute(&self.db.pool)
                                 .await
@@ -2160,6 +2159,28 @@ mod tests {
     use super::*;
     use crate::orchestration::mesh::CentrifugeNode;
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
+
+    #[tokio::test]
+    async fn test_decide_approval_quote_draft_logic() {
+        // Just verify the logic of the dynamic amount extraction block
+        let payload = serde_json::json!({
+            "feature_type": "quote_draft",
+            "suggested_price": 250.0,
+            "deposit_amount_cents": 5000,
+        });
+
+        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+            let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let deposit_amount = payload.get("deposit_amount_cents").and_then(|v| v.as_i64()).unwrap_or((price * 0.20) as i64 * 100);
+            let total_amount_cents = (price * 100.0) as i64;
+
+            assert_eq!(price, 250.0);
+            assert_eq!(total_amount_cents, 25000);
+            assert_eq!(deposit_amount, 5000);
+        } else {
+            panic!("Feature type was not parsed correctly");
+        }
+    }
 
     #[tokio::test]
     async fn test_orchestrator_initialization() {

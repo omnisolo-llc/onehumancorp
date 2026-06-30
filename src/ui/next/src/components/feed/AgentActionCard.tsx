@@ -637,9 +637,27 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                         {
                           (approval.proposed_action || approval.context_payload)
                             .suggested_price
-                        }
+                        }{" "}
+                        Estimate
                       </span>
                     </div>
+                    {(approval.proposed_action || approval.context_payload)
+                      .deposit_amount_cents && (
+                      <div className="flex justify-between">
+                        <span className="text-xs text-gray-500">
+                          Required Deposit:
+                        </span>
+                        <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                          $
+                          {(
+                            (approval.proposed_action ||
+                              approval.context_payload).deposit_amount_cents /
+                            100
+                          ).toFixed(2)}{" "}
+                          Deposit
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-xs text-gray-500">
                         Scope of Work:

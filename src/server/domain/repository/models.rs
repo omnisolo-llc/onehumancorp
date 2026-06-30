@@ -376,6 +376,31 @@ pub struct QuoteLineItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Proposal {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub status: Option<String>,
+    pub total_amount_cents: Option<i64>,
+    pub required_deposit_cents: Option<i64>,
+    pub checkout_url: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ProposalLineItem {
+    pub id: String,
+    pub proposal_id: String,
+    pub description: String,
+    pub unit_price_cents: i64,
+    pub quantity: i32,
+    pub is_optional: bool,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LedgerEntry {
 
     pub id: String,

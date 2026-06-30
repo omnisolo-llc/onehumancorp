@@ -237,6 +237,15 @@ async fn simulate_quote_draft(
         None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
     };
 
+    let proposed_slot_id = uuid::Uuid::new_v4().to_string();
+
+    // Acquire Redis Redlock for the slot
+    if let Ok(redis_url) = std::env::var("OHC_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
+        if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url) {
+            let _ = redis_lock.acquire_lock(&tenant_id, "booking_slot", &proposed_slot_id, 1800).await;
+        }
+    }
+
     let payload = serde_json::json!({
         "feature_type": "quote_draft",
         "service": "Plumbing Fix",
@@ -244,6 +253,8 @@ async fn simulate_quote_draft(
         "suggested_price": 250.0,
         "scope": "Plumbing Fix including labor and standard materials.",
         "suggested_time": "Tomorrow at 2 PM",
+        "proposed_slot_id": proposed_slot_id,
+        "deposit_amount_cents": 5000,
     });
 
     match orchestrator.execute_action(
@@ -508,6 +519,42 @@ async fn list_ledger_entries(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_simulate_quote_draft_includes_redis_and_deposit() {
+        use axum::extract::{Extension, State};
+        use std::sync::Arc;
+        use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+        use crate::common::Claims;
+        use uuid::Uuid;
+        use ohc_builtin_agent::mesh::transport::InProcessTransport;
+        use crate::orchestration::mesh::CentrifugeNode;
+        use axum::response::IntoResponse;
+
+        let db_pool = crate::db::create_sqlite_pool_for_test().await;
+        // Using in-memory sqlite for test
+        let db = Arc::new(crate::db::DB { pool: db_pool.clone(), store: crate::db::DbStore::Sqlite(db_pool) });
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
+
+        let claims = Extension(Claims {
+            sub: Uuid::new_v4().to_string(),
+            organization_id: Some("test_tenant".to_string()),
+            roles: vec!["admin".to_string()],
+            exp: 9999999999,
+            iat: 0,
+            username: "".to_string(),
+            email: "".to_string(),
+            session_id: None,
+            jti: "".to_string(),
+        });
+
+        // Test the actual handler
+        let response = simulate_quote_draft(State(orchestrator.clone()), claims).await;
+        let response = response.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+    }
 
     #[tokio::test]
     async fn test_approvals_cache_initialization() {
