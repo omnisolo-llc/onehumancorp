@@ -125,11 +125,11 @@ impl SqliteMemoryStore {
             }
         }
     }
+}
 
-    /// Hermes Agent Unique Harness Innovations: FTS5 session search: Cross-session recall with LLM summarization.
-    /// Searches session messages using FTS5 MATCH across ALL sessions, returning ranked snippets,
-    /// and summarizing them using the LLM to synthesize information drawn from multiple sessions.
-    pub async fn search_cross_session_messages(
+#[async_trait]
+impl LongTermMemory for SqliteMemoryStore {
+    async fn search_cross_session_messages(
         &self,
         query: &str,
         limit: usize,
@@ -182,10 +182,7 @@ impl SqliteMemoryStore {
             }
         }
     }
-}
 
-#[async_trait]
-impl LongTermMemory for SqliteMemoryStore {
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
         sqlx::query("INSERT INTO agent_memory (content, tags) VALUES (?, ?)")
@@ -269,7 +266,32 @@ impl LongTermMemory for SqliteMemoryStore {
     fn as_anthropic_accessor(
         &self,
     ) -> Option<std::sync::Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>> {
-        None
+        Some(std::sync::Arc::new(self.clone()))
+    }
+}
+
+#[async_trait]
+impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
+    async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
+        Err("Topic retrieval not supported in SQLite FTS5 store directly.".to_string())
+    }
+
+    async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
+        // Fallback to cross-session search
+        <Self as crate::memory_store::LongTermMemory>::search_cross_session_messages(self, _query, _limit, false).await
+    }
+
+    async fn search_cross_session_messages(
+        &self,
+        query: &str,
+        limit: usize,
+        summarize: bool,
+    ) -> Result<Vec<String>, String> {
+        <Self as crate::memory_store::LongTermMemory>::search_cross_session_messages(self, query, limit, summarize).await
+    }
+
+    async fn write_topic(&self, _topic_name: &str, _content: &str) -> Result<(), String> {
+        Err("Topic writing not supported in SQLite FTS5 store directly.".to_string())
     }
 }
 
