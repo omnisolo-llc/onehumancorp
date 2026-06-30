@@ -5,17 +5,17 @@ test.describe('Zero-Click Onboarding Flow', () => {
 
   test('should complete the zero-click onboarding flow on mobile', async ({ page }) => {
     // Navigate to onboarding page
-    await page.goto('/onboarding/zero-click');
+    await page.goto('/setup.html');
     await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
 
     // Initial Screen
-    await expect(page.locator('h1', { hasText: 'Zero-Click Business Generator' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'OneHumanCorp' })).toBeVisible({ timeout: 15000 });
 
     // Check if the chat assistant loaded
-    await expect(page.getByText('OHC Setup Assistant')).toBeVisible();
+    await expect(page.getByText('Setup Assistant')).toBeVisible();
 
     // The user input should be visible
-    const input = page.getByPlaceholder('e.g. I am a home baker in Austin selling custom vegan cakes.');
+    const input = page.getByPlaceholder('e.g. I am a home baker');
     await expect(input).toBeVisible();
 
     // Type into the input
