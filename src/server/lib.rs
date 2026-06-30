@@ -4744,37 +4744,26 @@ async fn ui_dashboard_unified_feed_handler(
     let cache_key = format!("ui_dashboard_unified:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_UNIFIED_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
-    // Check cache
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            // Supply should not be cached because it changes continuously (inventory counts),
-            // so we fetch supply and merge it on cache hit.
-            let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
-            let mut final_cached = cached.clone();
-            if let Some(obj) = final_cached.as_object_mut() {
-                obj.insert("supply".to_string(), supply_res);
-            }
-            return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
-        }
+    let db_for_supply = db.clone();
+    let tenant_id_for_supply = tenant_id.clone();
 
-        let db_bg = db.clone();
-        let t_bg = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            let db1 = db_bg.clone(); let t1 = t_bg.clone();
-            let db2 = db_bg.clone(); let t2 = t_bg.clone();
-            let db3 = db_bg.clone(); let t3 = t_bg.clone();
-            let db4 = db_bg.clone(); let t4 = t_bg.clone();
-            let db5 = db_bg.clone(); let t5 = t_bg.clone();
-            let db6 = db_bg.clone(); let t6 = t_bg.clone();
-            let db7 = db_bg.clone(); let t7 = t_bg.clone();
+    let db_clone = db.clone();
+    let t_clone = tenant_id.clone();
 
-            let db8 = db_bg.clone(); let t8 = t_bg.clone();
-            let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+    let (cache_res, supply_res) = tokio::join!(
+        cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), move || async move {
+            let db1 = db_clone.clone(); let t1 = t_clone.clone();
+            let db2 = db_clone.clone(); let t2 = t_clone.clone();
+            let db3 = db_clone.clone(); let t3 = t_clone.clone();
+            let db4 = db_clone.clone(); let t4 = t_clone.clone();
+            let db5 = db_clone.clone(); let t5 = t_clone.clone();
+            let db6 = db_clone.clone(); let t6 = t_clone.clone();
+            let db7 = db_clone.clone(); let t7 = t_clone.clone();
+
+            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
                 tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1).await }),
                 tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
-                tokio::spawn(async move { load_ui_supply_from_db(&db8, &t8, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_triage_from_db(&db4, &t4, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_agent_approvals_from_db(&db5, &t5, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_agent_feed_from_db(&db6, &t6, mobile_optimized).await }),
@@ -4788,9 +4777,7 @@ async fn ui_dashboard_unified_feed_handler(
             let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
-
-            let _supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
-            let result = serde_json::json!({
+            Some(serde_json::json!({
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
                 "orders": orders,
                 "inbox": inbox,
@@ -4798,67 +4785,15 @@ async fn ui_dashboard_unified_feed_handler(
                 "pending_approvals": approvals,
                 "agent_feed": agent_feed,
                 "priority_tasks": priority_tasks,
-            });
-            if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
-                c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
-            }
-        });
-
-        // Supply should not be cached because it changes continuously (inventory counts),
-        // so we fetch supply and merge it on cache hit.
-        let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
-        let mut final_cached = cached.clone();
-        if let Some(obj) = final_cached.as_object_mut() {
-            obj.insert("supply".to_string(), supply_res);
-        }
-        return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
-    }
-
-    let db1 = db.clone(); let t1 = tenant_id.clone();
-    let db2 = db.clone(); let t2 = tenant_id.clone();
-    let db3 = db.clone(); let t3 = tenant_id.clone();
-    let db4 = db.clone(); let t4 = tenant_id.clone();
-    let db5 = db.clone(); let t5 = tenant_id.clone();
-    let db6 = db.clone(); let t6 = tenant_id.clone();
-    let db7 = db.clone(); let t7 = tenant_id.clone();
-    let db8 = db.clone(); let t8 = tenant_id.clone();
-
-    let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1).await }),
-        tokio::spawn(async move { load_ui_orders_from_db(&db2, &t2, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_inbox_from_db(&db3, &t3, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_supply_from_db(&db4, &t4, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_triage_from_db(&db5, &t5, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_agent_approvals_from_db(&db6, &t6, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_agent_feed_from_db(&db7, &t7, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_priority_tasks_from_db(&db8, &t8, mobile_optimized).await })
+            }))
+        }),
+        load_ui_supply_from_db(&db_for_supply, &tenant_id_for_supply, mobile_optimized)
     );
 
-    let orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
-
-
-    let cacheable_result = serde_json::json!({
-        "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
-        "orders": orders,
-        "inbox": inbox,
-        "triage": triage,
-        "pending_approvals": approvals,
-        "agent_feed": agent_feed,
-        "priority_tasks": priority_tasks,
-    });
-
-    let _ = cache.set(&cache_key, cacheable_result.clone(), std::time::Duration::from_secs(10)).await;
-
-    // Add supply to the final result
-    let mut final_result = cacheable_result;
+    let mut final_result = cache_res.unwrap_or_else(|| serde_json::json!({}));
+    let _supply = supply_res.unwrap_or_else(|_| serde_json::json!({}));
     if let Some(obj) = final_result.as_object_mut() {
-        obj.insert("supply".to_string(), supply);
+        obj.insert("supply".to_string(), _supply);
     }
 
     (axum::http::StatusCode::OK, axum::Json(final_result)).into_response()
