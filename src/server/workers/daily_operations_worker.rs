@@ -119,7 +119,7 @@ mod tests {
         sqlx::query("CREATE TABLE tenants (id TEXT PRIMARY KEY);").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE agent_feed_items (id TEXT PRIMARY KEY, tenant_id TEXT, event_source TEXT, context_payload TEXT, proposed_action TEXT, lifecycle_state TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await.unwrap();
 
-        Arc::new(DB { store: DbStore::Sqlite(pool.clone()), pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_lazy("postgres://postgres:postgres@localhost:5432/ohc").unwrap() })
+        Arc::new(DB { store: DbStore::Sqlite(pool.clone()), pool: crate::db::secure_pg_pool_options().max_connections(1).connect_lazy("postgres://postgres:postgres@localhost:5432/ohc").unwrap() })
     }
 
     #[tokio::test]

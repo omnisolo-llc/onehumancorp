@@ -1,0 +1,14 @@
+--- sqlite_store.rs
++++ sqlite_store.rs
+@@ -41,10 +41,10 @@
+         .bind(&user.password_hash)
+         .bind(roles_json)
+         .bind(user.active)
++        .bind(org_id)
+         .bind(&user.oidc_subject)
+         .bind(user.created_at)
+         .bind(user.updated_at)
+-        .bind(org_id)
+         .execute(&self.pool)
+         .await
+         .map_err(|e: sqlx::Error| e.to_string())?;
