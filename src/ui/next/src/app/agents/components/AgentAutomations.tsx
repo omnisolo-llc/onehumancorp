@@ -5,8 +5,10 @@ export default function AgentAutomations() {
   const [dmResponderEnabled, setDmResponderEnabled] = useState(false);
   const [weeklyInsightsEnabled, setWeeklyInsightsEnabled] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const toggleAgent = async (agent: string, current: boolean, setter: React.Dispatch<React.SetStateAction<boolean>>) => {
+    setError(null);
     setLoading(agent);
     try {
       const response = await fetch('/api/v1/agents/toggle', {
@@ -20,7 +22,7 @@ export default function AgentAutomations() {
         setter(!current);
       }
     } catch (e) {
-      console.error("Failed to toggle agent", e);
+      setError("Failed to toggle agent. Please try again.");
     } finally {
       setLoading(null);
     }
@@ -28,6 +30,11 @@ export default function AgentAutomations() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm font-medium border border-red-100">
+          {error}
+        </div>
+      )}
       {/* Autonomous Social Media Agent */}
       <div className="shadow-sm p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
         <div className="flex items-start justify-between">
