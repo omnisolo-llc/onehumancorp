@@ -1,32 +1,33 @@
-issue_title: "Integrate WhatsApp Business Messaging via Twilio"
+issue_title: "Scout: Tool Integration Research - WhatsApp/Twilio"
 issue_description: |
-  **Title**: Integrate WhatsApp Business Messaging via Twilio
+  **Mission Queue Protocol Brief:**
 
-  **Problem Statement**:
-  Owners like Maya (Home Baker) and Carlos (Field Service) communicate with clients primarily through WhatsApp. Right now, these messages are disconnected from OHC, requiring owners to manually switch between WhatsApp on their phones and OHC to draft quotes, check booking times, or update order statuses. This fragmentation leads to dropped leads, missed follow-ups, and an incomplete owner feed.
+  **Title:** Add Twilio WhatsApp Integration for Work Intake & Notifications
+  **Problem Statement:** Maya (Home Baker) and Fatima (Food Cart Operator) receive a huge portion of their work and pre-orders through WhatsApp. Currently, they have to manually read these messages, type out replies on their personal phones, and copy the details into OHC. This slows down response times, splits their attention, and risks losing orders. They need their WhatsApp messages to show up in OHC's Work Triage feed automatically so the Assistant can help draft replies and coordinate the work.
 
-  **Research Report**:
-  - **Competitor Landscape**: Tencent Workbuddy, WeCom, and CRM tools like HubSpot integrate deeply with WhatsApp, allowing business owners to consolidate work in one inbox.
-  - **Tool Evaluated**: Twilio API for WhatsApp.
-  - **Capabilities & Limits**: Twilio provides a robust, developer-friendly REST API for sending/receiving WhatsApp messages. It supports rich media (images for cake references or service photos), templates (for appointment reminders), and webhooks for real-time inbound message processing. Rate limits apply, and Meta requires template approval for outbound business-initiated messages.
-  - **SaaS Viability**: Twilio uses a pay-as-you-go pricing model with no large upfront costs. It can operate in multi-tenant mode, routing messages via a unified webhook (using OHC's `tenant_id` mappings based on incoming numbers or Twilio subaccounts).
-  - **User-First Value Mapping**: A non-technical owner will connect their WhatsApp number once. OHC will then route incoming WhatsApp DMs directly into the "Work Triage" feed. The Customer Assistant can instantly draft replies within OHC, keeping context intact.
+  **Research Report:**
+  * **Ecosystem Scraping:** Competitors like Shopify (via apps), HubSpot, and WeChat-based CRMs offer deep integration with messaging apps. WhatsApp is the de facto business communication tool in LATAM, EMEA, and parts of APAC.
+  * **Community Mining:** Small business subreddits frequently ask for "WhatsApp CRM" or "WhatsApp to Task" bridges.
+  * **Selected Tool:** Twilio API for WhatsApp.
+  * **Capabilities & Limits:** Twilio provides a robust API for sending and receiving WhatsApp messages. It supports webhooks for incoming messages, template messages (for notifications outside the 24h window), and session-based freeform messaging.
+  * **SaaS Viability:** Pricing is per-message, making it very viable to bundle or pass through to owners on paid tiers. It supports multi-tenant operation natively (we can segregate numbers or use Twilio's sub-accounts).
 
-  **Design Doc**:
-  - **Trigger**: Incoming WhatsApp message hits OHC Twilio Webhook. Outgoing messages triggered by owner actions or Agent drafts via OHC interface.
-  - **Integration**:
-    - Store Twilio credentials and WhatsApp Sender ID per tenant.
-    - Implement a unified webhook endpoint that maps incoming messages to the correct `tenant_id` and creates an inbox task.
-    - Expose a capability in the AI Assistant (Customer Assistant) to draft and send replies.
-  - **User Experience**: The owner sees WhatsApp messages inline with emails and web forms in the OHC shell. They can tap "Reply" within OHC, and the response is sent seamlessly via WhatsApp.
+  **Design Doc:**
+  * **Integration Trigger:** A new card in the "Tool Integrations" page in OHC will allow owners to connect their Twilio WhatsApp Sender.
+  * **Data Flow:** Incoming messages trigger a webhook to OHC, which parses the sender and message, matching it to a customer profile.
+  * **Owner View:** The message appears in the Work Triage feed. The AI Assistant drafts a reply or suggests creating a task/booking based on the message content.
+  * **Response:** When the owner approves the draft, OHC sends it back via the Twilio API to the customer's WhatsApp.
 
-  **Implementation Prompt**:
-  Implement a Twilio WhatsApp integration that allows owners to send and receive WhatsApp messages directly from the OHC Assistant Feed. Create the necessary backend webhook to ingest inbound Twilio webhooks, map them to an OHC tenant, and present them in the Work Triage UI. Add functionality for the AI Customer Assistant to draft replies that the owner can approve and send back via WhatsApp. The end goal is to deliver the end-to-end user experience of connecting WhatsApp and messaging customers seamlessly within OHC.
+  **Implementation Prompt:**
+  1. Add a Twilio WhatsApp connection flow in the Integrations UI.
+  2. Implement webhook handling to receive incoming WhatsApp messages and inject them into the Work Triage feed.
+  3. Ensure the AI Assistant can read these messages and draft appropriate replies.
+  4. Implement outgoing message sending via the Twilio API.
+  5. The feature must be fully usable by a non-technical owner like Maya, who just wants to see messages in her feed, without dealing with API keys unless absolutely necessary (consider a streamlined OAuth or managed number flow in the future, but start with simple credential input for MVP).
 
-  **Priority**: P1
-
-  **Estimated Scope**: Medium
-issue_priority: P1
+  **Priority:** P0 (critical)
+  **Estimated Scope:** Large
+issue_priority: P0
 issue_category: research
 issue_type: task
 issue_label: [agent-report]
