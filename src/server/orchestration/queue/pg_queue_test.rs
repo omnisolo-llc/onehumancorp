@@ -183,3 +183,61 @@ async fn test_pg_queue_concurrent_workers() {
         .fetch_one(&pool).await.unwrap();
     assert_eq!(remaining.0, 0, "There should be no pending jobs left");
 }
+
+#[tokio::test]
+async fn test_pg_queue_rls_isolation() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
+
+    let queue = PgTaskQueue::new(Arc::new(pool.clone()));
+
+    // Clean queue
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+
+    let job1 = Job {
+        id: "job-rls-1".to_string(),
+        tenant_id: "tenant_A".to_string(),
+        parent_task_id: "parent-1".to_string(),
+        job_type: "rls-role".to_string(),
+        payload: "{}".to_string(),
+        status: "PENDING".to_string(),
+        retry_count: 0,
+        max_retries: 3,
+        next_retry_at: Utc::now(),
+        locked_until: None,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+
+    let job2 = Job {
+        id: "job-rls-2".to_string(),
+        tenant_id: "tenant_B".to_string(),
+        parent_task_id: "parent-1".to_string(),
+        job_type: "rls-role".to_string(),
+        payload: "{}".to_string(),
+        status: "PENDING".to_string(),
+        retry_count: 0,
+        max_retries: 3,
+        next_retry_at: Utc::now(),
+        locked_until: None,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+
+    queue.enqueue(job1).await.unwrap();
+    queue.enqueue(job2).await.unwrap();
+
+    // Now try to dequeue, we should see both jobs because dequeue runs in system context (ohc_bypassrls)
+    let dequeued1 = queue.dequeue(vec!["rls-role".to_string()], 0, 0).await.unwrap().unwrap();
+    let dequeued2 = queue.dequeue(vec!["rls-role".to_string()], 0, 0).await.unwrap().unwrap();
+
+    // One from A, one from B
+    assert!(
+        (dequeued1.tenant_id == "tenant_A" && dequeued2.tenant_id == "tenant_B") ||
+        (dequeued1.tenant_id == "tenant_B" && dequeued2.tenant_id == "tenant_A")
+    );
+}
