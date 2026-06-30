@@ -22,6 +22,9 @@ type TriageItem = {
 
 function tenantId() {
   if (typeof window === "undefined") return "default";
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlTenant = urlParams.get("tenant_id");
+  if (urlTenant) return urlTenant;
   return (
     localStorage.getItem("tenant_id") ||
     localStorage.getItem("tenant") ||
@@ -57,6 +60,7 @@ export default function TriagePage() {
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -246,6 +250,7 @@ export default function TriagePage() {
         ) : (
           items.map((item) => {
             const isProcessing = processingId === item.id;
+            const isSelected = selectedItemId === item.id;
 
             return (
               <div
@@ -254,7 +259,19 @@ export default function TriagePage() {
                 className="ohc-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
               >
                 {/* Header Context */}
-                <div className="p-5 border-b border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] backdrop-blur-[30px] backdrop-saturate-[210%]">
+                <div
+                  className="p-5 border-b border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] backdrop-blur-[30px] backdrop-saturate-[210%] cursor-pointer"
+                  onClick={() => {
+                    if (isSelected) {
+                        setSelectedItemId(null);
+                        setEditingId(null);
+                    } else {
+                        setSelectedItemId(item.id);
+                        setEditingId(null);
+                    }
+                  }}
+                  data-testid={`triage-card-header-${item.id}`}
+                >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{getSourceIcon(item.source || "")}</span>
@@ -266,103 +283,112 @@ export default function TriagePage() {
                       {item.priority || "Normal"}
                     </span>
                   </div>
-                  <div className="text-[15px] font-medium text-gray-900 dark:text-white leading-snug break-words">
+                  <div className="text-[15px] font-medium text-gray-900 dark:text-white leading-snug break-words line-clamp-2">
                     {item.context || "No context provided"}
                   </div>
+                  {!isSelected && item.action_type && (
+                     <div className="mt-2 text-[12px] text-[#0066FF] dark:text-[#3388FF] font-medium flex items-center gap-1">
+                        <span>✨</span> AI Drafted: {item.action_type} (Tap to review)
+                     </div>
+                  )}
                 </div>
 
-                {/* Draft Proposal */}
-                {item.action_type && (
-                  <div className="p-5 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 backdrop-blur-[30px] saturate-[210%] flex flex-col gap-2">
-                    <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
-                      Proposed Action: {item.action_type}
-                    </div>
-                    <div className="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
-                      {item.action_payload || "No specific payload"}
-                    </div>
-                  </div>
-                )}
+                {/* Slide-in / Expanded Detail View */}
+                {isSelected && (
+                  <div className="animate-in slide-in-from-top-2 duration-200 fade-in">
+                    {item.action_type && (
+                      <div className="p-5 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 backdrop-blur-[30px] saturate-[210%] flex flex-col gap-2">
+                        <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
+                          Proposed Action: {item.action_type}
+                        </div>
+                        <div className="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
+                          {item.action_payload || "No specific payload"}
+                        </div>
+                      </div>
+                    )}
 
-                {/* Meta Details */}
-                <div className="px-5 py-3 flex justify-between bg-white/30 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[11px] text-gray-500 dark:text-gray-400">
-                  <span>{new Date(item.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  <span>{new Date(item.created_at || Date.now()).toLocaleDateString()}</span>
-                </div>
-
-                {/* Action Buttons */}
-                {editingId === item.id ? (
-                  <div className="p-5 flex flex-col gap-3 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
-                    <textarea
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/80 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-[12px] p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y"
-                      data-testid={`triage-edit-textarea-${item.id}`}
-                      placeholder="Edit the draft payload..."
-                    />
-                    <div className="flex flex-col sm:flex-row gap-3 w-full pt-2">
-                      <button
-                        onClick={() => handleDecision(item.id, true, editValue)}
-                        disabled={isProcessing}
-                        className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
-                        data-testid={`triage-save-btn-${item.id}`}
-                      >
-                        {isProcessing ? "Processing..." : "Save & Send"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingId(null);
-                          setEditValue("");
-                        }}
-                        disabled={isProcessing}
-                        className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
-                        data-testid={`triage-cancel-btn-${item.id}`}
-                      >
-                        Cancel
-                      </button>
+                    {/* Meta Details */}
+                    <div className="px-5 py-3 flex justify-between bg-white/30 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[11px] text-gray-500 dark:text-gray-400">
+                      <span>{new Date(item.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{new Date(item.created_at || Date.now()).toLocaleDateString()}</span>
                     </div>
-                  </div>
-                ) : (
-                  <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
-                    {item.action_type ? (
-                      <>
-                        <button
-                          disabled={isProcessing}
-                          className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
-                          data-testid={`triage-review-btn-${item.id}`}
-                          onClick={() => {
-                            setEditingId(item.id);
-                            setEditValue(item.action_payload || "");
-                          }}
-                        >
-                          Review Draft
-                        </button>
+
+                    {/* Action Buttons */}
+                    {editingId === item.id ? (
+                      <div className="p-5 flex flex-col gap-3 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
+                        <textarea
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/80 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-[12px] p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y"
+                          data-testid={`triage-edit-textarea-${item.id}`}
+                          placeholder="Edit the draft payload..."
+                        />
+                        <div className="flex flex-col sm:flex-row gap-3 w-full pt-2">
+                          <button
+                            onClick={() => handleDecision(item.id, true, editValue)}
+                            disabled={isProcessing}
+                            className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                            data-testid={`triage-save-btn-${item.id}`}
+                          >
+                            {isProcessing ? "Processing..." : "Save & Send"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingId(null);
+                              setEditValue("");
+                            }}
+                            disabled={isProcessing}
+                            className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                            data-testid={`triage-cancel-btn-${item.id}`}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
+                        {item.action_type ? (
+                          <>
+                            <button
+                              disabled={isProcessing}
+                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                              data-testid={`triage-review-btn-${item.id}`}
+                              onClick={() => {
+                                setEditingId(item.id);
+                                setEditValue(item.action_payload || "");
+                              }}
+                            >
+                              Review Draft
+                            </button>
+                            <button
+                              disabled={isProcessing}
+                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                              data-testid={`triage-approve-${item.id}`}
+                              onClick={() => handleDecision(item.id, true)}
+                            >
+                              {isProcessing ? "Processing..." : "Approve as-is"}
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            disabled={isProcessing}
+                            className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                            data-testid={`triage-approve-${item.id}`}
+                            onClick={() => handleDecision(item.id, true)}
+                          >
+                            {isProcessing ? "Processing..." : "Approve & Send"}
+                          </button>
+                        )}
                         <button
                           disabled={isProcessing}
                           className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
-                          data-testid={`triage-approve-${item.id}`}
-                          onClick={() => handleDecision(item.id, true)}
+                          data-testid={`triage-dismiss-${item.id}`}
+                          onClick={() => handleDecision(item.id, false)}
                         >
-                          {isProcessing ? "Processing..." : "Approve as-is"}
+                          Dismiss
                         </button>
-                      </>
-                    ) : (
-                      <button
-                        disabled={isProcessing}
-                        className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
-                        data-testid={`triage-approve-${item.id}`}
-                        onClick={() => handleDecision(item.id, true)}
-                      >
-                        {isProcessing ? "Processing..." : "Approve & Send"}
-                      </button>
+                      </div>
                     )}
-                    <button
-                      disabled={isProcessing}
-                      className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
-                      data-testid={`triage-dismiss-${item.id}`}
-                      onClick={() => handleDecision(item.id, false)}
-                    >
-                      Dismiss
-                    </button>
                   </div>
                 )}
               </div>
