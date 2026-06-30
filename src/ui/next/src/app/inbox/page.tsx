@@ -322,6 +322,8 @@ function InboxWorkspace({
                            buttonText = "✨ Approve booking";
                         } else if (parsedPayload && parsedPayload.action_type === "Draft Reply") {
                            buttonText = "✨ Approve & Send Draft";
+                        } else if (parsedPayload && parsedPayload.feature_type === "ambassador_reply") {
+                           buttonText = "✨ Approve & Send Draft";
                         }
                       }
                       return (
