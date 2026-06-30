@@ -129,7 +129,7 @@ test.describe("Documentation User Journey", () => {
     await chatButton.click();
 
     // Verify the Help Chat interface is visible
-    await expect(page.locator("h3", { hasText: "Ask AI Help" })).toBeVisible();
+    await expect(page.locator("h3", { hasText: "Ask anything" })).toBeVisible();
 
     // Locate the chat input and send button
     const chatInput = page.locator('input[placeholder="Ask anything..."]');

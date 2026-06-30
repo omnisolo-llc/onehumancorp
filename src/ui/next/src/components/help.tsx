@@ -15,7 +15,7 @@ type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: s
 
 const helpTabs = [
   { id: "center", label: "Help" },
-  { id: "chat", label: "Ask AI" },
+  { id: "chat", label: "Ask anything" },
   { id: "videos", label: "Videos" },
   { id: "whatsnew", label: "New" }
 ] as const;
@@ -229,7 +229,7 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
+        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
           <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide relative pr-12">
             {helpTabs.map((t) => (
               <button

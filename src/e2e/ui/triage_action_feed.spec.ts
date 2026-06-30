@@ -38,7 +38,7 @@ test.describe('Triage Action Feed UI', () => {
 
     if (await emptyState.isVisible()) {
       // Empty state path
-      await expect(emptyState).toContainText('No items need your attention right now');
+      await expect(emptyState).toContainText('All caught up!');
     } else {
       // Populated path
       const firstCard = listItems.first();

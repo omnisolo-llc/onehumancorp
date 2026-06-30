@@ -52,7 +52,7 @@ test.describe('In-App Help & Documentation Features', () => {
 
   test('api docs page', async ({ page }) => {
     await page.goto('/api/ui/api-docs.html');
-    await expect(page.getByText('API Reference for advanced users')).toBeVisible();
+    await expect(page.getByText('OHC Advanced API Reference')).toBeVisible();
   });
 
   test('changelog page', async ({ page }) => {

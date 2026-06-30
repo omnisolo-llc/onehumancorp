@@ -1826,7 +1826,7 @@
           // If items use 'status' (ui/triage) instead of 'lifecycle_state' (agent-feed)
           const proposals = items.filter(i => i.status !== 'resolved' && i.status !== 'dismissed' && i.lifecycle_state !== 'APPROVED' && i.lifecycle_state !== 'DISMISSED');
           if (proposals.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">All caught up!</div>';
             return;
           }
 
@@ -2243,7 +2243,7 @@
 
           const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED' || i.lifecycle_state === 'REJECTED' || i.status === 'resolved' || i.status === 'dismissed' || i.status === 'APPROVED' || i.status === 'REJECTED');
           if (activities.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty">No recent activity found.</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">No recent activity found.</div>';
             return;
           }
           triageQueue.innerHTML = activities.map(activity => {
@@ -3194,7 +3194,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
             <button class="ohc-help-tab" data-target="tab-tours">Interactive Tours</button>
             <button class="ohc-help-tab" data-target="tab-videos">Videos</button>
-            <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
+            <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask anything">Ask anything</button>
         </div>
 
         <div id="tab-articles" class="ohc-help-content active">
@@ -3215,7 +3215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   </label>
                 </div>
                 <div id="advanced-help-links" style="display: none;">
-                    <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">API Reference for advanced users</a>
+                    <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OHC Advanced API Reference</a>
                     <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
                 </div>
             </div>

@@ -202,7 +202,7 @@ export function HelpChat() {
               <span className="text-xl drop-shadow-md">✨</span>
               <div>
                 <h3 id="ai-chat-header-title" className="font-bold font-outfit text-sm tracking-wide text-white/90">
-                  Ask AI Help
+                  Ask anything
                 </h3>
                 <p className="text-xs text-blue-100 font-inter font-medium">
                   Always here to help
