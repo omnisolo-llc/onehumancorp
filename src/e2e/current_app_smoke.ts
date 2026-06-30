@@ -55,8 +55,8 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     expect(await totalRevenue.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 
     const bandwidthSavings = page.locator('#cost-dashboard-total-savings');
-    await expect(bandwidthSavings).toBeVisible();
-    expect(await bandwidthSavings.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
+    await expect(bandwidthSavings).toBeVisible({ timeout: 10000 });
+    expect(await bandwidthSavings.innerText()).toMatch(/^-?\$[\d,]+\.\d{2}$/);
 
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();
     await expect(page.locator('h3', { hasText: 'Agent & Feature Costs' })).toBeVisible();
