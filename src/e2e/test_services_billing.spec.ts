@@ -72,6 +72,19 @@ test.describe('Billing Services & Plan Limits E2E', () => {
     await page.goto('/cost-dashboard');
     await page.waitForLoadState('networkidle');
 
+    // Set viewport to a mobile size
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Verify mobile responsiveness: No horizontal scroll should exist
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+
+    // The download invoice button is natively visible on this widget
+    const downloadInvoiceBtn = page.getByRole('button', { name: 'Download Invoice' });
+    const box = await downloadInvoiceBtn.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+
     // Wait for the cost dashboard to load
     await expect(page.locator('#cost-dashboard-projected')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('#cost-dashboard-revenue')).toBeVisible();
