@@ -19,7 +19,7 @@ pub async fn guest_auth_middleware(
         return axum::response::Response::builder()
             .status(axum::http::StatusCode::UNAUTHORIZED)
             .body(axum::body::Body::from("Guest auth is not allowed in cloud mode"))
-            .unwrap();
+            .expect("Failed to build response");
     }
 
     let tenant_id = req.headers().get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("storefront").to_string();
@@ -382,9 +382,9 @@ impl Store {
             oidc_subject: None,
         };
 
-        self.users.write().unwrap().insert(id.clone(), admin);
-        self.by_name.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_user }, id.clone());
-        self.by_email.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_email }, id);
+        self.users.write().expect("Failed to acquire lock").insert(id.clone(), admin);
+        self.by_name.write().expect("Failed to acquire lock").insert(TenantKey { org_id: "".to_string(), key: admin_user }, id.clone());
+        self.by_email.write().expect("Failed to acquire lock").insert(TenantKey { org_id: "".to_string(), key: admin_email }, id);
     }
 
 
@@ -403,9 +403,9 @@ impl Store {
             return Err("password must be at least 6 characters".to_string());
         }
 
-        let mut users = self.users.write().unwrap();
-        let mut by_name = self.by_name.write().unwrap();
-        let mut by_email = self.by_email.write().unwrap();
+        let mut users = self.users.write().expect("Failed to acquire lock");
+        let mut by_name = self.by_name.write().expect("Failed to acquire lock");
+        let mut by_email = self.by_email.write().expect("Failed to acquire lock");
 
         let name_key = TenantKey { org_id: org_id.clone(), key: username.clone() };
         if by_name.contains_key(&name_key) {
@@ -444,8 +444,8 @@ impl Store {
 
     pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
         self.validate_org_id(org_id)?;
-        let by_name = self.by_name.read().unwrap();
-        let users = self.users.read().unwrap();
+        let by_name = self.by_name.read().expect("Failed to acquire lock");
+        let users = self.users.read().expect("Failed to acquire lock");
 
         let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
         let mut user_id_opt = by_name.get(&name_key).cloned();
@@ -493,7 +493,7 @@ impl Store {
             return None;
         }
 
-        let users = self.users.read().unwrap();
+        let users = self.users.read().expect("Failed to acquire lock");
         let u = users.get(id)?;
 
         if let Some(ref user_org) = u.organization_id {
@@ -511,7 +511,7 @@ impl Store {
             return vec![];
         }
 
-        let users = self.users.read().unwrap();
+        let users = self.users.read().expect("Failed to acquire lock");
         users.values()
             .filter(|u| {
                 if org_id.is_empty() {
@@ -527,8 +527,8 @@ impl Store {
     pub fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
         self.validate_org_id(org_id)?;
 
-        let mut users = self.users.write().unwrap();
-        let mut by_email = self.by_email.write().unwrap();
+        let mut users = self.users.write().expect("Failed to acquire lock");
+        let mut by_email = self.by_email.write().expect("Failed to acquire lock");
 
         let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
 
@@ -569,10 +569,10 @@ impl Store {
     pub fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         self.validate_org_id(org_id)?;
 
-        let mut users = self.users.write().unwrap();
-        let mut by_name = self.by_name.write().unwrap();
-        let mut by_email = self.by_email.write().unwrap();
-        let mut by_oidc = self.by_oidc.write().unwrap();
+        let mut users = self.users.write().expect("Failed to acquire lock");
+        let mut by_name = self.by_name.write().expect("Failed to acquire lock");
+        let mut by_email = self.by_email.write().expect("Failed to acquire lock");
+        let mut by_oidc = self.by_oidc.write().expect("Failed to acquire lock");
 
         let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
 
@@ -606,7 +606,7 @@ impl Store {
         }
 
         {
-            let mut revoked = self.revoked.write().unwrap();
+            let mut revoked = self.revoked.write().expect("Failed to acquire lock");
             revoked.insert(format!("{}:{}", org_id, jti), exp);
 
             let now = Utc::now();
@@ -633,7 +633,7 @@ impl Store {
         }
 
         {
-            let revoked = self.revoked.read().unwrap();
+            let revoked = self.revoked.read().expect("Failed to acquire lock");
             if let Some(exp) = revoked.get(&format!("{}:{}", org_id, jti)) {
                  if *exp > Utc::now() {
                      return true;
@@ -676,7 +676,7 @@ impl Store {
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
         if let Ok(header) = jsonwebtoken::decode_header(_token) {
             if header.alg == jsonwebtoken::Algorithm::RS256 {
-                let oidc_cfg_internal = self.oidc_cfg.read().unwrap().clone();
+                let oidc_cfg_internal = self.oidc_cfg.read().expect("Failed to acquire lock").clone();
                 let oidc_cfg = crate::oidc::OIDCConfig {
                     issuer_url: oidc_cfg_internal.issuer_url,
                     client_id: oidc_cfg_internal.client_id,
@@ -726,7 +726,7 @@ impl Store {
                 }
                 Err(_) => {
                     let oidc_cfg = {
-                        let c = self.oidc_cfg.read().unwrap();
+                        let c = self.oidc_cfg.read().expect("Failed to acquire lock");
                         crate::oidc::OIDCConfig {
                             issuer_url: c.issuer_url.clone(),
                             client_id: c.client_id.clone(),
