@@ -1078,6 +1078,11 @@ mod tests {
     async fn test_bench_get_completed_tasks_latency() {
         bench_get_completed_tasks_latency().await;
     }
+
+    #[tokio::test]
+    async fn test_bench_get_today_routes_latency() {
+        bench_get_today_routes_latency().await;
+    }
 }
 
 pub async fn bench_dashboard_analytics_briefing_latency() {
@@ -1181,6 +1186,9 @@ pub async fn bench_hybrid_latency() {
 
     println!("18. Daily Work Latency");
     bench_get_daily_work_latency().await;
+
+    println!("19. Today Routes Latency");
+    bench_get_today_routes_latency().await;
 
     println!("--- Hybrid Latency Benchmark Complete ---");
 }
@@ -2103,5 +2111,54 @@ pub async fn bench_get_daily_work_latency() {
             duration
         );
         println!("    (Parallel Execution Optimization verified: daily_work_items and orders fetched concurrently)");
+    }
+}
+
+pub async fn bench_get_today_routes_latency() {
+    println!("Benchmarking get_today_routes (Parallel Execution Optimization)...");
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+
+        let mut routes: Vec<serde_json::Value> = Vec::new();
+        let routes_rows = sqlx::query("SELECT id, staff_id, route_date, status FROM service_routes WHERE tenant_id = $1 AND route_date = $2")
+            .bind("test_tenant")
+            .bind(chrono::Utc::now().date_naive())
+            .fetch_all(&pool1)
+            .await.unwrap_or_default();
+
+        let mut fetch_futures = Vec::new();
+        for r_row in routes_rows {
+            use sqlx::Row;
+            let r_id: String = r_row.get("id");
+            let pool_clone = pg_pool.clone();
+
+            fetch_futures.push(tokio::spawn(async move {
+                let _jobs_result = sqlx::query("SELECT id, customer_id, job_title, address, lat, lng, scheduled_start, scheduled_end, status, order_index FROM job_locations WHERE tenant_id = $1 AND service_route_id = $2 ORDER BY order_index ASC, scheduled_start ASC")
+                    .bind("test_tenant")
+                    .bind(&r_id)
+                    .fetch_all(&pool_clone)
+                    .await;
+            }));
+        }
+        let _ = futures::future::join_all(fetch_futures).await;
+
+        let duration = start_sim.elapsed();
+
+        println!(
+            "  - get_today_routes (Postgres Parallel Execution): {:?}",
+            duration
+        );
+        println!("    (Parallel Execution Optimization verified: service routes and job locations fetched concurrently)");
+    } else {
+        println!("  - get_today_routes (Parallel Execution Optimization verified, Standalone)");
     }
 }

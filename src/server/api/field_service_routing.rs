@@ -108,46 +108,69 @@ async fn get_today_routes(
 
     let mut routes = Vec::new();
     if let Ok(routes_rows) = routes_result {
+        let mut fetch_futures = Vec::new();
+
         for r_row in routes_rows {
             let r_id: String = r_row.get("id");
-            let jobs_result = sqlx::query(
-                r#"
-                SELECT id, customer_id, job_title, address, lat, lng, scheduled_start, scheduled_end, status, order_index
-                FROM job_locations
-                WHERE tenant_id = $1 AND service_route_id = $2
-                ORDER BY order_index ASC, scheduled_start ASC
-                "#,
-            )
-            .bind(&tenant_id)
-            .bind(&r_id)
-            .fetch_all(&mut *tx)
-            .await;
+            let r_staff_id: Option<String> = r_row.try_get("staff_id").unwrap_or(None);
+            let r_route_date: NaiveDate = r_row.get("route_date");
+            let r_status: String = r_row.get("status");
 
-            let mut jobs = Vec::new();
-            if let Ok(jobs_rows) = jobs_result {
-                for j_row in jobs_rows {
-                    jobs.push(JobLocation {
-                        id: j_row.get("id"),
-                        customer_id: j_row.try_get("customer_id").unwrap_or(None),
-                        job_title: j_row.get("job_title"),
-                        address: j_row.get("address"),
-                        lat: j_row.try_get("lat").unwrap_or(None),
-                        lng: j_row.try_get("lng").unwrap_or(None),
-                        scheduled_start: j_row.get("scheduled_start"),
-                        scheduled_end: j_row.try_get("scheduled_end").unwrap_or(None),
-                        status: j_row.get("status"),
-                        order_index: j_row.get("order_index"),
-                    });
+            let tenant_id_clone = tenant_id.clone();
+            let pool_clone = state.db.pool.clone();
+
+            fetch_futures.push(tokio::spawn(async move {
+                let mut local_tx = pool_clone.begin().await.unwrap();
+                let _ = crate::common::auth_utils::set_org_context(&mut *local_tx, &tenant_id_clone).await;
+
+                let jobs_result = sqlx::query(
+                    r#"
+                    SELECT id, customer_id, job_title, address, lat, lng, scheduled_start, scheduled_end, status, order_index
+                    FROM job_locations
+                    WHERE tenant_id = $1 AND service_route_id = $2
+                    ORDER BY order_index ASC, scheduled_start ASC
+                    "#,
+                )
+                .bind(&tenant_id_clone)
+                .bind(&r_id)
+                .fetch_all(&mut *local_tx)
+                .await;
+
+                let mut jobs = Vec::new();
+                if let Ok(jobs_rows) = jobs_result {
+                    for j_row in jobs_rows {
+                        jobs.push(JobLocation {
+                            id: j_row.get("id"),
+                            customer_id: j_row.try_get("customer_id").unwrap_or(None),
+                            job_title: j_row.get("job_title"),
+                            address: j_row.get("address"),
+                            lat: j_row.try_get("lat").unwrap_or(None),
+                            lng: j_row.try_get("lng").unwrap_or(None),
+                            scheduled_start: j_row.get("scheduled_start"),
+                            scheduled_end: j_row.try_get("scheduled_end").unwrap_or(None),
+                            status: j_row.get("status"),
+                            order_index: j_row.get("order_index"),
+                        });
+                    }
                 }
-            }
 
-            routes.push(ServiceRoute {
-                id: r_id,
-                staff_id: r_row.try_get("staff_id").unwrap_or(None),
-                route_date: r_row.get("route_date"),
-                status: r_row.get("status"),
-                jobs,
-            });
+                let _ = local_tx.commit().await;
+
+                ServiceRoute {
+                    id: r_id,
+                    staff_id: r_staff_id,
+                    route_date: r_route_date,
+                    status: r_status,
+                    jobs,
+                }
+            }));
+        }
+
+        let results = futures::future::join_all(fetch_futures).await;
+        for res in results {
+            if let Ok(route) = res {
+                routes.push(route);
+            }
         }
     }
 
