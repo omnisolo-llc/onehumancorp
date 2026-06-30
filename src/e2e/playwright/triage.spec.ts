@@ -5,7 +5,7 @@ test.describe('Intelligent Owner Triage Inbox (Mobile First)', () => {
 
   test('should load the triage inbox and display empty state', async ({ page }) => {
     const tenantId = 'triage-test-tenant-' + Date.now();
-    await page.goto(`/triage?tenant_id=${tenantId}`);
+    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
 
     // Verify app shell and empty state
     await expect(page.locator('text=Work Triage')).toBeVisible();
@@ -34,7 +34,7 @@ test.describe('Intelligent Owner Triage Inbox (Mobile First)', () => {
       }
     });
 
-    await page.goto(`/triage?tenant_id=${tenantId}`);
+    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
 
     // Wait for item to appear
     const itemCard = page.getByTestId('triage-card-triage-item-1');
@@ -77,7 +77,7 @@ test.describe('Intelligent Owner Triage Inbox (Mobile First)', () => {
       }
     });
 
-    await page.goto(`/triage?tenant_id=${tenantId}`);
+    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
 
     const itemCard = page.getByTestId('triage-card-triage-item-3');
     await expect(itemCard).toBeVisible({ timeout: 15000 });
@@ -113,7 +113,7 @@ test.describe('Intelligent Owner Triage Inbox (Mobile First)', () => {
       }
     });
 
-    await page.goto(`/triage?tenant_id=${tenantId}`);
+    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
 
     const itemCard = page.getByTestId('triage-card-triage-item-2');
     await expect(itemCard).toBeVisible({ timeout: 15000 });

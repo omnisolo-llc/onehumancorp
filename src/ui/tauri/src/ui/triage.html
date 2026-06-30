@@ -34,7 +34,170 @@
       .glassmorphism-input {
         border-radius: 8px;
       }
-    </style>
+
+      .triage-container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 16px;
+        box-sizing: border-box;
+      }
+      .triage-card {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin-bottom: 16px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-card {
+          background: rgba(22, 22, 26, 0.7);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+      .triage-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.4);
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-header {
+          background: rgba(22,22,26,0.5);
+          border-bottom-color: rgba(255,255,255,0.1);
+        }
+      }
+      .triage-source {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .triage-context {
+        font-size: 15px;
+        font-weight: 500;
+        line-height: 1.4;
+      }
+      .triage-action-preview {
+        padding: 20px;
+        background: rgba(0, 102, 255, 0.1);
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-action-preview {
+          background: rgba(0, 102, 255, 0.2);
+        }
+      }
+      .triage-action-type {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        color: #0066FF;
+        margin-bottom: 8px;
+      }
+      .triage-payload {
+        border: 1px solid rgba(0, 102, 255, 0.2);
+        background: rgba(255, 255, 255, 0.5);
+        padding: 16px;
+        font-size: 13px;
+        line-height: 1.5;
+        border-radius: 8px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-payload {
+          background: rgba(0, 0, 0, 0.3);
+          border-color: rgba(0, 102, 255, 0.3);
+        }
+      }
+      .triage-meta {
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: #666;
+        background: rgba(255,255,255,0.3);
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-meta {
+          color: #aaa;
+          background: rgba(0,0,0,0.3);
+        }
+      }
+      .triage-buttons {
+        padding: 16px 20px;
+        display: flex;
+        gap: 12px;
+        background: rgba(255,255,255,0.4);
+        border-top: 1px solid rgba(255,255,255,0.2);
+        flex-wrap: wrap;
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-buttons {
+          background: rgba(0,0,0,0.2);
+          border-top-color: rgba(255,255,255,0.1);
+        }
+      }
+      .triage-btn {
+        flex: 1;
+        min-height: 44px;
+        min-width: 44px;
+        padding: 0 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+      }
+      .triage-btn.primary {
+        background: #0066FF;
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 102, 255, 0.2);
+      }
+      .triage-btn.secondary {
+        background: rgba(255,255,255,0.5);
+        color: inherit;
+        border: 1px solid rgba(0,0,0,0.1);
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-btn.secondary {
+          background: rgba(0,0,0,0.5);
+          border-color: rgba(255,255,255,0.2);
+        }
+      }
+      .triage-textarea {
+        width: 100%;
+        min-height: 88px;
+        font-size: 13px;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.2);
+        background: rgba(255,255,255,0.8);
+        color: inherit;
+        font-family: inherit;
+        resize: vertical;
+        box-sizing: border-box;
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-textarea {
+          background: rgba(0,0,0,0.4);
+          border-color: rgba(255,255,255,0.2);
+        }
+      }
+
+</style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Work Triage - Unified Agent Feed</title>
@@ -359,8 +522,9 @@
     </div>
 
     <script>
+
       let items = [];
-      let selectedId = null;
+      let editingId = null;
 
       function tenantId() {
         return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
@@ -377,190 +541,166 @@
       async function loadItems() {
         const listEl = document.getElementById("triage-list");
         try {
-          const res = await fetch(`/api/ui/dashboard/daily-work?tenant_id=${encodeURIComponent(tenantId())}`);
+          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
           if (!res.ok) throw new Error("Failed to load triage items from the database");
 
           const data = await res.json();
           items = data.items || (Array.isArray(data) ? data : []);
 
-          if (!selectedId && items.length > 0) {
-            selectedId = items[0].id;
-          }
-
-          renderUI();
-        } catch (e) {
-          listEl.innerHTML = `<div class="app-empty" style="color: #d9534f;">${e.message || "Failed to load triage items"}</div>`;
-        }
-      }
-
-      function showStatus(message, isSuccess = true) {
-        const statusEl = document.getElementById("action-status");
-        statusEl.textContent = message;
-        statusEl.className = `action-status ${isSuccess ? 'success' : 'error'}`;
-        statusEl.style.display = "block";
-        setTimeout(() => {
-          statusEl.style.display = "none";
-        }, 3000);
-      }
-
-
-      async function handleDecision(id, approved) {
-        let editedReply = null;
-        if (approved) {
-           const textarea = document.getElementById('edit-draft-reply');
-           if (textarea) {
-               editedReply = textarea.value;
-           }
-        }
-
-        try {
-          const res = await fetch(`/api/ui/omni_inbox/action?tenant_id=${encodeURIComponent(tenantId())}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message_id: id, approved, edited_reply: editedReply })
-          });
-
-          if (!res.ok) throw new Error("Failed to update action");
-
-          showStatus(approved ? "Approved!" : "Dismissed.", true);
-
-          items = items.filter(i => i.id !== id);
-          if (selectedId === id) {
-            selectedId = items.length > 0 ? items[0].id : null;
-          }
-
           renderUI();
         } catch (e) {
           console.error(e);
-          showStatus("Error updating action.", false);
+          listEl.innerHTML = `<div class="app-empty" style="color:var(--text-danger)">Failed to load items. ${e.message}</div>`;
         }
       }
 
-
-      function renderUI() {
-        // Badges
-        const activeCount = items.length;
-        const urgentCount = items.filter(item => ["urgent", "high"].includes((item.priority || "").toLowerCase())).length;
-
-        document.getElementById("active-count-badge").textContent = `Active: ${activeCount}`;
-        document.getElementById("active-count-badge").className = `app-badge ${activeCount > 0 ? 'warn' : 'good'}`;
-
-        const urgentBadge = document.getElementById("urgent-count-badge");
-        if (urgentCount > 0) {
-          urgentBadge.textContent = `Urgent: ${urgentCount}`;
-          urgentBadge.style.display = "inline-block";
-        } else {
-          urgentBadge.style.display = "none";
-        }
-
-        // List
-        const listEl = document.getElementById("triage-list");
-        if (items.length === 0) {
-          listEl.innerHTML = `<div class="app-empty" data-testid="triage-feed-empty">All caught up!</div>`;
-        } else {
-          listEl.innerHTML = items.map(item => {
-            const displaySource = item.customer_info?.name ? item.customer_info.name : (item.intent || "Unknown Source");
-            const displayContent = item.customer_info?.message || "No content";
-            return `
-            <button
-              type="button"
-              data-testid="triage-card-${item.id}"
-              class="app-list-item ${selectedId === item.id ? 'selected' : ''}"
-              onclick="selectItem('${item.id}')"
-            >
-              <div style="min-width: 0;">
-                <div class="app-list-title">${displaySource}</div>
-                <div class="app-list-subtitle">${displayContent}</div>
-              </div>
-              <span class="app-badge neutral">${item.status || "unread"}</span>
-            </button>
-          `}).join('');
-        }
-
-        // Detail
-        const detailEl = document.getElementById("triage-detail");
-        const selected = items.find(i => i.id === selectedId);
-
-        if (!selected) {
-          detailEl.innerHTML = `<div class="app-empty">Select a message to review it.</div>`;
-        } else {
-          const dateStr = selected.created_at
-            ? new Date(selected.created_at).toLocaleString()
-            : new Date().toLocaleString();
-
-          let actionHtml = '';
-          let draftReply = selected.draft_reply || (selected.proposed_action ? selected.proposed_action.message || selected.proposed_action.draft_reply : null) || selected.action_payload || (selected.context_payload ? selected.context_payload.draft_reply : null);
-
-          if (draftReply) {
-            actionHtml = `
-
-              <div class="detail-group">
-                <div class="app-metric-label">AI Draft Reply (Edit before sending)</div>
-                <textarea id="edit-draft-reply" class="detail-value proposed-action" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 14px; background: rgba(255, 255, 255, 0.65); resize: vertical;">${draftReply}</textarea>
-              </div>
-
-            `;
+      async function handleDecision(id, approved, editValue = null) {
+        try {
+          // If approved is false, status should be DISMISSED
+          const action_status = approved ? "APPROVED" : "DISMISSED";
+          let payload = { action_status };
+          if (approved && editValue !== null) {
+             payload.edited_payload = editValue;
           }
 
-          let buttonsHtml = `
-            <div class="btn-group">
-              <button
-                class="btn-primary"
-                data-testid="approve-btn"
-                onclick="handleDecision('${selected.id}', true)"
-              >
-                ✨ Send Reply
-              </button>
-              <button
-                class="btn-secondary"
-                data-testid="dismiss-btn"
-                onclick="handleDecision('${selected.id}', false)"
-              >
-                Dismiss
-              </button>
-            </div>
-          `;
+          const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}&id=${encodeURIComponent(id)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
 
-          detailEl.innerHTML = `
-            <div class="detail-group">
-              <div class="app-metric-label">Source</div>
-              <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${selected.source || "Unknown source"}</div>
-            </div>
-
-            <div class="detail-group">
-              <div class="app-metric-label">Message</div>
-              <div class="detail-value">
-                ${selected.original_content || "No message content"}
-              </div>
-            </div>
-
-            ${actionHtml}
-
-            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-              <div>
-                <div class="app-metric-label">Status</div>
-                <div style="margin-top: 8px;"><span class="app-badge neutral">${selected.status || "unread"}</span></div>
-              </div>
-              <div>
-                <div class="app-metric-label">Created</div>
-                <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${dateStr}</div>
-              </div>
-            </div>
-
-            ${buttonsHtml}
-          `;
+          if (!res.ok) {
+             console.error(await res.text());
+             throw new Error("Failed to update action");
+          }
+          items = items.filter(i => i.id !== id);
+          editingId = null;
+          renderUI();
+        } catch (e) {
+          console.error(e);
+          alert("Error: " + e.message);
         }
       }
 
-      window.selectItem = function(id) {
-        selectedId = id;
-        renderUI();
-      };
+      function startEdit(id) {
+         editingId = id;
+         renderUI();
+      }
 
-      document.addEventListener("DOMContentLoaded", () => {
-        loadItems();
-      });
-    </script>
+      function cancelEdit() {
+         editingId = null;
+         renderUI();
+      }
+
+      function handleSaveDecision(id) {
+         const textarea = document.getElementById('triage-edit-textarea-' + id);
+         const val = textarea ? textarea.value : '';
+         handleDecision(id, true, val);
+      }
+
+      function renderUI() {
+        const activeCount = items.length;
+        const activeBadge = document.getElementById("active-count-badge");
+        if (activeBadge) {
+            activeBadge.textContent = `Active: ${activeCount}`;
+            activeBadge.className = `app-badge ${activeCount > 0 ? 'warn' : 'good'}`;
+        }
+
+        const urgentBadge = document.getElementById("urgent-count-badge");
+        if (urgentBadge) {
+            const urgentCount = items.filter(item => ["urgent", "high"].includes((item.priority || "").toLowerCase())).length;
+            if (urgentCount > 0) {
+              urgentBadge.textContent = `Urgent: ${urgentCount}`;
+              urgentBadge.style.display = "inline-block";
+            } else {
+              urgentBadge.style.display = "none";
+            }
+        }
+
+        const listEl = document.getElementById("triage-list");
+        if (items.length === 0) {
+          listEl.innerHTML = `<div class="app-empty" style="padding: 40px 20px; text-align: center;" data-testid="triage-feed-empty">
+            <div style="font-size: 32px; margin-bottom: 12px;">✨</div>
+            <div style="font-size: 18px; font-weight: 600;">All caught up! You're a hero.</div>
+            <div style="font-size: 14px; margin-top: 8px; opacity: 0.7;">Your AI assistant has handled all outstanding items. Great job!</div>
+          </div>`;
+          return;
+        }
+
+        listEl.innerHTML = items.map(item => {
+          const displaySource = item.customer_id || item.source || "Unknown Source";
+          const displayContext = item.context || item.customer_info?.message || item.intent || "No context provided";
+
+          let draftReply = item.action_payload || item.draft_reply || (item.proposed_action ? item.proposed_action.message || item.proposed_action.draft_reply : null) || (item.context_payload ? item.context_payload.draft_reply : null);
+
+          let actionHtml = '';
+          if (draftReply) {
+             actionHtml = `
+                <div class="triage-action-preview">
+                    <div class="triage-action-type">Proposed Action: ${item.action_type || 'Draft Reply'}</div>
+                    <div class="triage-payload">${draftReply}</div>
+                </div>
+             `;
+          }
+
+          let buttonsHtml = '';
+          if (editingId === item.id) {
+             buttonsHtml = `
+                <div class="triage-buttons" style="flex-direction: column;">
+                   <textarea id="triage-edit-textarea-${item.id}" data-testid="triage-edit-textarea-${item.id}" class="triage-textarea">${draftReply || ''}</textarea>
+                   <div style="display: flex; gap: 12px; width: 100%;">
+                       <button class="triage-btn primary" data-testid="triage-save-btn-${item.id}" onclick="handleSaveDecision('${item.id}')">Save & Send</button>
+                       <button class="triage-btn secondary" data-testid="triage-cancel-btn-${item.id}" onclick="cancelEdit()">Cancel</button>
+                   </div>
+                </div>
+             `;
+          } else {
+              if (draftReply) {
+                  buttonsHtml = `
+                    <div class="triage-buttons">
+                        <button class="triage-btn primary" data-testid="triage-review-btn-${item.id}" onclick="startEdit('${item.id}')">Review Draft</button>
+                        <button class="triage-btn secondary" data-testid="triage-approve-${item.id}" onclick="handleDecision('${item.id}', true)">Approve as-is</button>
+                        <button class="triage-btn secondary" data-testid="triage-dismiss-${item.id}" onclick="handleDecision('${item.id}', false)">Dismiss</button>
+                    </div>
+                  `;
+              } else {
+                  buttonsHtml = `
+                    <div class="triage-buttons">
+                        <button class="triage-btn primary" data-testid="triage-approve-${item.id}" onclick="handleDecision('${item.id}', true)">Approve & Send</button>
+                        <button class="triage-btn secondary" data-testid="triage-dismiss-${item.id}" onclick="handleDecision('${item.id}', false)">Dismiss</button>
+                    </div>
+                  `;
+              }
+          }
+
+          const createdTime = item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+          const createdDate = item.created_at ? new Date(item.created_at).toLocaleDateString() : '';
+
+          return `
+            <div class="triage-card" data-testid="triage-card-${item.id}">
+              <div class="triage-header">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="triage-source">
+                        <span>💬</span> ${displaySource}
+                    </div>
+                    <span class="app-badge ${badgeTone(item.priority)}">${item.priority || "Normal"}</span>
+                </div>
+                <div class="triage-context">${displayContext}</div>
+              </div>
+              ${actionHtml}
+              <div class="triage-meta">
+                 <span>${createdTime}</span>
+                 <span>${createdDate}</span>
+              </div>
+              ${buttonsHtml}
+            </div>
+          `;
+        }).join('');
+      }
+
+      window.addEventListener('load', loadItems);
+
+</script>
 
 
 
