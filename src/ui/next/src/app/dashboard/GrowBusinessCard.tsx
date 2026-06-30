@@ -34,6 +34,13 @@ export function GrowBusinessCard() {
               Viral Widget
             </Link>
             <Link
+              id="digital-business-card-btn"
+              href="/digital-business-card"
+              className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Digital Business Card
+            </Link>
+            <Link
               id="review-storefront-btn"
               href="/edge-storefront-setup"
               className="px-4 py-2 bg-[#0071E3] hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"

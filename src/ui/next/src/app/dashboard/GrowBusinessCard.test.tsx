@@ -17,6 +17,9 @@ describe('GrowBusinessCard', () => {
     const widgetLink = screen.getByText('Viral Widget');
     expect(widgetLink).toHaveAttribute('href', '/viral-powered-by-ohc-widget');
 
+    const cardLink = screen.getByText('Digital Business Card');
+    expect(cardLink).toHaveAttribute('href', '/digital-business-card');
+
     const storefrontLink = screen.getByText('Review Storefront');
     expect(storefrontLink).toHaveAttribute('href', '/edge-storefront-setup');
 
