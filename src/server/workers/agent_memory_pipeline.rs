@@ -40,43 +40,59 @@ impl AgentMemoryPipeline {
     pub async fn process_session_data(&self) -> Result<(), Box<dyn std::error::Error>> {
         match &self.db.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let rows = sqlx::query("SELECT s.session_id, s.agent_id, s.context_data, a.tenant_id FROM agent_session_data s JOIN agents a ON s.agent_id = a.id ORDER BY s.last_accessed ASC LIMIT 100")
-                    .fetch_all(sqlite_pool)
+                for _ in 0..100 {
+                    let mut tx = sqlite_pool.begin().await?;
+
+                    let row = sqlx::query("
+                        SELECT s.session_id, s.agent_id, s.context_data, a.tenant_id
+                        FROM agent_session_data s
+                        JOIN agents a ON s.agent_id = a.id
+                        ORDER BY s.last_accessed ASC
+                        LIMIT 1
+                    ")
+                    .fetch_optional(&mut *tx)
                     .await?;
 
-                for row in rows {
-                    use sqlx::Row;
-                    let session_id: String = row.get("session_id");
-                    let agent_id: String = row.get("agent_id");
-                    let context_data: String = row.get("context_data");
-                    let tenant_id: String = row.get("tenant_id");
+                    if let Some(row) = row {
+                        use sqlx::Row;
+                        let session_id: String = row.get("session_id");
+                        let agent_id: String = row.get("agent_id");
+                        let context_data: String = row.get("context_data");
+                        let tenant_id: String = row.get("tenant_id");
 
-                    let embedding = match self.embedding_api.generate_embedding(&context_data).await {
-                        Ok(emb) => emb,
-                        Err(e) => {
-                            ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
-                            tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
-                            vec![0.0; 1536]
-                        }
-                    };
+                        // We immediately delete to simulate "locking" it so other workers don't grab it
+                        sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                            .bind(&session_id)
+                            .execute(&mut *tx)
+                            .await?;
 
-                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                    let mem_id = Uuid::new_v4();
+                        let embedding = match self.embedding_api.generate_embedding(&context_data).await {
+                            Ok(emb) => emb,
+                            Err(e) => {
+                                ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
+                                tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
+                                vec![0.0; 1536]
+                            }
+                        };
 
-                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6)")
-                        .bind(mem_id.to_string())
-                        .bind(&tenant_id)
-                        .bind(&agent_id)
-                        .bind("SESSION_DATA")
-                        .bind(&context_data)
-                        .bind(&emb_str)
-                        .execute(sqlite_pool)
-                        .await?;
+                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                        let mem_id = Uuid::new_v4();
 
-                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
-                        .bind(&session_id)
-                        .execute(sqlite_pool)
-                        .await?;
+                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6)")
+                            .bind(mem_id.to_string())
+                            .bind(&tenant_id)
+                            .bind(&agent_id)
+                            .bind("SESSION_DATA")
+                            .bind(&context_data)
+                            .bind(&emb_str)
+                            .execute(&mut *tx)
+                            .await?;
+
+                        tx.commit().await?;
+                    } else {
+                        tx.rollback().await?;
+                        break;
+                    }
                 }
             }
             DbStore::Postgres => {

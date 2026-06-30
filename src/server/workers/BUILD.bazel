@@ -24,6 +24,7 @@ exports_files(
         "subscription_replenishment_worker.rs",
         "daily_ops_routine_worker.rs",
         "agent_action_worker.rs",
+        "agent_action_worker_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -54,6 +55,7 @@ rust_library(
         "subscription_replenishment_worker.rs",
         "daily_ops_routine_worker.rs",
         "agent_action_worker.rs",
+        "agent_action_worker_test.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
