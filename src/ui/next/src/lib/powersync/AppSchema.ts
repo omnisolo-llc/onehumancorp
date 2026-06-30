@@ -32,7 +32,40 @@ const pendingActions = new Table({
   timestamp: column.integer
 });
 
+
+const appointments = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  customer_id: column.text,
+  customer_name: column.text,
+  job_template_id: column.text,
+  job_name: column.text,
+  status: column.text,
+  scheduled_start_time: column.text,
+  scheduled_end_time: column.text,
+  location_address: column.text,
+  notes: column.text,
+  actual_start_time: column.text,
+  actual_end_time: column.text
+});
+
+const serviceRoutes = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  staff_profile_id: column.text,
+  route_date: column.text,
+  status: column.text,
+  start_location_lat: column.real,
+  start_location_lng: column.real,
+  end_location_lat: column.real,
+  end_location_lng: column.real,
+  created_at: column.text,
+  updated_at: column.text
+});
+
 export const AppSchema = new Schema({
+  appointments: appointments,
+  service_routes: serviceRoutes,
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages,
   pending_actions: pendingActions

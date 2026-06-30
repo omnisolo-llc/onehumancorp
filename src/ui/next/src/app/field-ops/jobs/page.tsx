@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { SyncManager } from "../../../lib/sync/SyncManager";
+import { useQuery } from "@powersync/react";
+import { PowerSyncProvider } from "../../../lib/powersync/PowerSyncProvider";
 
 type Appointment = {
   id: string;
@@ -18,9 +20,10 @@ type Appointment = {
   actual_end_time?: string;
 };
 
-export default function FieldOpsJobsPage() {
+function FieldOpsJobsPageContent() {
   const [isOffline, setIsOffline] = useState(false);
   const [jobs, setJobs] = useState<Appointment[]>([]);
+  const { data: offlineJobs } = useQuery<Appointment>('SELECT * FROM appointments ORDER BY scheduled_start_time ASC');
   const [agentSuggestion, setAgentSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [delayAction, setDelayAction] = useState<{
@@ -37,6 +40,13 @@ export default function FieldOpsJobsPage() {
   const [draftingQuote, setDraftingQuote] = useState(false);
   const [draftQuoteResult, setDraftQuoteResult] = useState<any | null>(null);
 
+
+  useEffect(() => {
+    if (isOffline && offlineJobs && offlineJobs.length > 0) {
+       setJobs(offlineJobs);
+    }
+  }, [isOffline, offlineJobs]);
+
   useEffect(() => {
     setIsOffline(!navigator.onLine);
     const handleOnline = () => setIsOffline(false);
@@ -45,18 +55,35 @@ export default function FieldOpsJobsPage() {
     window.addEventListener("offline", handleOffline);
 
     // Fetch initial schedule
-    fetch("/api/v1/field-ops/appointments")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.appointments) {
-          setJobs(data.appointments);
-        }
+    if (navigator.onLine) {
+      fetch("/api/v1/field-ops/appointments")
+        .then((res) => res.json())
+        .then(async (data) => {
+          if (data.appointments) {
+            setJobs(data.appointments);
+            // Sync to local DB
+            try {
+               const { getPowerSyncDB } = await import('../../../lib/powersync/db');
+               const db = await getPowerSyncDB();
+               await db.execute('DELETE FROM appointments');
+               for (const appt of data.appointments) {
+                  await db.execute('INSERT INTO appointments (id, tenant_id, customer_id, customer_name, job_template_id, job_name, status, scheduled_start_time, scheduled_end_time, location_address, notes, actual_start_time, actual_end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+                      appt.id, 'default', appt.customer_id, appt.customer_name, appt.job_template_id, appt.job_name, appt.status, appt.scheduled_start_time, appt.scheduled_end_time, appt.location_address, appt.notes || '', appt.actual_start_time || null, appt.actual_end_time || null
+                  ]);
+               }
+            } catch (e) {
+               console.error("Failed to sync to local DB", e);
+            }
+          }
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Failed to load appointments", err);
+          setLoading(false);
+        });
+    } else {
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to load appointments", err);
-        setLoading(false);
-      });
+    }
 
     return () => {
       window.removeEventListener("online", handleOnline);
@@ -198,6 +225,17 @@ export default function FieldOpsJobsPage() {
     if (!job) return;
 
     handleStatusChange(jobId, "Completed");
+
+    // Queue invoice generating / tap-to-pay intent
+    SyncManager.getInstance().enqueue({
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      type: "generate_invoice",
+      payload: {
+        job_id: jobId,
+        customer_id: job.customer_id
+      },
+      timestamp: Date.now()
+    });
 
     if (job.notes) {
       SyncManager.getInstance().enqueue({
@@ -440,7 +478,7 @@ export default function FieldOpsJobsPage() {
                         className="flex-1 bg-[#0071E3] hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
                         onClick={() => handleComplete(job.id)}
                       >
-                        Job Done
+                        Complete & Pay
                       </button>
                       <button
                         className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors active:scale-[0.98] min-h-[44px] min-w-[44px]"
@@ -555,5 +593,13 @@ export default function FieldOpsJobsPage() {
       )}
 
     </div>
+  );
+}
+
+export default function FieldOpsJobsPage() {
+  return (
+    <PowerSyncProvider>
+      <FieldOpsJobsPageContent />
+    </PowerSyncProvider>
   );
 }

@@ -10,6 +10,15 @@ vi.mock('../../../lib/sync/SyncManager', () => ({
   },
 }));
 
+vi.mock('../../../lib/powersync/PowerSyncProvider', () => ({
+  PowerSyncProvider: ({ children }: any) => <div data-testid="powersync-provider">{children}</div>,
+  isPowerSyncSupportedForLocation: () => true
+}));
+vi.mock('@powersync/react', () => ({
+  useQuery: vi.fn(() => ({ data: [] })),
+  PowerSyncContext: { Provider: ({ children }: any) => <div>{children}</div> }
+}));
+
 describe('FieldOpsJobsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -82,7 +91,7 @@ describe('FieldOpsJobsPage', () => {
     const startWorkButton = await screen.findByText('Start Work');
     fireEvent.click(startWorkButton);
 
-    const completeButton = await screen.findByText('Job Done');
+    const completeButton = await screen.findByText('Complete & Pay');
     fireEvent.click(completeButton);
 
     expect(await screen.findByText('Saved Notes:')).toBeInTheDocument();
