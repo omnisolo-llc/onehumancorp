@@ -2779,7 +2779,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let tm_mesh = handoff_mesh.clone();
     hub.task_manager().set_broadcaster(std::sync::Arc::new(move |task, event_type| {
-        let payload = match serde_json::to_string(&task) {
+        let task_value = serde_json::to_value(&task).unwrap_or(serde_json::Value::Null);
+        let redacted_task = ::server_telemetry::redact_interface_pii(task_value);
+        let payload = match serde_json::to_string(&redacted_task) {
             Ok(p) => p,
             Err(e) => {
                 ::server_telemetry::record_error_signal("[bug] Failed to serialize task");
