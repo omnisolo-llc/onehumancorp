@@ -384,23 +384,104 @@ pub async fn stripe_webhook_handler(
                     .and_then(|q| q.parse::<i32>().ok())
                     .unwrap_or(1);
 
-                let inventory_service = crate::services::inventory::InventoryService::new(None);
+                let idempotency_key_opt = obj.get("metadata")
+                    .and_then(|m| m.get("idempotency_key"))
+                    .and_then(|id| id.as_str());
 
-                let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, "").await;
+                let amount = obj.get("amount").and_then(|a| a.as_f64()).unwrap_or(0.0) / 100.0;
+                let currency = obj.get("currency").and_then(|c| c.as_str()).unwrap_or("usd");
 
-                // Notify KAIROS Orchestrator for Sales and Operations AI agents
-                let orch = webhook_state.orchestrator.clone();
-                let payload_val = obj.clone();
-                let tenant_id_val = tenant_id.to_string();
-                tokio::spawn(async move {
-                    let evt = crate::orchestration::departments::types::DepartmentEvent {
-                        id: uuid::Uuid::new_v4().to_string(),
-                        tenant_id: tenant_id_val,
-                        event_type: "POS_SALE_COMPLETED".to_string(),
-                        payload: payload_val,
-                    };
-                    let _ = orch.dispatch_event(evt).await;
-                });
+                let mut is_new = true;
+
+                if let Some(idempotency_key) = idempotency_key_opt {
+                    // Check if already processed
+                    let existing: Option<(String,)> = sqlx::query_as("SELECT status FROM payment_intents WHERE idempotency_key = $1 AND tenant_id = $2")
+                        .bind(idempotency_key)
+                        .bind(tenant_id)
+                        .fetch_optional(&webhook_state.db.pool)
+                        .await.unwrap_or(None);
+
+                    if let Some((status,)) = existing {
+                        if status == "succeeded" {
+                            is_new = false;
+                        }
+                    }
+
+                    if is_new {
+                        let _ = sqlx::query("UPDATE payment_intents SET status = 'succeeded', stripe_payment_intent_id = $1 WHERE idempotency_key = $2 AND tenant_id = $3")
+                            .bind(payload.id.clone())
+                            .bind(idempotency_key)
+                            .bind(tenant_id)
+                            .execute(&webhook_state.db.pool)
+                            .await;
+
+                        let tx_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
+                            .bind(tenant_id)
+                            .bind(&tx_id)
+                            .bind(amount)
+                            .bind(currency)
+                            .execute(&webhook_state.db.pool)
+                            .await;
+
+                        let account_id = "default_revenue";
+                        let _ = sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                            .bind(tenant_id)
+                            .bind(account_id)
+                            .bind(currency)
+                            .bind(0.0)
+                            .execute(&webhook_state.db.pool)
+                            .await;
+
+                        let entry_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
+                            .bind(tenant_id)
+                            .bind(&entry_id)
+                            .bind(&tx_id)
+                            .bind(account_id)
+                            .bind(amount)
+                            .execute(&webhook_state.db.pool)
+                            .await;
+
+                        let _ = sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
+                            .bind(amount)
+                            .bind(tenant_id)
+                            .bind(account_id)
+                            .execute(&webhook_state.db.pool)
+                            .await;
+
+                        let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'billing_webhook', 'finance', 'payment_succeeded', $3, 'pending')")
+                            .bind(uuid::Uuid::new_v4().to_string())
+                            .bind(tenant_id)
+                            .bind(serde_json::json!({
+                                "event": "payment_succeeded",
+                                "amount": amount,
+                                "currency": currency,
+                                "idempotency_key": idempotency_key
+                            }))
+                            .execute(&webhook_state.db.pool)
+                            .await;
+                    }
+                }
+
+                if is_new {
+                    let inventory_service = crate::services::inventory::InventoryService::new(None);
+                    let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, "").await;
+
+                    // Notify KAIROS Orchestrator for Sales and Operations AI agents
+                    let orch = webhook_state.orchestrator.clone();
+                    let payload_val = obj.clone();
+                    let tenant_id_val = tenant_id.to_string();
+                    tokio::spawn(async move {
+                        let evt = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id_val,
+                            event_type: "POS_SALE_COMPLETED".to_string(),
+                            payload: payload_val,
+                        };
+                        let _ = orch.dispatch_event(evt).await;
+                    });
+                }
             }
 
             // Also try to update the order status to Paid if order_id is present

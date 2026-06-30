@@ -25,7 +25,8 @@ impl TerminalSessionManager {
         product_id: Option<&str>,
         quantity: Option<i32>,
         order_id: Option<&str>,
-    ) -> Result<String, String> {
+        idempotency_key: Option<&str>,
+    ) -> Result<(String, String), String> {
         if tenant_id.is_empty() {
             return Err("Unauthenticated: Missing tenant ID".to_string());
         }
@@ -35,7 +36,8 @@ impl TerminalSessionManager {
             currency,
             product_id,
             quantity,
-            order_id
+            order_id,
+            idempotency_key
         ).await
     }
 }
@@ -76,7 +78,8 @@ impl StripeClient {
         product_id: Option<&str>,
         quantity: Option<i32>,
         order_id: Option<&str>,
-    ) -> Result<String, String> {
+        idempotency_key: Option<&str>,
+    ) -> Result<(String, String), String> {
         let api_key = self.require_api_key()?;
         if amount_cents <= 0 {
             return Err("amount_cents must be positive".to_string());
@@ -102,9 +105,18 @@ impl StripeClient {
         if let Some(oid) = order_id {
             form.insert("metadata[order_id]".to_string(), oid.to_string());
         }
+        if let Some(idemp) = idempotency_key {
+            form.insert("metadata[idempotency_key]".to_string(), idemp.to_string());
+        }
 
-        let res = reqwest::Client::new().post(format!("{}/v1/payment_intents", Self::api_base()))
-            .basic_auth(api_key, Some(""))
+        let mut builder = reqwest::Client::new().post(format!("{}/v1/payment_intents", Self::api_base()))
+            .basic_auth(api_key, Some(""));
+
+        if let Some(idemp) = idempotency_key {
+            builder = builder.header("Idempotency-Key", idemp);
+        }
+
+        let res = builder
             .form(&form)
             .send()
             .await
@@ -118,8 +130,9 @@ impl StripeClient {
 
         let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
         let secret = json["client_secret"].as_str().ok_or_else(|| "Missing client_secret in response".to_string())?;
+        let id = json["id"].as_str().ok_or_else(|| "Missing id in response".to_string())?;
 
-        Ok(secret.to_string())
+        Ok((secret.to_string(), id.to_string()))
     }
 
     pub async fn capture_terminal_payment_intent(

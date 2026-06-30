@@ -684,6 +684,29 @@ pub async fn create_payment_intent_handler(
         tracing::warn!("Failed to record api call cost: {}", e);
     }
 
+    let payment_id = uuid::Uuid::new_v4().to_string();
+    let idempotency_key = uuid::Uuid::new_v4().to_string();
+
+    let pool = crate::db::get_pool();
+    let res = sqlx::query(
+        r#"
+        INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, source)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        "#
+    )
+    .bind(&tenant_id)
+    .bind(&payment_id)
+    .bind(&idempotency_key)
+    .bind((req_data.amount_cents as f64) / 100.0)
+    .bind(&req_data.currency)
+    .bind("in_person")
+    .execute(&pool)
+    .await;
+
+    if let Err(e) = res {
+        return Json(Err(format!("Failed to create payment intent record: {}", e)));
+    }
+
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
@@ -697,10 +720,20 @@ pub async fn create_payment_intent_handler(
             req_data.product_id.as_deref(),
             req_data.quantity,
             req_data.order_id.as_deref(),
+            Some(&idempotency_key),
         ).await {
-            Ok(client_secret) => {
+            Ok((client_secret, stripe_payment_intent_id)) => {
                 let pool = crate::db::get_pool();
                 let device_id = "default_device"; // Fallback device id for web terminal intent creation without active explicit session.
+
+                // update payment intents
+                let _ = sqlx::query("UPDATE payment_intents SET stripe_payment_intent_id = $1 WHERE idempotency_key = $2 AND tenant_id = $3")
+                    .bind(&stripe_payment_intent_id)
+                    .bind(&idempotency_key)
+                    .bind(&tenant_id)
+                    .execute(&pool)
+                    .await;
+
                 if let Err(e) = sqlx::query(
                     "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
                      VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
