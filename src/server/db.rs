@@ -8,6 +8,47 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::OnceLock;
 
+
+macro_rules! validate_tenant_id {
+    ($tenant_id:expr) => {
+        if crate::config::get().multitenant {
+            if $tenant_id.trim().eq_ignore_ascii_case("system") {
+                return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
+            }
+            if $tenant_id.trim().is_empty() {
+                return Err("empty tenant_id is not allowed in multi-tenant mode".into());
+            }
+        }
+    };
+}
+
+macro_rules! validate_tenant_id_box {
+    ($tenant_id:expr) => {
+        if crate::config::get().multitenant {
+            if $tenant_id.trim().eq_ignore_ascii_case("system") {
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "tenant_id 'system' cannot be queried in multi-tenant mode")));
+            }
+            if $tenant_id.trim().is_empty() {
+                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "empty tenant_id is not allowed in multi-tenant mode")));
+            }
+        }
+    };
+}
+
+macro_rules! validate_tenant_id_sqlx {
+    ($tenant_id:expr) => {
+        if crate::config::get().multitenant {
+            if $tenant_id.trim().eq_ignore_ascii_case("system") {
+                return Err(sqlx::Error::Configuration("tenant_id 'system' cannot be queried in multi-tenant mode".into()));
+            }
+            if $tenant_id.trim().is_empty() {
+                return Err(sqlx::Error::Configuration("empty tenant_id is not allowed in multi-tenant mode".into()));
+            }
+        }
+    };
+}
+
+
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
@@ -103,6 +144,8 @@ impl DB {
         tenant_id: &str,
         service_id: &str,
     ) -> Result<Vec<AvailableSlot>, sqlx::Error> {
+        validate_tenant_id_sqlx!(tenant_id);
+
         match &self.store {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
@@ -479,17 +522,20 @@ impl DB {
         tenant_id: &str,
         query: &str,
     ) -> Result<Vec<SearchResult>, String> {
+        validate_tenant_id!(tenant_id);
+
         let query_lower = format!("%{}%", query.to_lowercase());
         let mut results = Vec::new();
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
                 // Search Customers
                 let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
-                    .fetch_all(sqlite_pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -513,7 +559,7 @@ impl DB {
                     .bind(&query_lower)
                     .bind(&query_lower)
                     .bind(&query_lower)
-                    .fetch_all(sqlite_pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
 
@@ -536,9 +582,10 @@ impl DB {
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
-                    .fetch_all(sqlite_pool)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| format!("DB Error: {}", e))?;
+                tx.commit().await.map_err(|e| format!("DB Error: {}", e))?;
 
                 for row in message_rows {
                     use sqlx::Row;
@@ -1559,6 +1606,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         context: &str,
         embedding: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        validate_tenant_id_box!(tenant_id);
+
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, tenant_id, context, embedding) VALUES (?, ?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
@@ -1710,6 +1759,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         content: &str,
         embedding: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        validate_tenant_id_box!(org_id);
+
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?;
@@ -1742,6 +1793,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         embedding: &str,
         source_type: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        validate_tenant_id_box!(org_id);
+
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
@@ -1784,6 +1837,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         embedding: &str,
         source_type: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        validate_tenant_id_box!(org_id);
+
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
@@ -1822,6 +1877,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         mission_id: &str,
         blockers: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        validate_tenant_id_box!(tenant_id);
+
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
@@ -1863,6 +1920,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         task_id: &str,
         table: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        validate_tenant_id_box!(tenant_id);
+
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 let query = if table == "swarm_tasks" {

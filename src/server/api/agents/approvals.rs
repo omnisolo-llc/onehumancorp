@@ -533,7 +533,7 @@ mod tests {
 
         let db_pool = crate::db::create_sqlite_pool_for_test().await;
         // Using in-memory sqlite for test
-        let db = Arc::new(crate::db::DB { pool: db_pool.clone(), store: crate::db::DbStore::Sqlite(db_pool) });
+        let db = Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Sqlite(db_pool) });
         let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));
         let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
