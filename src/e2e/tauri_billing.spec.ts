@@ -89,4 +89,46 @@ test.describe('Tauri Billing & Pricing UI', () => {
     await expect(freeBtn).toHaveText('Downgrade to Free');
     await expect(freeBtn).not.toBeDisabled();
   });
+
+  test('Pricing page toggles between monthly and annual pricing', async ({ page }) => {
+    await page.goto(`/ui/dashboard.html`);
+
+    await page.evaluate(() => {
+      localStorage.setItem('ohc_active_tenant_id', 'e2e-tenant');
+      localStorage.setItem('token', 'e2e-dummy-token');
+    });
+
+    await page.goto(`/ui/pricing.html`);
+
+    await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
+
+    // Verify initial monthly prices
+    const proPrice = page.locator('.ohc-growth-card:has-text("Pro") .plan-price');
+    const businessPrice = page.locator('.ohc-growth-card:has-text("Business") .plan-price');
+
+    await expect(proPrice).toContainText('$79');
+    await expect(proPrice).toContainText('/month');
+    await expect(businessPrice).toContainText('$299');
+    await expect(businessPrice).toContainText('/month');
+
+    // Toggle to Annual (Subscribe & Save)
+    const toggle = page.locator('label:has(input#billing-toggle)');
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+
+    // Verify annual prices with 20% discount
+    await expect(proPrice).toContainText('$63');
+    await expect(proPrice).toContainText('/month, billed annually');
+    await expect(businessPrice).toContainText('$239');
+    await expect(businessPrice).toContainText('/month, billed annually');
+
+    // Toggle back to Monthly
+    await toggle.click();
+
+    // Verify it reverts to original prices
+    await expect(proPrice).toContainText('$79');
+    await expect(proPrice).toContainText('/month');
+    await expect(businessPrice).toContainText('$299');
+    await expect(businessPrice).toContainText('/month');
+  });
 });
