@@ -56,7 +56,7 @@ interface OnboardingState {
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
-      step: -1,
+      step: -2,
       chatStep: 1,
       bio: '',
       businessDescription: '',

@@ -938,7 +938,7 @@ Image provided: ${instantImageUrl}`;
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            if (businessName.trim().length < 3) {
+                            if (String(businessName || '').trim().length < 3) {
                               setValidationError('Business Name must be at least 3 characters.');
                               return;
                             }
@@ -958,7 +958,7 @@ Image provided: ${instantImageUrl}`;
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => {
-                        if (businessName.trim().length < 3) {
+                        if (String(businessName || '').trim().length < 3) {
                           setValidationError('Business Name must be at least 3 characters.');
                           return;
                         }
@@ -1290,15 +1290,15 @@ Image provided: ${instantImageUrl}`;
                   onClick={() => {
                     let hasError = false;
                     const newErrors: Record<string, string> = { ...validationErrors };
-                    if (businessName.trim().length < 3) {
+                    if (String(businessName || '').trim().length < 3) {
                       newErrors.businessName = 'Must be at least 3 characters.';
                       hasError = true;
                     }
-                    if (businessType.trim().length === 0) {
+                    if (String(businessType || '').trim().length === 0) {
                       newErrors.businessType = 'Business Type is required to configure your agents.';
                       hasError = true;
                     }
-                    if (firstProductPrice.trim().length === 0) {
+                    if (String(firstProductPrice || '').trim().length === 0) {
                       newErrors.firstProductPrice = 'A price is needed to set up your Stripe catalog.';
                       hasError = true;
                     }
