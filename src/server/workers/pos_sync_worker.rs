@@ -158,7 +158,7 @@ impl PosSyncWorker {
                 let stock: i32 = sqlx::Row::get(&row, "available_quantity");
                 let is_conflict = stock < quantity_deducted as i32;
 
-                let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
                     .bind(quantity_deducted)
                     .bind(product_id)
                     .bind(&job.tenant_id)
@@ -374,7 +374,7 @@ impl PosSyncWorker {
                             let stock: i32 = sqlx::Row::get(&row, "available_quantity");
                             let is_conflict = stock < qty as i32;
 
-                            let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
+                            let _ = sqlx::query("UPDATE products SET pn_counter_n = pn_counter_n + $1, inventory_count = GREATEST(0, pn_counter_p - (pn_counter_n + $1)), available_quantity = GREATEST(0, available_quantity - $1) WHERE id = $2 AND tenant_id = $3")
                                 .bind(qty)
                                 .bind(product_id)
                                 .bind(&job.tenant_id)
