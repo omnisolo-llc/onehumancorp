@@ -5,7 +5,7 @@ import React from 'react';
 
 // Mock Next.js Link component
 vi.mock('next/link', () => ({
-  default: ({ children, href }: any) => {
+  default: ({ children, href }: { children: React.ReactNode, href: string }) => {
     return React.createElement('a', { href }, children);
   }
 }));
