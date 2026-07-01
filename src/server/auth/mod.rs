@@ -1061,6 +1061,14 @@ mod store_tests {
     }
 
     #[test]
+    fn test_random_bytes_length() {
+        let b = super::random_bytes(16);
+        assert_eq!(b.len(), 16);
+        let b2 = super::random_bytes(32);
+        assert_eq!(b2.len(), 32);
+    }
+
+    #[test]
     fn test_store_validate_org_id_multitenant() {
         // Create an empty store just to access the validate_org_id method
         let store = Store::new();
