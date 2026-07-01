@@ -69,7 +69,7 @@ pub async fn simulate_inbound_signal_handler(
             .bind(&signal_id)
             .bind(&tenant_id)
             .bind(&payload.source)
-            .bind(serde_json::to_string(&payload.payload).unwrap())
+            .bind(serde_json::to_string(&payload.payload).unwrap_or_else(|_| "{}".to_string()))
             .execute(pool).await;
 
             let _ = sqlx::query(
@@ -79,8 +79,8 @@ pub async fn simulate_inbound_signal_handler(
             .bind(&tenant_id)
             .bind(&signal_id)
             .bind(&intent)
-            .bind(serde_json::to_string(&customer_info).unwrap())
-            .bind(serde_json::to_string(&suggested_actions).unwrap())
+            .bind(serde_json::to_string(&customer_info).unwrap_or_else(|_| "{}".to_string()))
+            .bind(serde_json::to_string(&suggested_actions).unwrap_or_else(|_| "{}".to_string()))
             .execute(pool).await;
         }
     }
