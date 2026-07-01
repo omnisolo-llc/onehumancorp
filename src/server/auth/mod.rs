@@ -827,7 +827,7 @@ impl AuthService for AuthServiceServerImpl {
         let req = request.into_inner();
 
         let (final_org_id, final_role) = if ::server_config::get().multitenant {
-            (uuid::Uuid::new_v4().to_string(), ROLE_ADMIN.to_string())
+            (sqlx::types::Uuid::new_v4().to_string(), ROLE_ADMIN.to_string())
         } else {
             (req.organization_id.clone(), ROLE_VIEWER.to_string())
         };
@@ -1058,6 +1058,14 @@ mod store_tests {
         // Since we can't easily assert on the inner paths without modifying visibility,
         // we assert that we don't panic upon creation.
         assert!(!store.secret.is_empty());
+    }
+
+    #[test]
+    fn test_random_bytes_length() {
+        let b = super::random_bytes(16);
+        assert_eq!(b.len(), 16);
+        let b2 = super::random_bytes(32);
+        assert_eq!(b2.len(), 32);
     }
 
     #[test]
