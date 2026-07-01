@@ -232,6 +232,7 @@ impl MyDashboardService {
                             amount_cents: (amount_real * 100.0) as i64,
                             status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                             created_at_unix: 0,
+                            currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                         };
                         results.push(o);
                     }
@@ -248,6 +249,7 @@ impl MyDashboardService {
                             amount_cents: (amount_real * 100.0) as i64,
                             status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                             created_at_unix: 0,
+                            currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                         };
                         results.push(o);
                     }

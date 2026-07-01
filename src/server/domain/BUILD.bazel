@@ -20,6 +20,7 @@ exports_files(
         "unified_tenant_test.rs",
         "booking.rs",
         "estimator.rs",
+        "money.rs",
     ],
     visibility = ["//visibility:public"],
 )

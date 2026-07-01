@@ -924,6 +924,7 @@ impl BookingEngineService for NativeBookingService {
                 description: row.try_get("description").unwrap_or_default(),
                 price_cents: row.get("price_cents"),
                 resource_requirements,
+                currency: "USD".to_string(),
             });
         }
 
@@ -1601,6 +1602,7 @@ impl BookingEngineService for NativeBookingService {
             line_items: req.line_items,
             service_id: req.service_id,
             proposed_slot_id: req.proposed_slot_id,
+            currency: "USD".to_string(),
         }))
     }
 
@@ -1649,6 +1651,7 @@ impl BookingEngineService for NativeBookingService {
                     unit_price_cents: r.try_get("unit_price_cents").unwrap_or_default(),
                     quantity: r.try_get("quantity").unwrap_or_default(),
                     is_optional: r.try_get("is_optional").unwrap_or_default(),
+                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                 });
             }
 
@@ -1661,6 +1664,7 @@ impl BookingEngineService for NativeBookingService {
                 line_items,
                 service_id: row.try_get("service_id").ok(),
                 proposed_slot_id: row.try_get("proposed_slot_id").ok(),
+                currency: "USD".to_string(),
             }))
         } else {
             Err(Status::not_found("Quote not found"))
