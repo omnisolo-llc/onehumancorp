@@ -22,6 +22,8 @@ ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension, default_currency)
 VALUES
   ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'Starter', false, 'USD'),
+  ('e2e-tenant-free', 'OHC E2E Free Bakery', 'Food and beverage', 'Free', false, 'USD'),
+  ('e2e-tenant-business', 'OHC E2E Business Bakery', 'Food and beverage', 'Business', false, 'USD'),
   ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro', false, 'USD')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
@@ -110,6 +112,28 @@ VALUES
     ARRAY['OPERATOR'],
     TRUE,
     'e2e-tenant',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  ),
+  (
+    'e2e-free-user',
+    'free@example.com',
+    'free@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    TRUE,
+    'e2e-tenant-free',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  ),
+  (
+    'e2e-business-user',
+    'business@example.com',
+    'business@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    TRUE,
+    'e2e-tenant-business',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
   ),
