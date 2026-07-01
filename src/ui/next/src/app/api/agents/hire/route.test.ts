@@ -17,10 +17,10 @@ describe('/api/agents/hire', () => {
     else process.env.OHC_API_URL = originalOhcApi;
   });
 
-  it('creates a local running hire response when no backend is configured', async () => {
+  it('returns a 503 error when no backend is configured', async () => {
     const { POST } = await import('./route');
     const response = await POST(
-      new Request('http://localhost/api/agents/hire', {
+      new Request('http://localhost/api/api/agents/hire', {
         method: 'POST',
         body: JSON.stringify({
           name: 'Growth Strategist',
@@ -41,26 +41,11 @@ describe('/api/agents/hire', () => {
       }) as any,
     );
 
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(503);
     const body = await response.json();
-    expect(body.status).toBe('running');
-    expect(body.agent_id).toMatch(/^agent-/);
-    expect(body.workflow_id).toMatch(/[0-9a-f-]{36}/);
-    expect(body.expert).toMatchObject({
-      name: 'Growth Strategist',
-      role: 'Business growth operator',
-      model: 'MiniMax-M3',
-      mode: 'Plan',
-      workspace: 'Marketing sprint',
-      task: 'Plan a launch',
-      skills: ['Web Research'],
-      connectors: ['Tencent Docs'],
-      contextReferences: '@orders @inventory',
-      attachments: 'launch.png, revenue.csv',
-      customProvider: 'https://llm.example.com/v1',
-      workDirectory: '/workspace/launch',
-      outputFormat: 'Spreadsheet',
-      taskConstraints: 'Budget under $500',
+    expect(body).toMatchObject({
+      status: 'error',
+      message: 'Backend hire service unavailable',
     });
   });
 
