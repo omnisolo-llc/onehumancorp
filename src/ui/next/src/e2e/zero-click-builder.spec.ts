@@ -21,20 +21,7 @@ test.describe('Zero Click Builder Mobile Onboarding', () => {
     const generateBtn = page.getByRole('button', { name: /Generate Store/i });
     await expect(generateBtn).toBeEnabled();
 
-    // Mock API response
-    await context.route('**/api/v1/growth/zero-click-builder/generate', async route => {
-      await new Promise(r => setTimeout(r, 2000));
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          organization_id: 'test-org-123',
-          user_id: 'test-user-123',
-          name: 'Austin Vegan Cakes',
-          url: 'https://austin-vegan-cakes.ohc.app'
-        })
-      });
-    });
+    // Testing end-to-end flow with real backend
 
     // 4. Tap Generate Button
     await generateBtn.click();

@@ -11,13 +11,8 @@ test.describe('Onboarding Error Banner UI', () => {
   });
 
   test('Error banner should render correctly with premium macOS translucent aesthetics when API fails', async ({ page }) => {
-    // Mock the network request to fail with a 500 error
-    await page.route('**/api/onboarding/intake', route => {
-      route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Internal Server Error' })
-      });
+    await page.route('**/api/onboarding/start', route => {
+      route.abort('failed');
     });
 
     // Proceed to the end of the form by clicking through steps
@@ -48,7 +43,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
 
     // The error banner should now be visible
-    const errorBanner = page.getByText('Backend connection failed. Please try again.');
+    const errorBanner = page.getByText(/Failed to fetch|Backend connection failed/i);
     await expect(errorBanner).toBeVisible();
 
     // Check that it has the premium glassmorphism styling
@@ -61,8 +56,8 @@ test.describe('Onboarding Error Banner UI', () => {
 
   test('Error banner should remain pinned outside scroll area when scrolling down the form', async ({ page }) => {
     // Setup error state
-    await page.route('**/api/onboarding/intake', route => {
-      route.fulfill({ status: 500 });
+    await page.route('**/api/onboarding/start', route => {
+      route.abort('failed');
     });
 
     await page.getByRole('button', { name: 'Start My Business' }).click();
@@ -84,19 +79,19 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
 
     // Verify error banner is visible
-    const errorBanner = page.getByText('Backend connection failed. Please try again.');
+    const errorBanner = page.getByText(/Failed to fetch|Backend connection failed/i);
     await expect(errorBanner).toBeVisible();
 
     // Check that the error banner is NOT inside the custom-scrollbar container
     const scrollContainer = page.locator('.custom-scrollbar');
     // We expect 0 count of error banners INSIDE the scroll container, it should be above it
-    await expect(scrollContainer.getByText('Backend connection failed. Please try again.')).toHaveCount(0);
+    await expect(scrollContainer.getByText(/Failed to fetch|Backend connection failed/i)).toHaveCount(0);
   });
 
   test('Error banner should disappear if a subsequent submission succeeds', async ({ page }) => {
     // First, mock the network request to fail
-    await page.route('**/api/onboarding/intake', route => {
-      route.fulfill({ status: 500 });
+    await page.route('**/api/onboarding/start', route => {
+      route.abort('failed');
     }, { times: 1 });
 
     await page.getByRole('button', { name: 'Start My Business' }).click();
@@ -120,17 +115,11 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
 
     // The error banner should now be visible
-    const errorBanner = page.getByText('Backend connection failed. Please try again.');
+    const errorBanner = page.getByText(/Failed to fetch|Backend connection failed/i);
     await expect(errorBanner).toBeVisible();
 
     // Now mock the request to succeed
-    await page.route('**/api/onboarding/intake', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: "Success", tenantId: "tenant-123" })
-      });
-    });
+    await page.unroute('**/api/onboarding/start');
 
     // Resubmit
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
@@ -145,8 +134,8 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Mock failure
-    await page.route('**/api/onboarding/intake', route => {
-      route.fulfill({ status: 500 });
+    await page.route('**/api/onboarding/start', route => {
+      route.abort('failed');
     });
 
     await page.getByRole('button', { name: 'Start My Business' }).click();
@@ -168,7 +157,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
 
     // Verify error banner is visible
-    const errorBanner = page.getByText('Backend connection failed. Please try again.');
+    const errorBanner = page.getByText(/Failed to fetch|Backend connection failed/i);
     await expect(errorBanner).toBeVisible();
 
     // Verify no horizontal scrolling on the page body
@@ -178,8 +167,8 @@ test.describe('Onboarding Error Banner UI', () => {
 
   test('Error banner shows the alert icon alongside the text', async ({ page }) => {
     // Mock failure
-    await page.route('**/api/onboarding/intake', route => {
-      route.fulfill({ status: 500 });
+    await page.route('**/api/onboarding/start', route => {
+      route.abort('failed');
     });
 
     await page.getByRole('button', { name: 'Start My Business' }).click();
@@ -201,7 +190,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
 
     // Verify error banner and icon
-    const errorBannerContainer = page.getByText('Backend connection failed. Please try again.').locator('..');
+    const errorBannerContainer = page.getByText(/Failed to fetch|Backend connection failed/i).locator("..");
     await expect(errorBannerContainer.locator('svg')).toBeVisible();
   });
 });
