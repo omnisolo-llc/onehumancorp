@@ -265,7 +265,7 @@
 
   <div class="ohc-growth-card">
     <h2>Your Referral Link</h2>
-    <p>Share this link with other business owners. When they sign up, you earn rewards.</p>
+    <p>Give $50, Get $50. Share this link with other business owners. When they sign up, you both earn rewards.</p>
 
     <div id="loading-state">
       <p style="text-align: center; font-style: italic;">Generating your link...</p>
@@ -278,6 +278,7 @@
       </div>
 
       <div class="action-buttons">
+        <button class="btn-primary" id="share-native-btn" style="background-color: #007aff; color: white; border: none; margin-bottom: 10px;">Share Invite Link</button>
         <button class="btn-secondary" id="share-whatsapp-btn" style="background-color: #25D366; color: white; border: none;">Share on WhatsApp</button>
         <button class="btn-secondary" id="share-x-btn" style="background-color: #000000; color: white; border: none;">Share on X</button>
       </div>
@@ -433,6 +434,21 @@
         btn.innerText = "Copied!";
         setTimeout(() => { btn.innerText = originalText; }, 2000);
       });
+    });
+
+    document.getElementById('share-native-btn').addEventListener('click', async () => {
+      const link = document.getElementById('referral-link').value;
+      if (navigator.share) {
+        await navigator.share({
+            title: "Join me on OHC",
+            text: "Launch your business online instantly with OHC! Use my invite link to get $50:\n\n⚡ Powered by OHC",
+            url: link,
+        });
+      } else {
+        navigator.clipboard.writeText(link).then(() => {
+            alert("Invite link copied to clipboard!");
+        });
+      }
     });
 
     document.getElementById('share-whatsapp-btn').addEventListener('click', () => {
