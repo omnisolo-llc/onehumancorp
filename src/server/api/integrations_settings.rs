@@ -1,4 +1,4 @@
-use axum::{extract::State, Json, response::IntoResponse, http::StatusCode};
+use axum::{extract::State, Json, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use crate::integrations::registry::IntegrationsRegistry;

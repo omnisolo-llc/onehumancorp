@@ -170,20 +170,6 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              timestamp: new Date().toISOString()
           };
 
-          for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
-            const crdtTx = {
-              id: `crdt_${transactionId}_${item.product.id}`,
-              type: 'CRDT_MUTATION',
-              timestamp: new Date().toISOString(),
-              payload: {
-                 entity_id: item.product.id,
-                 data: {
-                    pn_counter_n_increment: -item.quantity
-                 }
-              }
-            };
-            await SyncManager.getInstance().enqueue(crdtTx);
-          }
           await SyncManager.getInstance().enqueue(tx);
 
           setStatus('Cash sale saved offline. Will sync when network is restored.');
