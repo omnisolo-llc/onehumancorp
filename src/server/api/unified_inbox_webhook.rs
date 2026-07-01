@@ -29,6 +29,7 @@ pub struct DraftedResponse {
     pub customer_id: String,
     pub context_summary: String,
     pub draft_reply: String,
+    pub action_type: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -176,18 +177,47 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(&state.db.pool).await;
 
-            let draft_reply = format!(
+
+            let mut draft_reply = format!(
                 "Hi there! Thanks for your message: '{}'. How can we help?",
                 payload.message
             );
+            let prompt = format!(
+                "You are an AI customer success ambassador. Write a concise, helpful reply to this customer message: '{}'. Use this context about their history: {}",
+                payload.message, context_summary
+            );
+            let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+
+            let llm_call = async {
+                match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                    .as_deref()
+                {
+                    Ok("minimax") => {
+                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                        if !api_key.is_empty() {
+                            crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
+                        } else {
+                            crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
+                        }
+                    }
+                    _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
+                }
+            };
+
+            if let Ok(Ok(reply)) = tokio::time::timeout(std::time::Duration::from_secs(30), llm_call).await {
+                draft_reply = reply;
+            }
+
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
-                context_summary,
+                context_summary: context_summary.clone(),
                 draft_reply,
+                action_type: "Draft Reply".to_string(),
             })
             .unwrap();
 
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'DRAFT_REPLY', $4, 'pending')")
+            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'Draft Reply', $4, 'pending')")
                 .bind(&action_id)
                 .bind(tenant_id)
                 .bind(&thread_id)
@@ -230,18 +260,47 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(sqlite_pool).await;
 
-            let draft_reply = format!(
+
+            let mut draft_reply = format!(
                 "Hi there! Thanks for your message: '{}'. How can we help?",
                 payload.message
             );
+            let prompt = format!(
+                "You are an AI customer success ambassador. Write a concise, helpful reply to this customer message: '{}'. Use this context about their history: {}",
+                payload.message, context_summary
+            );
+            let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+
+            let llm_call = async {
+                match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                    .as_deref()
+                {
+                    Ok("minimax") => {
+                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                        if !api_key.is_empty() {
+                            crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
+                        } else {
+                            crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
+                        }
+                    }
+                    _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
+                }
+            };
+
+            if let Ok(Ok(reply)) = tokio::time::timeout(std::time::Duration::from_secs(30), llm_call).await {
+                draft_reply = reply;
+            }
+
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
-                context_summary,
+                context_summary: context_summary.clone(),
                 draft_reply,
+                action_type: "Draft Reply".to_string(),
             })
             .unwrap();
 
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, 'DRAFT_REPLY', ?, 'pending')")
+            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, 'Draft Reply', ?, 'pending')")
                 .bind(&action_id)
                 .bind(tenant_id)
                 .bind(&thread_id)
