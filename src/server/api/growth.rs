@@ -369,6 +369,7 @@ where
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
+        .route("/waitlist/embed", get(handle_waitlist_embed))
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
         .route("/one-tap-referral/embed", get(handle_one_tap_referral_embed))
