@@ -130,7 +130,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Target Highlight Overlay (using box-shadow to punch a hole) */}
       {targetRect && (
         <div
-          className="ohc-walkthrough-overlay fixed pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[2px]"
+          className="ohc-walkthrough-overlay fixed pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[30px] saturate-[210%]"
           style={{
             zIndex: 9999,
             top: targetRect.top - 4,
@@ -169,7 +169,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           <button
             id="wt-next"
             onClick={handleNext}
-            className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg backdrop-blur-md saturate-[210%] active:scale-95 transition-all"
+            className="bg-blue-600/95 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg backdrop-blur-[30px] saturate-[210%] active:scale-95 transition-all"
           >
             {isLastStep ? 'Finish' : 'Next'}
           </button>

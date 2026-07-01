@@ -218,7 +218,7 @@ export function HelpWidget() {
           <button
             id="ohc-floating-help-btn"
             onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[20px] saturate-200 text-white rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.3)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
+            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] saturate-200 text-white rounded-full shadow-[0_8px_32px_rgba(37,99,235,0.3)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
             aria-label="Help"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -229,7 +229,7 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
+        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[30px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-white/60 transition-all font-inter">
           <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide relative pr-12">
             {helpTabs.map((t) => (
               <button
@@ -257,7 +257,7 @@ export function HelpWidget() {
             {tab === "center" && (
               <div>
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">In-App Help Center</h3>
-                <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[20px] saturate-200 min-h-[44px]" />
+                <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[30px] saturate-[210%] saturate-200 min-h-[44px]" />
                 <div className="space-y-6 mb-8">
                   {Array.from(
                     filteredArticles.reduce((acc, article) => {
@@ -288,17 +288,17 @@ export function HelpWidget() {
                                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
                   <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OHC.">
-                  <button onClick={() => { setOpen(false); fetch("/api/walkthrough/store-setup").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." }, { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" }])); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); fetch("/api/walkthrough/store-setup").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." }, { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" }])); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[30px] saturate-[210%] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
                   </WithTooltip>
-                  <button onClick={() => { setOpen(false); fetch("/api/walkthrough/pos").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "pos-keypad", title: "Enter Amount", content: "Type in the total sale amount using the keypad." }, { targetId: "charge-btn", title: "Charge Customer", content: "Tap here to process the payment. It's that easy!" }])); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); fetch("/api/walkthrough/pos").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "pos-keypad", title: "Enter Amount", content: "Type in the total sale amount using the keypad." }, { targetId: "charge-btn", title: "Charge Customer", content: "Tap here to process the payment. It's that easy!" }])); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[30px] saturate-[210%] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => { setOpen(false); fetch("/api/walkthrough/assistant").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "ai-chat-trigger", title: "Open Assistant", content: "Click here to open your AI Support Agent." }, { targetId: "ohc-help-input-area", title: "Ask Anything", content: "Type your request here and the agent will handle it while you sleep." }])); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); fetch("/api/walkthrough/assistant").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "ai-chat-trigger", title: "Open Assistant", content: "Click here to open your AI Support Agent." }, { targetId: "ohc-help-input-area", title: "Ask Anything", content: "Type your request here and the agent will handle it while you sleep." }])); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[30px] saturate-[210%] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => { setOpen(false); fetch("/api/walkthrough/meeting-room").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "UltraPlan Protocol", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); fetch("/api/walkthrough/meeting-room").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "UltraPlan Protocol", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[30px] saturate-[210%] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
                   <button
@@ -307,7 +307,7 @@ export function HelpWidget() {
                       setOpen(false);
                       router.push("/kairos?walkthrough=true");
                     }}
-                    className="w-full text-left bg-indigo-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-indigo-100 hover:bg-indigo-100/90 hover:shadow-md transition-all min-h-[44px]"
+                    className="w-full text-left bg-indigo-50/80 backdrop-blur-[30px] saturate-[210%] saturate-200 p-4 rounded-2xl shadow-sm border border-indigo-100 hover:bg-indigo-100/90 hover:shadow-md transition-all min-h-[44px]"
                   >
                     <span className="font-bold font-outfit text-indigo-800 text-base block">Tour: KAIROS AI OS Orchestration</span>
                   </button>
@@ -316,7 +316,7 @@ export function HelpWidget() {
             )}
 
             {tab === "chat" && (
-              <div className="flex flex-col h-full bg-white/30 backdrop-blur-[20px] saturate-200 rounded-xl p-2">
+              <div className="flex flex-col h-full bg-white/30 backdrop-blur-[30px] saturate-[210%] saturate-200 rounded-xl p-2">
                 <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2">
                   {chatMessages.map((msg) => {
                     const className = `p-3 rounded-2xl text-sm w-4/5 ${
@@ -360,7 +360,7 @@ export function HelpWidget() {
                   {videos.map((v) => (
                     <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-sm border border-white/30">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
-                        <div className="w-10 h-10 bg-white/90 backdrop-blur-3xl saturate-[210%] rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
+                        <div className="w-10 h-10 bg-white/90 backdrop-blur-[30px] saturate-[210%] rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                       </div>
                       <div className="absolute bottom-2 left-2 right-2 z-10">
@@ -401,12 +401,12 @@ export function HelpWidget() {
 
       {/* Video Player Modal */}
       {activeVideo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-md saturate-200 p-4 animate-fade-in">
-          <div className="bg-black backdrop-blur-3xl rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] mx-auto aspect-[9/16] relative animate-pop-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-[30px] saturate-[210%] saturate-200 p-4 animate-fade-in">
+          <div className="bg-black backdrop-blur-[30px] saturate-[210%] rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] mx-auto aspect-[9/16] relative animate-pop-in">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-10 flex justify-between items-start pt-6">
               <h3 className="text-white font-bold font-outfit text-base pr-4 line-clamp-2 drop-shadow-md leading-tight">{activeVideo.title}</h3>
-              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-3xl saturate-[210%] border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" aria-label="Close video">
+              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-[30px] saturate-[210%] border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" aria-label="Close video">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>

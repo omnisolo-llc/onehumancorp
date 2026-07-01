@@ -176,7 +176,7 @@ export function HelpChat() {
             <button
               id="ai-chat-trigger-btn"
               onClick={() => setIsOpen(true)}
-              className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-xl saturate-[210%]"
+              className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[30px] saturate-[210%]"
               aria-label="Open help chat"
               aria-expanded={isOpen}
               aria-controls="ai-chat-interface"
@@ -196,7 +196,7 @@ export function HelpChat() {
           {/* Header */}
           <div
             id="ai-chat-header"
-            className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-md"
+            className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-[30px] saturate-[210%]"
           >
             <div className="flex items-center gap-2">
               <span className="text-xl drop-shadow-md">✨</span>
@@ -254,8 +254,8 @@ export function HelpChat() {
                 <div
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-sm saturate-[210%] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/80 backdrop-blur-xl text-white rounded-br-sm border border-white/20"
-                      : "bg-white/80 dark:bg-black/50 backdrop-blur-md border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm"
+                      ? "bg-blue-600/80 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-white/20"
+                      : "bg-white/80 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
@@ -264,7 +264,7 @@ export function HelpChat() {
                 {msg.link && (
                   <a
                     href={msg.link.url}
-                    className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-bold hover:underline bg-blue-50/90 backdrop-blur-[30px] px-3.5 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm transition-all hover:bg-blue-100/90"
+                    className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-bold hover:underline bg-blue-50/90 backdrop-blur-[30px] saturate-[210%] px-3.5 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm transition-all hover:bg-blue-100/90"
                   >
                     Read the full article →
                   </a>
@@ -304,12 +304,12 @@ export function HelpChat() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask anything..."
               disabled={isLoading}
-              className="flex-1 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] border border-white/40 dark:border-white/10 rounded-[24px] px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-100/70 text-gray-900 dark:text-gray-100"
+              className="flex-1 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[24px] px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-100/70 text-gray-900 dark:text-gray-100"
             />
             <button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
-              className="bg-blue-600/95 backdrop-blur-md text-white p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-md active:scale-95"
+              className="bg-blue-600/95 backdrop-blur-[30px] saturate-[210%] text-white p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-md active:scale-95"
               aria-label="Send message"
             >
               {isLoading ? (

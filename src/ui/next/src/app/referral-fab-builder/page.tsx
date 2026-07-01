@@ -75,7 +75,7 @@ export default function ReferralFabBuilder() {
 
         {/* Editor Section */}
         <div className="space-y-6">
-          <div className="bg-white/80 backdrop-blur-xl border border-gray-100 rounded-3xl p-8 shadow-sm">
+          <div className="bg-white/80 backdrop-blur-[30px] saturate-[210%] border border-gray-100 rounded-3xl p-8 shadow-sm">
             <h2 className="text-xl font-semibold mb-6">Customize Your Floating Action Button</h2>
 
             <div className="space-y-5">
@@ -150,7 +150,7 @@ export default function ReferralFabBuilder() {
         </div>
 
         {/* Preview Section */}
-        <div className="bg-white/50 backdrop-blur-3xl rounded-[40px] border-[8px] border-white/60 shadow-2xl overflow-hidden relative flex flex-col h-[600px] lg:h-auto min-h-[600px]">
+        <div className="bg-white/50 backdrop-blur-[30px] saturate-[210%] rounded-[40px] border-[8px] border-white/60 shadow-2xl overflow-hidden relative flex flex-col h-[600px] lg:h-auto min-h-[600px]">
            {/* Mock Website Background */}
            <div className="bg-gray-100 h-12 flex items-center px-4 gap-2 border-b border-gray-200">
              <div className="w-3 h-3 rounded-full bg-red-400"></div>
@@ -202,7 +202,7 @@ export default function ReferralFabBuilder() {
 
       {/* Paywall Modal */}
       {showPaywall && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl relative">
             <button
               onClick={() => setShowPaywall(false)}

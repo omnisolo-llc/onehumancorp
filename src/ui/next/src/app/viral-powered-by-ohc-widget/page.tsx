@@ -43,7 +43,7 @@ export default function ViralPoweredByOHCWidgetPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
-      <div className="w-full max-w-4xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
+      <div className="w-full max-w-4xl bg-white/80 backdrop-blur-[30px] saturate-[210%] rounded-[24px] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
         <div className="flex-1 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Viral Widget Builder</h1>
           <div className="space-y-4">

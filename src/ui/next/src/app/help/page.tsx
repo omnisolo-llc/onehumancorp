@@ -104,7 +104,7 @@ export default function HelpCenterPage() {
             </p>
             <WithTooltip id="ask-ai-tooltip" defaultText="Open AI Help Chat to get answers instantly.">
             <button
-              className="mt-6 px-6 py-3 bg-blue-600/95 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg backdrop-blur-md saturate-[210%] transition-all min-h-[44px] hover:scale-105 active:scale-95"
+              className="mt-6 px-6 py-3 bg-blue-600/95 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg backdrop-blur-[30px] saturate-[210%] transition-all min-h-[44px] hover:scale-105 active:scale-95"
               onClick={() => {
                 const event = new CustomEvent('open-help-chat');
                 window.dispatchEvent(event);

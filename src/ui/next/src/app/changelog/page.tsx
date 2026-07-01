@@ -38,14 +38,14 @@ export default function ChangelogPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div>
             </div>
           ) : sections.length === 0 ? (
-            <p className="text-center text-gray-500 font-medium py-8 backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl">
+            <p className="text-center text-gray-500 font-medium py-8 backdrop-blur-[30px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl">
               No changelog available.
             </p>
           ) : (
             sections.map((section, idx) => (
               <div
                 key={idx}
-                className="backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 sm:p-8 rounded-3xl transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)] hover:border-blue-300 dark:hover:border-blue-700"
+                className="backdrop-blur-[30px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 sm:p-8 rounded-3xl transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)] hover:border-blue-300 dark:hover:border-blue-700"
               >
                 <h2 className="text-xl sm:text-2xl font-bold text-[#0071E3] dark:text-blue-400 mb-4 font-outfit">
                   {section.version}
@@ -93,7 +93,7 @@ export default function ChangelogPage() {
               href="https://onehumancorp.com/changelog"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#0071E3] dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50/80 dark:bg-blue-900/20 px-8 py-4 rounded-full border border-blue-100 dark:border-blue-800/50 inline-block shadow-sm backdrop-blur-xl saturate-[210%] transition-all hover:shadow-md hover:-translate-y-0.5"
+              className="text-[#0071E3] dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50/80 dark:bg-blue-900/20 px-8 py-4 rounded-full border border-blue-100 dark:border-blue-800/50 inline-block shadow-sm backdrop-blur-[30px] saturate-[210%] transition-all hover:shadow-md hover:-translate-y-0.5"
             >
               Read the full technical changelog on our website →
             </a>

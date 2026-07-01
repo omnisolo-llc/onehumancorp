@@ -255,7 +255,7 @@ function AutoCatalogContent() {
           >
             Subscription Box
           </button>
-          <label className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm cursor-pointer hover:bg-gray-50 transition-colors">
+          <label className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm-sm cursor-pointer hover:bg-gray-50 transition-colors">
             <div className="text-4xl mb-2">📷</div>
             <span className="font-semibold text-gray-800">Take a photo or upload</span>
             <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />

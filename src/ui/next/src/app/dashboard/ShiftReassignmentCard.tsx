@@ -54,7 +54,7 @@ export const ShiftReassignmentCard: React.FC<ShiftReassignmentCardProps> = ({
   return (
     <div
       data-testid="shift-reassignment-card"
-      className="bg-[rgba(255,255,255,0.7)] dark:bg-[rgba(22,22,26,0.75)] backdrop-blur-[40px] backdrop-saturate-[200%] border border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex flex-col gap-4 relative overflow-hidden transition-all duration-300"
+      className="bg-[rgba(255,255,255,0.7)] dark:bg-[rgba(22,22,26,0.75)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)] p-5 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex flex-col gap-4 relative overflow-hidden transition-all duration-300"
     >
       {/* Decorative gradient orb */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#FF9500]/20 to-[#FF2D55]/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
@@ -72,7 +72,7 @@ export const ShiftReassignmentCard: React.FC<ShiftReassignmentCardProps> = ({
         </div>
       </div>
 
-      <div className="z-10 mt-2 bg-[#F5F5F7]/80 dark:bg-[#1C1C1E]/80 backdrop-blur-md p-4 rounded-xl border border-[rgba(0,0,0,0.05)] dark:border-[rgba(255,255,255,0.05)]">
+      <div className="z-10 mt-2 bg-[#F5F5F7]/80 dark:bg-[#1C1C1E]/80 backdrop-blur-[30px] saturate-[210%] p-4 rounded-xl border border-[rgba(0,0,0,0.05)] dark:border-[rgba(255,255,255,0.05)]">
          <span className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] block mb-2">AI Proposal:</span>
          <p className="text-base text-[#1D1D1F] dark:text-[#F5F5F7]">
             {proposalText}

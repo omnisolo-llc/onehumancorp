@@ -129,7 +129,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
           className="absolute inset-0 bg-cover bg-center opacity-90"
           style={{ backgroundImage: `url(${props.image})` }}
         >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" />
         </div>
         <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white m-4 glassmorphism shadow-lg">
           <h1 className="text-3xl font-bold font-outfit mb-3 tracking-tight">{props.headline}</h1>

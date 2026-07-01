@@ -62,7 +62,7 @@ export function WrappedWidget() {
     <section
         id="wrapped-summary"
         data-testid="wrapped-widget"
-        className="mb-6 relative overflow-hidden rounded-[24px] border border-white/40 dark:border-white/10 shadow-xl bg-gradient-to-br from-pink-500/90 via-purple-500/90 to-indigo-600/90 dark:from-pink-900/80 dark:via-purple-900/80 dark:to-indigo-950/80 backdrop-blur-[40px] backdrop-saturate-[2] p-6 text-white group transform transition-all hover:scale-[1.01]"
+        className="mb-6 relative overflow-hidden rounded-[24px] border border-white/40 dark:border-white/10 shadow-xl bg-gradient-to-br from-pink-500/90 via-purple-500/90 to-indigo-600/90 dark:from-pink-900/80 dark:via-purple-900/80 dark:to-indigo-950/80 backdrop-blur-[30px] saturate-[210%] p-6 text-white group transform transition-all hover:scale-[1.01]"
     >
       {/* Decorative blurred blobs */}
       <div className="absolute -top-20 -right-20 w-64 h-64 bg-yellow-400/30 rounded-full blur-[80px] pointer-events-none"></div>

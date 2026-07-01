@@ -36,7 +36,7 @@ export const ContextCard: React.FC<ContextCardProps> = ({ tenantId, customerId }
 
   if (loading) {
     return (
-      <div className="w-full h-11 min-h-[44px] backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-lg flex items-center justify-center animate-pulse">
+      <div className="w-full h-11 min-h-[44px] backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-lg flex items-center justify-center animate-pulse">
         <span className="text-sm text-gray-500">Loading context...</span>
       </div>
     );
@@ -47,7 +47,7 @@ export const ContextCard: React.FC<ContextCardProps> = ({ tenantId, customerId }
   }
 
   return (
-    <div className="w-full min-h-[44px] p-3 backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-xl mb-4 transition-all duration-300">
+    <div className="w-full min-h-[44px] p-3 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-xl mb-4 transition-all duration-300">
       <div className="flex flex-col space-y-1">
         <div className="text-xs font-semibold text-gray-700 flex flex-wrap gap-1">
           {profile.segments.map((segment, idx) => (

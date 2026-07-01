@@ -387,13 +387,13 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   };
 
   return (
-    <div id="pos-keypad" className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50">
+    <div id="pos-keypad" className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50">
       <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
       <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 
       {pendingReconciliation.length > 0 && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-[30px] saturate-[210%] p-4">
-           <div className="bg-white/85 backdrop-blur-[40px] saturate-[210%] border border-white/50 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
+           <div className="bg-white/85 backdrop-blur-[30px] saturate-[210%] border border-white/50 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
              <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
              <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
              <ul className="space-y-2 mb-6">

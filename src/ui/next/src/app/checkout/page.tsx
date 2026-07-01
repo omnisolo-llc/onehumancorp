@@ -203,7 +203,7 @@ function CheckoutContent() {
       >
         {isSuccess ? (
           <div className="flex flex-col gap-6">
-            <div className="p-8 flex flex-col justify-center items-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-lg rounded-[24px] text-center">
+            <div className="p-8 flex flex-col justify-center items-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-lg rounded-[24px] text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <svg
                   className="w-8 h-8 text-green-600"
@@ -240,7 +240,7 @@ function CheckoutContent() {
             />
           </div>
         ) : tier ? (
-          <div className="p-6 md:p-8 flex flex-col justify-between bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-lg rounded-[24px]">
+          <div className="p-6 md:p-8 flex flex-col justify-between bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-lg rounded-[24px]">
             <div className="mb-6">
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">
                 OHC {tier} Plan
@@ -502,7 +502,7 @@ function CheckoutContent() {
                 </p>
               )}
               {checkoutStatus === "Oops! Item just sold out." && (
-                <div className="fixed bottom-0 left-0 right-0 p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] z-[100] shadow-2xl rounded-t-[24px]">
+                <div className="fixed bottom-0 left-0 right-0 p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] z-[100] shadow-2xl rounded-t-[24px]">
                   <div className="flex items-start gap-4 max-w-lg mx-auto">
                     <div className="w-12 h-12 bg-red-100 rounded-full flex-shrink-0 flex items-center justify-center text-xl text-red-600">
                       <svg

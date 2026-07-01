@@ -332,7 +332,7 @@ export default function POSTerminal() {
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 mobile-pos-container">
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff?.name}</h1>
             <p className="text-[#0071E3] font-medium text-sm mt-1">{t(activeStaff?.role)}</p>
@@ -356,7 +356,7 @@ export default function POSTerminal() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 bg-[#F5F5F7]">
 
-           <div className="app-card rounded-2xl p-6 shadow-lg mb-6 text-center bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50">
+           <div className="app-card rounded-2xl p-6 shadow-lg mb-6 text-center bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50">
              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -392,7 +392,7 @@ export default function POSTerminal() {
              <button
                 onClick={handleQuickCharge}
                 disabled={reserving}
-                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50 ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`charge-btn min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-[#0066FF] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -400,7 +400,7 @@ export default function POSTerminal() {
                <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
 
-             <button className="min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg active:scale-[0.98] bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50">
+             <button className="min-h-[44px] min-w-[44px] p-4 rounded-[8px] text-left shadow-lg active:scale-[0.98] bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50">
                <div className="text-[#FF9500] mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
@@ -434,7 +434,7 @@ export default function POSTerminal() {
 
            {/* Bottom Bar */}
            {cartItemCount > 0 && !checkoutComplete && (
-             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-[30px] border-t border-gray-200 z-40 pb-safe pb-8">
+             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-[30px] saturate-[210%] border-t border-gray-200 z-40 pb-safe pb-8">
                <button
                  onClick={() => setIsCartOpen(true)}
                  className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
@@ -449,7 +449,7 @@ export default function POSTerminal() {
            {isCartOpen && !checkoutComplete && (
              <div className="fixed inset-0 z-50 flex flex-col justify-end">
                <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => setIsCartOpen(false)}></div>
-               <div className="relative bg-white/85 backdrop-blur-[40px] saturate-[210%] border-t border-white/50 rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
+               <div className="relative bg-white/85 backdrop-blur-[30px] saturate-[210%] border-t border-white/50 rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom max-h-[90vh] overflow-y-auto">
                  <div className="flex justify-between items-center mb-6">
                    <h2 className="text-xl font-bold font-outfit text-gray-900">Current Order</h2>
                    <button onClick={() => setIsCartOpen(false)} className="p-2 bg-gray-100 rounded-full text-gray-500 hover:bg-gray-200">

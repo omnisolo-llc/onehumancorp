@@ -130,7 +130,7 @@ function VCardContent() {
           <div className="px-6 space-y-4">
             {phone && (
               <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} className="bg-gray-50 hover:bg-gray-100 p-4 rounded-2xl border border-gray-100 flex items-center gap-4 transition-colors group">
-                <div className="w-12 h-12 rounded-full bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform" style={{ color: themeColor }}>
+                <div className="w-12 h-12 rounded-full bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform" style={{ color: themeColor }}>
                   📱
                 </div>
                 <div className="overflow-hidden">
@@ -142,7 +142,7 @@ function VCardContent() {
 
             {email && (
               <a href={`mailto:${email}`} className="bg-gray-50 hover:bg-gray-100 p-4 rounded-2xl border border-gray-100 flex items-center gap-4 transition-colors group">
-                <div className="w-12 h-12 rounded-full bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform" style={{ color: themeColor }}>
+                <div className="w-12 h-12 rounded-full bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform" style={{ color: themeColor }}>
                   ✉️
                 </div>
                 <div className="overflow-hidden">
@@ -154,7 +154,7 @@ function VCardContent() {
 
             {website && (
               <a href={website.startsWith('http') ? website : `https://${website}`} target="_blank" rel="noopener noreferrer" className="bg-gray-50 hover:bg-gray-100 p-4 rounded-2xl border border-gray-100 flex items-center gap-4 transition-colors group">
-                <div className="w-12 h-12 rounded-full bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform" style={{ color: themeColor }}>
+                <div className="w-12 h-12 rounded-full bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform" style={{ color: themeColor }}>
                   🌐
                 </div>
                 <div className="overflow-hidden">
@@ -166,7 +166,7 @@ function VCardContent() {
 
             {linkedin && (
               <a href={linkedin.startsWith('http') ? linkedin : `https://${linkedin}`} target="_blank" rel="noopener noreferrer" className="bg-gray-50 hover:bg-gray-100 p-4 rounded-2xl border border-gray-100 flex items-center gap-4 transition-colors group">
-                <div className="w-12 h-12 rounded-full bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform" style={{ color: themeColor }}>
+                <div className="w-12 h-12 rounded-full bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm-sm flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform" style={{ color: themeColor }}>
                   💼
                 </div>
                 <div className="overflow-hidden">

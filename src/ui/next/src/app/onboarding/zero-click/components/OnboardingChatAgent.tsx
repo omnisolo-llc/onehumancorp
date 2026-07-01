@@ -146,7 +146,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden shadow-xl w-full max-w-2xl mx-auto">
+    <div className="flex flex-col h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden shadow-xl w-full max-w-2xl mx-auto">
       {/* Header */}
       <div className="p-4 border-b border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex items-center gap-3 bg-transparent">
         <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xl">
@@ -174,7 +174,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] rounded-2xl rounded-bl-sm px-4 py-3 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex gap-1 items-center">
+            <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-2xl rounded-bl-sm px-4 py-3 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex gap-1 items-center">
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
@@ -187,7 +187,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
       {/* Provisioning Overlay */}
       {isProvisioning && (
-        <div className="absolute inset-0 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[10px] flex flex-col items-center justify-center rounded-2xl">
+        <div className="absolute inset-0 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] flex flex-col items-center justify-center rounded-2xl">
           <div className="w-16 h-16 border-4 border-[#0066FF]/20 border-t-[#0066FF] rounded-full animate-spin mb-6"></div>
           <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 animate-pulse">
             Building Your Business...

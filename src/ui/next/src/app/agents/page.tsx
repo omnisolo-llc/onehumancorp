@@ -240,7 +240,7 @@ export default function AgentsPage() {
   }
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
-      <header className="border-b border-zinc-200 dark:border-zinc-850 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] sticky top-0 z-30">
+      <header className="border-b border-zinc-200 dark:border-zinc-850 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-30">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -482,7 +482,7 @@ function CatalogPanel({
   return (
     <>
       {/* Featured Scenarios Carousel */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-6 shadow-sm">
+      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-6 shadow-sm">
         <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">Featured Scenarios</h3>
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-350 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent snap-x">
           {featuredScenarios.map((scenario) => (
@@ -514,7 +514,7 @@ function CatalogPanel({
       </div>
 
       {/* Search Filter Panel */}
-      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+      <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
         <SectionHeader
           title={panel === 'teams' ? 'Expert Teams' : 'Browse experts'}
           detail="Search by job, pick a single expert or a coordinated team, then summon it into the task composer."
@@ -696,7 +696,7 @@ function ComposerPanel({
   startTask: () => void;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="text-base font-bold text-zinc-900 dark:text-white">Task Composer</h2>
@@ -993,7 +993,7 @@ function SkillsPanel({
   setEnabledSkills: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="Skill Market" detail="Install, disable, search, upload, or create natural-language skills for experts." />
       <div className="mb-4 flex flex-wrap gap-2">
         <button className="rounded-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-xs font-bold transition-colors" type="button">Find skill</button>
@@ -1045,7 +1045,7 @@ function ConnectorsPanel({
   setEnabledConnectors: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="Connector Center" detail="Connect external data and service actions for expert tasks." />
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         {['Create custom connector', 'MCP endpoint', 'Notification channel'].map((label) => (
@@ -1102,7 +1102,7 @@ function AutomationsPanel() {
   ];
 
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="Scheduled Tasks" detail="Configure recurring expert runs with prompt, workspace, model, skills, connectors, and notifications." />
       
       <div className="mb-4 grid gap-3 md:grid-cols-3">
@@ -1193,7 +1193,7 @@ function MemoryPanel() {
   };
 
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="Consolidated Memory" detail="Review and override what AI agents remember about your business." />
 
       {loading ? (
@@ -1228,7 +1228,7 @@ function MemoryPanel() {
 }
 function ExplorePanel({ summon }: { summon: (item: ExpertCatalogItem) => void }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="Explore Templates" detail="Curated templates prefill prompt, expert, skills, and connector choices." />
       <div className="grid gap-3 md:grid-cols-2">
         {exploreTemplates.map((template, index) => (
@@ -1248,7 +1248,7 @@ function ExplorePanel({ summon }: { summon: (item: ExpertCatalogItem) => void })
 }
 function RemotePanel() {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="Remote Assistant Control" detail="Summon experts and receive notifications from business chat tools." />
       <div className="mb-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 p-3 text-xs font-bold text-teal-700 dark:text-teal-400 font-mono">
         /summon Growth Strategist
@@ -1266,7 +1266,7 @@ function RemotePanel() {
 }
 function DataPanel() {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="Data Management" detail="Manage shared files, task archives, generated outputs, and workspace history." />
       <div className="grid gap-3 md:grid-cols-3">
         {['Shared files', 'Archived tasks', 'Generated outputs', 'Workspace history', 'Download center', 'Unshare queue'].map((item) => (
@@ -1280,7 +1280,7 @@ function DataPanel() {
 }
 function OperationsPanel() {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="AI Departments" detail="Operational agents stay visible for backwards-compatible business management." />
       <div className="grid gap-3 md:grid-cols-2">
         {departments.map((department) => (
@@ -1371,7 +1371,7 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
 }
 function FeedPanel({ feed }: { feed: ApprovalItem[] }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="Activity Feed" detail="Realtime expert and department activity." />
       {feed.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-350 dark:border-zinc-750 p-4 text-xs text-zinc-500 dark:text-zinc-400">No activity yet.</p>
@@ -1396,7 +1396,7 @@ function ApprovalsPanel({
   decideApproval: (id: string, approved: boolean) => void;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] saturate-[210%] p-5 shadow-sm">
       <SectionHeader title="Needs Approval" detail="Review high-risk drafts before experts execute or send." />
       {approvals.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-350 dark:border-zinc-750 p-5 text-center">

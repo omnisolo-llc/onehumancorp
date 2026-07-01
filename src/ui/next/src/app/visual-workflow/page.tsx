@@ -72,7 +72,7 @@ export default function VisualWorkflowPage() {
         <div className="flex flex-wrap gap-3">
           <WalkthroughTarget id="vw-add-node">
             <button
-              className="bg-[#0071E3]/90 backdrop-blur-md hover:bg-[#005bb5]/90 text-white px-4 py-2.5 rounded-lg shadow-sm transition-all min-h-[44px] font-medium"
+              className="bg-[#0071E3]/90 backdrop-blur-[30px] saturate-[210%] hover:bg-[#005bb5]/90 text-white px-4 py-2.5 rounded-lg shadow-sm transition-all min-h-[44px] font-medium"
               onClick={() => addNode("Input")}
             >
               + Add Input Node
@@ -107,7 +107,7 @@ export default function VisualWorkflowPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <div className="border border-white/20 rounded-2xl p-6 min-h-[400px] bg-white/40 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)]">
+        <div className="border border-white/20 rounded-2xl p-6 min-h-[400px] bg-white/40 backdrop-blur-[30px] saturate-[210%] shadow-[0_8px_32px_rgba(0,0,0,0.05)]">
           <h2 className="text-xl font-semibold mb-4 text-[#1D1D1F]">Workspace Canvas</h2>
 
           {nodes.length === 0 && (
@@ -118,7 +118,7 @@ export default function VisualWorkflowPage() {
 
           <div className="space-y-4">
             {nodes.map((n, i) => (
-              <div key={n.id} className="bg-white/80 backdrop-blur-md p-4 shadow-sm border border-gray-200/60 rounded-xl flex items-center justify-between transition-all hover:shadow-md">
+              <div key={n.id} className="bg-white/80 backdrop-blur-[30px] saturate-[210%] p-4 shadow-sm border border-gray-200/60 rounded-xl flex items-center justify-between transition-all hover:shadow-md">
                 <div className="flex items-center">
                   <span className="inline-flex items-center justify-center px-2.5 py-1 bg-gray-100/80 text-xs font-mono rounded-md mr-3 text-gray-600 min-w-[3rem]">{n.id}</span>
                   <span className="font-semibold text-gray-800">{n.type}</span>
@@ -150,7 +150,7 @@ export default function VisualWorkflowPage() {
           )}
         </div>
 
-        <div className="border border-white/10 rounded-2xl p-6 bg-[#16161A]/60 backdrop-blur-3xl saturate-[180%] text-[#F5F5F7] shadow-xl overflow-auto h-[400px] lg:h-[500px]">
+        <div className="border border-white/10 rounded-2xl p-6 bg-[#16161A]/60 backdrop-blur-[30px] saturate-[210%] text-[#F5F5F7] shadow-xl overflow-auto h-[400px] lg:h-[500px]">
           <h2 className="text-xl font-semibold mb-4 text-white">Execution Result</h2>
           {result ? (
             <pre className="text-sm font-mono whitespace-pre-wrap break-all text-gray-300 bg-black/20 p-4 rounded-xl border border-white/5">{result}</pre>

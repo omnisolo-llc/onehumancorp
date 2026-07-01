@@ -79,7 +79,7 @@ export function VideoTutorialList({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredVideos.map(video => (
-            <div key={video.id} onClick={() => setActiveVideo(video)} className="backdrop-blur-[30px] bg-white/80 dark:bg-black/40 saturate-[250%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/80 dark:border-white/20 overflow-hidden group hover:shadow-lg transition-all cursor-pointer flex flex-col hover:-translate-y-1">
+            <div key={video.id} onClick={() => setActiveVideo(video)} className="backdrop-blur-[30px] bg-white/80 dark:bg-black/40 saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/80 dark:border-white/20 overflow-hidden group hover:shadow-lg transition-all cursor-pointer flex flex-col hover:-translate-y-1">
             {/* Mock video player area (portrait optimized 9:16 approx for mobile shorts feel, or standard 16:9) */}
             <div className="w-full aspect-[9/16] sm:aspect-video bg-gray-900 relative flex items-center justify-center">
               {/* Play button overlay */}
@@ -107,8 +107,8 @@ export function VideoTutorialList({
       )}
       {/* Video Player Modal */}
       {activeVideo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-[20px] saturate-200 p-4 animate-fade-in">
-          <div className="bg-black backdrop-blur-[30px] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] mx-auto aspect-[9/16] relative animate-pop-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/80 backdrop-blur-[30px] saturate-[210%] saturate-200 p-4 animate-fade-in">
+          <div className="bg-black backdrop-blur-[30px] saturate-[210%] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] mx-auto aspect-[9/16] relative animate-pop-in">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-10 flex justify-between items-start pt-6">
               <h3 className="text-white font-bold font-outfit text-base pr-4 line-clamp-2 drop-shadow-md leading-tight">{activeVideo.title}</h3>

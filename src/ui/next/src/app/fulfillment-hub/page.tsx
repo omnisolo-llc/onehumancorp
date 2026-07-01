@@ -67,7 +67,7 @@ export default function FulfillmentHub() {
     <div className="min-h-screen bg-gray-50 flex justify-center">
       <div className="w-full max-w-[375px] bg-white relative pb-20 shadow-xl overflow-hidden">
         {/* App Bar (Translucent Glass) */}
-        <div className="sticky top-0 z-50 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] backdrop-saturate-[210%] border-b border-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-50 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border-b border-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] px-4 py-3 flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-900 tracking-tight">Fulfillment Hub</h1>
           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0071E3] font-bold text-sm">
             OHC

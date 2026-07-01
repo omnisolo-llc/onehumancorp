@@ -102,7 +102,7 @@ export default function ShareToUnlockGeneratorPage() {
                     <div className="flex gap-2 border p-1 min-h-[44px] min-w-[44px] bg-gray-50 border-gray-200">
                         <button
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>

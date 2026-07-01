@@ -81,7 +81,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
-          className="fixed z-[100] backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-[0_12px_40px_rgba(0,0,0,0.2)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed animate-fade-in-up"
+          className="fixed z-[100] backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-[0_12px_40px_rgba(0,0,0,0.2)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
             left: Math.max(144, Math.min(windowWidth - 144, tooltipRect.left + tooltipRect.width / 2)),
@@ -89,7 +89,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           }}
         >
           {tooltipText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/90 dark:border-t-black/80 border-t-8 border-x-transparent border-x-8 border-b-0 backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/90 dark:border-t-black/80 border-t-8 border-x-transparent border-x-8 border-b-0 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70"></div>
         </div>
       )}
       <style dangerouslySetInnerHTML={{__html: `

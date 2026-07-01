@@ -53,7 +53,7 @@ export default function NewProposalPage() {
       </button>
 
       {proposal && (
-        <div className="mt-12 p-6 border border-gray-200 rounded bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm">
+        <div className="mt-12 p-6 border border-gray-200 rounded bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm-sm">
           <h2 className="text-xl font-semibold mb-4">Generated Draft</h2>
           <div className="whitespace-pre-wrap font-serif leading-relaxed text-gray-800">
             {proposal}

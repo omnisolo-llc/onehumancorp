@@ -59,7 +59,7 @@ export default function SmartPricingPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
-      <header className="px-6 py-4 flex items-center justify-between border-b border-white/40 dark:border-white/10 sticky top-0 z-50 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[2.1]">
+      <header className="px-6 py-4 flex items-center justify-between border-b border-white/40 dark:border-white/10 sticky top-0 z-50 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%]">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-[-0.02em]">
           Smart Pricing
         </h1>
@@ -81,7 +81,7 @@ export default function SmartPricingPage() {
           </p>
         </div>
 
-        <div className="p-6 shadow-sm flex items-center justify-between bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
+        <div className="p-6 shadow-sm flex items-center justify-between bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
           <div>
             <h3 className="text-lg font-semibold font-outfit text-[#1D1D1F]">
               Enable Smart Pricing
@@ -106,7 +106,7 @@ export default function SmartPricingPage() {
         </div>
 
         {enabled && (
-          <div className="p-6 shadow-sm flex flex-col gap-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
+          <div className="p-6 shadow-sm flex flex-col gap-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
             <h3 className="text-lg font-semibold font-outfit border-b pb-2 text-[#1D1D1F] border-black/10">
               Configuration
             </h3>

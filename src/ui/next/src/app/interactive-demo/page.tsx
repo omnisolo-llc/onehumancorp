@@ -155,7 +155,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
                 />
                 <button
                   onClick={() => navigator.clipboard.writeText(embedCode)}
-                  className="absolute top-2 right-2 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-medium transition-colors backdrop-blur-sm"
+                  className="absolute top-2 right-2 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-medium transition-colors backdrop-blur-[30px] saturate-[210%]"
                 >
                   Copy
                 </button>
@@ -193,7 +193,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
 
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-[30px] saturate-[210%]">
           <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden text-center">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
 

@@ -691,7 +691,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
+      <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
         {error}
       </div>
     );
@@ -743,7 +743,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         {activeTab === "proposals" && (
           <>
             {loading && (
-              <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Loading Agent Proposals...
               </div>
             )}
@@ -810,12 +810,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <div className="w-full p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Loading Activity Feed...
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
-              <div className="w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center">
+              <div className="w-full p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   No recent activity found.
                 </p>
@@ -825,7 +825,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               {activities.map((activity) => (
                 <div
                   key={activity.id}
-                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-5 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-[8px]">

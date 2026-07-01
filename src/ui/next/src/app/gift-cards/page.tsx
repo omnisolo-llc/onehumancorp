@@ -58,7 +58,7 @@ export default function GiftCardsPage() {
                     type="number"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
-                    className="w-full pl-8 pr-4 py-2 rounded-xl border border-gray-300 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-semibold"
+                    className="w-full pl-8 pr-4 py-2 rounded-xl border border-gray-300 bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-semibold"
                     min="5"
                     max="1000"
                   />
@@ -125,7 +125,7 @@ export default function GiftCardsPage() {
 
            {/* Share Modal */}
            {showShareModal && (
-             <div className="mt-4 p-6 rounded-2xl bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-lg border border-gray-100 flex flex-col gap-4 animate-in slide-in-from-bottom-4">
+             <div className="mt-4 p-6 rounded-2xl bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm-lg border border-gray-100 flex flex-col gap-4 animate-in slide-in-from-bottom-4">
                 <h3 className="text-lg font-bold font-outfit text-gray-900">Share Your Gift Card</h3>
                 <p className="text-sm text-gray-600">Send this link directly to your customer. They can claim it securely online.</p>
 

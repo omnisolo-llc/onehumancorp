@@ -370,7 +370,7 @@ function FieldOpsJobsPageContent() {
         {jobs.map((job) => (
           <div
             key={job.id}
-            className="bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm border border-white/40 overflow-hidden"
+            className="bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm border border-white/40 overflow-hidden"
           >
             <div className="p-5 border-b border-gray-100 bg-gray-50/50">
               <div className="flex justify-between items-start mb-2">
@@ -512,7 +512,7 @@ function FieldOpsJobsPageContent() {
 
       {/* Voice-to-Quote Modal */}
       {voiceQuoteJobId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
           <div className="bg-white/80 dark:bg-[#16161A]/80 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[24px] shadow-2xl p-6 w-full max-w-md flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold font-outfit text-gray-900 dark:text-white flex items-center gap-2">

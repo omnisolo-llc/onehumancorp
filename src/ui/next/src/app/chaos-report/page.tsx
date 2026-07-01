@@ -94,7 +94,7 @@ export default function ChaosReportPage() {
                   className={`w-full rounded-t-md transition-all duration-500 ${isDarkMode ? 'bg-[#0066FF]/80' : 'bg-[#0066FF]/60'} group-hover:bg-blue-400 relative`}
                   style={{ height: `${Math.max(5, Math.min(100, val / 10))}%` }}
                 >
-                  <div className={`absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm text-gray-900'}`}>
+                  <div className={`absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-sm text-gray-900'}`}>
                     {val}ms
                   </div>
                 </div>

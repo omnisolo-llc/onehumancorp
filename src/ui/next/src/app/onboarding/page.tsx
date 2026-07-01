@@ -680,7 +680,7 @@ Image provided: ${instantImageUrl}`;
 
   return (
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
-      <div id="setup-screen" className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-0 sm:border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism">
+      <div id="setup-screen" className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100vh] sm:min-h-[812px] relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border-0 sm:border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism">
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
@@ -708,7 +708,7 @@ Image provided: ${instantImageUrl}`;
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
+          <div className="mx-6 mt-4 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
             <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             <p className="flex-1">{error}</p>
           </div>
@@ -736,14 +736,14 @@ Image provided: ${instantImageUrl}`;
                 </button>
                 <button
                   type="button"
-                  className="flex items-center justify-center w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
+                  className="flex items-center justify-center w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
                   onClick={() => { updateState({ step: -1 }); syncStateToBackend({ step: -1 }); }}
                 >
                   <span className="flex items-center gap-2"><SetupIcon name="sparkles" /> Instant Build</span>
                 </button>
                 <button
                   type="button"
-                  className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
+                  className="w-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
                   onClick={() => { updateState({ step: 0 }); syncStateToBackend({ step: 0 }); }}
                 >
                   Conversational Setup
@@ -753,7 +753,7 @@ Image provided: ${instantImageUrl}`;
           )}
 
           {step === 0 && (
-            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full backdrop-blur-[40px] backdrop-saturate-[250%] bg-[rgba(255,255,255,0.7)] dark:bg-[rgba(22,22,26,0.8)] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-2xl border border-white/20 p-4">
+            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full backdrop-blur-[30px] saturate-[210%] bg-[rgba(255,255,255,0.7)] dark:bg-[rgba(22,22,26,0.8)] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-2xl border border-white/20 p-4">
               <button onClick={() => { updateState({ step: -2 }); syncStateToBackend({ step: -2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1 min-h-[44px] min-w-[44px] p-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -763,7 +763,7 @@ Image provided: ${instantImageUrl}`;
               </p>
 
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
-                <div id="chat-messages" className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4">
+                <div id="chat-messages" className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4">
                   {chatMessages.length === 0 && (
                     <div className="mb-2"><strong>Assistant:</strong> What do you do? (e.g. I bake custom vegan cakes in Austin)</div>
                   )}
@@ -792,7 +792,7 @@ Image provided: ${instantImageUrl}`;
                     id="chat-image-url"
                     value={chatImageUrl}
                     onChange={(e) => setChatImageUrl(e.target.value)}
-                    className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
+                    className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
                     placeholder="Image URL (Optional)"
                     inputMode="url"
                     autoComplete="url"
@@ -801,7 +801,7 @@ Image provided: ${instantImageUrl}`;
                   <div className="flex gap-2 w-full">
                     <button
                       id="chat-upload-btn"
-                      className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
+                      className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
                       onClick={() => {
                         const url = prompt("Enter image URL");
                         if (url) setChatImageUrl(url);
@@ -823,7 +823,7 @@ Image provided: ${instantImageUrl}`;
                       onKeyDown={(e) => {
                          if (e.key === 'Enter') handleSendChatMessage();
                       }}
-                      className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none flex-1 transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
+                      className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none flex-1 transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
                       placeholder="Type a message..."
                       enterKeyHint="send"
                     />
@@ -855,7 +855,7 @@ Image provided: ${instantImageUrl}`;
                 <textarea
                   id="instant-bio"
                   data-testid="instant-bio"
-                  className={`bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] ${error === "Please tell us about your business." || error ? "border border-[#FF3B30]" : "border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"}`}
+                  className={`bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] ${error === "Please tell us about your business." || error ? "border border-[#FF3B30]" : "border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"}`}
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                   style={{ resize: 'none' }}
@@ -870,7 +870,7 @@ Image provided: ${instantImageUrl}`;
                   id="instant-image-url"
                   data-testid="instant-image-url"
                   type="url"
-                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] min-h-[44px]"
+                  className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] min-h-[44px]"
                   placeholder="Image URL (Optional)"
                   value={instantImageUrl}
                   onChange={(e) => updateState({ instantImageUrl: e.target.value })}
@@ -947,7 +947,7 @@ Image provided: ${instantImageUrl}`;
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} min-h-[44px]`}
                         inputMode="text"
                         enterKeyHint="next"
                       />
@@ -1019,7 +1019,7 @@ Image provided: ${instantImageUrl}`;
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 focus:ring-2 focus:ring-[#0066FF]/30'}`}
+                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 focus:ring-2 focus:ring-[#0066FF]/30'}`}
                       />
                     </div>
                   </div>
@@ -1086,7 +1086,7 @@ Image provided: ${instantImageUrl}`;
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} min-h-[44px]`}
                       />
                     </div>
                   </div>
@@ -1153,7 +1153,7 @@ Image provided: ${instantImageUrl}`;
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
-                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} min-h-[44px]`}
                       />
                     </div>
                   </div>
@@ -1221,7 +1221,7 @@ Image provided: ${instantImageUrl}`;
                       updateState({ businessName: e.target.value });
                       setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                   {validationErrors.businessName && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.businessName}</p>}
                 </div>
@@ -1236,7 +1236,7 @@ Image provided: ${instantImageUrl}`;
                       updateState({ businessType: e.target.value });
                       setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                   {validationErrors.businessType && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.businessType}</p>}
                 </div>
@@ -1248,7 +1248,7 @@ Image provided: ${instantImageUrl}`;
                     autoCapitalize="words"
                     value={categories.join(', ')}
                     onChange={(e) => updateState({ categories: e.target.value.split(',').map(c => c.trim()) })}
-                    className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                    className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -1260,7 +1260,7 @@ Image provided: ${instantImageUrl}`;
                         autoCapitalize="words"
                         value={firstProductName}
                         onChange={(e) => updateState({ firstProductName: e.target.value })}
-                        className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                        className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
                       />
                    </div>
                    <div>
@@ -1277,7 +1277,7 @@ Image provided: ${instantImageUrl}`;
                               setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
                            }
                         }}
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? 'border-[#FF3B30]' : 'border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20'} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                       />
                       {validationErrors.firstProductPrice && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.firstProductPrice}</p>}
                    </div>
@@ -1348,7 +1348,7 @@ Image provided: ${instantImageUrl}`;
                       <div
                         key={template}
                         onClick={() => updateState({ websiteTemplate: template })}
-                        className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
                         <div className="font-semibold text-sm">{template}</div>
                       </div>
@@ -1361,14 +1361,14 @@ Image provided: ${instantImageUrl}`;
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => updateState({ domainChoice: 'subdomain' })}
-                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Free Subdomain</span>
                       <span className="text-[10px] opacity-70">your-name.ohc.app</span>
                     </div>
                     <div
                       onClick={() => updateState({ domainChoice: 'custom' })}
-                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Custom Domain</span>
                       <span className="text-[10px] opacity-70">your-name.com</span>
@@ -1397,7 +1397,7 @@ Image provided: ${instantImageUrl}`;
                           }
                         }}
                         placeholder="e.g. Maya Smith"
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminName ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminName ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                         inputMode="text"
                         enterKeyHint="next"
                       />
@@ -1424,7 +1424,7 @@ Image provided: ${instantImageUrl}`;
                       }
                     }}
                     placeholder="you@example.com"
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
@@ -1447,7 +1447,7 @@ Image provided: ${instantImageUrl}`;
                           }
                         }}
                         placeholder="••••••••"
-                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminPassword ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border ${validationErrors.adminPassword ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                       />
                       {validationErrors.adminPassword && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminPassword}</p>}
                     </div>
@@ -1473,7 +1473,7 @@ Image provided: ${instantImageUrl}`;
                 </div>
 
                 <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-white">
+                  <label className="flex items-center justify-between cursor-pointer p-3 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-white">
                     <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
                     <input
                       type="checkbox"
@@ -1563,13 +1563,13 @@ Image provided: ${instantImageUrl}`;
 
                 <a
                   href="/assistant"
-                  className="flex w-full items-center justify-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full items-center justify-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   <IconLabel icon="sparkles">Open Assistant</IconLabel>
                 </a>
                 <a
                   href="/builder"
-                  className="flex w-full items-center justify-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full items-center justify-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   <IconLabel icon="eye">Preview Storefront</IconLabel>
                 </a>
