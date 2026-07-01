@@ -21,19 +21,30 @@ test.describe('Global Edge-Cached Dynamic Storefronts E2E', () => {
     const tenantId = '11111111-1111-1111-1111-111111111111';
     const productId = '22222222-2222-2222-2222-222222222222';
 
+    // 1. Initial hit should result in a cache miss from our local edge caching middleware
     let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
     expect(res.status()).toBe(200);
+    expect(res.headers()['x-cache']).toBe('MISS');
 
-    // Perform an inventory invalidation trigger via webhook (simulating backend ops)
+    // 2. Second hit should be a cache hit
+    let hitRes = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
+    expect(hitRes.status()).toBe(200);
+    expect(hitRes.headers()['x-cache']).toBe('HIT');
+
+    // 3. Perform an inventory invalidation trigger via webhook (simulating backend ops)
+    // The pos handler invokes cdn cache invalidation asynchronously.
     const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/storefront/webhook/invalidate', {
       data: { tags: [`entity:product:${productId}`] }
     });
     expect(invalidateRes.status()).toBe(200);
 
-    // Hit cache again and verify regeneration logic is invoked
-    // In a real e2e environment this hits the backend properly. We verify the API endpoint contract.
+    // Allow some time for asynchronous local CDN invalidation
+    await new Promise(r => setTimeout(r, 100));
+
+    // 4. Hit cache again and verify regeneration logic is invoked (should be MISS again)
     let refreshed = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`);
     expect(refreshed.status()).toBe(200);
+    expect(refreshed.headers()['x-cache']).toBe('MISS');
   });
 
   test('generates edge storefront with premium styling and seo tags injected via builder', async ({ request, page }) => {

@@ -15,7 +15,9 @@ describe('Edge Storefront Route', () => {
       ok: true,
       text: async () => '<!DOCTYPE html><html><head><title>Test</title></head><body>Test</body></html>',
       headers: new Headers({
-        'Cache-Tag': 'tenant-id:test-tenant'
+        'Cache-Tag': 'tenant-id:test-tenant',
+        'Surrogate-Key': 'tenant-id:test-tenant',
+        'ETag': 'W/"test-etag"'
       })
     } as any);
 
@@ -25,6 +27,8 @@ describe('Edge Storefront Route', () => {
     expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=60, stale-while-revalidate=86400');
     expect(response.headers.get('Content-Type')).toBe('text/html');
     expect(response.headers.get('Cache-Tag')).toBe('tenant-id:test-tenant');
+    expect(response.headers.get('Surrogate-Key')).toBe('tenant-id:test-tenant');
+    expect(response.headers.get('ETag')).toBe('W/"test-etag"');
 
     const html = await response.text();
     expect(html).toContain('<title>Test</title>');
