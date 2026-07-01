@@ -186,6 +186,64 @@ describe('HelpWidget', () => {
     });
   });
 
+  it('closes video modal when clicking on the backdrop overlay', async () => {
+    const user = userEvent.setup();
+    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+
+    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    await user.click(helpBtn);
+
+    const videosTab = screen.getByText('Videos');
+    await user.click(videosTab);
+
+    await waitFor(() => {
+        expect(screen.getByText('Test Video')).toBeInTheDocument();
+    });
+
+    const videoCard = screen.getByText('Test Video').parentElement?.parentElement;
+    if (videoCard) {
+      await user.click(videoCard);
+    }
+
+    const modalBackdrop = await screen.findByRole('dialog');
+    expect(modalBackdrop).toBeInTheDocument();
+
+    await user.click(modalBackdrop);
+
+    await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('does not close video modal when clicking inside the modal content', async () => {
+    const user = userEvent.setup();
+    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+
+    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    await user.click(helpBtn);
+
+    const videosTab = screen.getByText('Videos');
+    await user.click(videosTab);
+
+    await waitFor(() => {
+        expect(screen.getByText('Test Video')).toBeInTheDocument();
+    });
+
+    const videoCard = screen.getByText('Test Video').parentElement?.parentElement;
+    if (videoCard) {
+      await user.click(videoCard);
+    }
+
+    const modalBackdrop = await screen.findByRole('dialog');
+    expect(modalBackdrop).toBeInTheDocument();
+
+    // Since getByText('Test Video') returns multiple elements (one in list, one in modal), we need to query by role
+    const heading = screen.getAllByRole('heading', { name: 'Test Video' })[1];
+    await user.click(heading);
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
   it('switches to the What is New tab and renders content', async () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);

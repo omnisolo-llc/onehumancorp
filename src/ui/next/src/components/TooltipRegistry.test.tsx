@@ -115,13 +115,25 @@ describe('TooltipRegistry', () => {
 
   it('handles fetch errors gracefully', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    mockTooltipFetch.mockImplementationOnce(() => Promise.resolve({ ok: false, json: async () => ({}) }));
+    mockTooltipFetch.mockImplementationOnce(() => Promise.resolve({ ok: false, status: 500, json: async () => ({}) }));
     await act(async () => {
       render(<TooltipProvider><div>Test</div></TooltipProvider>);
       await new Promise(r => setTimeout(r, 20));
     });
     expect(global.fetch).toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load tooltips', expect.any(Error));
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('handles aborted fetch gracefully', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockTooltipFetch.mockImplementationOnce(() => Promise.reject({ name: 'AbortError' }));
+    await act(async () => {
+      render(<TooltipProvider><div>Test</div></TooltipProvider>);
+      await new Promise(r => setTimeout(r, 20));
+    });
+    expect(global.fetch).toHaveBeenCalled();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
   });
 });
