@@ -37,6 +37,46 @@ test.describe('KDS Offline & Multilingual', () => {
     expect(dir).toBeGreaterThan(0);
   });
 
+  test('KDS Print and Offline Formatting', async ({ page, context }) => {
+    // Navigate to KDS page
+    await page.goto('/pos/kds');
+    await expect(page.locator('text=Active Orders')).toBeVisible({ timeout: 10000 });
+
+    // Click printer settings and verify modal
+    await page.getByTestId('printer-settings-btn').click();
+    await expect(page.locator('text=Printer Settings')).toBeVisible();
+
+    // Test Printer connection flow
+    const connectBtn = page.getByTestId('btn-connect-printer');
+    await expect(connectBtn).toBeVisible();
+
+    // Listen for alert from test print
+    let alertMessage = '';
+    page.on('dialog', async dialog => {
+      alertMessage = dialog.message();
+      await dialog.accept();
+    });
+
+    await connectBtn.click();
+
+    // Open printer settings again
+    await page.getByTestId('printer-settings-btn').click();
+
+    // Set offline
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+
+    // Print receipt
+    await page.getByTestId('btn-print-1').click();
+
+    // Verify alert message indicating ESC/POS print payload
+    expect(alertMessage).toContain('Printing ESC/POS command');
+
+    // Restore network
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  });
+
   test('KDS Offline Actions & Background Sync', async ({ page, context }) => {
     await expect(page.locator('text=#1 - Ahmed')).toBeVisible({ timeout: 10000 });
     // Verify initial state is "Received" before attempting to click "Prepare"

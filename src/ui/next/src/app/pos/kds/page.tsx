@@ -92,6 +92,7 @@ export default function KDSPage() {
   };
 
   const texts = t[language];
+  const [showPrinterModal, setShowPrinterModal] = useState(false);
 
   return (
     <div dir={language === 'ar' ? 'rtl' : 'ltr'} className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
@@ -103,13 +104,22 @@ export default function KDSPage() {
             <h1 className="text-xl font-bold text-gray-900">{texts.kds}</h1>
             {isOffline && <span className="text-[#FF3B30] font-bold text-sm bg-red-100 px-2 py-1 rounded-md">{texts.offline}</span>}
           </div>
-          <button
-            onClick={toggleLanguage}
-            className="text-[#0071E3] font-bold px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
-            data-testid="lang-toggle"
-          >
-            {language === 'en' ? 'عربي' : 'EN'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowPrinterModal(true)}
+              className="text-gray-600 font-bold px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+              data-testid="printer-settings-btn"
+            >
+              🖨️
+            </button>
+            <button
+              onClick={toggleLanguage}
+              className="text-[#0071E3] font-bold px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+              data-testid="lang-toggle"
+            >
+              {language === 'en' ? 'عربي' : 'EN'}
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -165,6 +175,13 @@ export default function KDSPage() {
                          {texts.ready}
                       </button>
                    )}
+                   <button
+                     onClick={() => alert(`Printing ESC/POS command for Order #${order.id}`)}
+                     className="col-span-2 w-full py-3 mt-2 bg-blue-50 text-blue-700 font-bold text-md rounded-xl border border-blue-200 active:scale-95 transition"
+                     data-testid={`btn-print-${order.id}`}
+                   >
+                     Print Receipt
+                   </button>
                 </div>
               </div>
             ))}
@@ -199,6 +216,22 @@ export default function KDSPage() {
           </div>
         )}
       </div>
+      {showPrinterModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white w-[340px] rounded-2xl p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Printer Settings</h2>
+              <button onClick={() => setShowPrinterModal(false)} className="text-gray-500 font-bold text-xl hover:text-gray-900">&times;</button>
+            </div>
+
+            <p className="text-gray-600 mb-6 text-sm">Connect a Bluetooth Thermal Printer (ESC/POS compatible) to print receipts.</p>
+
+            <button onClick={() => { alert('Connected!'); setShowPrinterModal(false); }} className="w-full py-4 bg-[#0071E3] text-white font-bold rounded-xl active:scale-95 transition" data-testid="btn-connect-printer">
+              Connect Printer
+            </button>
+          </div>
+        </div>
+      )}
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
