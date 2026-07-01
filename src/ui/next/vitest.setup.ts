@@ -197,3 +197,25 @@ console.error = (...args: any[]) => {
 
 // Set IS_REACT_ACT_ENVIRONMENT
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+// Mock Worker
+class WorkerMock {
+  constructor(stringUrl: string) {}
+  onmessage() {}
+  postMessage() {}
+  terminate() {}
+  addEventListener() {}
+  removeEventListener() {}
+  dispatchEvent() { return false; }
+  onerror() {}
+  onmessageerror() {}
+}
+globalThis.Worker = WorkerMock as any;
+
+// Mock navigator locks
+Object.defineProperty(navigator, 'locks', {
+  value: {
+    request: vi.fn(),
+    query: vi.fn()
+  }
+});

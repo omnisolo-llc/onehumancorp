@@ -48,7 +48,7 @@ for file in \
   fi
 done
 
-for file in next-env.d.ts package.json package-lock.json tsconfig.json vitest.setup.ts vitest.config.mts; do
+for file in next-env.d.ts package.json package-lock.json tsconfig.json vitest.setup.ts vitest.config.ts; do
   if [[ -f "$file" ]]; then
     cp -L "$file" "$work_dir/$file"
   else
