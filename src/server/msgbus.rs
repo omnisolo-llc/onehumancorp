@@ -232,7 +232,7 @@ impl IpcBus {
         }
 
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
-        let options = options.create_if_missing(true);
+        let options = options.create_if_missing(false);
         let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
