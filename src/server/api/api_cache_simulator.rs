@@ -23,7 +23,7 @@ pub async fn cdn_cache_simulator_middleware(
     // Check if we have a valid cache hit in our CDN simulator
     if let Some((cached_bytes, _is_stale)) = cache.get_with_swr(&cache_key).await {
         // Return 200 with the cached bytes, acting as an edge CDN hit
-        let mut res = Response::builder()
+        let res = Response::builder()
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
             .header("X-CDN-Cache-Status", "HIT")
@@ -65,8 +65,6 @@ pub async fn cdn_cache_simulator_middleware(
         tags.dedup();
 
         // Store the response in the CDN cache simulator
-        // We use String to store bytes directly since HybridCache works with it.
-        // Convert bytes to string (HTML) assuming it's valid UTF-8 HTML response
         if let Ok(html_str) = String::from_utf8(bytes.to_vec()) {
             cache.set_with_tags(&cache_key, html_str, tags, Duration::from_secs(3600)).await;
         }

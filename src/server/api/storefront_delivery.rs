@@ -20,7 +20,7 @@ pub struct DeliveryState {
 
 pub fn router() -> Router<DeliveryState> {
     Router::new()
-        .route("/{tenant_id}/{product_id}", get(get_storefront_product).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)).layer(axum::middleware::from_fn(crate::utils::api_cache_simulator::cdn_cache_simulator_middleware)))
+        .route("/{tenant_id}/{product_id}", get(get_storefront_product).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)).layer(axum::middleware::from_fn(crate::api::api_cache_simulator::cdn_cache_simulator_middleware)))
         .route("/webhook/invalidate", post(invalidate_cache_webhook))
 }
 

@@ -16,6 +16,7 @@ rust_library(
         "tier_middleware.rs",
         "edge_caching_middleware.rs",
         "tenant_middleware.rs",
+        "api_cache_simulator.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
