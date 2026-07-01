@@ -207,7 +207,7 @@ impl std::fmt::Display for HumanInLoopSpectrum {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 #[derive(Default)]
-/// 5. Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval)
+/// Master Catalog C.5. Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval)
 pub enum PermissionArchitecture {
     /// Permissive (auto-approve): All tools are auto-approved unless explicitly in high-risk.
     #[default]
