@@ -5,7 +5,7 @@ test.describe('Edge Caching Coordinator - High Traffic Event', () => {
     // 1. We assume test tenant and product ID
     const tenantId = '33333333-3333-3333-3333-333333333333';
     const productId = '44444444-4444-4444-4444-444444444444';
-    const storefrontUrl = `http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`;
+    const storefrontUrl = `/api/v1/storefront/${tenantId}/${productId}`;
 
     // 2. Simulate high traffic: 50 concurrent requests to the edge cache storefront
     const requests = Array.from({ length: 50 }).map(() => request.get(storefrontUrl));
@@ -13,20 +13,20 @@ test.describe('Edge Caching Coordinator - High Traffic Event', () => {
 
     // Check they all returned 200 (or at least resolved without error)
     for (const res of responses) {
-      expect(res.status()).toBe(200);
+      expect(res.ok()).toBeTruthy();
     }
 
     // 3. Trigger inventory update webhook to invalidate the cache
-    const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/storefront/webhook/invalidate', {
+    const invalidateRes = await request.post('/api/v1/storefront/webhook/invalidate', {
       data: {
         tags: [`tenant-id:${tenantId}`, `entity:product:${productId}`]
       }
     });
-    expect(invalidateRes.status()).toBe(200);
+    expect(invalidateRes.ok()).toBeTruthy();
 
     // 4. Verify the cache is correctly invalidated
     const subsequentRes = await request.get(storefrontUrl);
-    expect(subsequentRes.status()).toBe(200);
+    expect(subsequentRes.ok()).toBeTruthy();
 
     const html = await subsequentRes.text();
     // Verify there is no stale data. For the purposes of this test, we expect the storefront

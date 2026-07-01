@@ -6,10 +6,10 @@ test.describe('Autonomous Inventory, CRM, and Pricing Synchronization', () => {
     await page.goto('/api/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
 
     // 2. Clear existing approvals
-    await request.post('http://127.0.0.1:18789/api/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
+    await request.post('/api/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
 
     // 3. Simulate the stockout
-    await request.post('http://127.0.0.1:18789/api/agents/approvals/simulate-stockout-reorder', {
+    await request.post('/api/agents/approvals/simulate-stockout-reorder', {
       headers: {
         'x-tenant-id': 'tenant-priya',
         'x-user-id': 'user-priya',
@@ -47,9 +47,9 @@ test.describe('Autonomous Inventory, CRM, and Pricing Synchronization', () => {
   test('Priya views and approves an inventory reconciliation action', async ({ page, request }) => {
     await page.goto('/api/auth/test-login?tenant=tenant-priya&user=user-priya&role=owner');
 
-    await request.post('http://127.0.0.1:18789/api/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
+    await request.post('/api/dev/reset-approvals?tenant_id=tenant-priya').catch(() => {});
 
-    await request.post('http://127.0.0.1:18789/api/agents/approvals/simulate-inventory-reconciliation', {
+    await request.post('/api/agents/approvals/simulate-inventory-reconciliation', {
       headers: {
         'x-tenant-id': 'tenant-priya',
         'x-user-id': 'user-priya',

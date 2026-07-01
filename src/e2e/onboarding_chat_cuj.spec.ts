@@ -13,7 +13,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
 
   test('Completes the conversational onboarding flow using the real API backend', async ({ page }) => {
     // Setup Tauri mock routes that point to actual HTML files.
-    // The HTML file makes requests to the real backend running on http://127.0.0.1:18789
+    // The HTML file makes requests to the real backend running on
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
         : path.resolve(__dirname, '..', '..');

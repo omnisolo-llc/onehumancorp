@@ -30,7 +30,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
     });
 
     // 2. Customer visits instant quote page
-    await page.goto(`http://127.0.0.1:18789/api/ui/instant-quote.html?tenant=${tenantId}`);
+    await page.goto(`/api/ui/instant-quote.html?tenant=${tenantId}`);
 
     // Verify UI is loaded
     await expect(page.locator('text=Instant Quote')).toBeVisible();

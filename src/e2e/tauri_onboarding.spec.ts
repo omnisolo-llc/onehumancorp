@@ -93,7 +93,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.fill('#chat-input', 'I run a mobile dog grooming business.');
 
     // We need to mock the /api/onboarding/chat response before sending
-    await page.route('http://127.0.0.1:18789/api/onboarding/chat', async route => {
+    await page.route('/api/onboarding/chat', async route => {
         await route.fulfill({
             status: 200,
             contentType: 'application/json',
