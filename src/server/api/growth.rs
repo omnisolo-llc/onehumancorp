@@ -373,6 +373,7 @@ where
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
         .route("/viral-widget/embed", get(handle_viral_widget_embed))
+        .route("/work-intake/embed", get(handle_work_intake_embed))
         .route("/one-tap-referral/embed", get(handle_one_tap_referral_embed))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/quiz/generate", post(handle_generate_viral_quiz))
@@ -3755,6 +3756,13 @@ pub struct ViralWidgetEmbedQuery {
     pub branding: Option<bool>,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct WorkIntakeEmbedQuery {
+    pub tenant: Option<String>,
+    pub theme: Option<String>,
+    pub title: Option<String>,
+}
+
 fn escape_html(s: &str) -> String {
     let mut escaped = String::with_capacity(s.len());
     for c in s.chars() {
@@ -4033,6 +4041,162 @@ async fn handle_spin_to_win_embed(
     );
 
     axum::response::Html(html)
+}
+
+pub async fn handle_work_intake_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<WorkIntakeEmbedQuery>
+) -> impl IntoResponse {
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let title = escape_html(query.title.as_deref().unwrap_or("Work Request"));
+    let theme = query.theme.as_deref().unwrap_or("light");
+
+    let bg_color = if theme == "dark" { "#111827" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f3f4f6" } else { "#111827" };
+    let input_bg = if theme == "dark" { "#374151" } else { "#f9fafb" };
+    let input_border = if theme == "dark" { "#4b5563" } else { "#d1d5db" };
+    let button_bg = if theme == "dark" { "#2563eb" } else { "#3b82f6" };
+    let button_hover = if theme == "dark" { "#1d4ed8" } else { "#2563eb" };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            background-color: {bg_color};
+            color: {text_color};
+            box-sizing: border-box;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }}
+        h2 {{
+            margin-top: 0;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: center;
+        }}
+        form {{
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }}
+        input, textarea {{
+            background-color: {input_bg};
+            color: {text_color};
+            border: 1px solid {input_border};
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-family: inherit;
+        }}
+        textarea {{
+            resize: vertical;
+            min-height: 80px;
+        }}
+        input:focus, textarea:focus {{
+            outline: none;
+            border-color: {button_bg};
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }}
+        button {{
+            background-color: {button_bg};
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: auto;
+        }}
+        button:hover {{
+            background-color: {button_hover};
+        }}
+        #success-message {{
+            display: none;
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            text-align: center;
+            font-weight: 500;
+            font-size: 14px;
+            margin-top: 16px;
+        }}
+    </style>
+</head>
+<body>
+    <h2>{title}</h2>
+    <form id="intake-form">
+        <input type="text" id="name" placeholder="Your Name" required>
+        <input type="email" id="email" placeholder="Your Email" required>
+        <textarea id="details" placeholder="How can we help you?" required></textarea>
+        <button type="submit">Send Request</button>
+    </form>
+    <div id="success-message">Request Received! Thanks, <span id="success-name"></span>!</div>
+    <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
+        <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+    </div>
+
+    <script>
+        document.getElementById('intake-form').addEventListener('submit', async (e) => {{
+            e.preventDefault();
+
+            const btn = e.target.querySelector('button');
+            const originalText = btn.textContent;
+            btn.textContent = 'Submitting...';
+            btn.disabled = true;
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const details = document.getElementById('details').value;
+
+            try {{
+                const formData = new URLSearchParams();
+                formData.append('name', name);
+                formData.append('email', email);
+                formData.append('details', details);
+
+                const res = await fetch('/api/v1/work-intake/submit?tenant={tenant}', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    }},
+                    body: formData.toString()
+                }});
+
+                if (res.ok) {{
+                    document.getElementById('intake-form').style.display = 'none';
+                    document.getElementById('success-name').textContent = name;
+                    document.getElementById('success-message').style.display = 'block';
+                }} else {{
+                    alert('Something went wrong. Please try again.');
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }}
+            }} catch (err) {{
+                alert('Network error. Please try again.');
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }}
+        }});
+    </script>
+</body>
+</html>"#
+    );
+
+    axum::response::Html(html).into_response()
 }
 
 pub async fn handle_viral_widget_embed(

@@ -60,7 +60,7 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
         // Ensure the referral growth loop is intact in the footer
         expect(html).toContain('Powered by');
         expect(html).toContain('OHC');
-        expect(html).toContain('/onboarding?ref=my-business');
+        expect(html).toContain('/api/v1/growth/referrals/click?target=/onboarding&ref=my-business');
 
         // Test POST submit endpoint
         const submitResponse = await request.post('/api/v1/work-intake/submit?tenant=my-business', {
@@ -81,7 +81,6 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
         expect(submitHtml).toContain('Thanks, Playwright Test!');
 
         // Confirm viral loop is still present on success screen
-        expect(submitHtml).toContain('Powered by');
-        expect(submitHtml).toContain('OHC');
+        expect(submitHtml).toContain('Powered by OHC');
     });
 });
