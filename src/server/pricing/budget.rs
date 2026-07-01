@@ -53,8 +53,8 @@ impl BudgetManager {
         let previous_current = self.current.fetch_add(amount_cents, Ordering::SeqCst);
         let final_current = previous_current + amount_cents;
 
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            if amount_cents > 0 {
+        if amount_cents > 0 {
+            if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
                 store.llm_cost_counter.add(
                     amount_cents as u64,
                     &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
