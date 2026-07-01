@@ -343,7 +343,7 @@
 
       <div class="total-section">
         <span>Total</span>
-        <span id="quote-total">-</span>
+        <span id="quote-total" data-testid="modal-quote-total">-</span>
       </div>
 
       <div class="deposit-section">
@@ -353,7 +353,7 @@
         </div>
         <p style="font-size: 13px; color: var(--accent-color); opacity: 0.8;">Applied to your final balance.</p>
 
-        <div class="slider-container" id="owner-slider-container">
+        <div class="slider-container" id="owner-slider-container" role="switch" aria-checked="true">
           <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sub); margin-bottom: 4px;">
             <span>0%</span>
             <span>Deposit %</span>
@@ -379,8 +379,8 @@
     </div>
 
     <div id="action-buttons" style="margin-bottom: 100px;">
-      <button class="btn btn-primary" id="btn-edit-quote" style="display: none; background-color: #f5f5f7; color: #1d1d1f; border: 1px solid #d2d2d7; margin-bottom: 12px;">Edit Quote</button>
-      <button class="btn btn-primary" id="btn-approve-send" style="display: none;">Approve & Send to Customer</button>
+      <button class="btn btn-primary" id="btn-edit-quote" aria-haspopup="dialog" style="display: none; background-color: #f5f5f7; color: #1d1d1f; border: 1px solid #d2d2d7; margin-bottom: 12px;">Edit Quote</button>
+      <button class="btn btn-primary" id="btn-approve-send" data-testid="modal-approve-btn" style="display: none;">Approve & Send to Customer</button>
       <button class="btn btn-apple-pay" id="btn-pay-deposit" style="display: none;">Pay Deposit with Pay</button>
       <button class="btn btn-primary" id="btn-pay-card" style="display: none; background-color: #333;">Pay with Card</button>
     </div>
@@ -388,7 +388,7 @@
   </div>
 
   <!-- Edit Quote Bottom Sheet -->
-  <div id="edit-quote-sheet" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-color); border-radius: 16px 16px 0 0; padding: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); z-index: 100; max-height: 80vh; overflow-y: auto;">
+  <div id="edit-quote-sheet" role="dialog" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-color); border-radius: 16px 16px 0 0; padding: 20px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); z-index: 100; max-height: 80vh; overflow-y: auto;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0; font-size: 18px;">Edit Quote</h2>
       <button id="btn-close-edit" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
