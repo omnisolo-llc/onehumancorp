@@ -60,6 +60,13 @@ pub async fn handle_oauth_callback(
             let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
+            if !tunnel_base_url.starts_with("https://") && !tunnel_base_url.starts_with("http://127.0.0.1") && !tunnel_base_url.starts_with("http://localhost") {
+                return (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    "Invalid tunnel_base_url: must be HTTPS or localhost.",
+                ).into_response();
+            }
+
             let mut redirect_url = format!("{}/{}/oauth/callback#code={}&state={}",
                 tunnel_base_url,
                 urlencoding::encode(&tunnel_id),
@@ -238,5 +245,25 @@ mod tests {
         assert!(!body_str.contains("<script>alert(1)</script>"));
         assert!(!body_str.contains("\"><img"));
 
+    }
+
+    #[tokio::test]
+    async fn test_oauth_callback_extra_query_params_escaping() {
+        let mut extra = HashMap::new();
+        extra.insert("token".to_string(), "abc+def".to_string());
+
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_123e4567-e89b-12d3-a456-426614174000_actualState123".to_string(),
+            extra,
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+        assert!(body_str.contains("token=abc%2Bdef"));
     }
 }
