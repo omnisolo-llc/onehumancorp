@@ -1,42 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('OnboardingWizard CUJ', () => {
-  test.beforeEach(async ({ page, context }) => {
-    await context.route('**/api/onboarding/intake', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: {
-          business_type: "Online Store",
-          business_name: "Mock Business",
-          categories: ["physical"],
-          initial_products: [
-            { name: "Mock Product", price: "10.00" }
-          ]
-        }
-      });
-    });
-
-    await context.route('**/api/onboarding/start', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: { organization_id: 'org_123' }
-      });
-    });
-
-    await context.route('**/api/onboarding/launch', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: { status: 'launched' }
-      });
-    });
-
-    await context.route('**/api/onboarding/state', async (route) => {
-      await route.fulfill({
-        status: 200,
-        json: { status: 'ok' }
-      });
-    });
-
+  test.beforeEach(async ({ page }) => {
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
       window.localStorage.clear();
@@ -205,17 +170,10 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.evaluate(() => window.localStorage.clear());
 
     // 3. Reload page and check restoration
-    await context.route('**/api/onboarding/draft', async (route, request) => {
-      if (request.method() === 'GET') {
-        route.fulfill({ status: 200, json: { wizardState: { step: 1, chatStep: 1, businessName: 'My Restored Business' } } });
-      } else {
-        route.fulfill({ status: 200, json: { success: true, organization_id: 'test-tenant-123' } });
-      }
-    });
     await page.reload();
 
     // We should be restored to the first step of the wizard where we were, with the text filled
-    await expect(page.getByText("What's the name of your business?")).toBeVisible();
+    await expect(page.getByText("What's the name of your business?")).toBeVisible({ timeout: 15000 });
     await expect(page.locator('input').first()).toHaveValue('My Restored Business', { timeout: 15000 });
   });
 
