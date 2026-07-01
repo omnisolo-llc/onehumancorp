@@ -35,6 +35,14 @@ impl HumanInLoopManager {
             )));
         }
 
+        // Master Catalog C.5. Permission Architecture Check
+        if permission_architecture == &PermissionArchitecture::Restrictive && !is_read_only {
+            return Err(ToolError::UserFixable(format!(
+                "Mutating tool '{}' requires human approval due to restrictive base architecture.",
+                tc.name
+            )));
+        }
+
         match hil_spectrum {
             HumanInLoopSpectrum::Autonomous => {
                 // Fully autonomous. No human intervention needed unless high-risk (handled above).
@@ -73,17 +81,9 @@ impl HumanInLoopManager {
                         confidence, confidence_threshold, tc.name
                     )))
                 } else {
-                    // Fall back to autonomous if confidence is sufficient, but also check the base permission architecture
-                    if permission_architecture == &PermissionArchitecture::Restrictive
-                        && !is_read_only
-                    {
-                        Err(ToolError::UserFixable(format!(
-                            "Mutating tool '{}' requires human approval due to restrictive base architecture.",
-                            tc.name
-                        )))
-                    } else {
-                        Ok(())
-                    }
+                    // Fall back to autonomous if confidence is sufficient
+                    // Note: Restrictive architecture is already checked above.
+                    Ok(())
                 }
             }
         }
@@ -128,7 +128,7 @@ mod tests {
         let tc = create_tool_call("read_file");
         let result = HumanInLoopManager::evaluate_escalation_tier(
             &tc,
-            false,
+            false, // is_read_only (Wait, false means it's mutating, but permissive allows it in autonomous)
             false,
             &HumanInLoopSpectrum::Autonomous,
             1.0,
@@ -138,6 +138,41 @@ mod tests {
             &[],
         );
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_restrictive_architecture_overrides_autonomous() {
+        let tc_mutate = create_tool_call("write_file");
+        let result = HumanInLoopManager::evaluate_escalation_tier(
+            &tc_mutate,
+            false, // is_read_only
+            false,
+            &HumanInLoopSpectrum::Autonomous,
+            1.0,
+            0.5,
+            &PermissionArchitecture::Restrictive,
+            &[],
+            &[],
+        );
+        assert!(matches!(result, Err(ToolError::UserFixable(_))));
+        if let Err(ToolError::UserFixable(msg)) = result {
+            assert!(msg.contains("restrictive base architecture"));
+        }
+
+        // Even with Restrictive, read_only is OK
+        let tc_read = create_tool_call("read_file");
+        let result_read = HumanInLoopManager::evaluate_escalation_tier(
+            &tc_read,
+            true, // is_read_only
+            false,
+            &HumanInLoopSpectrum::Autonomous,
+            1.0,
+            0.5,
+            &PermissionArchitecture::Restrictive,
+            &[],
+            &[],
+        );
+        assert!(result_read.is_ok());
     }
 
     #[test]
