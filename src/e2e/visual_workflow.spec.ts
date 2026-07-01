@@ -53,7 +53,7 @@ test.describe('Visual Workflow Orchestrator', () => {
   test('should show error gracefully when running without valid backend/api', async ({ page }) => {
     await page.click('button:has-text("+ Add Input Node")');
     // Click the run workflow button
-    await page.click('button:has-text("▶ Run Workflow")');
+    await page.click('button:has-text("Run Workflow")');
 
     // Because the backend API may not be fully reachable in E2E without auth,
     // it will likely show a fetch error in the execution result box.

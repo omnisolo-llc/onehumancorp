@@ -59,7 +59,7 @@ describe("VisualWorkflowPage", () => {
     });
 
     render(<VisualWorkflowPage />);
-    fireEvent.click(screen.getByText("▶ Run Workflow"));
+    fireEvent.click(screen.getByText("Run Workflow"));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith("/api/workflow/run", expect.any(Object));
@@ -71,7 +71,7 @@ describe("VisualWorkflowPage", () => {
     (global.fetch as any).mockRejectedValueOnce(new Error("Network Error"));
 
     render(<VisualWorkflowPage />);
-    fireEvent.click(screen.getByText("▶ Run Workflow"));
+    fireEvent.click(screen.getByText("Run Workflow"));
 
     await waitFor(() => {
       expect(screen.getByText(/Error: Network Error/)).toBeInTheDocument();
