@@ -3203,7 +3203,8 @@
             state.categories = inputs.categories.value.trim();
           }
         } else if (stepId === "step-name") {
-          if (inputs.name.value.trim().length === 0) {
+          if (inputs.name.value.trim().length < 3) {
+            errors.name.innerText = "Business Name must be at least 3 characters.";
             errors.name.style.display = "block";
             inputs.name.classList.add("invalid-input");
             isValid = false;
