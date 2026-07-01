@@ -138,3 +138,15 @@ pub struct LoyaltyLedger {
     pub tier_name: Option<String>,
     pub last_updated: Option<chrono::DateTime<chrono::Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskEnvelope {
+    pub id: String,
+    pub tenant_id: String,
+    pub current_department: String,
+    pub status: String,
+    pub payload: serde_json::Value,
+    pub routing_history: serde_json::Value,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}

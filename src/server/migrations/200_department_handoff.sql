@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS task_envelopes (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    current_department TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    payload JSONB DEFAULT '{}',
+    routing_history JSONB DEFAULT '[]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE task_envelopes ENABLE ROW LEVEL SECURITY;
