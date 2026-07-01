@@ -297,7 +297,7 @@ export default function TriagePage() {
                 {isSelected && (
                   <div className="animate-in slide-in-from-top-2 duration-200 fade-in">
                     {item.action_type && (
-                      <div className="p-5 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 backdrop-blur-[30px] saturate-[210%] flex flex-col gap-2">
+                      <div className="p-5 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 backdrop-blur-[30px] saturate-[210%] flex flex-col gap-2 shadow-sm rounded-lg mb-2">
                         <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
                           Proposed Action: {item.action_type}
                         </div>
@@ -319,7 +319,7 @@ export default function TriagePage() {
                         <textarea
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/80 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-[12px] p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y"
+                          className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/90 dark:bg-gray-800/90 border border-gray-300 dark:border-gray-600 rounded-[12px] p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y transition-shadow"
                           data-testid={`triage-edit-textarea-${item.id}`}
                           placeholder="Edit the draft payload..."
                         />
