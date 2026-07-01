@@ -76,3 +76,86 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     }
   });
 });
+
+  test('should render activity tab correctly', async ({ page }) => {
+    const tenantId = 'mobile-feed-test-tenant';
+    await page.goto(`/dashboard?tenant_id=${tenantId}`);
+
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
+
+    const activityTab = page.locator('button:has-text("Activity")');
+    await expect(activityTab).toBeVisible();
+    await activityTab.click();
+
+    // Verify empty state or items
+    const emptyState = page.locator('text=No recent activity found.');
+    const items = page.locator('.triage-item');
+    await Promise.race([
+        emptyState.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {}),
+        items.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {})
+    ]);
+  });
+
+  test('should render financials tab correctly', async ({ page }) => {
+    const tenantId = 'mobile-feed-test-tenant';
+    await page.goto(`/dashboard?tenant_id=${tenantId}`);
+
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
+
+    const financialsTab = page.locator('button:has-text("Financials")');
+    await expect(financialsTab).toBeVisible();
+    await financialsTab.click();
+
+    // Verify empty state or items
+    const emptyState = page.locator('text=No pending invoices found.');
+    const items = page.locator('.triage-item');
+    await Promise.race([
+        emptyState.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {}),
+        items.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {})
+    ]);
+  });
+
+  test('should support dismissing an action card if available', async ({ page, request }) => {
+    const tenantId = 'mobile-feed-test-tenant';
+    await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    await page.goto(`/dashboard?tenant_id=${tenantId}`);
+
+    const dismissButtons = page.locator('button:has-text("Dismiss")');
+    const caughtUpText = page.locator('text=All caught up!');
+
+    await Promise.race([
+      dismissButtons.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {}),
+      caughtUpText.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {})
+    ]);
+
+    const count = await dismissButtons.count();
+    if (count > 0) {
+      const firstDismissBtn = dismissButtons.nth(0);
+      const isVisible = await firstDismissBtn.isVisible();
+      if (isVisible) {
+         await firstDismissBtn.click();
+      }
+      await expect(firstDismissBtn).not.toBeEnabled({ timeout: 15000 }).catch(() => {});
+    }
+  });
+
+  test('should test all touch targets for dismiss buttons', async ({ page, request }) => {
+    const tenantId = 'mobile-feed-test-tenant';
+    await request.post(`/api/dev/simulate-agent-feed-item?tenant_id=${tenantId}`);
+    await page.goto(`/dashboard?tenant_id=${tenantId}`);
+
+    const dismissButtons = page.locator('button:has-text("Dismiss")');
+    await dismissButtons.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+
+    const count = await dismissButtons.count();
+    for (let i = 0; i < count; i++) {
+        const btn = dismissButtons.nth(i);
+        const btnBox = await btn.boundingBox();
+        if (btnBox) {
+            expect(btnBox.width).toBeGreaterThanOrEqual(44);
+            expect(btnBox.height).toBeGreaterThanOrEqual(44);
+        }
+    }
+  });

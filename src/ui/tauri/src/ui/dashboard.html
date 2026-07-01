@@ -1728,14 +1728,16 @@
         }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
+          const res = await fetch(`/api/ui/dashboard/unified-agent-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
 
           const data = await res.json();
           // Adjust logic to match new ui triage shape if necessary
-          agentFeedItems = data.triage || (Array.isArray(data) ? data : (data.items || []));
+          const approvals = Array.isArray(data.pending_approvals) ? data.pending_approvals : [];
+          const feed = Array.isArray(data.agent_feed) ? data.agent_feed : [];
+          agentFeedItems = [...approvals, ...feed];
           if (agentFeedItems.length === 0) {
             triageQueue.innerHTML = `
               <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
@@ -1830,7 +1832,7 @@
           // If items use 'status' (ui/triage) instead of 'lifecycle_state' (agent-feed)
           const proposals = items.filter(i => i.status !== 'resolved' && i.status !== 'dismissed' && i.lifecycle_state !== 'APPROVED' && i.lifecycle_state !== 'DISMISSED');
           if (proposals.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">All caught up!</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty" style="text-align: center; color: #86868b; padding: 20px; font-weight: 500;">All caught up!</div>';
             return;
           }
 
@@ -1890,7 +1892,7 @@
           }
           triageQueue.innerHTML = groupedCardsHTML.join('') + standaloneProposals.map(item => {
             const actionType = item.action_type || item.proposed_action?.action_type;
-            const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
+            const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || item.payload?.description || item.description || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true;
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
 
@@ -2308,7 +2310,7 @@
         } else if (currentTriageTab === 'financials') {
           const financials = items.filter(i => (i.payload?.feature_type === 'invoice' || i.context_payload?.feature_type === 'invoice' || i.action_payload?.feature_type === 'invoice' || i.type === 'invoice'));
           if (financials.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">No pending invoices found.</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty" style="text-align: center; color: #86868b; padding: 20px; font-weight: 500;">No pending invoices found.</div>';
             return;
           }
           triageQueue.innerHTML = financials.map(item => {
@@ -2339,7 +2341,7 @@
 
           const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED' || i.lifecycle_state === 'REJECTED' || i.status === 'resolved' || i.status === 'dismissed' || i.status === 'APPROVED' || i.status === 'REJECTED');
           if (activities.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">No recent activity found.</div>';
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty" style="text-align: center; color: #86868b; padding: 20px; font-weight: 500;">No recent activity found.</div>';
             return;
           }
           triageQueue.innerHTML = activities.map(activity => {
