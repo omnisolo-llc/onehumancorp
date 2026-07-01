@@ -671,3 +671,20 @@ SET lifecycle_state = EXCLUDED.lifecycle_state,
 INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
 VALUES ('req_replenish_123', 'e2e-tenant', 'system', '{"feature_type": "subscription_replenishment", "customer_name": "Maya Baker"}'::jsonb, '{"action_type": "email", "context": "Based on this customer''s order history and the estimated consumption rate, they are due for a replenishment. Would you like me to generate a personalized checkout link and draft an email suggesting they refill?"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE SET lifecycle_state = EXCLUDED.lifecycle_state;
+
+-- Tenant must be created first
+INSERT INTO tenants (id, name, industry, status, skip_onboarding, default_currency)
+VALUES
+  ('11111111-1111-1111-1111-111111111111', 'OHC E2E Edge Cache Tenant', 'Retail', 'active', true, 'USD')
+ON CONFLICT (id) DO NOTHING;
+
+-- Now add products and sites
+INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
+VALUES
+  ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Edge Cached Product E2E', 'Edge Cached Product E2E', 'physical', 42.00, 4200, 'USD', 100, '{"seeded_by":"e2e"}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO builder_sites (id, tenant_id, domain, published_at)
+VALUES
+  ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'edge-e2e.ohc.store', CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
