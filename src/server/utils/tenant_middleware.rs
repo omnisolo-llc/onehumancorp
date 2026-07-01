@@ -18,6 +18,7 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
     }
 
     let is_auth_bypass = path.starts_with("/api/v1/auth") || path.starts_with("/api/agents/webhook") || path.starts_with("/api/v1/webhook") || path.starts_with("/health") || path.starts_with("/metrics") || path.starts_with("/api/v1/growth/embed") || path.starts_with("/api/dev/");
+    let is_auth_bypass = is_auth_bypass || path.starts_with("/api/v1/storefront");
     if is_auth_bypass {
          return next.run(req).await;
     }
