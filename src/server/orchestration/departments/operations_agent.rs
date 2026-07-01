@@ -208,6 +208,24 @@ impl Department for OperationsAgent {
             }
         }
 
+
+        if event.event_type == "quote.deposit_paid" {
+            let quote_id = event.payload.get("quote_id").and_then(|v| v.as_str()).unwrap_or_default();
+            let _ = self.orchestrator.execute_action(
+                DepartmentType::Operations,
+                format!("Schedule service for paid quote {}", quote_id),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                serde_json::json!({
+                    "action": "create_task",
+                    "title": "Fulfill Quote",
+                    "description": format!("Quote {} deposit has been paid. Time to schedule and fulfill.", quote_id),
+                    "quote_id": quote_id
+                })
+            ).await;
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

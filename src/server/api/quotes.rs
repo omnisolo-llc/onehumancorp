@@ -516,7 +516,7 @@ async fn approve_quote(
     };
 
     let quote = match sqlx::query_as::<_, Quote>(
-        "UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 RETURNING *"
+        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 RETURNING *"
     )
     .bind(quote_id)
     .fetch_optional(&pool)

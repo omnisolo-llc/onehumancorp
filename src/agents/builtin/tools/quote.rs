@@ -46,7 +46,7 @@ impl PydanticToolExecutor<GenerateQuoteArgs> for GenerateQuoteExecutor {
             .map_err(|e| ToolError::LlmRecoverable(format!("Failed to begin transaction: {}", e)))?;
 
         sqlx::query(
-            "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
+            "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
         )
         .bind(quote_id)
         .bind(&tenant_id)

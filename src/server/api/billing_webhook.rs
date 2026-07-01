@@ -565,6 +565,25 @@ pub async fn stripe_webhook_handler(
                     .and_then(|m| m.get("conversational_intake_id"))
                     .and_then(|id| id.as_str());
 
+                let quote_id_opt = obj.get("metadata")
+                    .and_then(|m| m.get("quote_id"))
+                    .and_then(|id| id.as_str());
+
+                if let Some(quote_id) = quote_id_opt {
+                    let _ = sqlx::query("UPDATE quotes SET status = 'DEPOSIT_PAID', updated_at = NOW() WHERE id = $1")
+                        .bind(quote_id)
+                        .execute(&webhook_state.db.pool)
+                        .await;
+
+                    let evt = crate::orchestration::departments::types::DepartmentEvent {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        tenant_id: tenant_id_opt.unwrap_or("unknown").to_string(),
+                        event_type: "quote.deposit_paid".to_string(),
+                        payload: serde_json::json!({ "quote_id": quote_id }),
+                    };
+                    let _ = webhook_state.orchestrator.dispatch_event(evt).await;
+                }
+
                 if let Some(intake_id) = conversational_intake_opt {
                     let _ = sqlx::query("UPDATE conversational_intake_queue SET status = 'BOOKED', updated_at = NOW() WHERE id = $1")
                         .bind(intake_id)
