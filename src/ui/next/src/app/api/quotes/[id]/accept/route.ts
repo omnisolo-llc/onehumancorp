@@ -13,8 +13,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const id = params.id;
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes/${id}/approve`, {
-      method: 'PATCH',
+    const res = await fetch(`${backendUrl}/api/v1/quotes/${id}/accept`, {
+      method: 'POST',
       headers,
     });
 
@@ -22,7 +22,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json(await res.json());
     }
 
-    return NextResponse.json({ error: 'Failed to approve quote' }, { status: res.status });
+    return NextResponse.json({ error: 'Failed to accept quote' }, { status: res.status });
   } catch {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
