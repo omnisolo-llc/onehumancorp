@@ -25,7 +25,7 @@ async function loginAs(page: Page, user: E2EUser) {
   // The actual tenant_id comes from a header or cookie in a real deployment.
   // In the real system, it's determined by the login session. But in our e2e fixture,
   // we can use Playwright to set the context or navigate.
-  await page.goto('/api/ui/dashboard.html');
+  await page.goto('/cost-dashboard');
 }
 
 function rejectNetworkStubbing(context: BrowserContext, page?: Page) {

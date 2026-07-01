@@ -50,7 +50,7 @@ impl BudgetManager {
                 let next = current + amount;
                 Some(next.to_bits())
             }
-        ).unwrap(); // safe because the closure always returns Some
+        ).expect("fetch_update failed"); // safe because the closure always returns Some
 
         let final_current = f64::from_bits(final_current_bits) + amount;
 
