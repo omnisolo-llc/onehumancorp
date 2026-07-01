@@ -465,7 +465,7 @@ pub async fn execute_action(
 
         if req.action_risk == ActionRisk::DraftForReview {
             if let Some(payload) = &req.payload {
-                if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") {
+                if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") || payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                     let task_id = uuid::Uuid::new_v4().to_string();
                     let action_payload_str = serde_json::to_string(payload).unwrap_or_default();
                     let context_msg = req.description.clone();
@@ -476,22 +476,24 @@ pub async fn execute_action(
                         match &db.store {
                             crate::db::DbStore::Postgres => {
                                 let _ = sqlx::query(
-                                    "INSERT INTO triage_items (id, tenant_id, source, priority, context, action_type, action_payload, status) VALUES ($1, $2, 'The Accountant', 'high', $3, 'Approve Draft', $4, 'pending')"
+                                    "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, 'System', 'high', $3, 'pending'); INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (gen_random_uuid(), $1, $2, 'Approve Draft', $4::jsonb)"
                                 )
                                 .bind(&task_id)
                                 .bind(&tenant_id)
                                 .bind(&context_msg)
+                                .bind(&tenant_id)
                                 .bind(&action_payload_str)
                                 .execute(&db.pool)
                                 .await;
                             },
                             crate::db::DbStore::Sqlite(_) => {
                                 let _ = sqlx::query(
-                                    "INSERT INTO triage_items (id, tenant_id, source, priority, context, action_type, action_payload, status) VALUES (?, ?, 'The Accountant', 'high', ?, 'Approve Draft', ?, 'pending')"
+                                    "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, 'System', 'high', ?, 'pending'); INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (lower(hex(randomblob(16))), ?, ?, 'Approve Draft', json(?))"
                                 )
                                 .bind(&task_id)
                                 .bind(&tenant_id)
                                 .bind(&context_msg)
+                                .bind(&tenant_id)
                                 .bind(&action_payload_str)
                                 .execute(&db.pool)
                                 .await;
@@ -1428,7 +1430,7 @@ pub async fn execute_action(
                         if let Err(e) = self.dispatch_event(approved_event).await {
                             tracing::error!("Failed to dispatch agent:customer_success:approved event: {}", e);
                         }
-                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") {
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") || payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let invoice_id = payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("");
                         let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
                         let _generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
