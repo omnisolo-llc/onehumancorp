@@ -3,21 +3,20 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const notes = body.notes || "";
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
-    // Simulate the Operations Agent translating the notes.
-    // In a real implementation this would call an LLM backend service.
-    let translatedNotes = "";
-    if (notes.toLowerCase().includes("no onions")) {
-      translatedNotes = "بدون بصل";
-    } else if (notes.toLowerCase().includes("extra pita")) {
-      translatedNotes = "خبز إضافي";
-    } else {
-      translatedNotes = "ترجمة مبدئية: " + notes; // Default fallback simulation
+    const res = await fetch(`${backendUrl}/api/pos/orders/translate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return NextResponse.json(data);
     }
-
-    return NextResponse.json({ translatedNotes });
+    return NextResponse.json({ error: 'Failed to translate order notes' }, { status: 502 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to translate order notes' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to translate order notes' }, { status: 502 });
   }
 }

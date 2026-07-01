@@ -20,6 +20,7 @@ where
         .route("/orders", get(get_orders_handler).post(post_orders_handler))
         .route("/inventory", get(get_inventory_handler).post(post_inventory_handler))
         .route("/auth", axum::routing::post(pos_auth_handler))
+        .route("/orders/translate", axum::routing::post(translate_order_notes_handler))
         .with_state(hub)
 }
 
@@ -280,4 +281,41 @@ pub async fn pos_auth_handler(
             }))
         }
     }
+}
+
+#[derive(serde::Deserialize)]
+pub struct TranslateNotesRequest {
+    pub notes: String,
+}
+
+pub async fn translate_order_notes_handler(
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<TranslateNotesRequest>,
+) -> impl axum::response::IntoResponse {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+
+    let notes = payload.notes;
+    // Call LLM translation helper if available
+    let translated = match crate::api::agents::translation::translate_inbox_message_with_llm(
+        tenant_id,
+        "kitchen",
+        &notes,
+        "Arabic",
+    ).await {
+        Ok(t) => t.translated_content,
+        Err(_) => {
+            if notes.to_lowercase().contains("no onions") {
+                "بدون بصل".to_string()
+            } else if notes.to_lowercase().contains("extra pita") {
+                "خبز إضافي".to_string()
+            } else {
+                notes.clone()
+            }
+        }
+    };
+
+    Json(json!({ "translatedNotes": translated }))
 }

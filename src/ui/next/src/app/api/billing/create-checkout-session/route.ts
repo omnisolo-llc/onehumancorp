@@ -32,12 +32,10 @@ export async function POST(req: Request) {
       const data = await res.json();
       return NextResponse.json(data, { status: res.status });
     } catch (fetchError) {
-      // In standalone UI testing or local dev without a fully healthy billing backend,
-      // return a graceful fallback mock url so the UI flow doesn't crash
-      console.warn('Backend /api/billing/create-checkout-session failed or timed out. Falling back to mock URL for E2E.', fetchError);
+      console.warn('Backend /api/billing/create-checkout-session failed or timed out:', fetchError);
       return NextResponse.json({
-         checkout_url: `/checkout?tier=${body.tier || 'Starter'}`
-      }, { status: 200 });
+         message: 'Billing backend service unavailable'
+      }, { status: 503 });
     }
   } catch (error) {
     console.warn('Warn proxying to backend:', error);
