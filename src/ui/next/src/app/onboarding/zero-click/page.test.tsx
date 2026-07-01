@@ -24,7 +24,7 @@ describe('ZeroClickBuilderPage', () => {
 
   it('renders the initial form', () => {
     render(<ZeroClickBuilderPage />);
-    expect(screen.getByText('Zero-Click Business Generator')).toBeInTheDocument();
+    expect(screen.getByText('Tell us about your business')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i)).toBeInTheDocument();
     const buttons = screen.getAllByRole('button');
     const submitBtn = buttons[buttons.length - 1];

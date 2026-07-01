@@ -146,7 +146,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden shadow-xl w-full max-w-2xl mx-auto">
+    <div className="flex flex-col min-h-[50vh] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden shadow-xl rounded-2xl w-full max-w-2xl mx-auto">
       {/* Header */}
       <div className="p-4 border-b border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex items-center gap-3 bg-transparent">
         <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xl">
@@ -218,6 +218,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
 
         <form onSubmit={handleSend} className="relative flex items-center gap-2">
           <input
+            id="instant-bio"
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -226,6 +227,8 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
             className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full py-3.5 pl-4 pr-12 min-h-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           />
           <button
+            id="generate-storefront-btn"
+            data-testid="generate-storefront-btn"
             type="submit"
             disabled={!input.trim() || isLoading || isProvisioning}
             className="absolute right-1 top-1.5 w-10 h-10 flex items-center justify-center bg-[#0066FF] hover:bg-[#005bb5] disabled:bg-gray-400 text-white rounded-full transition-colors"
