@@ -1102,6 +1102,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         phone TEXT,
                         name TEXT,
                         preferences TEXT DEFAULT '{}',
+                        loyalty_tier TEXT DEFAULT 'None',
+                        lifetime_value DECIMAL DEFAULT 0.0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         is_subscribable BOOLEAN DEFAULT FALSE,
@@ -1512,6 +1514,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         phone TEXT,
                         mood TEXT,
                         preferences TEXT DEFAULT '{}',
+                        loyalty_tier TEXT DEFAULT 'None',
+                        lifetime_value DECIMAL DEFAULT 0.0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
