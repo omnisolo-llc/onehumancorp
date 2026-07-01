@@ -2002,14 +2002,15 @@ pub async fn bench_ui_dashboard_unified_agent_feed_latency() {
             .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
-        let pool1 = pg_pool.clone();
-        let pool2 = pg_pool.clone();
-        let pool3 = pg_pool.clone();
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: pg_pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
 
         let _ = tokio::join!(
-            sqlx::query("SELECT id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT 20").bind("test_tenant").execute(&pool1),
-            sqlx::query("SELECT id, tenant_id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool2),
-            sqlx::query("SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT 20").bind("test_tenant").execute(&pool3)
+            tokio::spawn({ let db = db.clone(); async move { sqlx::query("SELECT id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT 20").bind("test_tenant").fetch_all(&db.pool).await } }),
+            tokio::spawn({ let db = db.clone(); async move { sqlx::query("SELECT id, tenant_id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50").bind("test_tenant").fetch_all(&db.pool).await } }),
+            tokio::spawn({ let db = db.clone(); async move { sqlx::query("SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT 20").bind("test_tenant").fetch_all(&db.pool).await } })
         );
         let duration = start_sim.elapsed();
 
@@ -2019,7 +2020,35 @@ pub async fn bench_ui_dashboard_unified_agent_feed_latency() {
         );
         println!("    (Parallel Execution Optimization verified: approvals, ledger, and feed fetched concurrently)");
     } else {
-        println!("  - ui_dashboard_unified_agent_feed_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_approvals (id TEXT, tenant_id TEXT, department TEXT, description TEXT, status TEXT, action_risk TEXT, payload TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT, tenant_id TEXT, event_source TEXT, context_payload TEXT, proposed_action TEXT, lifecycle_state TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_action_requests (id TEXT, tenant_id TEXT, agent_type TEXT, status TEXT, action_type TEXT, payload TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: crate::db::get_pool(),
+            store: crate::db::DbStore::Sqlite(sqlite_pool.clone()),
+        });
+
+        let _ = tokio::join!(
+            tokio::spawn({ let db = db.clone(); async move { match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT 20").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) } } }),
+            tokio::spawn({ let db = db.clone(); async move { match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, tenant_id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) } } }),
+            tokio::spawn({ let db = db.clone(); async move { match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT 20").bind("test_tenant").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) } } })
+        );
+        let duration = start_sim.elapsed();
+
+        println!(
+            "  - ui_dashboard_unified_agent_feed_handler (SQLite Parallel Execution): {:?}",
+            duration
+        );
+        println!("    (Parallel Execution Optimization verified: approvals, ledger, and feed fetched concurrently)");
     }
 }
 
@@ -2068,12 +2097,14 @@ pub async fn bench_get_daily_work_latency() {
             .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
         let start_sim = std::time::Instant::now();
-        let pool1 = pg_pool.clone();
-        let pool2 = pg_pool.clone();
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: pg_pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
 
         let _ = tokio::join!(
-            sqlx::query("SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(&pool1),
-            sqlx::query("SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(&pool2)
+            tokio::spawn({ let db = db.clone(); async move { sqlx::query("SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(&db.pool).await } }),
+            tokio::spawn({ let db = db.clone(); async move { sqlx::query("SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(&db.pool).await } })
         );
         let duration = start_sim.elapsed();
 
@@ -2088,13 +2119,18 @@ pub async fn bench_get_daily_work_latency() {
             .await
             .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS daily_work_items (id TEXT, tenant_id TEXT, signal_id TEXT, intent TEXT, customer_info TEXT, suggested_actions TEXT, status TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+
         let start_sim = std::time::Instant::now();
-        let pool1 = sqlite_pool.clone();
-        let pool2 = sqlite_pool.clone();
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: crate::db::get_pool(),
+            store: crate::db::DbStore::Sqlite(sqlite_pool.clone()),
+        });
 
         let _ = tokio::join!(
-            sqlx::query("SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(&pool1),
-            sqlx::query("SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(&pool2)
+            tokio::spawn({ let db = db.clone(); async move { match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) } } }),
+            tokio::spawn({ let db = db.clone(); async move { match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) } } })
         );
         let duration = start_sim.elapsed();
 
