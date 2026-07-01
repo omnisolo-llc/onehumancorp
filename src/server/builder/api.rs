@@ -547,6 +547,22 @@ async fn create_block(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_default();
+    if !redis_url.is_empty() {
+        if let Ok(client) = redis::Client::open(redis_url) {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let invalidation_topic = "cache_invalidation_events";
+                let invalidation_payload = serde_json::json!({
+                    "event": "storefront.redesign",
+                    "tags": [
+                        format!("tenant-id:{}", tenant_id)
+                    ]
+                }).to_string();
+                let _: Result<(), _> = redis::AsyncCommands::publish(&mut conn, invalidation_topic, invalidation_payload).await;
+            }
+        }
+    }
+
     let pool_clone = pool.clone();
     tokio::spawn(async move {
         let site_id_query = sqlx::query_scalar::<_, Uuid>("SELECT site_id FROM builder_pages WHERE id = $1")
@@ -597,6 +613,22 @@ async fn update_block(
 
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_default();
+    if !redis_url.is_empty() {
+        if let Ok(client) = redis::Client::open(redis_url) {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let invalidation_topic = "cache_invalidation_events";
+                let invalidation_payload = serde_json::json!({
+                    "event": "storefront.redesign",
+                    "tags": [
+                        format!("tenant-id:{}", tenant_id)
+                    ]
+                }).to_string();
+                let _: Result<(), _> = redis::AsyncCommands::publish(&mut conn, invalidation_topic, invalidation_payload).await;
+            }
+        }
+    }
 
     let pool_clone = pool.clone();
     let page_id = existing_block.page_id;

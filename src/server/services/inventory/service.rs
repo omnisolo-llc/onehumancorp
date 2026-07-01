@@ -298,7 +298,8 @@ impl InventoryService {
                                 "event": "inventory.updated",
                                 "tags": [
                                     format!("tenant-id:{}", tenant_id),
-                                    format!("entity:product:{}", product_id)
+                                    format!("entity:product:{}", product_id),
+                                    format!("storefront:product:{}:{}", tenant_id, product_id)
                                 ]
                             }).to_string();
                             let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
@@ -580,7 +581,8 @@ impl InventoryService {
                     "event": "inventory.updated",
                     "tags": [
                         format!("tenant-id:{}", tenant_id),
-                        format!("entity:product:{}", product_id)
+                        format!("entity:product:{}", product_id),
+                        format!("storefront:product:{}:{}", tenant_id, product_id)
                     ]
                 }).to_string();
                 let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;

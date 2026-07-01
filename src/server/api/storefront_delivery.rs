@@ -201,9 +201,12 @@ async fn regenerate_storefront_product(
             }
 
             // Pre-warm the cache since SWR or cache miss just resolved
-            cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
+            let mut final_tags = tags.clone();
+            final_tags.push(format!("storefront:product:{}:{}", tenant_id, product_id));
 
-            return Ok((html, tags));
+            cache.set_with_tags(&cache_key, html.clone(), final_tags.clone(), std::time::Duration::from_secs(3600)).await;
+
+            return Ok((html, final_tags));
         }
     }
     Err(StatusCode::NOT_FOUND)
