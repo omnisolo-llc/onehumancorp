@@ -14,15 +14,19 @@ UPDATE swarm_tasks SET tenant_id = 'system' WHERE tenant_id IS NULL;
 
 -- Enable RLS and add policies
 ALTER TABLE task_dependencies ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_task_dependencies ON task_dependencies;
 CREATE POLICY tenant_isolation_task_dependencies ON task_dependencies USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE agent_session_data ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_agent_session_data ON agent_session_data;
 CREATE POLICY tenant_isolation_agent_session_data ON agent_session_data USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE swarm_truth_embeddings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_swarm_truth_embeddings ON swarm_truth_embeddings;
 CREATE POLICY tenant_isolation_swarm_truth_embeddings ON swarm_truth_embeddings USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE swarm_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_swarm_tasks ON swarm_tasks;
 CREATE POLICY tenant_isolation_swarm_tasks ON swarm_tasks USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 -- +goose Down
