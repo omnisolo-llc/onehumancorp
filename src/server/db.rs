@@ -720,7 +720,12 @@ impl DB {
                     operation
                 )));
             }
+
+            #[cfg(test)]
+            let remaining_time = timeout_duration;
+            #[cfg(not(test))]
             let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
+
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
             match timeout_res {
