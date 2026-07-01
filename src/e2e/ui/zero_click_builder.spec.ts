@@ -30,7 +30,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
     });
 
     // Mock the api response
-    await page.route('**/api/v1/onboarding/start_zero_click*', async route => {
+    await page.route('**/api/onboarding/start_zero_click*', async route => {
         await route.fulfill({
             status: 200,
             contentType: 'application/json',

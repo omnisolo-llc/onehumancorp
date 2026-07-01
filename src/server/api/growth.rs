@@ -2255,6 +2255,12 @@ async fn handle_check_milestones(
             description: "Your business has surpassed $10,000 in total revenue!".to_string(),
             reached: reached_types.contains(&"revenue_10k".to_string()),
         },
+        Milestone {
+            id: "revenue_100k".to_string(),
+            title: "🌟 Six-Figure Club".to_string(),
+            description: "Your business has surpassed $100,000 in total revenue!".to_string(),
+            reached: reached_types.contains(&"revenue_100k".to_string()),
+        },
     ];
     Json(MilestonesResponse { milestones })
 }

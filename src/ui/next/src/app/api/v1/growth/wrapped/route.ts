@@ -24,24 +24,8 @@ export async function GET(request: Request) {
       console.warn("Backend fetch failed for wrapped data, using fallback", err);
     }
 
-    // Fallback data for the UI
-    const year = new Date().getFullYear();
-    const data = {
-      year,
-      title: "Your Year in Review 🎉",
-      subtitle: "See how your AI agents and viral loops grew your business.",
-      stats: {
-        totalSales: "$124,500",
-        totalOrders: 1420,
-        newCustomers: 850,
-        topProduct: "Vegan Celebration Cake",
-        aiHoursSaved: 124
-      },
-      shareText: `My AI agents saved me 124 hours this year and drove $124k in sales! Check out my OHC Year in Review:`
-    };
-
-    return NextResponse.json(data);
+    return NextResponse.json({ error: 'Backend wrapped service unavailable' }, { status: 502 });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch wrapped data' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch wrapped data' }, { status: 502 });
   }
 }

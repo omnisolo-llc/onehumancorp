@@ -147,7 +147,7 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 8px !important;
+        border-radius: 8px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       @media (prefers-color-scheme: dark) {
@@ -1396,7 +1396,7 @@
             Generate My Workspace
           </button>
 
-          <div style="margin-top: 24px; margin-bottom: 12px; font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display: flex; align-items: center; justify-content: center;">
+          <div style="margin-top: 24px; margin-bottom: 12px; font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; display: flex; align-items: center; justify-content: center; min-height: 44px;">
             <span style="flex-grow: 1; height: 1px; background: rgba(0,0,0,0.1); margin-right: 12px;"></span>
             Or configure manually
             <span style="flex-grow: 1; height: 1px; background: rgba(0,0,0,0.1); margin-left: 12px;"></span>
@@ -4014,7 +4014,7 @@
                 ? "http://127.0.0.1:18789"
                 : "";
             const res = await fetch(
-              `${backendUrl}/api/v1/growth/zero-click-builder/generate`,
+              `${backendUrl}/api/onboarding/start_zero_click`,
               {
                 method: "POST",
                 headers: {
