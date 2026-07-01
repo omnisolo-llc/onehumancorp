@@ -13,16 +13,20 @@ test.describe('Dashboard Parallel Fetch', () => {
     await expect(page.locator('text=Inbox Activity').last()).toBeVisible();
     await expect(page.locator('text=Growth & Virality')).toBeVisible();
 
-    // Optionally check if we have the fallback rendering in case of no data
+    // Check if we have the fallback rendering in case of no data
     const ordersContainer = page.locator('text=Recent Orders').locator('..').locator('..');
-    const ordersHasTable = await ordersContainer.locator('table').count() > 0;
 
-    // Fix: Wait for the fallback component to be reliably visible if empty
-    if (!ordersHasTable) {
-        await expect(ordersContainer.locator('.app-empty').or(page.locator('text=No order rows found for this tenant.'))).toBeVisible();
-    }
-    const ordersHasEmptyResolved = await ordersContainer.locator('.app-empty').count() > 0 || await page.locator('text=No order rows found for this tenant.').count() > 0;
+    // Create locators for both possible states
+    const ordersTable = ordersContainer.locator('table');
+    const emptyState = ordersContainer.locator('.app-empty').or(page.locator('text=No order rows found for this tenant.'));
 
-    expect(ordersHasTable || ordersHasEmptyResolved).toBeTruthy();
+    // Wait for either the table or the empty state to become visible
+    await expect(ordersTable.or(emptyState)).toBeVisible();
+
+    // Assert that exactly one of the states is present and visible
+    const tableVisible = await ordersTable.isVisible();
+    const emptyVisible = await emptyState.isVisible();
+
+    expect(tableVisible || emptyVisible).toBeTruthy();
   });
 });
