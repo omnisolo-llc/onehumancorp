@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { WalkthroughTarget } from "../../components/Walkthrough";
 
 type WrappedStats = {
   totalSales: string;
@@ -59,8 +60,8 @@ export function WrappedWidget() {
   };
 
   return (
+    <WalkthroughTarget id="wrapped-summary">
     <section
-        id="wrapped-summary"
         data-testid="wrapped-widget"
         className="mb-6 relative overflow-hidden rounded-[24px] border border-white/40 dark:border-white/10 shadow-xl bg-gradient-to-br from-pink-500/90 via-purple-500/90 to-indigo-600/90 dark:from-pink-900/80 dark:via-purple-900/80 dark:to-indigo-950/80 backdrop-blur-[40px] backdrop-saturate-[2] p-6 text-white group transform transition-all hover:scale-[1.01]"
     >
@@ -142,5 +143,6 @@ export function WrappedWidget() {
         </div>
       </div>
     </section>
+    </WalkthroughTarget>
   );
 }

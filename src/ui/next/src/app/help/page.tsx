@@ -92,19 +92,19 @@ export default function HelpCenterPage() {
         </div>
 
         {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl min-h-[300px] w-full max-w-[400px] mx-auto transition-all">
-            <svg className="w-16 h-16 max-w-[64px] max-h-[64px] text-gray-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex flex-col items-center justify-center py-24 px-8 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl min-h-[400px] w-full max-w-2xl mx-auto transition-all">
+            <svg className="w-20 h-20 max-w-[80px] max-h-[80px] text-gray-400 mb-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-center text-gray-600 font-medium text-lg">
-              No results found matching <span className="text-gray-900 font-semibold">"{searchQuery}"</span>
+            <p className="text-center text-gray-700 dark:text-gray-300 font-medium text-xl md:text-2xl mb-2">
+              No results found matching <span className="text-gray-900 dark:text-gray-100 font-semibold">"{searchQuery}"</span>
             </p>
-            <p className="text-center text-gray-500 mt-2 text-sm">
+            <p className="text-center text-gray-500 dark:text-gray-400 text-base md:text-lg mb-8 max-w-md">
               Try adjusting your search terms or ask our AI assistant for help.
             </p>
             <WithTooltip id="ask-ai-tooltip" defaultText="Open AI Help Chat to get answers instantly.">
             <button
-              className="mt-6 px-6 py-3 bg-blue-600/95 hover:bg-blue-700 text-white font-semibold rounded-full shadow-lg backdrop-blur-md saturate-[210%] transition-all min-h-[44px] hover:scale-105 active:scale-95"
+              className="px-8 py-4 bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold rounded-full shadow-lg backdrop-blur-md saturate-[210%] transition-all min-h-[44px] hover:-translate-y-1 active:scale-95 text-lg"
               onClick={() => {
                 const event = new CustomEvent('open-help-chat');
                 window.dispatchEvent(event);
