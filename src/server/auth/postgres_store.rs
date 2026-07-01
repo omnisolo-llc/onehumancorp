@@ -473,6 +473,62 @@ impl UserRepository for PgUserRepository {
 }
 
 #[cfg(test)]
+mod auth_utils_tests {
+    use super::*;
+    use std::time::Duration;
+    use std::sync::Mutex;
+    use temp_env;
+
+    static ENV_MUTEX: Mutex<()> = Mutex::new(());
+
+    #[tokio::test]
+    async fn test_tenant_isolation_boundary_enforcement() {
+        let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => return,
+        };
+
+        if database_url.starts_with("sqlite") {
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .acquire_timeout(Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let repo = PgUserRepository::new(pool.clone());
+
+        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+            let mut tx = pool.begin().await.unwrap();
+            let res = set_org_context(&mut *tx, "tenant_foo").await;
+            assert!(res.is_ok());
+
+            // Try to set system and verify it errors
+            let res = set_org_context(&mut *tx, "system").await;
+            assert!(res.is_err());
+
+            tx.rollback().await.unwrap();
+        }).await;
+    }
+}
+
+#[cfg(test)]
 mod security_tests {
     use super::*;
     use std::sync::Mutex;
