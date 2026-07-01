@@ -106,6 +106,10 @@ test.describe("Tooltips", () => {
     // Wait a bit to simulate holding (less than 500ms)
     await page.waitForTimeout(200);
 
+    // Cancel by triggering touchmove
+    await tooltipTarget.evaluate((node) => {
+        const target = node.querySelector('span') || node;
+        target.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, cancelable: true }));
     });
 
     // Wait past the 500ms threshold
@@ -141,7 +145,6 @@ test.describe("Tooltips", () => {
     await page.waitForTimeout(2100);
     await expect(tooltipText).not.toBeAttached();
   });
-});
 
   test("renders help widget tooltip on hover", async ({ page }) => {
     // Navigate to a page that contains the help widget
