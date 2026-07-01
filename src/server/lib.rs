@@ -6707,7 +6707,7 @@ async fn create_ui_bom_item_handler(
             }),
         )
         .route("/api/v1/sync/events", axum::routing::post({ let db = db.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::SyncEventsRequest>| async move { api::offline_sync::sync_events_handler(axum::extract::State(db.pool.clone()), headers, payload).await } }))
-        .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
+        .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } })).route("/api/v1/sync/mutations", axum::routing::post({ let db = db.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::sync_mutations_handler::GenericOfflineSyncRequest>| async move { api::sync_mutations_handler::sync_mutations_handler(axum::extract::State(db.pool.clone()), headers, payload).await } }))
         .route("/api/v1/sync/mcp-deltas", axum::routing::post(api::sync_gateway::sync_mcp_deltas_handler).with_state(db.pool.clone()))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))

@@ -31,7 +31,7 @@ pub struct OfflineSyncResponse {
 }
 
 
-async fn validate_token_and_get_tenant(pool: &sqlx::PgPool, headers: &axum::http::HeaderMap) -> Result<(String, String), axum::response::Response> {
+pub async fn validate_token_and_get_tenant(pool: &sqlx::PgPool, headers: &axum::http::HeaderMap) -> Result<(String, String), axum::response::Response> {
     let auth_header = headers.get("authorization").and_then(|h| h.to_str().ok());
     let token = match auth_header {
         Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],

@@ -73,6 +73,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:mod.rs",
     "//src/server/api:sync_gateway.rs",
     "//src/server/api:offline_sync.rs",
+    "//src/server/api:sync_mutations_handler.rs",
+    "//src/server/api:sync_mutations_handler_test.rs",
     "//src/server/api:sync.rs",
         "//src/server/api:pos.rs",
     "//src/server/api:staff_mesh.rs",

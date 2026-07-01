@@ -1,52 +1,26 @@
-import './globals.css';
-import type { Metadata } from 'next';
-import { WalkthroughTarget } from '../components/Walkthrough';
-import { WalkthroughProvider, HelpWidget } from '../components/help';
-import { TooltipProvider } from '../components/TooltipRegistry';
+import './globals.css'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import { OfflineSyncIndicator } from '@/components/OfflineSyncIndicator'
 
-import { HelpChat } from "../components/HelpChat";
-import { VoiceAssistant } from "../components/VoiceAssistant";
-import { NetworkStatusIndicator } from "../components/NetworkStatusIndicator";
-import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
-import { RateLimitWarningProvider } from '../components/RateLimitWarning';
-import { ProductShellGuard } from './components/ProductShellGuard';
-
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-};
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'In-App Help Center',
-  description: 'Automated storefront builder',
-};
+  title: 'One Human Corp',
+  description: 'AI Work Assistant for Owners',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="stylesheet" href="/api/ui/swagger-ui.css" />
-        <script src="/api/ui/swagger-ui-bundle.js"></script>
-      </head>
-      <body>
-        <RateLimitWarningProvider>
-          <TooltipProvider>
-                    <WalkthroughProvider>
-              <ProductShellGuard>{children}</ProductShellGuard>
-              <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
-              <HelpChat />
-              <VoiceAssistant />
-              <NetworkStatusIndicator />
-              <SyncManagerInitializer />
-            </WalkthroughProvider>
-                  </TooltipProvider>
-        </RateLimitWarningProvider>
+      <body className={inter.className}>
+        {children}
+        <OfflineSyncIndicator />
       </body>
     </html>
-  );
+  )
 }
