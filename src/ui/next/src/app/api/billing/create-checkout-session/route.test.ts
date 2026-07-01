@@ -39,7 +39,7 @@ describe("POST /api/billing/create-checkout-session", () => {
     expect(data).toEqual(mockResponseData);
   });
 
-  it("should handle backend errors by returning a mock URL for E2E", async () => {
+  it("should handle backend errors by returning a 503 error", async () => {
     (global.fetch as any).mockRejectedValue(new Error("Network Error"));
 
     const req = new Request("http://localhost/api/billing/create-checkout-session", {
@@ -50,7 +50,7 @@ describe("POST /api/billing/create-checkout-session", () => {
     const res = await POST(req);
     const data = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(data).toEqual({ checkout_url: "/checkout?tier=Starter" });
+    expect(res.status).toBe(503);
+    expect(data).toEqual({ message: "Billing backend service unavailable" });
   });
 });
