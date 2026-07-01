@@ -2,11 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard Flow', () => {
 
-
   test.beforeEach(async ({ page }) => {
     const fs = require('fs');
     const path = require('path');
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    const tauriUiDir = path.join(process.cwd(), '../ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
