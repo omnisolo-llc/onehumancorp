@@ -394,7 +394,7 @@ impl Department for SalesAgent {
                 }
 
                 let prompt = format!(
-                    "You are a sales agent drafting a project proposal for a new inquiry. Inquiry: {}. Service: {}. Base Price: {}. Past context: {}. Output strict JSON with keys: scope, suggested_time, suggested_price, drafted_message. Do not use markdown.",
+                    "You are a sales agent drafting a project proposal for a new inquiry. Inquiry: {}. Service: {}. Base Price: {}. Past context: {}. Output strict JSON with keys: scope, suggested_time, suggested_price, drafted_message, milestones. `milestones` should be an array of objects with keys: title, amount_cents, status (DRAFT). Do not use markdown.",
                     intent.original_message, service_name, price, context_summary
                 );
 

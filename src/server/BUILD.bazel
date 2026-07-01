@@ -128,6 +128,7 @@ SERVER_RS_SRCS = [
     "//src/server/domain:money.rs",
     "//src/server/domain:model.rs",
     "//src/server/domain:organization.rs",
+    "//src/server/domain:project.rs",
     "//src/server/domain:quotes.rs",
     "//src/server/domain:booking.rs",
     "//src/server/domain:estimator.rs",

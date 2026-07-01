@@ -53,6 +53,11 @@ pub async fn dispatch_action(
                 tracing::info!("Dispute Resolution Engine executed operational action: {}", ops);
             }
         }
+        "milestone_billing" => {
+            crate::domain::project::handle_milestone_action(tenant_id, payload, pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
         _ => {
             tracing::warn!("Unsupported feature_type for action dispatch: {}", feature_type);
         }
