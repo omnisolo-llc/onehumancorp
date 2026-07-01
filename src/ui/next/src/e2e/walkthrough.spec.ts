@@ -6,7 +6,7 @@ test.describe('Interactive Walkthroughs', () => {
     await page.goto('/builder');
 
     // Open the help widget
-    const helpButton = page.locator('#help-widget-container button').first();
+    const helpButton = page.locator('#ohc-floating-help-btn').first();
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 
@@ -43,7 +43,7 @@ test.describe('Interactive Walkthroughs', () => {
     await page.goto('/builder');
 
     // Open help widget
-    const helpButton = page.locator('#help-widget-container button').first();
+    const helpButton = page.locator('#ohc-floating-help-btn').first();
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 
