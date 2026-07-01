@@ -1750,7 +1750,7 @@
         role="progressbar"
         aria-label="Setup progress"
         aria-valuemin="0"
-        aria-valuemax="8"
+        aria-valuemax="10"
       >
         <div class="stepper-progress" id="stepper-progress"></div>
         <div class="step-indicator active" data-step="step-context"></div>
@@ -1759,6 +1759,8 @@
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
+        <div class="step-indicator" data-step="step-location"></div>
+        <div class="step-indicator" data-step="step-target-audience"></div>
         <div class="step-indicator" data-step="step-domain"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
@@ -3386,6 +3388,8 @@
           "step-assistant",
           "step-admin",
           "step-offer",
+          "step-location",
+          "step-target-audience",
           "step-domain",
           "step-template",
         ];
@@ -3395,7 +3399,7 @@
 
         const stepperProgress = document.getElementById("stepper-progress");
         if (stepperProgress) {
-          stepperProgress.style.width = (currentIndex / 7) * 100 + "%";
+          stepperProgress.style.width = (currentIndex / (steps.length - 1)) * 100 + "%";
         }
 
         document
