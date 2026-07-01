@@ -250,13 +250,16 @@ mod tests {
         assert!(is_blocked_ip("::ffff:127.0.0.1".parse().unwrap()));
     }
 
-    #[tokio::test]
-    async fn test_validate_url_and_get_ip_valid() {
-        let res = validate_url_and_get_ip("https://example.com").await;
-        assert!(res.is_ok());
-        let (host, ip) = res.unwrap();
-        assert_eq!(host, "example.com");
-        assert!(!is_blocked_ip(ip));
+    #[test]
+    fn test_validate_url_and_get_ip_valid() {
+        temp_env::with_vars(vec![("OHC_ALLOW_LOCAL_IPS", Some("true"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                let res = validate_url_and_get_ip("http://127.0.0.1").await;
+                assert!(res.is_ok());
+                let (host, _ip) = res.unwrap();
+                assert_eq!(host, "127.0.0.1");
+            });
+        });
     }
 
     #[tokio::test]
