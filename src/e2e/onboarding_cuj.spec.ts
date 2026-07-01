@@ -61,12 +61,22 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByTestId('assistant-tone').selectOption('Friendly');
     await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
 
+    await page.getByTestId('admin-name').fill('Maya');
     await page.getByTestId('admin-email').fill('admin@testbakery.local');
     await page.getByTestId('admin-password').fill('SuperSecretPassword123');
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
 
     await page.getByTestId('first-offer').fill('Chocolate Cake');
-    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-location"]').click();
+
+    await page.getByTestId('location-input').fill('Austin');
+    await page.locator('#step-location [data-testid="next-step-btn"][data-next="step-target-audience"]').click();
+
+    await page.getByTestId('target-audience').fill('Locals');
+    await page.locator('#step-target-audience [data-testid="next-step-btn"][data-next="step-domain"]').click();
+
+    await page.getByTestId('domain-name').fill('testbakery');
+    await page.locator('#step-domain [data-testid="next-step-btn"][data-next="step-template"]').click();
 
 
 
@@ -112,15 +122,16 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByTestId('team-operations').click();
     await page.getByTestId('assistant-tone').selectOption('Friendly');
     await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
+    await page.getByTestId('admin-name').fill('Maya');
     await page.getByTestId('admin-email').fill('admin@testbakery.local');
     await page.getByTestId('admin-password').fill('SuperSecretPassword123');
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
 
     // Do not fill offer, try to proceed
-    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-location"]').click();
 
     // Expect validation failure message
-    await expect(page.getByText('Please enter an offer.')).toBeVisible();
+    await expect(page.getByText('Please tell us what you sell.')).toBeVisible();
   });
 
   // Test 4: Navigating Back works

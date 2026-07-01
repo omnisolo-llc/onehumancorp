@@ -43,6 +43,7 @@
         overflow-y: auto;
       }
       /* OHC Premium Glassmorphism */
+
       .glassmorphism {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
@@ -51,35 +52,8 @@
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
-      @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-      }
-      .old-glassmorphism {
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow:
-          0 4px 6px -1px rgba(0, 0, 0, 0.1),
-          0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      }
-
-      @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      textarea.glassmorphism, input.glassmorphism, select.glassmorphism, button.glassmorphism {
+        border-radius: 8px !important;
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
@@ -89,14 +63,6 @@
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-      }
-      .old-glassmorphism {
-          border-radius: 16px;
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
         }
       }
 
@@ -165,26 +131,6 @@
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
-      @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-      }
-      .old-glassmorphism {
-        border-radius: 16px !important;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow:
-          0 4px 6px -1px rgba(0, 0, 0, 0.1),
-          0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      }
       textarea.glassmorphism, input.glassmorphism, select.glassmorphism {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
@@ -202,16 +148,6 @@
           border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-      }
-      .old-glassmorphism {
-        border-radius: 16px !important;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow:
-          0 4px 6px -1px rgba(0, 0, 0, 0.1),
-          0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       button {
         min-width: 44px;
@@ -433,13 +369,6 @@
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
       }
-      .old-glassmorphism {
-          border-radius: 16px;
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border-color: rgba(255, 255, 255, 0.1);
-        }
         h1 {
           color: #f5f5f7;
         }
@@ -1982,7 +1911,7 @@
           enterkeyhint="next"
         />
         <div id="name-error" class="error-msg" aria-live="polite">
-          Business Name is required.
+          Business Name must be at least 3 characters.
         </div>
 
         <input
@@ -3258,7 +3187,7 @@
             state.categories = inputs.categories.value.trim();
           }
         } else if (stepId === "step-name") {
-          if (inputs.name.value.trim().length === 0) {
+          if (inputs.name.value.trim().length < 3) {
             errors.name.style.display = "block";
             inputs.name.classList.add("invalid-input");
             isValid = false;
