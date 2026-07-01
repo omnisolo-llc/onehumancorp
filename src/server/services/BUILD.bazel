@@ -100,7 +100,13 @@ rust_library(
         "//src/server/services/agent_feed:service.rs",
         "//src/server/services/syndication:adapter.rs",
         "//src/server/services/syndication:mesh.rs",
+
         "//src/server/services/syndication:mod.rs",
+        "//src/server/services/capital:mod.rs",
+        "//src/server/services/capital:ledger.rs",
+        "//src/server/services/capital:multi_currency_ledger.rs",
+        "//src/server/services/capital:funding_engine.rs",
+
         "//src/server/services/subscription:mod.rs",
         "//src/server/services/subscription:service.rs",
             "//src/server/services/ledger:mod.rs",

@@ -33,10 +33,28 @@ impl PosSyncWorker {
 
         // Check if we simulate failure via specific amount
         let mut amount_cents = 0;
+        let mut currency = "usd".to_string();
+        let mut cached_rate: Option<f64> = None;
         if let Some(mutation) = payload.get("mutation") {
             amount_cents = mutation.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
         } else if let Some(a) = payload.get("amount_cents").and_then(|v| v.as_i64()) {
             amount_cents = a;
+        }
+
+        if let Some(c) = payload.get("currency").and_then(|v| v.as_str()) {
+            currency = c.to_string();
+        }
+        if let Some(r) = payload.get("cached_rate").and_then(|v| v.as_f64()) {
+            cached_rate = Some(r);
+        }
+
+        let ledger = ::server_services_capital::multi_currency_ledger::MultiCurrencyLedger::new(std::sync::Arc::new(self.db.pool.clone()));
+        if amount_cents > 0 {
+             if let Err(e) = ledger.record_transaction(&job.tenant_id, amount_cents, &currency, "USD", cached_rate).await {
+                 tracing::error!("Failed to record multi-currency ledger transaction: {}", e);
+                 let _ = tx.rollback().await;
+                 return Err("Failed to record transaction in ledger".into());
+             }
         }
 
         if amount_cents == 4002 {
@@ -67,6 +85,8 @@ impl PosSyncWorker {
                 "customer_email": "",
                 "transaction_id": transaction_id,
                 "amount_cents": amount_cents,
+                "currency": currency,
+                "cached_rate": cached_rate,
                 "product_id": product_id,
             }).to_string();
 

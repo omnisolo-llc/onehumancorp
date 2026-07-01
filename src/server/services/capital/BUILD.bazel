@@ -4,6 +4,8 @@ exports_files(
     [
         "mod.rs",
         "ledger.rs",
+        "multi_currency_ledger.rs",
+        "funding_engine.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -13,14 +15,20 @@ rust_library(
     srcs = [
         "mod.rs",
         "ledger.rs",
+    "multi_currency_ledger.rs",
         "funding_engine.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
+
     deps = [
         "@crates//:sqlx",
+        "@crates//:serde",
+        "@crates//:uuid",
+        "//src/server/common:server_common",
     ],
+
 )
 
 rust_test(

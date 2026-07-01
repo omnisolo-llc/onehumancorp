@@ -6748,7 +6748,12 @@ async fn create_ui_bom_item_handler(
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))
         .nest("/api/v1/pos", api::pos::pos_routes(hub.clone()))
         .nest("/api/v1/cart", api::cart::router(hub.clone()))
+
         .nest("/api/v1/storefront", api::storefront_delivery::router().with_state(api::storefront_delivery::DeliveryState { pool: db.pool.clone() }))
+        .route("/api/v1/localization/i18n/{locale}", axum::routing::get(api::localization::get_translations).with_state(std::sync::Arc::new(db.pool.clone())))
+        .route("/api/v1/localization/product/{product_id}", axum::routing::get(api::localization::get_product_translations).with_state(std::sync::Arc::new(db.pool.clone())))
+        .route("/api/v1/localization/fx", axum::routing::get(api::localization::get_fx_rates).with_state(std::sync::Arc::new(db.pool.clone())))
+
         .route("/api/v1/voice/command", axum::routing::post(api::audio_command::handle_voice_command).with_state(api::audio_command::VoiceCommandState {
             orchestrator: dept_orchestrator.clone(),
             semantic_router: semantic_router.clone(),
