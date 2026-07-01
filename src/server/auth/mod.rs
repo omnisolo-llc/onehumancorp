@@ -194,12 +194,11 @@ impl Store {
                         use std::os::unix::fs::OpenOptionsExt;
                         let mut options = std::fs::OpenOptions::new();
                         options.read(true);
-                        if !::server_config::get().multitenant {
-                            #[cfg(target_os = "linux")]
-                            options.custom_flags(0x00020000); // O_NOFOLLOW
-                            #[cfg(target_os = "macos")]
-                            options.custom_flags(0x0100); // O_NOFOLLOW
-                        }
+                        #[cfg(target_os = "linux")]
+                        options.custom_flags(0x00020000); // O_NOFOLLOW
+                        #[cfg(target_os = "macos")]
+                        options.custom_flags(0x0100); // O_NOFOLLOW
+
                         if let Ok(mut file) = options.open(&secret_path) {
                             use std::io::Read;
                             let mut bytes = Vec::new();
@@ -243,12 +242,11 @@ impl Store {
                             use std::os::unix::fs::OpenOptionsExt;
                             let mut options = std::fs::OpenOptions::new();
                             options.read(true);
-                            if !::server_config::get().multitenant {
-                                #[cfg(target_os = "linux")]
-                                options.custom_flags(0x00020000); // O_NOFOLLOW
-                                #[cfg(target_os = "macos")]
-                                options.custom_flags(0x0100); // O_NOFOLLOW
-                            }
+                        #[cfg(target_os = "linux")]
+                        options.custom_flags(0x00020000); // O_NOFOLLOW
+                        #[cfg(target_os = "macos")]
+                        options.custom_flags(0x0100); // O_NOFOLLOW
+
                             if let Ok(mut file) = options.open(&secret_path) {
                                 use std::io::Read;
                                 let mut bytes = String::new();
@@ -286,12 +284,15 @@ impl Store {
                 {
                     use std::os::unix::fs::OpenOptionsExt;
                     use std::io::Write;
-                    if let Ok(mut file) = std::fs::OpenOptions::new()
-                        .write(true)
-                        .create_new(true)
-                        .mode(0o600)
-                        .open(&secret_path)
-                    {
+
+                    let mut options = std::fs::OpenOptions::new();
+                    options.write(true).create_new(true).mode(0o600);
+                    #[cfg(target_os = "linux")]
+                    options.custom_flags(0x00020000); // O_NOFOLLOW
+                    #[cfg(target_os = "macos")]
+                    options.custom_flags(0x0100); // O_NOFOLLOW
+
+                    if let Ok(mut file) = options.open(&secret_path) {
                         let _ = file.write_all(&new_secret);
                     }
 
@@ -824,16 +825,19 @@ impl AuthService for AuthServiceServerImpl {
 
     async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
-        if ::server_config::get().multitenant && req.organization_id.is_empty() {
-             return Err(Status::invalid_argument("organization_id is required in cloud mode to maintain tenant isolation"));
-        }
+
+        let (final_org_id, final_role) = if ::server_config::get().multitenant {
+            (uuid::Uuid::new_v4().to_string(), ROLE_ADMIN.to_string())
+        } else {
+            (req.organization_id.clone(), ROLE_VIEWER.to_string())
+        };
 
         let user = self.store.create_user(
-            req.email.clone(),
+            req.username.clone(),
             req.email.clone(),
             req.password,
-            vec![ROLE_VIEWER.to_string()],
-            req.organization_id.clone(),
+            vec![final_role],
+            final_org_id,
         ).map_err(|e| Status::internal(e))?;
 
         let token = self.store.issue_token(&user).map_err(|e| Status::internal(e))?;
@@ -919,9 +923,9 @@ impl AuthService for AuthServiceServerImpl {
         let req = request.into_inner();
         // Force the new user to be in the caller's organization to prevent cross-tenant injection
         let user = self.store.create_user(
+            req.username.clone(),
             req.email.clone(),
-            req.email.clone(),
-            "temp".to_string(),
+            req.password,
             vec![],
             org_id,
         ).map_err(|e| Status::internal(e))?;
