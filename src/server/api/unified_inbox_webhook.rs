@@ -81,6 +81,65 @@ pub struct LocalUiTenantQuery {
     pub mobile_optimized: Option<bool>,
 }
 
+
+async fn generate_draft_reply(
+    tenant_id: &str,
+    customer_message: &str,
+    context_summary: &str,
+    db: &Arc<DB>,
+) -> String {
+    let (business_name, industry): (String, String) = match &db.store {
+        crate::db::DbStore::Postgres => sqlx::query_as(
+            "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+        )
+        .bind(tenant_id)
+        .fetch_optional(&db.pool)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_else(|| ("A business".to_string(), "".to_string())),
+        crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query_as(
+            "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
+        )
+        .bind(tenant_id)
+        .fetch_optional(sqlite_pool)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_else(|| ("A business".to_string(), "".to_string())),
+    };
+
+    let business_context = if industry.is_empty() {
+        format!("A business named {}", business_name)
+    } else {
+        format!("A {} business named {}", industry, business_name)
+    };
+
+    let prompt = format!(
+        "Write one concise, warm customer-service reply. Business context: {}. Customer recent history: {}. Customer message: {}",
+        business_context, context_summary, customer_message
+    );
+    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
+
+    let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+        Ok("gemini") => {
+            crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
+        }
+        Ok("minimax") => {
+            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            if api_key.is_empty() {
+                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
+            } else {
+                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
+            }
+        }
+        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
+    };
+
+    match llm_res {
+        Ok(reply) => reply,
+        Err(_) => format!("Hi there! Thanks for your message: '{}'. How can we help?", customer_message),
+    }
+}
+
 fn get_ui_tenant_id(query: &LocalUiTenantQuery) -> String {
     query
         .tenant_id
@@ -176,10 +235,12 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(&state.db.pool).await;
 
-            let draft_reply = format!(
-                "Hi there! Thanks for your message: '{}'. How can we help?",
-                payload.message
-            );
+            let draft_reply = generate_draft_reply(
+                tenant_id,
+                &payload.message,
+                &context_summary,
+                &state.db,
+            ).await;
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary,
@@ -230,10 +291,12 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(sqlite_pool).await;
 
-            let draft_reply = format!(
-                "Hi there! Thanks for your message: '{}'. How can we help?",
-                payload.message
-            );
+            let draft_reply = generate_draft_reply(
+                tenant_id,
+                &payload.message,
+                &context_summary,
+                &state.db,
+            ).await;
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary,
