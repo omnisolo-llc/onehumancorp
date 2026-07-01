@@ -1,93 +1,141 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect } from './fixtures';
 
-test.describe('OHC Multi-Channel Messaging Hub (Work Triage Agent)', () => {
-    test('Should display unified message feed and allow AI drafted reply to be sent', async ({ browser }) => {
-        // Step 1: Login via fixture
-        const page = await adminPage(browser);
+test.describe('Omni Inbox Triage Integration', () => {
+  test.use({ viewport: { width: 375, height: 667 } }); // Mobile viewport
 
-        // Step 2: Hit mock ingestion endpoint to simulate Maya receiving an Instagram DM
-        const mockPayload = {
-            source: 'Instagram DM',
-            sender_id: 'customer_maya',
-            message: 'Do you make vegan cakes for this Saturday?'
-        };
+  const tenantId = 'e2e-omni-triage-tenant';
 
-        const response = await page.request.post('/api/dev/mock-omni-inbox?tenant_id=e2e-tenant', {
-            data: mockPayload
-        });
-
-        expect(response.ok()).toBeTruthy();
-
-        // Step 3: Navigate to Work Triage UI
-        await page.goto('/api/ui/triage.html');
-
-        // Wait for feed to load
-        await expect(page.getByTestId(/triage-card-/).first()).toBeVisible();
-
-        // Step 4: Verify the message appears in the feed
-        const sourceText = await page.locator('[data-testid^="triage-card-"] .font-outfit').first().textContent();
-        expect(sourceText).toContain('Instagram DM');
-
-        const messageText = await page.locator('[data-testid^="triage-card-"] .text-\[15px\]').first().textContent();
-        expect(messageText).toContain('Do you make vegan cakes for this Saturday?');
-
-        // Click the first item to select it
-        await page.locator('[data-testid^="triage-card-"]').first().click();
-
-        // Step 5: Verify Thread view & Draft reply
-        await page.locator('text=Proposed Action').first().waitFor();
-        const draftReplyText = await page.locator('.proposed-action').first().textContent();
-        expect(draftReplyText).toContain('vegan cake');
-
-        // Step 6: Click "Approve & Send"
-        const approveBtn = page.locator('[data-testid^="triage-approve-"]').first();
-        await expect(approveBtn).toBeVisible();
-        await approveBtn.click();
-
-        // Step 7: Verify UI updates
-        const actionStatus = page.locator('[role="status"]');
-        await expect(actionStatus).toBeVisible();
-        await expect(actionStatus).toHaveText('Approved!');
+  test('should display omni inbox messages in triage feed', async ({ page, request }) => {
+    // Seed omni_inbox_messages
+    await request.post('/api/v1/builder/seeder/exec', {
+      data: {
+        sql: `
+          INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
+          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          VALUES ('omni-msg-1', '${tenantId}', 'WhatsApp', 'Need an appointment', 'Need an appointment', 'English', 'I can help with that.', 'unread', 'cust_1', NOW())
+          ON CONFLICT DO NOTHING;
+        `
+      }
     });
 
-    test('Should handle dismissing a triage item and show the empty state', async ({ browser }) => {
-        const page = await adminPage(browser);
+    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
 
-        const mockPayload = {
-            source: 'Email',
-            sender_id: 'customer_spam',
-            message: 'Are you looking to increase your SEO rankings?'
-        };
+    // Check if it appears in triage
+    const itemCard = page.getByTestId('triage-card-omni-msg-1');
+    await expect(itemCard).toBeVisible({ timeout: 15000 });
+    await expect(itemCard.locator('text=WhatsApp')).toBeVisible();
+    await expect(itemCard.locator('text=Need an appointment')).toBeVisible();
+    await expect(itemCard.locator('text=Draft Reply')).toBeVisible();
+  });
 
-        const response = await page.request.post('/api/dev/mock-omni-inbox?tenant_id=e2e-tenant-spam', {
-            data: mockPayload
-        });
-        expect(response.ok()).toBeTruthy();
-
-        await page.goto('/api/ui/triage.html');
-        const sourceText = await page.locator('[data-testid^="triage-card-"] .font-outfit').first().textContent();
-        expect(sourceText).toContain('Email');
-
-        await page.locator('[data-testid^="triage-card-"]').first().click();
-
-        // Click Dismiss
-        const dismissBtn = page.locator('[data-testid^="triage-dismiss-"]').first();
-        await expect(dismissBtn).toBeVisible();
-        await dismissBtn.click();
-
-        // Verify status updates
-        const actionStatus = page.locator('[role="status"]');
-        await expect(actionStatus).toBeVisible();
-        await expect(actionStatus).toHaveText('Dismissed.');
-
-        // Wait for it to disappear and the empty state to show up (if it was the last item)
-        // Note: other items might exist from previous tests, but if it is empty we should see the empty state.
-        // For this test, we can just ensure that the card is removed.
-        const card = page.getByTestId(/triage-card-/);
-        // It might be empty, check for empty state just in case
-        if (await page.getByTestId('triage-feed-empty').isVisible()) {
-             await expect(page.getByTestId('triage-feed-empty')).toBeVisible();
-        }
+  test('should approve omni inbox message from triage', async ({ page, request }) => {
+    await request.post('/api/v1/builder/seeder/exec', {
+      data: {
+        sql: `
+          INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
+          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          VALUES ('omni-msg-2', '${tenantId}', 'Instagram DM', 'How much is it?', 'How much is it?', 'English', 'It is $50.', 'unread', 'cust_2', NOW())
+          ON CONFLICT DO NOTHING;
+        `
+      }
     });
+
+    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
+
+    const itemCard = page.getByTestId('triage-card-omni-msg-2');
+    await expect(itemCard).toBeVisible({ timeout: 15000 });
+
+    const cardHeader = page.getByTestId('triage-card-header-omni-msg-2');
+    await cardHeader.click();
+
+    const approveButton = page.getByTestId('triage-approve-omni-msg-2');
+    await expect(approveButton).toBeVisible();
+    await approveButton.click();
+
+    await expect(itemCard).not.toBeVisible({ timeout: 5000 });
+  });
+
+  test('should edit and approve omni inbox message from triage', async ({ page, request }) => {
+    await request.post('/api/v1/builder/seeder/exec', {
+      data: {
+        sql: `
+          INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
+          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          VALUES ('omni-msg-3', '${tenantId}', 'Email', 'Where are you located?', 'Where are you located?', 'English', 'We are in NY.', 'unread', 'cust_3', NOW())
+          ON CONFLICT DO NOTHING;
+        `
+      }
+    });
+
+    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
+
+    const itemCard = page.getByTestId('triage-card-omni-msg-3');
+    await expect(itemCard).toBeVisible({ timeout: 15000 });
+
+    const cardHeader = page.getByTestId('triage-card-header-omni-msg-3');
+    await cardHeader.click();
+
+    const reviewButton = page.getByTestId('triage-review-btn-omni-msg-3');
+    await reviewButton.click();
+
+    const textarea = page.getByTestId('triage-edit-textarea-omni-msg-3');
+    await expect(textarea).toBeVisible();
+    await expect(textarea).toHaveValue('We are in NY.');
+
+    await textarea.fill('We are located in downtown NY.');
+
+    const saveButton = page.getByTestId('triage-save-btn-omni-msg-3');
+    await saveButton.click();
+
+    await expect(itemCard).not.toBeVisible({ timeout: 5000 });
+  });
+
+  test('should dismiss omni inbox message from triage', async ({ page, request }) => {
+    await request.post('/api/v1/builder/seeder/exec', {
+      data: {
+        sql: `
+          INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
+          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          VALUES ('omni-msg-4', '${tenantId}', 'SMS', 'Stop', 'Stop', 'English', '', 'unread', 'cust_4', NOW())
+          ON CONFLICT DO NOTHING;
+        `
+      }
+    });
+
+    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
+
+    const itemCard = page.getByTestId('triage-card-omni-msg-4');
+    await expect(itemCard).toBeVisible({ timeout: 15000 });
+
+    const cardHeader = page.getByTestId('triage-card-header-omni-msg-4');
+    await cardHeader.click();
+
+    const dismissButton = page.getByTestId('triage-dismiss-omni-msg-4');
+    await expect(dismissButton).toBeVisible();
+    await dismissButton.click();
+
+    await expect(itemCard).not.toBeVisible({ timeout: 5000 });
+  });
+
+  test('should not display resolved or dismissed omni inbox messages', async ({ page, request }) => {
+    await request.post('/api/v1/builder/seeder/exec', {
+      data: {
+        sql: `
+          INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
+          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          VALUES ('omni-msg-5', '${tenantId}', 'SMS', 'Hello', 'Hello', 'English', 'Hi!', 'resolved', 'cust_5', NOW()),
+                 ('omni-msg-6', '${tenantId}', 'SMS', 'Spam', 'Spam', 'English', '', 'dismissed', 'cust_6', NOW())
+          ON CONFLICT DO NOTHING;
+        `
+      }
+    });
+
+    await page.goto(`/api/ui/triage.html?tenant_id=${tenantId}`);
+
+    const itemCard5 = page.getByTestId('triage-card-omni-msg-5');
+    await expect(itemCard5).not.toBeVisible({ timeout: 5000 });
+
+    const itemCard6 = page.getByTestId('triage-card-omni-msg-6');
+    await expect(itemCard6).not.toBeVisible({ timeout: 5000 });
+  });
 });
