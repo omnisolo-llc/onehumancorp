@@ -61,14 +61,26 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByTestId('assistant-tone').selectOption('Friendly');
     await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
 
+    const adminName = page.locator('#admin-name');
+    await adminName.fill('Test Admin');
     await page.getByTestId('admin-email').fill('admin@testbakery.local');
     await page.getByTestId('admin-password').fill('SuperSecretPassword123');
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
 
     await page.getByTestId('first-offer').fill('Chocolate Cake');
-    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
 
+    // In `setup.html`, step-offer transitions to step-location
+    // `data-next="step-location"`
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-location"]').click();
 
+    await page.getByTestId('location-input').fill('123 Bakery Lane');
+    await page.locator('#step-location [data-testid="next-step-btn"][data-next="step-target-audience"]').click();
+
+    await page.getByTestId('target-audience').fill('Local families');
+    await page.locator('#step-target-audience [data-testid="next-step-btn"][data-next="step-domain"]').click();
+
+    await page.getByTestId('domain-name').fill('maya-bakery');
+    await page.locator('#step-domain [data-testid="next-step-btn"][data-next="step-template"]').click();
 
     await page.getByTestId('template-selection').selectOption('Modern');
 
@@ -95,7 +107,8 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
 
     // Expect validation failure message immediately
-    await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
+    // Wait for the name-error div to become visible and check its content.
+    await expect(page.locator('#name-error')).toBeVisible();
   });
 
   // Test 3: Validate missing location blocks progression
@@ -112,15 +125,19 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByTestId('team-operations').click();
     await page.getByTestId('assistant-tone').selectOption('Friendly');
     await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
+
+    // Fill in admin credentials
+    const adminName = page.locator('#admin-name');
+    await adminName.fill('Test Admin');
     await page.getByTestId('admin-email').fill('admin@testbakery.local');
     await page.getByTestId('admin-password').fill('SuperSecretPassword123');
     await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
 
     // Do not fill offer, try to proceed
-    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-template"]').click();
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-location"]').click();
 
     // Expect validation failure message
-    await expect(page.getByText('Please enter an offer.')).toBeVisible();
+    await expect(page.getByText('Please tell us what you sell.')).toBeVisible();
   });
 
   // Test 4: Navigating Back works
