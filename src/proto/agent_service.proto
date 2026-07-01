@@ -51,6 +51,8 @@ message RunTaskRequest {
   bool enable_tools_gating = 14;
   // Enable TAO Orchestration Loop
   bool enable_tao_orchestration_loop = 15;
+  // Enable Lazy Tool Loading (Harness Thickness)
+  bool enable_lazy_tool_loading = 16;
 }
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
@@ -115,6 +117,8 @@ message SubAgentRequest {
   bool enable_tools_gating = 13;
   // Enable TAO Orchestration Loop
   bool enable_tao_orchestration_loop = 14;
+  // Enable Lazy Tool Loading (Harness Thickness)
+  bool enable_lazy_tool_loading = 15;
 }
 
 // SubAgentResponse carries the sub-agent's final answer.
