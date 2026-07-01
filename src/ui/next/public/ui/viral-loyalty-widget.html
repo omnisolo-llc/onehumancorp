@@ -151,6 +151,28 @@
       outline-offset: 2px;
     }
 
+    .demo-toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .demo-toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
     @media (max-width: 375px) {
       .stamp {
         width: 40px;
@@ -245,17 +267,48 @@
 
       try {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+        let refId = tenantId;
 
-        // This simulates generating a program
-        const res = await fetch('/api/v1/growth/referrals/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+        try {
+          // This simulates generating a program
+          const res = await fetch('/api/v1/growth/referrals/generate', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+              }
+          });
+
+          if (!res.ok) {
+              throw new Error("API returned " + res.status);
+          }
+
+          const data = await res.json();
+          if (data.referral_link) {
+              refId = data.referral_link.split('/').pop();
+          }
+        } catch (fetchErr) {
+            console.error("Network unreachable or API error", fetchErr);
+            // Show error toast
+            let toast = document.getElementById('demo-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'demo-toast';
+                toast.className = 'demo-toast';
+                document.body.appendChild(toast);
             }
-        });
-        const data = await res.json();
-        const refId = data.referral_link ? data.referral_link.split('/').pop() : tenantId;
+            toast.style.background = 'rgba(220, 38, 38, 0.9)'; // Red error background
+            toast.textContent = 'Failed to generate referral link';
+            // Trigger reflow
+            void toast.offsetWidth;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+
+            // Abort generation process on error
+            btn.disabled = false;
+            btn.textContent = 'Generate Loyalty Program';
+            return;
+        }
 
         // Show result
         const baseUrl = window.location.origin;
