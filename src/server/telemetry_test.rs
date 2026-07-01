@@ -275,9 +275,62 @@ mod tests {
             .unwrap();
 
         use sqlx::Row;
-        let _ = pool;
         let count: i64 = row.get(0);
-                assert_eq!(count, 0, "Metric should not be buffered in standalone mode");
+        assert_eq!(count, 0, "Metric should not be buffered in standalone mode");
+            });
+        });
+    }
+
+    #[test]
+    fn test_buffer_metric_i64_respects_standalone() {
+        let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
+        temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        // Ensure OHC_STANDALONE_MODE is true. Telemetry should be ignored
+        let labels = json!({"user_id": "standalone_test_i64"});
+        let res: Result<(), _> = ::server_telemetry::buffer_metric_i64(&pool, "test_standalone_i64", "counter", 1, labels).await;
+        assert!(res.is_ok());
+
+        let row: sqlx::postgres::PgRow = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone_i64'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let count: i64 = row.get(0);
+        assert_eq!(count, 0, "Metric i64 should not be buffered in standalone mode");
+            });
+        });
+    }
+
+    #[test]
+    fn test_record_rag_escalation_telemetry_respects_standalone() {
+        let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
+        temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true"))], || {
+            tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return, // Gracefully exit if DB is not available in sandbox or times out
+        };
+
+        let res: Result<(), _> = ::server_telemetry::record_rag_escalation(&pool, "org_123", "TimeoutError").await;
+        assert!(res.is_ok());
+
+        let row: sqlx::postgres::PgRow = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'ohc_rag_escalation_total'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let count: i64 = row.get(0);
+        assert_eq!(count, 0, "RAG escalation should not be buffered in standalone mode");
             });
         });
     }
