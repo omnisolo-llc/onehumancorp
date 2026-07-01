@@ -28,25 +28,27 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const abortController = new AbortController();
-    fetch("/api/tooltips", { signal: abortController.signal })
-      .then(r => {
-        if (!r.ok) throw new Error("Failed to load tooltips");
-        return r.json();
-      })
-      .then(data => {
+    const fetchTooltips = async () => {
+      try {
+        const response = await fetch("/api/tooltips", { signal: abortController.signal });
+        if (!response.ok) {
+          throw new Error(`Failed to load tooltips, status: ${response.status}`);
+        }
+        const data = await response.json();
         if (data && typeof data === 'object' && !Array.isArray(data)) {
           const safeTooltips = Object.fromEntries(
             Object.entries(data).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
           );
-          setTooltips(safeTooltips);
-          window.OHC_TOOLTIPS = safeTooltips;
+          setTooltips(prev => ({ ...prev, ...safeTooltips }));
+          window.OHC_TOOLTIPS = { ...(window.OHC_TOOLTIPS || {}), ...safeTooltips };
         }
-      })
-      .catch((e) => {
+      } catch (e: any) {
         if (e.name !== 'AbortError') {
           console.error('Failed to load tooltips', e);
         }
-      });
+      }
+    };
+    fetchTooltips();
     return () => { abortController.abort(); };
   }, []);
 
