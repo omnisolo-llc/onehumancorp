@@ -1,22 +1,19 @@
 import { NextResponse } from 'next/server';
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
   const tenantId = req.headers.get('x-tenant-id') || 'default';
   const userId = req.headers.get('x-user-id') || 'default';
-  const authHeader = req.headers.get('authorization');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-tenant-id': tenantId,
     'x-user-id': userId,
   };
-  if (authHeader) {
-    headers.authorization = authHeader;
-  }
+
+  const id = params.id;
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes/${resolvedParams.id}/approve`, {
+    const res = await fetch(`${backendUrl}/api/v1/quotes/${id}/approve`, {
       method: 'PATCH',
       headers,
     });

@@ -1,20 +1,52 @@
 "use client";
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 function CustomerProposalViewContent() {
     const searchParams = useSearchParams();
     const proposalId = searchParams.get('id');
     const [isLoading, setIsLoading] = useState(false);
+    const [quote, setQuote] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
 
-    const handlePayDeposit = async () => {
+    useEffect(() => {
+        if (!proposalId) return;
+        async function fetchQuote() {
+            try {
+                const res = await fetch(`/api/quotes/${proposalId}`);
+                if (!res.ok) throw new Error('Failed to fetch proposal');
+                const data = await res.json();
+                setQuote(data);
+            } catch (err: any) {
+                setError(err.message);
+            }
+        }
+        fetchQuote();
+    }, [proposalId]);
+
+    const handleAccept = async () => {
+        if (!proposalId) return;
         setIsLoading(true);
-        setTimeout(() => {
-            alert('Redirecting to Stripe for deposit payment...');
+        try {
+            const res = await fetch(`/api/quotes/${proposalId}/accept`, { method: 'POST' });
+            if (!res.ok) throw new Error('Failed to accept proposal');
+            const data = await res.json();
+            if (data.stripe_payment_link) {
+                window.location.href = data.stripe_payment_link;
+            } else {
+                alert('Proposal Accepted!');
+                window.location.reload();
+            }
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
+
+    if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
+    if (!quote) return <div className="p-4 text-center">Loading...</div>;
 
     return (
         <div style={{ maxWidth: '375px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' }}>
@@ -22,37 +54,43 @@ function CustomerProposalViewContent() {
             <p style={{ color: '#666' }}>Proposal ID: {proposalId}</p>
 
             <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span>Custom Service</span>
-                    <span>$150.00</span>
-                </div>
+                {quote.line_items?.map((item: any) => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <span>{item.description} (x{item.quantity})</span>
+                        <span>${(item.unit_price_cents * item.quantity / 100).toFixed(2)}</span>
+                    </div>
+                ))}
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '20px' }}>
                     <span>Total</span>
-                    <span>$150.00</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '10px', color: '#0066FF' }}>
-                    <span>Required Deposit</span>
-                    <span>$50.00</span>
+                    <span>${(quote.quote.total_amount_cents / 100).toFixed(2)}</span>
                 </div>
             </div>
 
-            <button
-                onClick={handlePayDeposit}
-                disabled={isLoading}
-                style={{
-                    width: '100%',
-                    backgroundColor: '#0066FF',
-                    color: 'white',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    fontWeight: 'bold',
-                    marginTop: '30px',
-                    opacity: isLoading ? 0.7 : 1
-                }}
-            >
-                {isLoading ? 'Processing...' : 'Pay $50 Deposit'}
-            </button>
+            {quote.quote.status !== 'ACCEPTED' ? (
+                <button
+                    onClick={handleAccept}
+                    disabled={isLoading}
+                    style={{
+                        width: '100%',
+                        backgroundColor: '#0066FF',
+                        color: 'white',
+                        padding: '15px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontWeight: 'bold',
+                        marginTop: '30px',
+                        opacity: isLoading ? 0.7 : 1,
+                        cursor: 'pointer'
+                    }}
+                >
+                    {isLoading ? 'Processing...' : 'Approve & Pay Invoice'}
+                </button>
+            ) : (
+                <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#e6f4ea', color: '#137333', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold' }}>
+                    Proposal Accepted
+                </div>
+            )}
         </div>
     );
 }
