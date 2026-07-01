@@ -349,6 +349,7 @@ where
         .route("/discount-code/embed", get(handle_discount_code_embed))
         .route("/footer-branding/embed.js", get(handle_footer_branding_embed))
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
+        .route("/post-purchase/embed", get(handle_post_purchase_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/spin-to-win/embed", get(handle_spin_to_win_embed))
@@ -1286,12 +1287,147 @@ pub struct StorefrontEmbedQuery {
 
 
 #[derive(Deserialize)]
+pub struct PostPurchaseEmbedQuery {
+    pub tenant: Option<String>,
+    pub discount: Option<String>,
+    pub theme: Option<String>,
+    #[serde(rename = "hideBranding")]
+    pub hide_branding: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct CustomerReferralEmbedQuery {
     pub tenant: Option<String>,
     pub give: Option<String>,
     pub get: Option<String>,
     pub theme: Option<String>,
     pub hide_branding: Option<String>,
+}
+
+
+async fn handle_post_purchase_embed(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<PostPurchaseEmbedQuery>,
+) -> impl IntoResponse {
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let discount = escape_html(query.discount.as_deref().unwrap_or("15pct"));
+
+    let discount_display = if discount.ends_with("pct") {
+        format!("{}%", discount.trim_end_matches("pct"))
+    } else if discount.ends_with("flat") {
+        format!("${}", discount.trim_end_matches("flat"))
+    } else {
+        discount.clone()
+    };
+
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
+    let border_color = if query.theme.as_deref() == Some("dark") { "#374151" } else { "#e5e7eb" };
+
+    let mut has_pro = false;
+    if query.hide_branding.as_deref() == Some("true") {
+        // Validate pro status in DB
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
+            .bind(&tenant)
+            .fetch_optional(&state.pool)
+            .await;
+
+        if let Ok(Some(plan)) = is_pro_res {
+            if plan.to_lowercase() == "pro" {
+                has_pro = true;
+            }
+        }
+    }
+
+    let branding = if has_pro {
+        "".to_string()
+    } else {
+        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#, tenant)
+    };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: {bg_color};
+            color: {text_color};
+            margin: 0;
+            padding: 16px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }}
+        .widget-icon {{ font-size: 32px; margin-bottom: 12px; }}
+        h3 {{ margin: 0 0 8px 0; font-size: 20px; font-weight: 700; }}
+        p {{ margin: 0 0 16px 0; font-size: 14px; opacity: 0.8; line-height: 1.5; }}
+        .input-group {{ display: flex; gap: 8px; justify-content: center; }}
+        input {{
+            padding: 12px;
+            border: 1px solid {border_color};
+            border-radius: 8px;
+            background: rgba(128,128,128,0.1);
+            color: {text_color};
+            outline: none;
+            width: 60%;
+            max-width: 300px;
+        }}
+        button {{
+            background: #0066FF;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }}
+    </style>
+</head>
+<body>
+    <div class="widget-icon">🎁</div>
+    <h3>Share and Get {discount_display} OFF</h3>
+    <p>Share your link with friends. They get {discount_display} off their first order, and you get {discount_display} off your next!</p>
+    <div class="input-group">
+        <input type="text" readonly value="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" id="ref-link" />
+        <button onclick="copyLink(this)">Copy Link</button>
+    </div>
+    {branding}
+    <script>
+        function copyLink(btn) {{
+            const link = document.getElementById('ref-link');
+            link.select();
+            document.execCommand('copy');
+            const oldText = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => {{ btn.textContent = oldText; }}, 2000);
+        }}
+    </script>
+</body>
+</html>"#,
+        bg_color = bg_color,
+        text_color = text_color,
+        border_color = border_color,
+        discount_display = discount_display,
+        branding = branding,
+        tenant = tenant
+    );
+
+    axum::response::Html(html)
 }
 
 async fn handle_customer_referral_embed(

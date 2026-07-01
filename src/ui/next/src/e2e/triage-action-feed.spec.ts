@@ -65,8 +65,9 @@ test.describe('Triage Action Feed UI', () => {
     while (count > 0) {
       const firstCard = listItems.nth(0);
       const testId = await firstCard.getAttribute('data-testid');
-      const approveBtn = firstCard.locator('button[data-testid="approve-triage-btn"]').first();
-      const dismissBtn = firstCard.locator('button[data-testid="dismiss-triage-btn"]').first();
+      // Triage items in the UI are using dynamic IDs
+      const approveBtn = firstCard.locator('button[data-testid^="triage-approve-"]').first();
+      const dismissBtn = firstCard.locator('button[data-testid^="triage-dismiss-"]').first();
 
       // We will wait for the API response after clicking
       const responsePromise = page.waitForResponse(response =>

@@ -90,6 +90,14 @@ async fn post_inventory_handler(
                 let edge_cache = crate::builder::edge::get_edge_cache();
                 edge_cache.invalidate_by_tag(&format!("entity:product:{}", item_id)).await;
                 edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+                let item_id_owned = item_id.to_string();
+                let tenant_id_owned = tenant_id.to_string();
+                tokio::spawn(async move {
+                    let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+                    cdn.invalidate_by_tag(&format!("entity:product:{}", item_id_owned)).await;
+                    cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_owned)).await;
+                });
             }
         }
     }

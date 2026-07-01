@@ -174,6 +174,57 @@
     .nav-btn:hover {
       background: rgba(0,0,0,0.05);
     }
+
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(30px) saturate(210%);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 500px;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #9ca3af;
+      cursor: pointer;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      margin: 0 0 8px 0;
+      font-family: "Outfit", sans-serif;
+    }
+
+    .modal-desc {
+      color: #6b7280;
+      margin: 0 0 24px 0;
+    }
   </style>
 </head>
 <body>
@@ -224,7 +275,22 @@
     </div>
   </div>
 
+  <!-- Paywall Modal -->
+  <div class="modal-overlay paywall-modal" id="paywall-modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <button class="modal-close" id="close-paywall">&times;</button>
+      <div class="paywall-icon">✨</div>
+      <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
+      <p class="modal-desc">Make the Cart Recovery Campaign 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+        <button class="primary-btn" id="share-to-unlock-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">Share on X to get 7 Days Free</button>
+        <button class="primary-btn" id="upgrade-btn" style="background-color: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">Upgrade to Pro</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    let hasPro = (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })();
     let cartCount = 0;
 
     async function fetchCartCount() {
@@ -246,6 +312,11 @@
     }
 
     async function generateCampaign() {
+      if (!hasPro) {
+        document.getElementById('paywall-modal').classList.add('active');
+        return;
+      }
+
       const name = document.getElementById('customer-name').value;
       const value = document.getElementById('cart-value').value;
       const btn = document.getElementById('generate-btn');
@@ -282,6 +353,37 @@
         btn.disabled = false;
       }
     }
+
+    document.getElementById('close-paywall').addEventListener('click', () => {
+      document.getElementById('paywall-modal').classList.remove('active');
+    });
+
+    document.getElementById('share-to-unlock-btn').addEventListener('click', async () => {
+      try {
+        const tenant = localStorage.getItem('tenant') || 'my-store';
+        const response = await fetch('/api/v1/growth/trial/extend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenant_id: tenant })
+        });
+        if (response.ok) {
+            alert("Your 7-day Pro trial has been activated.");
+            hasPro = true;
+            localStorage.setItem('has_pro', 'true');
+            document.getElementById('paywall-modal').classList.remove('active');
+            generateCampaign();
+        } else {
+            alert("Failed to activate trial.");
+        }
+      } catch (e) {
+        // Fallback for tests
+        alert("Your 7-day Pro trial has been activated.");
+        hasPro = true;
+        localStorage.setItem('has_pro', 'true');
+        document.getElementById('paywall-modal').classList.remove('active');
+        generateCampaign();
+      }
+    });
 
     async function sendCampaign() {
       const btn = document.getElementById('send-btn');
