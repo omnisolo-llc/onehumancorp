@@ -8,12 +8,12 @@ services:
     image: onehumancorp/server:latest
 
   postgres:
-    image: ankane/pgvector:v0.5.1
+    image: pgvector/pgvector:pg15
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
 
   valkey:
-    image: redis:alpine
+    image: valkey/valkey:7.2
     pull_policy: missing
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]

@@ -40,7 +40,7 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
     await page.evaluate((tId) => localStorage.setItem('tenant_id', tId), tenantId);
     await page.reload();
 
-    const dmCard = page.locator('[data-testid="instagram-dm-card"]').first();
+    const dmCard = page.locator('[data-testid="ambassador-reply-card"]').first();
     for (let i = 0; i < 5; i++) {
         if (await dmCard.isVisible()) break;
         await page.waitForTimeout(3000);
@@ -77,7 +77,7 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
     await page.evaluate((tId) => { localStorage.setItem('tenant_id', tId); }, tenantId);
     await page.reload();
 
-    const dmCard = page.locator('[data-testid="instagram-dm-card"]').first();
+    const dmCard = page.locator('[data-testid="ambassador-reply-card"]').first();
     if (response.status() === 200) {
         for (let i = 0; i < 5; i++) {
             if (await dmCard.isVisible()) break;
@@ -85,12 +85,10 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
             await page.reload();
         }
         await expect(dmCard).toBeVisible({ timeout: 15000 });
-        const approveBtn = dmCard.locator('..').locator('..').locator('[data-testid="approve-instagram-dm"]').first();
-        const approveBtnAlt = dmCard.locator('..').locator('[data-testid="approve-instagram-dm"]').first();
+        const approveBtn = dmCard.locator('[data-testid="feed-approve-btn"]').first();
 
-        await expect(approveBtn.or(approveBtnAlt)).toBeVisible();
-        if (await approveBtn.isVisible()) await approveBtn.click();
-        else await approveBtnAlt.click();
+        await expect(approveBtn).toBeVisible();
+        await approveBtn.click();
         await expect(dmCard).not.toBeVisible();
     }
   });

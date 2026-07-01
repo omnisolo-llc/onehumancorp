@@ -68,6 +68,10 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
       await route.fulfill({ json: { client_secret: 'mock_secret' } });
     });
 
+    await page.route('/api/v1/payments/terminal/intent/capture', async route => {
+      await route.fulfill({ json: { success: true, status: 'succeeded' } });
+    });
+
     await page.route('/api/v1/payments/terminal/commit', async route => {
       await route.fulfill({ json: { success: true } });
     });

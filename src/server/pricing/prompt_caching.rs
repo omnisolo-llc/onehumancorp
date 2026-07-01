@@ -495,4 +495,18 @@ mod tests {
         let res = PromptCache::truncate_context(text, 10);
         assert_eq!(res, "Check out this [link] for more info.");
     }
+
+    #[test]
+    fn test_truncate_context_incomplete_url() {
+        let text = "Check out this [link](https://example.com/very/long/url/that/wastes/tokens";
+        // The URL is incomplete (missing closing ')').
+        // Truncate based on 4 chars per token. 10 tokens = 40 chars.
+        let res = PromptCache::truncate_context(text, 10);
+        // The function shouldn't panic, it should just truncate normally or strip part of the URL.
+        assert!(res.len() > 0);
+
+        let text2 = "Check out this [link](http";
+        let res2 = PromptCache::truncate_context(text2, 10);
+        assert!(res2.len() > 0);
+    }
 }

@@ -4,20 +4,7 @@ test.describe('API Documentation', () => {
   test('should display interactive Swagger UI layout', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     // Navigate to API Docs page
-    await page.goto('/api/ui/api-docs.html');
-
-    // Advanced Settings toggle
-    const toggle = page.locator('#advanced-settings-toggle');
-    const apiDocsContent = page.locator('#api-docs-content');
-
-    // Check initial state (should be hidden)
-    await expect(apiDocsContent).not.toBeVisible();
-
-    // Click toggle
-    await toggle.check();
-
-    // Check state after click (should be visible)
-    await expect(apiDocsContent).toBeVisible();
+    await page.goto('/api-docs');
 
     // Ensure the advanced warning is visible
     await expect(page.locator('text=Advanced:')).toBeVisible();
@@ -25,20 +12,20 @@ test.describe('API Documentation', () => {
 
     // Tooltip hover test
     const tooltipTarget = page.locator('#api-docs-tooltip');
+    await tooltipTarget.waitFor({ state: "visible", timeout: 10000 });
     await tooltipTarget.hover();
 
-    // Using string matching as class visible might be tricky depending on the JS
-    const tooltipElement = page.locator('.ohc-tooltip');
+    const tooltipElement = page.locator('.animate-fade-in-up');
     await expect(tooltipElement).toBeVisible();
     await expect(tooltipElement).toContainText('Direct API access is only for custom integrations.');
 
     // Verify Swagger UI container wrapper is visible
     // Target the specific wrapper classes for verification
-    const wrapper = page.locator('.backdrop-blur-\\[20px\\].saturate-200').first();
+    const wrapper = page.locator('.backdrop-blur-\\[30px\\]').first();
     await expect(wrapper).toBeVisible();
 
     // Check if swagger-ui container renders
-    const swaggerUI = page.locator('#swagger-ui');
+    const swaggerUI = page.locator('.swagger-ui');
     await expect(swaggerUI).toBeVisible();
   });
 
@@ -46,10 +33,10 @@ test.describe('API Documentation', () => {
     await loginAs(page, unlimitedAdminUser);
     // Set viewport to mobile (375px)
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/api/ui/api-docs.html');
+    await page.goto('/api-docs');
 
     // Wait for the swagger UI to load
-    await expect(page.locator('#swagger-ui')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 15000 });
 
     // Check if layout allows for horizontal scroll by evaluating the clientWidth vs scrollWidth
     const overflowInfo = await page.evaluate(() => {

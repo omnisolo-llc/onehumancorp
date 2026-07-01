@@ -167,6 +167,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_create_terminal_payment_intent_requires_configured_key() {
+        let client = StripeClient::new("".to_string());
+        let result = client.create_terminal_payment_intent("test_tenant", 1000, "usd", None, None, None, "idempotency_key").await;
+        let err = result.expect_err("Create intent must not be mocked when Stripe credentials are missing");
+        assert!(err.contains("Stripe API key"));
+    }
+
+    #[tokio::test]
     async fn test_capture_terminal_payment_intent_requires_configured_key() {
         let client = StripeClient::new("".to_string());
         let result = client.capture_terminal_payment_intent("pi_test_123").await;

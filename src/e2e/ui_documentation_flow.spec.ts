@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Documentation Features Flow', () => {
   test('User can navigate the Help Center and view an article', async ({ page }) => {

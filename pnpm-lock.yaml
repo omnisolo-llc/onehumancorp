@@ -148,7 +148,7 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5(next@16.2.7(@playwright/test@1.61.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       playwright:
-        specifier: ^1.50.1
+        specifier: ^1.61.1
         version: 1.61.1
       postcss:
         specifier: ^8.5.15

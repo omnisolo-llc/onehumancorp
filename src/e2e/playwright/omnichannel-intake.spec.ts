@@ -50,7 +50,7 @@ test.describe('Omnichannel Intake Agent feed card', () => {
     const feedSection = page.locator('section', { hasText: 'Proposals' }).first();
     await expect(feedSection).toBeVisible({ timeout: 15000 });
 
-    const approvalCard = feedSection.locator('[data-testid="instagram-dm-card"]').first();
+    const approvalCard = feedSection.locator('[data-testid="ambassador-reply-card"]').first();
 
     // Check if the drafted reply is visible, waiting until it's rendered by the agent
     for (let i = 0; i < 5; i++) {
@@ -69,11 +69,9 @@ test.describe('Omnichannel Intake Agent feed card', () => {
     await expect(approvalCard.getByText('Hello, what is the status of my order?')).toBeVisible({ timeout: 15000 });
 
     // Approve the response
-    const approveBtn1 = approvalCard.locator('..').locator('..').locator('[data-testid="feed-approve-btn"]').first();
-    const approveBtn2 = approvalCard.locator('..').locator('[data-testid="feed-approve-btn"]').first();
+    const targetBtn = approvalCard.locator('[data-testid="feed-approve-btn"]').first();
 
-    await expect(approveBtn1.or(approveBtn2)).toBeVisible();
-    const targetBtn = (await approveBtn1.isVisible()) ? approveBtn1 : approveBtn2;
+    await expect(targetBtn).toBeVisible();
 
     // Ensure the button has a min 44x44 bounding box
     const box = await targetBtn.boundingBox();

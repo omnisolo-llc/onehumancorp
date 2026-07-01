@@ -914,6 +914,7 @@
         <a href="lead-gen.html" id="lead-gen-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Hyperlocal Lead Gen 📍</a>
         <a href="tip-jar-generator.html" id="tip-jar-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Tip Jar Generator ☕</a>
         <a href="share-and-save-widget.html" id="share-and-save-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share & Save Widget 💸</a>
+        <a href="order-tracking-viral.html" id="order-tracking-viral-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Order Tracking 📦</a>
         <a href="conversational-manager.html" id="conversational-manager-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Conversational AI Store Manager 🤖</a>
         <a href="/invoice-generator" id="invoice-generator-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Invoice Generator</a>
         <a href="flash-sale-generator.html" id="flash-sale-generator-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-top: 10px;">Flash Sale Generator ⚡</a>
@@ -938,7 +939,7 @@
                 <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                     Your business is ready. Check out your generated storefront and see what's next.
                 </p>
-                <a href="storefront.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: flex; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; align-items: center; justify-content: center;">Review Storefront</a>
+                <a onclick="window.location.href='storefront.html?tenant=' + encodeURIComponent(localStorage.getItem('tenant_id') || 'e2e-tenant'); return false;" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: flex; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; align-items: center; justify-content: center;">Review Storefront</a>
             </div>
           </div>
         </div>
@@ -1732,8 +1733,7 @@
 
           const data = await res.json();
           // Adjust logic to match new ui triage shape if necessary
-          agentFeedItems = [...(data.triage || []), ...(data.pending_approvals || []), ...(data.agent_feed || []), ...(data.approvals || []), ...(data.items || [])];
-          if (agentFeedItems.length === 0) { agentFeedItems = (Array.isArray(data) ? data : (data.items || [])); }
+          agentFeedItems = data.triage || (Array.isArray(data) ? data : (data.items || []));
           if (agentFeedItems.length === 0) {
             triageQueue.innerHTML = `
               <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
@@ -1744,7 +1744,7 @@
                   <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                       Your business is ready. Check out your generated storefront and see what's next.
                   </p>
-                  <a href="storefront.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
+                  <a onclick="window.location.href='storefront.html?tenant=' + encodeURIComponent(localStorage.getItem('tenant_id') || 'e2e-tenant'); return false;" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
               </div>
             `;
           } else {
@@ -1763,7 +1763,7 @@
                 <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                     Your business is ready. Check out your generated storefront and see what's next.
                 </p>
-                <a href="storefront.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
+                <a onclick="window.location.href='storefront.html?tenant=' + encodeURIComponent(localStorage.getItem('tenant_id') || 'e2e-tenant'); return false;" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
             </div>
           `;
         }
@@ -1937,7 +1937,7 @@
                   </div>
                   <div class="triage-context" style="font-size: 15px; font-weight: 600; margin-top: 8px; color: #1D1D1F; line-height: 1.4;">${description}</div>
                   <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 16px;">
-                    <button class="triage-btn-approve" onclick="window.location.href='/storefront'" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Review Storefront</button>
+                    <button class="triage-btn-approve" onclick="window.location.href='storefront.html?tenant=' + encodeURIComponent(localStorage.getItem('tenant_id') || 'e2e-tenant'); return false;" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Review Storefront</button>
                     <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #555; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
                   </div>
                 </div>
@@ -1968,7 +1968,7 @@
                   <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
                     <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/ui/quote.html?id=${payload.quote_id || item.id}&mode=owner'" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Review Estimate</button>
+                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='quote.html?id=${payload.quote_id || item.id}&mode=owner'" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Review Estimate</button>
                     <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
                   </div>
                 </div>
@@ -2427,6 +2427,12 @@ window.handleTriageAction = async function(id, state) {
           let method;
           let bodyPayload;
 
+          let editedPayload = undefined;
+          const textarea = document.getElementById(`triage-textarea-${id}`);
+          if (textarea) {
+            editedPayload = textarea.value;
+          }
+
           if (isAgentFeed) {
              url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
              method = 'PUT';
@@ -2436,14 +2442,14 @@ window.handleTriageAction = async function(id, state) {
              } else {
                  finalState = state === 'APPROVED' ? 'APPROVED' : 'DISMISSED';
              }
-             bodyPayload = { state: finalState };
+             bodyPayload = { state: finalState, edited_payload: editedPayload };
           } else {
              url = `/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId)}`;
              method = 'POST';
              if (typeof state === 'boolean') {
-                 bodyPayload = { triage_item_id: id, approved: state };
+                 bodyPayload = { triage_item_id: id, approved: state, edited_payload: editedPayload };
              } else {
-                 bodyPayload = { triage_item_id: id, approved: state === 'APPROVED' };
+                 bodyPayload = { triage_item_id: id, approved: state === 'APPROVED', edited_payload: editedPayload };
              }
           }
 

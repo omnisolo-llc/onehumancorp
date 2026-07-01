@@ -76,7 +76,7 @@ impl UserRepository for PgUserRepository {
         } else {
             let query = r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5::jsonb, $6, current_setting('app.current_tenant')::text, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5::jsonb, $6, $10, $7, $8, $9)
             "#;
             sqlx::query(query)
             .bind(&user.id)
@@ -88,6 +88,7 @@ impl UserRepository for PgUserRepository {
             .bind(&user.oidc_subject)
             .bind(user.created_at)
             .bind(user.updated_at)
+            .bind(org_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -116,7 +117,7 @@ impl UserRepository for PgUserRepository {
         let row_opt = if should_bypass {
             sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         let row = match row_opt {
@@ -153,7 +154,7 @@ impl UserRepository for PgUserRepository {
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = current_setting('app.current_tenant')::text"
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = $2"
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -162,7 +163,7 @@ impl UserRepository for PgUserRepository {
         let row_opt = if should_bypass {
             sqlx::query(query).bind(username).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(username).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(username).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         let row = match row_opt {
@@ -198,7 +199,7 @@ impl UserRepository for PgUserRepository {
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = current_setting('app.current_tenant')::text"
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = $2"
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -207,7 +208,7 @@ impl UserRepository for PgUserRepository {
         let row_opt = if should_bypass {
             sqlx::query(query).bind(email).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(email).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(email).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         let row = match row_opt {
@@ -243,7 +244,7 @@ impl UserRepository for PgUserRepository {
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = current_setting('app.current_tenant')::text"
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2"
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -252,7 +253,7 @@ impl UserRepository for PgUserRepository {
         let row_opt = if should_bypass {
             sqlx::query(query).bind(sub).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(sub).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(sub).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         let row = match row_opt {
@@ -286,7 +287,7 @@ impl UserRepository for PgUserRepository {
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = current_setting('app.current_tenant')::text ORDER BY created_at"
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = $1 ORDER BY created_at"
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -295,7 +296,7 @@ impl UserRepository for PgUserRepository {
         let rows = if should_bypass {
             sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         let mut users = Vec::new();
@@ -338,7 +339,7 @@ impl UserRepository for PgUserRepository {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5::jsonb, active=$6,
             oidc_subject=$7, updated_at=$8
-            WHERE id=$1 AND tenant_id = current_setting('app.current_tenant')::text RETURNING id
+            WHERE id=$1 AND tenant_id = $9 RETURNING id
             "#
         };
 
@@ -368,6 +369,7 @@ impl UserRepository for PgUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
+                .bind(org_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?
@@ -389,7 +391,7 @@ impl UserRepository for PgUserRepository {
         let query = if should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
-            "DELETE FROM users WHERE id = $1 AND tenant_id = current_setting('app.current_tenant')::text RETURNING id"
+            "DELETE FROM users WHERE id = $1 AND tenant_id = $2 RETURNING id"
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -398,7 +400,7 @@ impl UserRepository for PgUserRepository {
         let res = if should_bypass {
             sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         } else {
-            sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
         };
 
         if res.is_none() {
@@ -412,8 +414,6 @@ impl UserRepository for PgUserRepository {
 
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
-        let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
@@ -433,11 +433,7 @@ impl UserRepository for PgUserRepository {
 
 
         let now = chrono::Utc::now();
-        let _ = if should_bypass {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
-        } else {
-            sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = current_setting('app.current_tenant')::text").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?
-        };
+        sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
@@ -460,9 +456,10 @@ impl UserRepository for PgUserRepository {
                 .await
                 .map_err(|e| e.to_string())?
         } else {
-            sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2 AND tenant_id = current_setting('app.current_tenant')::text")
+            sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2 AND tenant_id = $3")
                 .bind(jti)
                 .bind(chrono::Utc::now())
+                .bind(org_id)
                 .fetch_one(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?

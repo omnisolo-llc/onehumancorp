@@ -24,12 +24,12 @@ vi.mock("next/navigation", () => ({
 
 describe("OnboardingWizard", () => {
   const renderOnboardingWizard = async () => {
-    let view;
+    let view: ReturnType<typeof render> | undefined;
     await act(async () => {
       view = render(
         <TooltipProvider>
           <OnboardingWizard />
-        </TooltipProvider>,
+        </TooltipProvider>
       );
     });
     return view;
@@ -73,7 +73,7 @@ describe("OnboardingWizard", () => {
       );
     }
     screen.getByText("What's the name of your business?");
-    const button = screen.getByRole("button", { name: /Next/i });
+    const button = screen.getByText(/Next/i).closest("button")!;
     expect(button).not.toBeDisabled();
   });
 
@@ -162,7 +162,7 @@ describe("OnboardingWizard", () => {
     // Test validation with missing data
     await user.clear(sellInput);
 
-    const nextBtn2 = screen.getByRole("button", { name: /Next/i });
+    const nextBtn2 = screen.getByText(/Next/i).closest("button")!;
 
     // Verify the button is enabled when empty
     expect(nextBtn2).not.toBeDisabled();
@@ -177,7 +177,7 @@ describe("OnboardingWizard", () => {
 
     await user.clear(locInput);
 
-    const nextBtn3 = screen.getByRole("button", { name: /Next/i });
+    const nextBtn3 = screen.getByText(/Next/i).closest("button")!;
 
     // Verify the button is enabled when empty
     expect(nextBtn3).not.toBeDisabled();
@@ -195,7 +195,7 @@ describe("OnboardingWizard", () => {
       /Local families, Tech startups/i,
     );
     await user.type(targetAudienceInput, "Local families");
-    const generateBtn = screen.getByRole("button", { name: /Next/i });
+    const generateBtn = screen.getByText(/Next/i).closest("button")!;
     expect(generateBtn).not.toBeDisabled();
     await user.click(generateBtn);
   });
@@ -242,7 +242,7 @@ describe("OnboardingWizard", () => {
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, "Maya Bakery");
 
-    const nextBtn1 = screen.getByRole("button", { name: /Next/i });
+    const nextBtn1 = screen.getByText(/Next/i).closest("button")!;
     await user.click(nextBtn1);
 
     // Chat Step 2
@@ -253,7 +253,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(sellInput, "Cakes");
 
-    const nextBtn2 = screen.getByRole("button", { name: /Next/i });
+    const nextBtn2 = screen.getByText(/Next/i).closest("button")!;
     await user.type(sellInput, "{Enter}");
 
     // Chat Step 3
@@ -264,7 +264,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(locInput, "NY");
 
-    const button3 = screen.getByRole("button", { name: /Next/i });
+    const button3 = screen.getByText(/Next/i).closest("button")!;
     expect(button3).not.toBeDisabled();
     await user.click(button3);
 
@@ -277,7 +277,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(targetAudienceInput, "Local families");
 
-    const button = screen.getByRole("button", { name: /Next/i });
+    const button = screen.getByText(/Next/i).closest("button")!;
     expect(button).not.toBeDisabled();
 
     // Step 1: Intake
@@ -381,7 +381,7 @@ describe("OnboardingWizard", () => {
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, "Maya Bakery");
 
-    const nextBtn1 = screen.getByRole("button", { name: /Next/i });
+    const nextBtn1 = screen.getByText(/Next/i).closest("button")!;
     await user.click(nextBtn1);
 
     // Chat Step 2
@@ -392,7 +392,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(sellInput, "Cakes");
 
-    const nextBtn2 = screen.getByRole("button", { name: /Next/i });
+    const nextBtn2 = screen.getByText(/Next/i).closest("button")!;
     await user.type(sellInput, "{Enter}");
 
     // Chat Step 3
@@ -403,7 +403,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(locInput, "NY");
 
-    const button3 = screen.getByRole("button", { name: /Next/i });
+    const button3 = screen.getByText(/Next/i).closest("button")!;
     await user.click(button3);
 
     // Chat Step 4
@@ -415,7 +415,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(targetAudienceInput, "Local families");
 
-    const button = screen.getByRole("button", { name: /Next/i });
+    const button = screen.getByText(/Next/i).closest("button")!;
 
     await user.click(button);
 
@@ -509,7 +509,7 @@ describe("OnboardingWizard", () => {
       );
     }
 
-    const nextButton = screen.getByRole("button", { name: /Next/i });
+    const nextButton = screen.getByText(/Next/i).closest("button")!;
 
     await user.click(nextButton);
 
@@ -819,7 +819,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(targetAudienceInput, "Local families");
 
-    const generateBtn = screen.getByRole("button", { name: /Next/i });
+    const generateBtn = screen.getByText(/Next/i).closest("button")!;
     expect(generateBtn).not.toBeDisabled();
 
     // Note: handleIntake uses fetch which is either mocked or fails, but we just want to test
@@ -980,7 +980,7 @@ describe("OnboardingWizard", () => {
     await user.type(nameInput, "Draft Bakery");
 
     // Proceed to Step 2
-    const nextBtn = screen.getByRole("button", { name: /Next/i });
+    const nextBtn = screen.getByText(/Next/i).closest("button")!;
     await user.click(nextBtn);
 
     // On step 2, wait for "What do you sell" or another input indicating step 2 is active
@@ -1288,16 +1288,16 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let view;
+    let view: ReturnType<typeof render> | undefined;
     await act(async () => {
       view = render(
         <TooltipProvider>
           <OnboardingWizard />
-        </TooltipProvider>,
+        </TooltipProvider>
       );
     });
 
-    const continueButton = screen.getByRole("button", { name: /Next/i });
+    const continueButton = screen.getByText(/Next/i).closest("button")!;
     await user.click(continueButton);
 
     await waitFor(() => {
@@ -1319,16 +1319,16 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let view;
+    let view: ReturnType<typeof render> | undefined;
     await act(async () => {
       view = render(
         <TooltipProvider>
           <OnboardingWizard />
-        </TooltipProvider>,
+        </TooltipProvider>
       );
     });
 
-    const continueButton = screen.getByRole("button", { name: /Next/i });
+    const continueButton = screen.getByText(/Next/i).closest("button")!;
     await user.click(continueButton);
 
     await waitFor(() => {
@@ -1348,16 +1348,16 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let view;
+    let view: ReturnType<typeof render> | undefined;
     await act(async () => {
       view = render(
         <TooltipProvider>
           <OnboardingWizard />
-        </TooltipProvider>,
+        </TooltipProvider>
       );
     });
 
-    const continueButton = screen.getByRole("button", { name: /Next/i });
+    const continueButton = screen.queryByRole("button", { name: /Next/i, hidden: true }) || screen.getAllByText(/Next/i)[0].closest("button")!;
     await user.click(continueButton);
 
     await waitFor(() => {

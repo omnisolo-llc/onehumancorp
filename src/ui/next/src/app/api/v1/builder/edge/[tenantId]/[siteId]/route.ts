@@ -51,6 +51,14 @@ export async function GET(
     if (cacheTag) {
         response.headers.set('Cache-Tag', cacheTag);
     }
+    const surrogateKey = backendResponse.headers.get('Surrogate-Key');
+    if (surrogateKey) {
+        response.headers.set('Surrogate-Key', surrogateKey);
+    }
+    const etag = backendResponse.headers.get('ETag');
+    if (etag) {
+        response.headers.set('ETag', etag);
+    }
 
     return response;
   } catch (error) {

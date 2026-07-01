@@ -170,20 +170,6 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              timestamp: new Date().toISOString()
           };
 
-          for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
-            const crdtTx = {
-              id: `crdt_${transactionId}_${item.product.id}`,
-              type: 'CRDT_MUTATION',
-              timestamp: new Date().toISOString(),
-              payload: {
-                 entity_id: item.product.id,
-                 data: {
-                    pn_counter_n_increment: -item.quantity
-                 }
-              }
-            };
-            await SyncManager.getInstance().enqueue(crdtTx);
-          }
           await SyncManager.getInstance().enqueue(tx);
 
           setStatus('Cash sale saved offline. Will sync when network is restored.');
@@ -345,7 +331,23 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
       if (processResult.error) {
         onOptimisticRollback?.();
         setStatus('Payment processing failed: ' + processResult.error.message);
+        setReserving(false);
+        return;
       } else {
+        setStatus('Capturing payment intent...');
+        const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payment_intent_id: processResult.paymentIntent.id })
+        });
+        const captureData = await captureRes.json();
+        if (!captureData.success) {
+          onOptimisticRollback?.();
+          setStatus('Payment capture failed: ' + captureData.error_message);
+          setReserving(false);
+          return;
+        }
+
         setStatus('Payment successful. Committing inventory...');
 
         try {
@@ -499,6 +501,20 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
               if (processResult.error) {
                 if (onOptimisticRollback) onOptimisticRollback();
                 setStatus('Payment processing failed: ' + processResult.error.message);
+                setReserving(false);
+                return;
+              }
+
+              setStatus('Capturing payment intent...');
+              const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payment_intent_id: processResult.paymentIntent.id })
+              });
+              const captureData = await captureRes.json();
+              if (!captureData.success) {
+                if (onOptimisticRollback) onOptimisticRollback();
+                setStatus('Payment capture failed: ' + captureData.error_message);
                 setReserving(false);
                 return;
               }

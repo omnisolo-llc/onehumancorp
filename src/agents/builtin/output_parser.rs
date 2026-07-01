@@ -308,7 +308,11 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
             } else {
                 // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
                 let args_snippet = msg.tool_calls.first().map(|tc| tc.arguments.to_string());
-                crate::types::format_pydantic_error_string(parse_error_msg, args_snippet.as_deref(), None)
+                crate::types::format_pydantic_error_string(
+                    parse_error_msg,
+                    args_snippet.as_deref(),
+                    Some("Please strictly follow the Pydantic-first tool schema and try again. The provided arguments do not match the expected JSON schema. Fix the errors and output a new tool call.")
+                )
             };
             let tool_results = msg
                 .tool_calls
@@ -337,7 +341,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                 )
             } else {
                 format!(
-                    "Validation Error (Pydantic-first tool schema): Your previous completion failed to parse.\nFailed completion: {}\nReason: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
+                    "Validation Error (Pydantic-first tool schema): Your previous completion failed to parse.\nFailed completion: {}\nReason: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type. Check the Pydantic JSON schema constraints.",
                     msg.content, parse_error_msg
                 )
             };

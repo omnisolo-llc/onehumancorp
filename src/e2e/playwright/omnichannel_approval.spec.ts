@@ -55,13 +55,13 @@ test.describe('Omnichannel Inbox Approval Flow', () => {
         expect(bodyBox?.width).toBeLessThanOrEqual(375);
 
         // Check if the drafted reply is visible
-        const dmCard = page.getByTestId('instagram-dm-card');
+        const dmCard = page.getByTestId('ambassador-reply-card');
         await expect(dmCard).toBeVisible({ timeout: 15000 });
         await expect(dmCard.getByText('Do you have vegan chocolate cake available for Saturday?')).toBeVisible();
-        await expect(dmCard.getByText('Draft:')).toBeVisible();
+        await expect(dmCard.getByText('Draft Reply')).toBeVisible();
 
         // Approve the response
-        const approveButton = page.getByTestId('approve-instagram-dm');
+        const approveButton = page.getByTestId('feed-approve-btn');
         await expect(approveButton).toBeVisible();
 
         // Ensure the button has a min 44x44 bounding box
