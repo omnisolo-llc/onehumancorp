@@ -19,10 +19,10 @@ ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS business_milestones DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
-INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension)
+INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension, default_currency)
 VALUES
-  ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'Starter', false),
-  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro', false)
+  ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'Starter', false, 'USD'),
+  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro', false, 'USD')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
@@ -228,11 +228,11 @@ SET title = EXCLUDED.title,
     metadata = EXCLUDED.metadata,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO orders (id, tenant_id, customer_id, total_amount_cents, status)
+INSERT INTO orders (id, tenant_id, customer_id, total_amount_cents, currency, status)
 VALUES
-  ('e2e-order-1', 'e2e-tenant', 'e2e-customer-ava', 39.99, 'ready'),
-  ('e2e-order-2', 'e2e-tenant', 'e2e-customer-ben', 75.00, 'pending'),
-  ('e2e-order-abandoned-1', 'e2e-tenant', 'e2e-customer-ben', 100.00, 'abandoned')
+  ('e2e-order-1', 'e2e-tenant', 'e2e-customer-ava', 39.99, 'USD', 'ready'),
+  ('e2e-order-2', 'e2e-tenant', 'e2e-customer-ben', 75.00, 'USD', 'pending'),
+  ('e2e-order-abandoned-1', 'e2e-tenant', 'e2e-customer-ben', 100.00, 'USD', 'abandoned')
 ON CONFLICT (id) DO UPDATE
 SET customer_id = EXCLUDED.customer_id,
     total_amount_cents = EXCLUDED.total_amount_cents,
@@ -551,8 +551,8 @@ ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS team_invites ENABLE ROW LEVEL SECURITY;
-INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES
-('823e4567-e89b-12d3-a456-426614174000', 'e2e-tenant', '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', 'DRAFT', 15000, 5000, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, currency, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES
+('823e4567-e89b-12d3-a456-426614174000', 'e2e-tenant', '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b', 'DRAFT', 15000, 'USD', 5000, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES
@@ -563,10 +563,10 @@ VALUES
   ('e2e-product-cake-pos', 'e2e-tenant-pos', 'POS Sync Product', 'POS Sync Product', 'physical', 10.00, 1000, 'USD', 1, '{"seeded_by":"e2e"}'::jsonb),
   ('e2e-product-cake-pos-additional', 'e2e-tenant-pos-additional', 'POS Additional', 'POS Additional', 'physical', 10.00, 1000, 'USD', 5, '{"seeded_by":"e2e"}'::jsonb);
 
-INSERT INTO tenants (id, name, industry, status, skip_onboarding)
+INSERT INTO tenants (id, name, industry, status, skip_onboarding, default_currency)
 VALUES
-  ('e2e-tenant-pos', 'OHC E2E Bakery POS', 'Food and beverage', 'active', true),
-  ('e2e-tenant-pos-additional', 'OHC E2E Bakery POS Add', 'Food and beverage', 'active', true);
+  ('e2e-tenant-pos', 'OHC E2E Bakery POS', 'Food and beverage', 'active', true, 'USD'),
+  ('e2e-tenant-pos-additional', 'OHC E2E Bakery POS Add', 'Food and beverage', 'active', true, 'USD');
 INSERT INTO products (id, tenant_id, title, description, product_type, price, price_cents, currency, inventory_count, metadata)
 VALUES
   ('e2e-product-pos-sync', 'e2e-tenant', 'POS Sync Product', 'POS Sync Product', 'physical', 10.00, 1000, 'USD', 1, '{"seeded_by":"e2e"}'::jsonb);
@@ -582,10 +582,10 @@ INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALU
 ('ms_e2e_revenue_10k', 'e2e-milestone-tenant', 'revenue_10k', CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 UPDATE tenants SET tier = 'Starter' WHERE id = 'e2e-tenant';
-INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension)
+INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension, default_currency)
 VALUES
-  ('e2e-tenant-free', 'OHC E2E Free Bakery', 'Food and beverage', 'Free', false),
-  ('e2e-tenant-business', 'OHC E2E Business Bakery', 'Food and beverage', 'Business', false)
+  ('e2e-tenant-free', 'OHC E2E Free Bakery', 'Food and beverage', 'Free', false, 'USD'),
+  ('e2e-tenant-business', 'OHC E2E Business Bakery', 'Food and beverage', 'Business', false, 'USD')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,

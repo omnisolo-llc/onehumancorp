@@ -32,6 +32,7 @@ message Order {
   int64 amount_cents = 4;
   string status = 5;
   int64 created_at_unix = 6;
+  string currency = 7;
 }
 
 message Quote {
@@ -41,6 +42,7 @@ message Quote {
   int64 total_amount = 4;
   int64 required_deposit = 5;
   int64 expires_at_unix = 6;
+  string currency = 7;
 }
 
 message Invoice {
@@ -48,6 +50,7 @@ message Invoice {
   string tenant_id = 2;
   string type = 3;
   int64 amount = 4;
+  string currency = 5;
 }
 
 message Booking {
@@ -332,6 +335,7 @@ message QuoteLineItem {
   int64 unit_price_cents = 2;
   int32 quantity = 3;
   bool is_optional = 4;
+  string currency = 5;
 }
 
 message CreateQuoteRequest {
@@ -341,6 +345,7 @@ message CreateQuoteRequest {
   int64 required_deposit = 4;
   optional string service_id = 5;
   optional string proposed_slot_id = 6;
+  string currency = 7;
 }
 
 message FetchQuoteRequest {
@@ -356,6 +361,7 @@ message QuoteResponse {
   repeated QuoteLineItem line_items = 6;
   optional string service_id = 7;
   optional string proposed_slot_id = 8;
+  string currency = 9;
 }
 
 message BookingResource {
@@ -376,6 +382,7 @@ message ServiceDefinition {
     string description = 3;
     int64 price_cents = 4;
     repeated ServiceResourceRequirement resource_requirements = 5;
+  string currency = 6;
 }
 
 message UnifiedBooking {
