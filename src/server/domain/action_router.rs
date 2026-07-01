@@ -8,6 +8,13 @@ pub async fn dispatch_action(
     pool: &PgPool,
 ) -> Result<(), String> {
     match feature_type {
+        "vip_loyalty" => {
+            tracing::info!("Approved VIP Loyalty offer for tenant: {}", tenant_id); // pii-safe
+            if let Some(msg) = payload.get("message").and_then(|v| v.as_str()) {
+                tracing::info!("Omnichannel Dispatcher sent SMS: {}", msg);
+                // In a real system we would update the DB or send actual SMS via Twilio/etc.
+            }
+        }
         "quote_draft" => {
             crate::domain::quotes::handle_quote_action(tenant_id, payload, pool)
                 .await

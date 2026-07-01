@@ -1975,6 +1975,32 @@
 
 
 
+          if (actionType === 'send_vip_offer' || item.context_payload?.feature_type === 'vip_loyalty' || (item.payload && typeof item.payload === 'string' && item.payload.includes('vip_loyalty'))) {
+            let payload = item.context_payload || item.payload || {};
+            if (typeof payload === 'string') {
+                try { payload = JSON.parse(payload); } catch(e){}
+            }
+            const draftMsg = item.proposed_content || item.proposed_action?.draft || "";
+            const customerId = payload.customer_id || "";
+            return `
+            <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+              <div class="triage-header" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(52, 199, 89, 0.1); color: #34C759; padding: 4px 8px; border-radius: 16px; font-weight: 800; letter-spacing: 0.5px;">VIP Loyalty</div>
+                <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: #FF9500;">High</div>
+              </div>
+              <h2 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1D1D1F;">${item.title}</h2>
+              <p style="margin: 0 0 12px 0; font-size: 14px; color: #86868B; line-height: 1.4;">${item.description}</p>
+              <div style="background: rgba(0, 0, 0, 0.03); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                  <textarea id="vip-offer-msg-${item.id}" style="width: 100%; min-height: 60px; border: none; background: transparent; font-size: 14px; font-family: inherit; resize: vertical;">${draftMsg}</textarea>
+              </div>
+              <div class="triage-actions" style="display: flex; gap: 8px; margin-top: auto;">
+                <button class="triage-btn-approve" data-testid="feed-approve-vip-btn" onclick="handleTriageAction('${item.id}', true, 'Send Offer', '${customerId}', document.getElementById('vip-offer-msg-${item.id}').value)" style="flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center;">Approve & Send</button>
+                <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; background: rgba(0,0,0,0.05); color: #1D1D1F; padding: 12px 16px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">Dismiss</button>
+              </div>
+            </div>
+            `;
+          }
+
           if (actionType === 'SocialPostDraft' || item.context_payload?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft') {
             let parsedPayload = item.proposed_action || item.context_payload || {};
             return `
