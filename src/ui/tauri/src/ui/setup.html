@@ -51,16 +51,7 @@
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
-      @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-      }
+
       .old-glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -72,15 +63,7 @@
           0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
 
-      @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      }
+
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
           background: rgba(22, 22, 26, 0.7);
@@ -91,7 +74,8 @@
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
       }
-      .old-glassmorphism {
+      @media (prefers-color-scheme: dark) {
+        .old-glassmorphism {
           border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
@@ -3908,7 +3892,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "success.html";
+              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
               return;
             }
 
@@ -3952,7 +3936,7 @@
               localStorage.removeItem("onboardingState");
               localStorage.setItem("has_onboarded", "true");
 
-              window.location.href = "success.html";
+              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
             } else {
               const errData = await response.json().catch(() => ({}));
               throw new Error(
@@ -4056,7 +4040,7 @@
               }
 
               setTimeout(() => {
-                window.location.href = "success.html";
+                window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
               }, 1500);
               return;
             }
@@ -4110,7 +4094,7 @@
             }
 
             setTimeout(() => {
-              window.location.href = "success.html";
+              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
             }, 1500);
           } catch (err) {
             console.error(err);
@@ -4259,7 +4243,7 @@
                   localStorage.removeItem("onboardingState");
                   localStorage.setItem("has_onboarded", "true");
 
-                  window.location.href = "success.html";
+                  window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
                 })
                 .catch((err) => {
                   console.error(err);
@@ -4301,7 +4285,7 @@
                     }
                     localStorage.removeItem("onboardingState");
                     localStorage.setItem("has_onboarded", "true");
-                    window.location.href = "success.html";
+                    window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
                   } else {
                     const errData = await response.json().catch(() => ({}));
                     throw new Error(
