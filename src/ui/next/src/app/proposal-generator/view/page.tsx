@@ -8,20 +8,75 @@ import { PoweredByOHC } from '../../components/PoweredByOHC';
 function ProposalViewContent() {
   const searchParams = useSearchParams();
   const [data, setData] = useState<any>(null);
+  const [error, setError] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalSuccess, setApprovalSuccess] = useState(false);
+
+  const proposalId = searchParams.get('id');
 
   useEffect(() => {
-    const encodedData = searchParams.get('data');
-    if (encodedData) {
-      try {
-        const base64Str = encodedData.replace(/-/g, '+').replace(/_/g, '/');
-        const utf8Encoded = escape(atob(base64Str));
-        const decoded = JSON.parse(decodeURIComponent(utf8Encoded));
-        setData(decoded);
-      } catch (e) {
-        console.error("Failed to decode proposal data");
+    if (proposalId) {
+      fetch(`/api/v1/proposals/${proposalId}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch");
+          return res.json();
+        })
+        .then((json) => setData(json))
+        .catch((e) => {
+          console.error("Failed to load proposal data", e);
+          setError(true);
+        });
+    } else {
+      // Fallback for older links or backwards compatibility
+      const encodedData = searchParams.get('data');
+      if (encodedData) {
+        try {
+          const base64Str = encodedData.replace(/-/g, '+').replace(/_/g, '/');
+          const utf8Encoded = escape(atob(base64Str));
+          const decoded = JSON.parse(decodeURIComponent(utf8Encoded));
+          setData(decoded);
+        } catch (e) {
+          console.error("Failed to decode proposal data");
+          setError(true);
+        }
+      } else {
+        setError(true);
       }
     }
-  }, [searchParams]);
+  }, [proposalId, searchParams]);
+
+  const handleApprove = async () => {
+    if (!proposalId) {
+       alert("Cannot approve a legacy proposal link. Please ask for a new link.");
+       return;
+    }
+
+    setIsApproving(true);
+    try {
+      const res = await fetch(`/api/v1/proposals/${proposalId}/approve`, {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to approve proposal");
+      }
+
+      setApprovalSuccess(true);
+    } catch (e) {
+      console.error(e);
+      alert("An error occurred while approving the proposal.");
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-inter bg-gray-50">
+        <div className="text-red-500 font-medium">Error: Invalid or corrupted proposal data.</div>
+      </div>
+    );
+  }
 
   if (!data) {
     return (
@@ -31,8 +86,37 @@ function ProposalViewContent() {
     );
   }
 
-  const { tenant, clientName, projectScope, amount, timeline } = data;
+  const tenant = data.tenant || data.tenant_id || "my-store";
+  const clientName = data.clientName || data.client_name || "Client";
+  const projectScope = data.projectScope || data.project_scope || "Project details";
+  const amount = data.amount || (data.total_amount_cents ? (data.total_amount_cents / 100).toString() : "0");
+  const timeline = data.timeline || data.estimated_timeline || "TBD";
+
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  if (approvalSuccess) {
+     return (
+        <div className="min-h-screen flex items-center justify-center font-inter bg-gray-50 p-4">
+           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 md:p-12 text-center max-w-lg animate-fade-in">
+              <div className="text-5xl mb-6">🎉</div>
+              <h2 className="text-2xl font-bold text-gray-900 font-outfit mb-4">Proposal Approved!</h2>
+              <p className="text-gray-600 mb-8">
+                 Thank you for approving the proposal. An invoice has been automatically generated and sent to you.
+              </p>
+              <div className="text-center flex flex-col items-center">
+                 <PoweredByOHC tenantId={tenant} />
+              </div>
+           </div>
+           <style dangerouslySetInnerHTML={{__html: `
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+            .font-inter { font-family: 'Inter', sans-serif; }
+            .font-outfit { font-family: 'Outfit', sans-serif; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+          `}} />
+        </div>
+     );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8 font-inter">
@@ -72,9 +156,13 @@ function ProposalViewContent() {
             <span className="text-4xl font-extrabold text-indigo-600 font-outfit">${parseFloat(amount).toFixed(2)}</span>
           </div>
 
-          <button className="w-full mt-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all text-lg flex items-center justify-center gap-2 transform hover:-translate-y-1">
+          <button
+             onClick={handleApprove}
+             disabled={isApproving}
+             className="w-full mt-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all text-lg flex items-center justify-center gap-2 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-            Approve Proposal
+            {isApproving ? "Approving..." : "Approve Proposal"}
           </button>
         </section>
 

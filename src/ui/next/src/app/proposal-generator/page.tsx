@@ -17,26 +17,46 @@ export default function ProposalGeneratorPage() {
     setTenantId(tenant);
   }, []);
 
-  const generateLink = () => {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const generateLink = async () => {
     if (!clientName || !projectScope || !amount || !timeline) {
       alert('Please fill out all fields.');
       return;
     }
 
-    const data = {
-      tenant: tenantId,
-      clientName,
-      projectScope,
-      amount,
-      timeline,
-    };
+    setIsGenerating(true);
+    try {
+      const data = {
+        tenant: tenantId,
+        clientName,
+        projectScope,
+        amount,
+        timeline,
+      };
 
-    const utf8Encoded = encodeURIComponent(JSON.stringify(data));
-    const base64Str = btoa(unescape(utf8Encoded));
-    const base64UrlStr = base64Str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      const res = await fetch('/api/v1/proposals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+        },
+        body: JSON.stringify(data),
+      });
 
-    const url = `${window.location.origin}/proposal-generator/view?data=${base64UrlStr}`;
-    setShareLink(url);
+      if (!res.ok) {
+        throw new Error('Failed to create proposal');
+      }
+
+      const result = await res.json();
+      const url = `${window.location.origin}/proposal-generator/view?id=${result.id}`;
+      setShareLink(url);
+    } catch (e) {
+      console.error(e);
+      alert('Error creating proposal. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCopy = async () => {
@@ -119,9 +139,10 @@ export default function ProposalGeneratorPage() {
             <div className="pt-4">
               <button
                 onClick={generateLink}
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all text-lg"
+                disabled={isGenerating}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all text-lg disabled:bg-indigo-400"
               >
-                Generate Shareable Proposal
+                {isGenerating ? 'Generating...' : 'Generate Shareable Proposal'}
               </button>
             </div>
           </div>
