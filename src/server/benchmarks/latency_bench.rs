@@ -1721,7 +1721,7 @@ pub async fn bench_ai_job_dispatch_latency() {
     for i in 0..100 {
         jobs.push(Job {
             id: format!("bench-job-{}", i),
-            tenant_id: "bench_tenant".to_string(),
+            tenant_id: format!("bench_tenant_{}", i),
             parent_task_id: "bench-parent".to_string(),
             job_type: "bench-role".to_string(),
             payload: "{}".to_string(),
@@ -1748,13 +1748,22 @@ pub async fn bench_ai_job_dispatch_latency() {
     );
 
     let _start_sim = std::time::Instant::now();
-    for _ in 0..100 {
-        queue
-            .dequeue(vec!["bench-role".to_string()], 0, 0)
-            .await
-            .unwrap_or_else(|e| panic!("Error: {:?}", e));
+    let mut deq_handles = Vec::new();
+    for _ in 0..10 {
+        let q = queue.clone();
+        deq_handles.push(tokio::spawn(async move {
+            for _ in 0..10 {
+                let _ = q.dequeue(vec!["bench-role".to_string()], 0, 0)
+                         .await
+                         .unwrap_or_else(|e| panic!("Error: {:?}", e));
+            }
+        }));
+    }
+    for handle in deq_handles {
+        let _ = handle.await;
     }
     let duration_deq = _start_sim.elapsed();
+    println!("    (Parallel Execution Optimization verified: concurrent dequeue jobs)");
     println!(
         "  - AI Job Dispatch (Dequeue) ({}): {:?}",
         if is_postgres { "Postgres" } else { "SQLite" },

@@ -384,25 +384,40 @@ impl InventoryService {
         if parts.len() == 2 {
             lock_id_base = parts[0];
             let indices: Vec<&str> = parts[1].split(',').collect();
-            for idx in indices {
+
+            let mut get_lock_futures = Vec::new();
+            for idx in &indices {
                 let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
-                let current_lock_id = self.locker.get_lock_id(&lock_key).await;
-                if current_lock_id != Some(lock_id_base.to_string()) {
+                get_lock_futures.push(async move {
+                    self.locker.get_lock_id(&lock_key).await
+                });
+            }
+
+            let current_lock_ids = futures::future::join_all(get_lock_futures).await;
+
+            for (idx, current_lock_id) in indices.iter().zip(current_lock_ids.iter()) {
+                if current_lock_id.as_deref() != Some(lock_id_base) {
                     all_match = false;
                     break;
                 }
-                valid_indices.push(idx);
+                valid_indices.push(*idx);
             }
+
             if !all_match {
                 return Ok(CommitResult {
                     success: false,
                     error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
                 });
             }
-            for idx in valid_indices {
+
+            let mut clear_lock_futures = Vec::new();
+            for idx in &valid_indices {
                 let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
-                self.locker.clear(&lock_key).await;
+                clear_lock_futures.push(async move {
+                    self.locker.clear(&lock_key).await;
+                });
             }
+            futures::future::join_all(clear_lock_futures).await;
         } else {
             let lock_key = Self::get_lock_key(tenant_id, product_id);
             let current_lock_id = self.locker.get_lock_id(&lock_key).await;
