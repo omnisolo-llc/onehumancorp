@@ -102,6 +102,15 @@ impl BudgetManager {
         let limit_threshold_cents = ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
         current >= limit_threshold_cents
     }
+
+    pub fn is_spend_rate_too_high(&self, time_elapsed: std::time::Duration, total_duration: std::time::Duration) -> bool {
+        if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
+            return false;
+        }
+        let current = self.current.load(Ordering::SeqCst);
+        let expected_spend = (self.total_limit_cents as f64) * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
+        current as f64 > expected_spend * 1.5 // 50% higher than expected rate
+    }
 }
 
 #[cfg(test)]
@@ -270,5 +279,15 @@ mod tests {
         let threshold_manager = BudgetManager::new(100.0).with_alert_threshold(0.01);
         threshold_manager.record_spend(0.02).expect("failed to unwrap");
         assert!(threshold_manager.check_alert_threshold());
+    }
+
+    #[test]
+    fn test_is_spend_rate_too_high() {
+        let manager = BudgetManager::new(100.0); // $100 limit, 10000 cents
+        manager.record_spend(20.0).expect("failed to unwrap"); // 2000 cents
+        let one_day = std::time::Duration::from_secs(86400);
+        let thirty_days = std::time::Duration::from_secs(30 * 86400);
+        assert!(manager.is_spend_rate_too_high(one_day, thirty_days)); // 20% in 1 day is way too high
+        assert!(!manager.is_spend_rate_too_high(std::time::Duration::from_secs(10 * 86400), thirty_days)); // 20% in 10 days is fine
     }
 }

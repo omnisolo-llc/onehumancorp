@@ -779,4 +779,45 @@ mod tests {
                 assert!(status.soft_limit_reached);
             }
     }
+
+    #[tokio::test]
+    async fn test_get_tenant_storage_used_negative() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-storage-negative";
+
+                let mut conn = limiter.get_connection().await.expect("failed to unwrap");
+                let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+
+                // Set negative storage manually
+                let _ : () = redis::AsyncCommands::set(&mut conn, &storage_key, -100).await.unwrap_or(());
+
+                // Getting storage used should fix the negative value to 0
+                let used = limiter.get_tenant_storage_used(tenant_id).await.expect("failed to unwrap");
+                assert_eq!(used, 0);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_record_token_usage_negative_or_zero() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-tokens-neg";
+
+                // record 0 tokens
+                let res = limiter.record_token_usage(tenant_id, "gpt-4o", 0).await;
+                assert!(res.is_ok());
+
+                // record negative tokens
+                let res = limiter.record_token_usage(tenant_id, "gpt-4o", -10).await;
+                assert!(res.is_ok());
+
+                let usage = limiter.get_token_usage(tenant_id).await.expect("failed to get usage");
+                assert_eq!(usage, 0);
+            }
+        }
+    }
 }
