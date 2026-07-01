@@ -2427,6 +2427,12 @@ window.handleTriageAction = async function(id, state) {
           let method;
           let bodyPayload;
 
+          let editedPayload = undefined;
+          const textarea = document.getElementById(`triage-textarea-${id}`);
+          if (textarea) {
+            editedPayload = textarea.value;
+          }
+
           if (isAgentFeed) {
              url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
              method = 'PUT';
@@ -2436,14 +2442,14 @@ window.handleTriageAction = async function(id, state) {
              } else {
                  finalState = state === 'APPROVED' ? 'APPROVED' : 'DISMISSED';
              }
-             bodyPayload = { state: finalState };
+             bodyPayload = { state: finalState, edited_payload: editedPayload };
           } else {
              url = `/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId)}`;
              method = 'POST';
              if (typeof state === 'boolean') {
-                 bodyPayload = { triage_item_id: id, approved: state };
+                 bodyPayload = { triage_item_id: id, approved: state, edited_payload: editedPayload };
              } else {
-                 bodyPayload = { triage_item_id: id, approved: state === 'APPROVED' };
+                 bodyPayload = { triage_item_id: id, approved: state === 'APPROVED', edited_payload: editedPayload };
              }
           }
 
