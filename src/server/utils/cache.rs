@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
 use dashmap::DashMap;
 use dashmap::DashSet;
-use tokio::sync::broadcast;
+// use tokio::sync::broadcast; // removed unused
 
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -25,7 +25,7 @@ struct CacheValue<T> {
 pub struct HybridCacheInner<T> {
     local: OnceLock<DashMap<String, CacheValue<T>>>,
     local_tags: OnceLock<DashMap<String, DashSet<String>>>,
-    flight_group: OnceLock<DashMap<String, broadcast::Sender<T>>>,
+    flight_group: OnceLock<DashMap<String, tokio::sync::watch::Sender<Option<T>>>>,
     redis_client: Option<redis::Client>,
     redis_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
     max_local_capacity: usize,
@@ -81,7 +81,7 @@ where
         self.inner.local_tags.get_or_init(|| DashMap::new())
     }
 
-    fn get_flight_group(&self) -> &DashMap<String, broadcast::Sender<T>> {
+    fn get_flight_group(&self) -> &DashMap<String, tokio::sync::watch::Sender<Option<T>>> {
         self.inner.flight_group.get_or_init(|| DashMap::new())
     }
 
@@ -91,6 +91,66 @@ where
 
     /// Gets the value from the cache or fetches it using the provided future.
     /// Ensures that only one fetch happens concurrently for a given key.
+    pub async fn get_or_fetch_with_tags_swr<F, Fut>(&self, key: &str, tags: Vec<String>, ttl: Duration, fetch: F) -> Option<T>
+    where
+        F: FnOnce() -> Fut + Send + 'static,
+        Fut: std::future::Future<Output = Option<T>> + Send + 'static,
+    {
+        let res = self.get_with_swr(key).await;
+        if let Some((v, is_stale)) = res.clone() {
+            if !is_stale {
+                return Some(v);
+            }
+        }
+
+        let flight_group = self.get_flight_group();
+
+        let mut rx = {
+            if let Some(tx) = flight_group.get(key) {
+                if let Some((v, true)) = res {
+                    return Some(v);
+                }
+                tx.subscribe()
+            } else {
+                let (tx, _rx) = tokio::sync::watch::channel(None);
+                flight_group.insert(key.to_string(), tx.clone());
+
+                if let Some((v, true)) = res {
+                    let cache_clone = self.clone();
+                    let key_clone = key.to_string();
+                    let tags_clone = tags.clone();
+                    tokio::spawn(async move {
+                        if let Some(val) = fetch().await {
+                            cache_clone.set_with_tags(&key_clone, val.clone(), tags_clone, ttl).await;
+                            let _ = tx.send(Some(val));
+                        }
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                        cache_clone.get_flight_group().remove(&key_clone);
+                    });
+                    return Some(v);
+                } else {
+                    // Miss
+                    if let Some(val) = fetch().await {
+                        self.set_with_tags(key, val.clone(), tags, ttl).await;
+                        let _ = tx.send(Some(val.clone()));
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                        flight_group.remove(key);
+                        return Some(val);
+                    }
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    flight_group.remove(key);
+                    return None;
+                }
+            }
+        };
+
+        if rx.changed().await.is_ok() {
+            rx.borrow().clone()
+        } else {
+            None
+        }
+    }
+
     pub async fn get_or_fetch_with_swr<F, Fut>(&self, key: &str, ttl: Duration, fetch: F) -> Option<T>
     where
         F: FnOnce() -> Fut + Send + 'static,
@@ -107,9 +167,12 @@ where
 
         let mut rx = {
             if let Some(tx) = flight_group.get(key) {
+                if let Some((v, true)) = res {
+                    return Some(v);
+                }
                 tx.subscribe()
             } else {
-                let (tx, _rx) = broadcast::channel(1);
+                let (tx, _rx) = tokio::sync::watch::channel(None);
                 flight_group.insert(key.to_string(), tx.clone());
 
                 if let Some((v, true)) = res {
@@ -118,8 +181,9 @@ where
                     tokio::spawn(async move {
                         if let Some(val) = fetch().await {
                             cache_clone.set(&key_clone, val.clone(), ttl).await;
-                            let _ = tx.send(val.clone());
+                            let _ = tx.send(Some(val));
                         }
+                        tokio::time::sleep(Duration::from_millis(50)).await;
                         cache_clone.get_flight_group().remove(&key_clone);
                     });
                     return Some(v);
@@ -127,17 +191,23 @@ where
                     // Miss
                     if let Some(val) = fetch().await {
                         self.set(key, val.clone(), ttl).await;
-                        let _ = tx.send(val.clone());
+                        let _ = tx.send(Some(val.clone()));
+                        tokio::time::sleep(Duration::from_millis(50)).await;
                         flight_group.remove(key);
                         return Some(val);
                     }
+                    tokio::time::sleep(Duration::from_millis(50)).await;
                     flight_group.remove(key);
                     return None;
                 }
             }
         };
 
-        rx.recv().await.ok()
+        if rx.changed().await.is_ok() {
+            rx.borrow().clone()
+        } else {
+            None
+        }
     }
 
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {

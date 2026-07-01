@@ -190,64 +190,42 @@ async fn list_feed_items(
 
     let cache_key = format!("agent_feed:{}:{}:{}:{}", tenant_id, limit, offset, mobile_optimized);
     let cache = get_agent_feed_cache();
+    let tag = format!("agent_feed_tenant:{}", tenant_id);
 
-    if let Some((cached_resp, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            return (StatusCode::OK, Json(cached_resp)).into_response();
-        }
-
-        let pool_bg = pool.clone();
-        let tenant_id_bg = tenant_id.clone();
-        let cache_bg = cache.clone();
-        let cache_key_bg = cache_key.clone();
-
-        tokio::spawn(async move {
-            let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool_bg.clone(), store: crate::db::DbStore::Postgres }));
-            if let Ok(items) = repo.list(&tenant_id_bg, limit, offset, mobile_optimized).await {
-                let any_response = if mobile_optimized {
-                    let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
-                        id: item.id,
-                        event_source: item.event_source,
-                        context_payload: None,
-                        proposed_action: None,
-                        lifecycle_state: item.lifecycle_state,
-                        created_at: item.created_at,
-                    }).collect();
-                    AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
-                } else {
-                    AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
-                };
-                let tag = format!("agent_feed_tenant:{}", tenant_id_bg);
-                cache_bg.set_with_tags(&cache_key_bg, any_response, vec![tag], std::time::Duration::from_secs(60)).await;
+    let result = cache.get_or_fetch_with_tags_swr(
+        &cache_key,
+        vec![tag],
+        std::time::Duration::from_secs(60),
+        move || async move {
+            let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
+            match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
+                Ok(items) => {
+                    let any_response = if mobile_optimized {
+                        let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
+                            id: item.id,
+                            event_source: item.event_source,
+                            context_payload: None,
+                            proposed_action: None,
+                            lifecycle_state: item.lifecycle_state,
+                            created_at: item.created_at,
+                        }).collect();
+                        AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
+                    } else {
+                        AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
+                    };
+                    Some(any_response)
+                },
+                Err(e) => {
+                    tracing::error!("Failed to list agent feed items: {}", e);
+                    None
+                }
             }
-        });
+        }
+    ).await;
 
-        return (StatusCode::OK, Json(cached_resp)).into_response();
-    }
-
-    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
-
-    match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
-        Ok(items) => {
-            let any_response = if mobile_optimized {
-                let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
-                    id: item.id,
-                    event_source: item.event_source,
-                    context_payload: None,
-                    proposed_action: None,
-                    lifecycle_state: item.lifecycle_state,
-                    created_at: item.created_at,
-                }).collect();
-                AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
-            } else {
-                AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
-            };
-            let tag = format!("agent_feed_tenant:{}", tenant_id);
-            cache.set_with_tags(&cache_key, any_response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
-            (StatusCode::OK, Json(any_response)).into_response()
-        },
-        Err(e) => {
-            tracing::error!("Failed to list agent feed items: {}", e);
+    match result {
+        Some(any_response) => (StatusCode::OK, Json(any_response)).into_response(),
+        None => {
             if mobile_optimized {
                 (StatusCode::INTERNAL_SERVER_ERROR, Json(AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: vec![] }))).into_response()
             } else {
