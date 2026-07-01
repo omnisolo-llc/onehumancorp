@@ -15,6 +15,7 @@ export default defineConfig({
       '**/external/**',
       '**/.next/**',
       '**/coverage/**',
+      '**/bazel-*/**',
       // '**/api/**',
     ],
     coverage: {
