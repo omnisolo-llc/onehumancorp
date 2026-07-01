@@ -1,4 +1,5 @@
 use std::sync::OnceLock;
+use tracing::warn;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PaymentMethod {
@@ -58,6 +59,10 @@ impl PaymentRouter {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
+        if amount_usd > 10000.0 {
+            warn!("Very large amount: ${}. ACH might take longer to settle.", amount_usd);
+        }
+
         let ach_min = Self::get_ach_min_amount();
         if ach_fee < card_fee && amount_usd >= ach_min {
             PaymentMethod::Ach
@@ -71,6 +76,10 @@ impl PaymentRouter {
     pub fn calculate_fee_savings(amount_usd: f64) -> f64 {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
+
+        if amount_usd > 10000.0 {
+            warn!("Very large amount: ${}. ACH might take longer to settle.", amount_usd);
+        }
 
         let ach_min = Self::get_ach_min_amount();
         if ach_fee < card_fee && amount_usd >= ach_min {
