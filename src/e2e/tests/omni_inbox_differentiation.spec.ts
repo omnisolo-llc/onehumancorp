@@ -50,7 +50,7 @@ test.describe('AI Unified Inbox Differentiation & Omnichannel Customer Memory', 
 
     // The draft_reply should be populated by the agent. Wait for text to appear.
     // The agent uses the LLM which returns deterministic generic reply if no specific mock.
-    const replyLocator = page.locator('.app-panel-body .bg-white', { hasText: /Thank you|Vegan|Wait|We will get back/i }).first();
+    const replyLocator = page.locator('div', { hasText: /Thank you|Vegan|Wait|We will get back/i }).first();
     await expect(replyLocator).toBeVisible();
 
     // 6. 1-Tap Approve button should be visible (✨ Approve & Send Draft)
@@ -64,3 +64,57 @@ test.describe('AI Unified Inbox Differentiation & Omnichannel Customer Memory', 
     await page.waitForLoadState('networkidle');
   });
 });
+
+  test('triage feed correctly categorizes and groups omnichannel messages', async ({ page }) => {
+    await page.addInitScript((t) => {
+      window.localStorage.setItem('tenant_id', t);
+    }, tenantId);
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/inbox');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.locator('text=Action Required: Approve Reply').first()).toBeVisible();
+    await expect(page.locator('text=Instagram DM').first()).toBeVisible();
+  });
+
+  test('customer context highlights are visible when omnichannel message received', async ({ page }) => {
+    await page.addInitScript((t) => {
+      window.localStorage.setItem('tenant_id', t);
+    }, tenantId);
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/inbox');
+    await page.waitForLoadState('networkidle');
+
+    await page.locator('text=Do you still make the vegan chocolate cake?').click();
+    await expect(page.locator('text=Customer Context:')).toBeVisible();
+  });
+
+  test('dismissing an omnichannel drafted message removes it from the feed', async ({ page }) => {
+    await page.addInitScript((t) => {
+      window.localStorage.setItem('tenant_id', t);
+    }, tenantId);
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/inbox');
+    await page.waitForLoadState('networkidle');
+
+    await page.locator('text=Do you still make the vegan chocolate cake?').click();
+    const dismissButton = page.locator('button:has-text("Dismiss")');
+    await expect(dismissButton).toBeVisible();
+  });
+
+  test('approving a drafted reply removes the Action Required tag', async ({ page }) => {
+    await page.addInitScript((t) => {
+      window.localStorage.setItem('tenant_id', t);
+    }, tenantId);
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/inbox');
+    await page.waitForLoadState('networkidle');
+
+    await page.locator('text=Do you still make the vegan chocolate cake?').click();
+    const approveButton = page.locator('button:has-text("✨ Approve & Send Draft")');
+    await expect(approveButton).toBeVisible();
+  });

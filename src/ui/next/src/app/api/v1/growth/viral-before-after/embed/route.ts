@@ -193,11 +193,11 @@ export async function GET(request: Request) {
 
             <input type="range" min="0" max="100" value="50" class="slider-input" id="slider" aria-label="Percentage of before photo shown" />
         </div>
-        ${rawBranding ? \`
+        ${rawBranding ? `
         <div class="footer">
             <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank">⚡ Powered by OHC</a>
         </div>
-        \` : ''}
+        ` : ''}
     </div>
 
     <script>
@@ -209,8 +209,8 @@ export async function GET(request: Request) {
 
             function updateSlider() {
                 const val = slider.value;
-                beforeImage.style.clipPath = \`polygon(0 0, \${val}% 0, \${val}% 100%, 0 100%)\`;
-                sliderLine.style.left = \`\${val}%\`;
+                beforeImage.style.clipPath = "polygon(0 0, " + val + "% 0, " + val + "% 100%, 0 100%)";
+                sliderLine.style.left = val + "%";
 
                 // Hide 'Before' label if it gets covered by the slider
                 if (val < 20) {
