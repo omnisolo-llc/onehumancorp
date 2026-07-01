@@ -297,6 +297,7 @@ export function HelpChat() {
             onSubmit={handleSend}
             className="p-3 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border-t border-white/40 dark:border-white/10 flex gap-2 items-center"
           >
+            <WalkthroughTarget id="ohc-help-input-area" className="flex-1 flex">
             <input
               id="ohc-help-input-area"
               type="text"
@@ -306,6 +307,7 @@ export function HelpChat() {
               disabled={isLoading}
               className="flex-1 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] border border-white/40 dark:border-white/10 rounded-[24px] px-4 py-3 text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-100/70 text-gray-900 dark:text-gray-100"
             />
+            </WalkthroughTarget>
             <button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
