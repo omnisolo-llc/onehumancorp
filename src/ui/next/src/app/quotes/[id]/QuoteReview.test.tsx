@@ -55,7 +55,7 @@ describe('QuoteReviewPage', () => {
     await waitFor(() => expect(screen.getByText('Item 1 (x1)')).toBeInTheDocument());
     expect(screen.getAllByText('$100.00').length).toBeGreaterThan(0);
 
-    const approveBtn = screen.getByText('Approve & Send Quote');
+    const approveBtn = screen.getByText('Send Quote to Client');
 
     (global.fetch as any).mockResolvedValueOnce({
         ok: true,

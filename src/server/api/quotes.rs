@@ -493,17 +493,97 @@ async fn accept_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    match sqlx::query("UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1")
+    let quote = match sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
         .bind(quote_id)
-        .execute(&pool)
+        .fetch_optional(&pool)
         .await
     {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response(),
+        Ok(Some(q)) => q,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
-            tracing::error!("Failed to accept quote: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response()
+            tracing::error!("Failed to fetch quote for accept: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let update_res = sqlx::query("UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1")
+        .bind(quote_id)
+        .execute(&pool)
+        .await;
+
+    if let Err(e) = update_res {
+        tracing::error!("Failed to accept quote: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+    }
+
+    let invoice_id = Uuid::new_v4();
+    let total_amount = (quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
+
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+    let mut payment_link = String::new();
+    match stripe_client.create_checkout_session(
+        &format!("Invoice for Quote #{}", quote.id),
+        &quote.customer_id.to_string(),
+        total_amount,
+        None,
+        None
+    ).await {
+        Ok(url) => {
+            payment_link = url.clone();
+        },
+        Err(e) => {
+            tracing::error!("Failed to create Stripe checkout session for invoice: {}", e);
         }
     }
+
+    let invoice_res = sqlx::query(
+        "INSERT INTO invoices (id, tenant_id, customer_id, quote_id, total_amount, currency, status, stripe_invoice_id) VALUES ($1, $2, $3, $4, $5, 'USD', 'Draft', $6)"
+    )
+    .bind(invoice_id.to_string())
+    .bind(&quote.tenant_id)
+    .bind(&quote.customer_id)
+    .bind(&quote.id)
+    .bind(total_amount)
+    .bind(&payment_link)
+    .execute(&pool)
+    .await;
+
+    if let Err(e) = invoice_res {
+        tracing::error!("Failed to create invoice: {}", e);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false}))).into_response();
+    }
+
+    let line_items = sqlx::query_as::<_, QuoteLineItem>("SELECT * FROM quote_line_items WHERE quote_id = $1")
+        .bind(quote_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default();
+
+    for item in line_items {
+        let li_id = Uuid::new_v4();
+        let price = (item.unit_price_cents as f64) / 100.0;
+        let amount = price * (item.quantity as f64);
+        let _ = sqlx::query(
+            "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+        )
+        .bind(li_id.to_string())
+        .bind(&quote.tenant_id)
+        .bind(invoice_id.to_string())
+        .bind(&item.description)
+        .bind(item.quantity)
+        .bind(price)
+        .bind(amount)
+        .execute(&pool)
+        .await;
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({
+        "success": true,
+        "invoice_id": invoice_id.to_string(),
+        "stripe_payment_link": payment_link
+    }))).into_response()
 }
 
 async fn approve_quote(
@@ -516,7 +596,7 @@ async fn approve_quote(
     };
 
     let quote = match sqlx::query_as::<_, Quote>(
-        "UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 RETURNING *"
+        "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 RETURNING *"
     )
     .bind(quote_id)
     .fetch_optional(&pool)
@@ -530,33 +610,7 @@ async fn approve_quote(
         }
     };
 
-    let amount_usd = (quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
-
-    // Fallback if Stripe client isn't fully integrated here
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
-    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-
-    match stripe_client.create_checkout_session(
-        &format!("Quote #{}", quote.id),
-        &quote.customer_id.to_string(),
-        amount_usd,
-        None,
-        None
-    ).await {
-        Ok(url) => {
-            let _ = sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2")
-                .bind(&url)
-                .bind(&quote.id)
-                .execute(&pool)
-                .await;
-
-            let mut q = quote;
-            q.stripe_payment_link = Some(url);
-            (StatusCode::OK, Json(serde_json::json!({"quote": q}))).into_response()
-        },
-        Err(e) => {
-            tracing::error!("Failed to create Stripe checkout session: {}", e); // pii-safe
-            (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
-        }
-    }
+    (StatusCode::OK, Json(serde_json::json!({"quote": quote}))).into_response()
 }
+
+// Temporary marker to slice off old approve_quote
