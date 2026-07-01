@@ -1,27 +1,48 @@
-import { test, expect } from '@playwright/test';
-import { Page } from '@playwright/test';
+import { test as baseTest, expect } from '@playwright/test';
+
+// Use baseTest to bypass fixture login, as the storefront endpoints are public API.
+const test = baseTest;
 
 test.describe('Storefront Edge Cache Invalidation & SEO', () => {
-  test('should serve cached product page, generate JSON-LD, and invalidate on update', async ({ page }) => {
-    // We navigate to a specific edge storefront URL with mock tenant and product IDs
-    // Since Playwright doesn't easily set up all data, we will intercept requests or create realistic DB states
-    // A full test would create a tenant, a product, wait for the agent, then hit the edge cache.
-    // For this E2E test, we'll hit the fallback and assume API handles state correctly.
+  test('should serve cached product page, generate JSON-LD, and invalidate on update', async ({ page, request }) => {
+    test.setTimeout(120000);
 
-    // 1. Visit storefront API
-    const res = await page.goto('/api/v1/storefront/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222');
+    const tenantId = '11111111-1111-1111-1111-111111111111';
+    const productId = '22222222-2222-2222-2222-222222222222';
 
-    // Fallback simple HTML since DB won't have this site
-    const html = await page.content();
-    expect(res?.status()).toBeDefined();
+    // 1. Visit storefront API directly - hits real backend route using playwright's baseURL via relative path
+    const res = await request.get(`/api/v1/storefront/${tenantId}/${productId}`);
+    expect(res?.status()).toBe(200);
 
-    // 2. Trigger cache invalidation via webhook
-    const invalidateRes = await page.request.post('/api/v1/storefront/webhook/invalidate', {
+    // 2. Verify headers from the edge middleware
+    const headers = res?.headers() || {};
+    expect(headers['cache-control']).toBeDefined();
+    expect(headers['etag']).toBeDefined();
+
+    // 3. Ensure our changes caused a HIT on next reload
+    const res2 = await request.get(`/api/v1/storefront/${tenantId}/${productId}`);
+    const headers2 = res2?.headers() || {};
+    expect(headers2['x-cache']).toBe('HIT');
+
+    // 4. Trigger cache invalidation via webhook
+    const invalidateRes = await request.post(`/api/v1/storefront/webhook/invalidate`, {
       data: {
-        tags: ["entity:product:22222222-2222-2222-2222-222222222222"]
+        tags: [`entity:product:${productId}`]
       }
     });
+    expect(invalidateRes.status()).toBe(200);
 
-    expect(invalidateRes.status()).toBeDefined();
+    // Wait a brief moment for cache to clear
+    await page.waitForTimeout(2000);
+
+    // 5. Reload should be MISS now after invalidation
+    const res3 = await request.get(`/api/v1/storefront/${tenantId}/${productId}`);
+    const headers3 = res3?.headers() || {};
+    expect(headers3['x-cache']).toBe('MISS');
+
+    // 6. Verify SEO JSON-LD schema is present
+    const updatedHtml = await res3.text();
+    expect(updatedHtml).toContain('application/ld+json');
+    expect(updatedHtml).toContain('schema.org');
   });
 });

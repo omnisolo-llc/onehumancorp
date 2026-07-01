@@ -67,6 +67,8 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                         product_id_str = Some(tag.trim_start_matches("entity:product:").to_string());
                     }
                     edge_cache.invalidate_by_tag(tag).await;
+                    let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                    cdn_cache.invalidate_by_tag(tag).await;
                 }
 
                 if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str) {
@@ -127,6 +129,8 @@ mod tests {
 
         for tag in event.tags {
             edge_cache.invalidate_by_tag(&tag).await;
+            let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+            cdn_cache.invalidate_by_tag(&tag).await;
         }
 
         assert_eq!(edge_cache.get("test_key").await, None);
