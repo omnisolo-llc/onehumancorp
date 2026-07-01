@@ -126,6 +126,7 @@ SERVER_RS_SRCS = [
     "//src/server/domain:inbox.rs",
     "//src/server/domain:incidents.rs",
     "//src/server/domain:mod.rs",
+    "//src/server/domain:money.rs",
     "//src/server/domain:model.rs",
     "//src/server/domain:organization.rs",
     "//src/server/domain:quotes.rs",

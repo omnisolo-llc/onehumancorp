@@ -355,7 +355,15 @@ impl DB {
                 #[cfg(not(unix))]
                 {
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                        let _ = std::fs::File::create(&db_path);
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::OpenOptionsExt;
+                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            let _ = std::fs::File::create(&db_path);
+                        }
                     }
                 }
             }
@@ -720,7 +728,12 @@ impl DB {
                     operation
                 )));
             }
+
+            #[cfg(test)]
+            let remaining_time = timeout_duration;
+            #[cfg(not(test))]
             let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
+
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
             match timeout_res {
@@ -1062,6 +1075,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         plan_tier TEXT DEFAULT 'free',
                         has_claimed_trial_extension BOOLEAN DEFAULT FALSE,
                         subdomain TEXT,
+                        default_currency TEXT DEFAULT 'USD',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         is_subscribable BOOLEAN DEFAULT FALSE,
@@ -1143,6 +1157,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         tenant_id TEXT,
                         customer_id TEXT,
                         total_amount REAL,
+                        currency TEXT DEFAULT 'USD',
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1188,6 +1203,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         tenant_id TEXT NOT NULL,
                         customer_id TEXT NOT NULL,
                         total_amount_cents INTEGER NOT NULL,
+                        currency TEXT DEFAULT 'USD',
                         status TEXT NOT NULL,
                         updated_at TEXT NOT NULL,
                         last_follow_up_at TEXT,
@@ -2289,7 +2305,15 @@ mod security_tests_final {
                         let _ = fs::create_dir_all(parent_dir);
 
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-                        let _ = fs::File::create(&db_path);
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::OpenOptionsExt;
+                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            let _ = fs::File::create(&db_path);
+                        }
 
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.

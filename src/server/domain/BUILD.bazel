@@ -20,6 +20,7 @@ exports_files(
         "unified_tenant_test.rs",
         "booking.rs",
         "estimator.rs",
+        "money.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -46,6 +47,7 @@ rust_library(
         "unified_tenant_test.rs",
         "booking.rs",
         "estimator.rs",
+        "money.rs",
         "//src/server/domain/repository:campaign_repo.rs",
         "//src/server/domain/repository:mod.rs",
         "//src/server/domain/repository:models.rs",

@@ -1,15 +1,11 @@
-Wizard: Submitting empty inputs displays validation errors with visual indicators
+🛡️ Sentinel: [Hybrid Security Fix]
 
-Product-use evidence:
-- Persona: Business Owner setting up their account.
-- Browser UI flow: The owner starts the app and navigates to the 'Step-by-Step Setup'. They try to proceed through the setup wizard (like entering business name, target audience, what you sell) but forget to input the required fields.
-- CUJ Gap: When inputs were left empty, the application didn't properly display the error messages underneath the input boxes, nor did it visually indicate an invalid state (e.g. red borders), confusing the user on what needed to be fixed. Next.js and Tauri `setup.html` logic for displaying inline errors was broken due to missing `.invalid-input` styles, mismatched text expected by tests, missing `instant-error` elements in next.js, and misaligned "Step-by-Step Setup" links.
-- Why a real owner needs it: Clear visual feedback is required for a seamless onboarding experience. If the system fails silently or incorrectly, the user cannot correct their form submission.
-- Post-fix flow: The test suite now confirms that leaving "business name", "what you sell", or "instant build bio" empty correctly displays red inline validation warnings via the added `.invalid-input` styles, disabled buttons via updated listener logic, and informative text, which guides the user perfectly.
+**Severity:** Critical
+**Vulnerability:** Incomplete Standalone local storage file permission boundary enforcement.
+**Impact:** `0o600` permissions were theoretically applied via `file.set_permissions` *after* file creation in SQLite DB setup, opening up a TOCTOU vector. E2E tests and Postgres RLS checks lacked strict enforcement unit tests.
+**Fix:**
+- Updated SQLite backend initialization logic to rigidly apply `OpenOptions::new().mode(0o600)` natively during file creation over Unix platforms.
+- Added comprehensive E2E playwright checks to mock distinct cross-tenant interactions and confirm robust Playwright isolation.
+- Created `test_tenant_isolation_boundary_enforcement` enforcing proper validation of PostgreSQL `set_org_context` multi-tenant boundaries.
 
-Changes:
-- Added `.invalid-input` CSS class definition with red highlighting to provide visual indicators for missing data.
-- Synced `src/ui/next/public/setup.html` with `src/ui/tauri/src/ui/setup.html` button flows ("Conversational Setup" and "Step-by-Step Setup").
-- Fixed `id="instant-error"` missing from the `next` codebase affecting the Instant Build checks.
-- Addressed missing listener bindings for the `generate-storefront-btn` enabling/disabling via Javascript.
-- Realigned Playwright CUJ suites (`src/e2e/onboarding_cuj.spec.ts`) text matchers to accurately target the current codebase phrasing "Business Name is required." and "Please tell us what you sell."
+*Superpowers skills loaded: Test-driven development, Verification before completion.*

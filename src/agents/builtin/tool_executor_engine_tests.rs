@@ -531,5 +531,6 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         let res = handle.await.expect("Expected string in test");
         assert!(res.is_ok());
         assert_eq!(res.expect("Expected string in test"), "success");
+        assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
 }

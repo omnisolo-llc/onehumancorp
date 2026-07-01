@@ -372,6 +372,7 @@ where
         .route("/waitlist/embed", get(handle_waitlist_embed))
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
+        .route("/viral-widget/embed", get(handle_viral_widget_embed))
         .route("/one-tap-referral/embed", get(handle_one_tap_referral_embed))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/quiz/generate", post(handle_generate_viral_quiz))
@@ -3667,6 +3668,37 @@ mod cloud_bridge_tests {
         assert!(html.contains("Powered by OHC"));
     }
 
+    #[tokio::test]
+    async fn test_viral_widget_embed() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+
+        let query = super::ViralWidgetEmbedQuery { tenant: Some("test-tenant".to_string()), theme: None, title: Some("Test Title".to_string()), branding: Some(true) };
+        let res = super::handle_viral_widget_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+        assert!(html.contains("Test Title"));
+        assert!(html.contains("test-tenant"));
+        assert!(html.contains("Powered by OHC"));
+
+        let query_no_branding = super::ViralWidgetEmbedQuery { tenant: Some("test-tenant-2".to_string()), theme: None, title: Some("Test Title 2".to_string()), branding: Some(false) };
+        let res_no_branding = super::handle_viral_widget_embed(Extension(state.clone()), axum::extract::Query(query_no_branding)).await.into_response();
+
+        let body_bytes_nb = axum::body::to_bytes(res_no_branding.into_body(), usize::MAX).await.unwrap();
+        let html_nb = String::from_utf8(body_bytes_nb.to_vec()).unwrap();
+
+        assert!(html_nb.contains("Test Title 2"));
+        assert!(html_nb.contains("test-tenant-2"));
+        assert!(!html_nb.contains("Powered by OHC"));
+    }
+
     use super::*;
     use super::tests::setup_db;
     use crate::hub::Hub;
@@ -3713,6 +3745,14 @@ pub struct EmbedWidgetQuery {
     pub tenant: Option<String>,
     pub r#type: Option<String>,
     pub theme: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ViralWidgetEmbedQuery {
+    pub tenant: Option<String>,
+    pub theme: Option<String>,
+    pub title: Option<String>,
+    pub branding: Option<bool>,
 }
 
 fn escape_html(s: &str) -> String {
@@ -3988,6 +4028,116 @@ async fn handle_spin_to_win_embed(
             }}, 3000);
         }});
     </script>
+</body>
+</html>"#
+    );
+
+    axum::response::Html(html)
+}
+
+pub async fn handle_viral_widget_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<ViralWidgetEmbedQuery>
+) -> impl IntoResponse {
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let title = escape_html(query.title.as_deref().unwrap_or("Viral Widget"));
+    let theme = query.theme.as_deref().unwrap_or("light");
+    let show_branding = query.branding.unwrap_or(true);
+
+    let bg_color = if theme == "dark" { "#111827" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f3f4f6" } else { "#111827" };
+    let border_color = if theme == "dark" { "#374151" } else { "#e5e7eb" };
+
+    let mut html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 24px;
+            background-color: {bg_color};
+            color: {text_color};
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }}
+        .card {{
+            background: {bg_color};
+            border: 1px solid {border_color};
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-width: 400px;
+            width: 100%;
+        }}
+        h2 {{
+            margin-top: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }}
+        p {{
+            color: #6b7280;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }}
+        button {{
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        }}
+        button:hover {{
+            background-color: #4338ca;
+        }}
+        .branding {{
+            margin-top: 16px;
+            font-size: 12px;
+            color: #9ca3af;
+        }}
+        .branding a {{
+            color: #9ca3af;
+            text-decoration: none;
+            font-weight: 600;
+        }}
+        .branding a:hover {{
+            color: #6b7280;
+        }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>{title}</h2>
+        <p>This is a viral widget for {tenant}. Share it with your friends!</p>
+        <button onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share Now</button>
+"#
+    );
+
+    if show_branding {
+        html.push_str(&format!(
+            r#"        <div class="branding">
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=viral_widget" target="_blank">⚡ Powered by OHC</a>
+        </div>"#
+        ));
+    }
+
+    html.push_str(
+        r#"
+    </div>
 </body>
 </html>"#
     );
