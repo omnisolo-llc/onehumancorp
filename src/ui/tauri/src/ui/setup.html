@@ -1982,7 +1982,7 @@
           enterkeyhint="next"
         />
         <div id="name-error" class="error-msg" aria-live="polite">
-          Business Name is required.
+          Business Name is required and must be at least 3 characters.
         </div>
 
         <input
@@ -3258,7 +3258,7 @@
             state.categories = inputs.categories.value.trim();
           }
         } else if (stepId === "step-name") {
-          if (inputs.name.value.trim().length === 0) {
+          if (inputs.name.value.trim().length < 3) {
             errors.name.style.display = "block";
             inputs.name.classList.add("invalid-input");
             isValid = false;

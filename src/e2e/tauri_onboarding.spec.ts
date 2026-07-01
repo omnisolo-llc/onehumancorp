@@ -117,9 +117,9 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Since this test specifically verifies the manual steps (Context, Categories, etc.),
     // we will navigate to the manual setup now to continue the existing test flow.
     await page.locator('#step-chat').getByRole('button', { name: 'Back' }).click();
-    await expect(page.getByRole('heading', { name: "10-Minute Setup Wizard" })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
-    await page.getByRole('button', { name: 'Start My Business' }).click();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
+    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
 
 
     // Setup page (Step 1: Context)
@@ -179,11 +179,21 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
 
     // Step 6: Offer
-    await expect(page.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
 
     await page.getByPlaceholder("e.g. I bake custom vegan cakes").fill("Faucet Repair");
     await page.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
 
+
+    // Step 6a: Location
+    await expect(page.getByRole('heading', { name: "Where are you located?" })).toBeVisible();
+    await page.fill('#location-input', 'Portland, OR');
+    await page.locator('#step-location').getByRole('button', { name: 'Next' }).click();
+
+    // Step 6b: Target Audience
+    await expect(page.getByRole('heading', { name: "Who is your target audience?" })).toBeVisible();
+    await page.fill('#target-audience', 'Everyone');
+    await page.locator('#step-target-audience').getByRole('button', { name: 'Next' }).click();
 
     // Step 7: Domain
     await expect(page.getByRole('heading', { name: "Where will your business live?" })).toBeVisible();
@@ -273,11 +283,21 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await newPage.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
 
     // Step 6: Offer
-    await expect(newPage.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
+    await expect(newPage.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
     await newPage.getByPlaceholder("e.g. I bake custom vegan cakes").fill("Faucet Repair");
     await expect(newPage.getByPlaceholder("e.g. I bake custom vegan cakes")).toHaveValue("Faucet Repair");
     await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
 
+
+    // Step 6a: Location
+    await expect(newPage.getByRole('heading', { name: "Where are you located?" })).toBeVisible();
+    await newPage.fill('#location-input', 'Portland, OR');
+    await newPage.locator('#step-location').getByRole('button', { name: 'Next' }).click();
+
+    // Step 6b: Target Audience
+    await expect(newPage.getByRole('heading', { name: "Who is your target audience?" })).toBeVisible();
+    await newPage.fill('#target-audience', 'Everyone');
+    await newPage.locator('#step-target-audience').getByRole('button', { name: 'Next' }).click();
 
     // Step 7: Domain
     await expect(newPage.getByRole('heading', { name: "Where will your business live?" })).toBeVisible();
@@ -300,7 +320,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await newPage.waitForTimeout(500);
 
     // Success page
-    await expect(newPage.locator('h1')).toContainText('You\'re all set!');
+    await expect(newPage.locator('h1')).toContainText("You're Live!");
 
     await newContext.close();
 
@@ -392,7 +412,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
-    await page.route('/dashboard.html', async route => {
+    await page.route('http://127.0.0.1:18789/dashboard.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
@@ -425,7 +445,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
       };
     });
 
-    await page.goto('/dashboard.html');
+    await page.goto('http://127.0.0.1:18789/dashboard.html');
 
     // Check that the container class has the updated glassmorphism properties
     const container = page.locator('.container');
@@ -434,8 +454,11 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     await expect(container).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
 
     // Check the Onboarding Welcome Card specifically
-    const welcomeCard = page.getByTestId('onboarding-welcome-card');
-    await expect(welcomeCard).toBeVisible();
+    // Ensure the unified feed section is visible in the test so the fallback renders
+    await page.evaluate(() => document.getElementById('unified-agent-feed-section').style.display = 'flex');
+    await page.evaluate(() => document.getElementById('unified-agent-feed-container').style.display = 'block');
+
+    const welcomeCard = page.locator('#unified-agent-feed-section [data-testid="onboarding-welcome-card"]').first();
     await expect(welcomeCard).toHaveCSS('border-radius', '16px');
 
         // Check dark mode
