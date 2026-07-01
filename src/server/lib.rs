@@ -3846,7 +3846,7 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
-                    } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
+                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "ProposedInvoice" {
                         tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
@@ -4107,7 +4107,7 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
-                    } else if action_type == "Draft Quote" || action_type == "ProposedInvoice" {
+                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "ProposedInvoice" {
                         tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
@@ -6775,7 +6775,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
-        .nest("/api/proposals", api::proposals::router())
+        .nest("/api/proposals", api::proposals::router(hub.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/v1/booking/reserve", api::booking::reserve::router(db.clone()))
         .nest("/api/v1/booking/available_slots", api::booking::available_slots::router(db.clone()))

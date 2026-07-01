@@ -1357,7 +1357,7 @@ describe("OnboardingWizard", () => {
       );
     });
 
-    const continueButton = screen.queryByRole("button", { name: /Next/i, hidden: true }) || screen.getAllByText(/Next/i)[0].closest("button")!;
+    const continueButton = screen.getAllByRole("button").find(b => b.textContent?.match(/Next/i))!;
     await user.click(continueButton);
 
     await waitFor(() => {

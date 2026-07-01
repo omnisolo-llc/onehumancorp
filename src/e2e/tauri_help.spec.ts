@@ -45,14 +45,14 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
     await expect(page.locator('text=Getting Started').first()).toBeVisible();
 
     await page.fill('input[placeholder="Search for help articles and videos..."]', 'paid');
-    await expect(page.locator('text=Getting Paid').first()).toBeVisible();
+    await expect(page.locator('text=Accepting Payments').first()).toBeVisible();
   });
 
   test('Persona: Business Owner views the Changelog', async ({ page }) => {
     await page.goto('/api/ui/changelog.html');
     await expect(page.locator('text=Release Notes & Changelog').first()).toBeVisible();
-    await expect(page.locator('text=Version 1.0 (Latest)').first()).toBeVisible();
-    await expect(page.locator('text=New Features').first()).toBeVisible();
+    await expect(page.locator('text=v0.4.48 (Cloud)').first()).toBeVisible();
+    await expect(page.locator('text=Cloud Scaling Improvements').first()).toBeVisible();
   });
 
   test('Persona: Developer views the API documentation', async ({ page }) => {

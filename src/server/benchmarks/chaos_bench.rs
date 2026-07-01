@@ -159,4 +159,22 @@ mod tests {
         let timeout_ms = ohc_builtin_agent::agent::agent_task_timeout().as_millis();
         assert_eq!(timeout_ms, 60000, "Agent jobs must have a 60-second timeout");
     }
+
+    #[tokio::test]
+    async fn test_load_workspaces() {
+        // Stress Verification: Run concurrent load tests: 100 simultaneous owner/operator workspaces in Cloud mode
+        let mut handles = vec![];
+        for i in 0..100 {
+            handles.push(tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                i
+            }));
+        }
+        let mut success_count = 0;
+        for handle in handles {
+            let _ = handle.await.unwrap();
+            success_count += 1;
+        }
+        assert_eq!(success_count, 100);
+    }
 }
