@@ -299,7 +299,7 @@ mod tests {
         sqlx::query("CREATE TABLE IF NOT EXISTS consolidated_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding vector(1536), source_type TEXT NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, reference_count INTEGER DEFAULT 0, reliability_score INTEGER DEFAULT 50, owner_override BOOLEAN DEFAULT FALSE, metadata TEXT);").execute(&pool).await.unwrap_or(sqlx::postgres::PgQueryResult::default());
         sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
 
-        sqlx::query("INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess_pg_mem', 'agent1', 'some context pg mem');")
+        sqlx::query("INSERT INTO agent_session_data (session_id, tenant_id, agent_id, context_data) VALUES ('sess_pg_mem', 'tenant1', 'agent1', 'some context pg mem');")
             .execute(&pool)
             .await
             .unwrap();

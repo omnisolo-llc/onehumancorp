@@ -825,6 +825,7 @@ impl DB {
                 let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
                         agent_id TEXT NOT NULL,
                         context_data TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1584,7 +1585,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ? RETURNING session_id, context_data")
+                let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ? RETURNING session_id, tenant_id, context_data")
                     .bind(threshold)
                     .fetch_all(sqlite_pool)
                     .await?;
@@ -1602,7 +1603,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
-                    let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1 AND tenant_id = $2 RETURNING session_id, context_data")
+                    let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1 AND tenant_id = $2 RETURNING session_id, tenant_id, context_data")
                         .bind(threshold)
                         .bind(&tenant_id)
                         .fetch_all(&mut *tx)
