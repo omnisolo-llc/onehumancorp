@@ -24,12 +24,12 @@ vi.mock("next/navigation", () => ({
 
 describe("OnboardingWizard", () => {
   const renderOnboardingWizard = async () => {
-    let view;
+    let view: ReturnType<typeof render> | undefined;
     await act(async () => {
       view = render(
         <TooltipProvider>
           <OnboardingWizard />
-        </TooltipProvider>,
+        </TooltipProvider>
       );
     });
     return view;
@@ -1288,12 +1288,12 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let view;
+    let view: ReturnType<typeof render> | undefined;
     await act(async () => {
       view = render(
         <TooltipProvider>
           <OnboardingWizard />
-        </TooltipProvider>,
+        </TooltipProvider>
       );
     });
 
@@ -1319,12 +1319,12 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let view;
+    let view: ReturnType<typeof render> | undefined;
     await act(async () => {
       view = render(
         <TooltipProvider>
           <OnboardingWizard />
-        </TooltipProvider>,
+        </TooltipProvider>
       );
     });
 
@@ -1348,12 +1348,12 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let view;
+    let view: ReturnType<typeof render> | undefined;
     await act(async () => {
       view = render(
         <TooltipProvider>
           <OnboardingWizard />
-        </TooltipProvider>,
+        </TooltipProvider>
       );
     });
 

@@ -20,8 +20,9 @@ export function DashboardViralInviteWidget() {
     e.preventDefault();
     setLoading(true);
     try {
-      if ((window as any).__TAURI__ && (window as any).__TAURI__.core) {
-        const link = await (window as any).__TAURI__.core.invoke('generate_cloud_bridge_invite');
+      const w = window as unknown as { __TAURI__?: { core?: { invoke: (cmd: string) => Promise<string> } } };
+      if (w.__TAURI__ && w.__TAURI__.core) {
+        const link = await w.__TAURI__.core.invoke('generate_cloud_bridge_invite');
         setReferralLink(link);
       } else {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
