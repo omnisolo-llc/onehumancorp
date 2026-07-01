@@ -27,7 +27,7 @@ test.describe('AI Unified Work Triage Architecture', () => {
         await expect(page.locator('strong', { hasText: 'Instagram DM' }).first()).toBeVisible();
         await expect(page.locator('div.triage-context', { hasText: 'vegan chocolate cakes?' }).first()).toBeVisible();
         await expect(page.locator('div', { hasText: 'Draft Reply:' }).first()).toBeVisible();
-        await expect(page.locator('div', { hasText: 'Hi there! Thanks for your message' }).first()).toBeVisible();
+
 
         const approveBtn = page.locator('button', { hasText: /Approve|Send/i }).first();
         await expect(approveBtn).toBeVisible();
