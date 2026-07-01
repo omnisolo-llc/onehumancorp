@@ -2602,6 +2602,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Message Triage Worker
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
+    let agent_feed_worker = Arc::new(crate::workers::agent_feed_worker::AgentFeedWorker::new(db.clone()));
+    agent_feed_worker.start();
     message_triage_worker.start();
 
     // Start Deposit Follow-Up Worker
@@ -6831,6 +6833,9 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/chaos-report", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
+        }))
+        .route("/triage.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/triage.html"))
         }))
         .route("/agent-audit-dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/agent-audit-dashboard.html"))

@@ -109,6 +109,12 @@ async fn handle_webhook(
                 payload: serde_json::json!({"source": payload.source, "message": payload.message}),
             };
             let _ = orchestrator.dispatch_event(event).await;
+            let job_id = uuid::Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'agent_feed_ingest', $3, 'PENDING')")
+                .bind(&job_id)
+                .bind(&payload.tenant_id)
+                .bind(serde_json::json!({"event_source": "new_order", "payload": {"source": payload.source, "message": payload.message}}).to_string())
+                .execute(&crate::db::get_pool()).await;
         }
         return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response();
     }

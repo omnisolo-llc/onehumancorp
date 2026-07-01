@@ -267,7 +267,7 @@ async fn create_feed_item(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    let service = AgentFeedService::new(pool);
+    let service = AgentFeedService::new(pool.into());
 
     // Pass the payload as a JSON value
     let mut value_payload = serde_json::json!({});
