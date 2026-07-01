@@ -345,7 +345,23 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
       if (processResult.error) {
         onOptimisticRollback?.();
         setStatus('Payment processing failed: ' + processResult.error.message);
+        setReserving(false);
+        return;
       } else {
+        setStatus('Capturing payment intent...');
+        const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payment_intent_id: processResult.paymentIntent.id })
+        });
+        const captureData = await captureRes.json();
+        if (!captureData.success) {
+          onOptimisticRollback?.();
+          setStatus('Payment capture failed: ' + captureData.error_message);
+          setReserving(false);
+          return;
+        }
+
         setStatus('Payment successful. Committing inventory...');
 
         try {
@@ -499,6 +515,20 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
               if (processResult.error) {
                 if (onOptimisticRollback) onOptimisticRollback();
                 setStatus('Payment processing failed: ' + processResult.error.message);
+                setReserving(false);
+                return;
+              }
+
+              setStatus('Capturing payment intent...');
+              const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ payment_intent_id: processResult.paymentIntent.id })
+              });
+              const captureData = await captureRes.json();
+              if (!captureData.success) {
+                if (onOptimisticRollback) onOptimisticRollback();
+                setStatus('Payment capture failed: ' + captureData.error_message);
                 setReserving(false);
                 return;
               }
