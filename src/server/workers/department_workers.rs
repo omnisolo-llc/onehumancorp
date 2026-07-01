@@ -1237,7 +1237,12 @@ impl AdvisorWorker {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(86400 * 7)); // Weekly CRON
             loop {
                 interval.tick().await;
+                Self::periodic_check(db.clone()).await;
+            }
+        });
+    }
 
+    pub async fn periodic_check(db: Arc<DB>) {
                 // 1. Get all active tenants
                 let tenants: Vec<String> = match &db.store {
                     crate::db::DbStore::Postgres => {
@@ -1303,58 +1308,73 @@ impl AdvisorWorker {
                     }
 
                     // Revenue Milestone Detection
-                    if gross_sales >= 1000.0 {
-                        let milestone_type = "revenue_1k";
-                        let milestone_title = "💰 Four-Figure Club";
-                        let milestone_msg = format!("Your business has surpassed $1,000 in total revenue! (Current: ${:.2})", gross_sales);
-                        let milestone_id = Uuid::new_v4().to_string();
+                    let thresholds = vec![
+                        (100000.0, "revenue_100k", "🌟 Six-Figure Club", "Your business has surpassed $100,000 in total revenue!"),
+                        (10000.0, "revenue_10k", "💎 Five-Figure Club", "Your business has surpassed $10,000 in total revenue!"),
+                        (1000.0, "revenue_1k", "💰 Four-Figure Club", "Your business has surpassed $1,000 in total revenue!"),
+                    ];
 
-                        match &db.store {
-                            crate::db::DbStore::Postgres => {
-                                let _ = sqlx::query(
-                                    "INSERT INTO business_milestones (id, tenant_id, milestone_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING"
-                                )
-                                .bind(&milestone_id)
-                                .bind(&tenant_id)
-                                .bind(milestone_type)
-                                .execute(&db.pool)
-                                .await;
+                    for (threshold, milestone_type, milestone_title, milestone_desc) in thresholds {
+                        if gross_sales >= threshold {
+                            let milestone_msg = format!("{} (Current: ${:.2})", milestone_desc, gross_sales);
+                            let milestone_id = Uuid::new_v4().to_string();
 
-                                let _ = sqlx::query(
-                                    r#"
-                                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                    VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
-                                    "#
-                                )
-                                .bind(&milestone_id)
-                                .bind(&tenant_id)
-                                .bind(milestone_title)
-                                .bind(milestone_msg)
-                                .execute(&db.pool)
-                                .await;
-                            },
-                            crate::db::DbStore::Sqlite(pool) => {
-                                let _ = sqlx::query(
-                                    "INSERT INTO business_milestones (id, tenant_id, milestone_type) VALUES (?, ?, ?)"
-                                )
-                                .bind(&milestone_id)
-                                .bind(&tenant_id)
-                                .bind(milestone_type)
-                                .execute(pool)
-                                .await;
+                            let inserted = match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let result = sqlx::query(
+                                        "INSERT INTO business_milestones (id, tenant_id, milestone_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING"
+                                    )
+                                    .bind(&milestone_id)
+                                    .bind(&tenant_id)
+                                    .bind(milestone_type)
+                                    .execute(&db.pool)
+                                    .await;
+                                    result.map(|r| r.rows_affected() > 0).unwrap_or(false)
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let result = sqlx::query(
+                                        "INSERT INTO business_milestones (id, tenant_id, milestone_type) VALUES (?, ?, ?) ON CONFLICT DO NOTHING"
+                                    )
+                                    .bind(&milestone_id)
+                                    .bind(&tenant_id)
+                                    .bind(milestone_type)
+                                    .execute(pool)
+                                    .await;
+                                    result.map(|r| r.rows_affected() > 0).unwrap_or(false)
+                                }
+                            };
 
-                                let _ = sqlx::query(
-                                    r#"
-                                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                    VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
-                                    "#
-                                )
-                                .bind(&milestone_id)
-                                .bind(&tenant_id)
-                                .bind(milestone_title)
-                                .bind(milestone_msg)
-                                .execute(pool)
-                                .await;
+                            if inserted {
+                                match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
+                                            "#
+                                        )
+                                        .bind(&milestone_id)
+                                        .bind(&tenant_id)
+                                        .bind(milestone_title)
+                                        .bind(milestone_msg)
+                                        .execute(&db.pool)
+                                        .await;
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        let _ = sqlx::query(
+                                            r#"
+                                            INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                            VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                                            "#
+                                        )
+                                        .bind(&milestone_id)
+                                        .bind(&tenant_id)
+                                        .bind(milestone_title)
+                                        .bind(milestone_msg)
+                                        .execute(pool)
+                                        .await;
+                                    }
+                                }
                             }
                         }
                     }
@@ -1425,8 +1445,6 @@ impl AdvisorWorker {
                         }
                     }
                 }
-            }
-        });
     }
 }
 #[cfg(test)]
@@ -1719,6 +1737,58 @@ mod tests {
          }
      }
 
+
+    #[tokio::test]
+    async fn test_advisor_worker_revenue_100k_milestone() {
+        let db = match crate::db::DB::new().await {
+            Ok(db) => db,
+            Err(_) => return, // Skip test if database is not available
+        };
+        let pool = db.pool.clone();
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
+
+        let tenant_id = "tenant-rev-100k";
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ledger (id TEXT PRIMARY KEY, tenant_id TEXT, action_type TEXT, state_change JSONB, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS business_milestones (id TEXT PRIMARY KEY, tenant_id TEXT, milestone_type TEXT, reached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(tenant_id, milestone_type));").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&pool).await;
+
+        let _ = sqlx::query("INSERT INTO ledger (id, tenant_id, action_type, state_change) VALUES ($1, $2, 'order_created', '{\"total_amount\": 100000.0}')")
+            .bind("L2")
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+
+
+        AdvisorWorker::periodic_check(Arc::new(db)).await;
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM business_milestones WHERE tenant_id = 'tenant-rev-100k' AND milestone_type = 'revenue_100k'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count, 1);
+
+        let count_10k: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM business_milestones WHERE tenant_id = 'tenant-rev-100k' AND milestone_type = 'revenue_10k'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count_10k, 1);
+
+        let count_1k: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM business_milestones WHERE tenant_id = 'tenant-rev-100k' AND milestone_type = 'revenue_1k'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count_1k, 1);
+
+        let tasks_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE tenant_id = 'tenant-rev-100k' AND title = '🌟 Six-Figure Club'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(tasks_count, 1);
+
+        // Run the worker again to verify it doesn't create duplicate tasks
+        let db2 = match crate::db::DB::new().await {
+            Ok(db) => db,
+            Err(_) => return,
+        };
+        AdvisorWorker::periodic_check(Arc::new(db2)).await;
+
+        let tasks_count_after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shared_tasks WHERE tenant_id = 'tenant-rev-100k' AND title = '🌟 Six-Figure Club'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(tasks_count_after, 1);
+    }
 
     #[tokio::test]
     async fn test_operations_worker_100_orders_milestone() {

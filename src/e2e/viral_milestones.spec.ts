@@ -27,7 +27,9 @@ test('viral milestones: verify multiple milestone titles from API', async ({ pag
     const json = {
       milestones: [
         { id: '5_referrals', title: 'High Connector!', description: 'Great job!', reached: false },
-        { id: 'revenue_1k', title: 'Four-Figure Club', description: 'Incredible!', reached: false }
+        { id: 'revenue_1k', title: 'Four-Figure Club', description: 'Incredible!', reached: false },
+        { id: 'revenue_10k', title: '💎 Five-Figure Club', description: 'Incredible!', reached: false },
+        { id: 'revenue_100k', title: '🌟 Six-Figure Club', description: 'Incredible!', reached: false }
       ]
     };
     await route.fulfill({ json });
@@ -36,6 +38,8 @@ test('viral milestones: verify multiple milestone titles from API', async ({ pag
   await page.goto('/milestone-alerts');
   await expect(page.locator('h3:has-text("High Connector!")')).toBeVisible({ timeout: 15000 });
   await expect(page.locator('h3:has-text("Four-Figure Club")')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('h3:has-text("💎 Five-Figure Club")')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('h3:has-text("🌟 Six-Figure Club")')).toBeVisible({ timeout: 15000 });
 });
 
 test('viral milestones: verify social share buttons', async ({ page }) => {
