@@ -118,8 +118,20 @@ impl JetBrainsObservationMasker {
                 let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
 
                 if original_len > current_limit {
+                    let priority_keys = [
+                        "error", "stack_trace", "message", "status", "code", "type", "name", "id",
+                        "success", "result",
+                    ];
+                    let mut sorted_keys: Vec<String> = obj.keys().cloned().collect();
+                    sorted_keys.sort_by_cached_key(|k| {
+                        let k_lower = k.to_lowercase();
+                        let is_priority = priority_keys.contains(&k_lower.as_str());
+                        // False (0) sorts before True (1), so we map priority (true) to 0 and non-priority (false) to 1
+                        (!is_priority, k.clone())
+                    });
+
                     let keys_to_remove: Vec<String> =
-                        obj.keys().skip(current_limit).cloned().collect();
+                        sorted_keys.into_iter().skip(current_limit).collect();
                     removed_count = keys_to_remove.len();
                     for k in keys_to_remove {
                         obj.remove(&k);
@@ -554,6 +566,63 @@ mod additional_tests {
         } else {
             panic!("Unexpected mask format");
         }
+    }
+
+    #[test]
+    fn test_mask_preserves_priority_keys() {
+        let mut obj = serde_json::Map::new();
+        obj.insert("irrelevant_key_1".to_string(), Value::String("a".into()));
+        obj.insert("error".to_string(), Value::String("critical failure".into()));
+        obj.insert("irrelevant_key_2".to_string(), Value::String("b".into()));
+        obj.insert("status".to_string(), Value::String("failed".into()));
+        obj.insert("irrelevant_key_3".to_string(), Value::String("c".into()));
+
+        let json_str = serde_json::to_string(&Value::Object(obj)).unwrap();
+
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_priority".to_string(),
+                    content: json_str,
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Hmm".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        // Limit object elements to 2.
+        let masker = JetBrainsObservationMasker::new(0, 100, 2);
+        masker.apply_masking(&mut messages);
+
+        let masked_content = &messages[0].tool_results[0].content;
+        let parsed: Value = serde_json::from_str(masked_content).unwrap();
+
+        let obj = parsed.as_object().unwrap();
+
+        // Ensure priority keys were retained
+        assert!(obj.contains_key("error"));
+        assert!(obj.contains_key("status"));
+
+        // The irrelevant keys should have been removed
+        assert!(!obj.contains_key("irrelevant_key_1"));
+        assert!(!obj.contains_key("irrelevant_key_2"));
+        assert!(!obj.contains_key("irrelevant_key_3"));
+
+        // Should have exactly 2 elements + the `_masked_keys` summary
+        assert_eq!(obj.len(), 3);
+        assert!(obj.contains_key("_masked_keys"));
     }
 
     #[test]
