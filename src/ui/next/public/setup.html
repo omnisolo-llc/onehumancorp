@@ -1342,9 +1342,18 @@
             type="button"
             class="btn-secondary"
             onclick="goToStep('step-chat')"
-            style="margin-top: 10px"
+            style="margin-bottom: 10px; width: 100%;"
           >
             Conversational Setup
+          </button>
+          <button
+            type="button"
+            class="btn-secondary next-step-btn"
+            data-testid="next-step-btn"
+            data-next="step-context"
+            style="width: 100%;"
+          >
+            Step-by-Step Setup
           </button>
         </div>
       </div>
@@ -1389,7 +1398,7 @@
           data-testid="instant-bio"
           class="glassmorphism"
           placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
-          rows="6"
+          rows="4"
           style="resize: none; padding: 14px"
           enterkeyhint="next"
         ></textarea>
@@ -1420,6 +1429,7 @@
           <button
             id="generate-storefront-btn"
             data-testid="generate-storefront-btn"
+            disabled
           >
             Next
           </button>
