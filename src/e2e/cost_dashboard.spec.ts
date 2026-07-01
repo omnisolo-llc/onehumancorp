@@ -5,7 +5,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await loginAs(page, adminUser);
 
     await page.goto('/plan');
-    await page.waitForLoadState('networkidle');
+
 
     // 3. Check for My Plan components
     await expect(page.locator('h1:has-text("My Plan")').first()).toBeVisible();
@@ -28,7 +28,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await loginAs(proPage, unlimitedAdminUser);
 
     await proPage.goto('/plan');
-    await proPage.waitForLoadState('networkidle');
+
 
     // Ensure the page renders / Unlimited for AI actions
     await expect(proPage.locator('body')).toContainText(/Unlimited/);
@@ -43,7 +43,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await loginAs(proPage, unlimitedAdminUser);
 
     await proPage.goto('/plan');
-    await proPage.waitForLoadState('networkidle');
+
 
     await expect(proPage.locator('body')).toContainText(/Unlimited/);
 
@@ -57,7 +57,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await loginAs(proPage, unlimitedAdminUser);
 
     await proPage.goto('/plan');
-    await proPage.waitForLoadState('networkidle');
+
 
     // The storage might be unlimited or explicitly bounded depending on plan tier definition in fixtures.
     await expect(proPage.locator('body')).toContainText(/Unlimited|< 1 MB|50\.00 GB/);
@@ -71,7 +71,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // E2E UI path: Go to /plan then click "View Detailed Costs"
     await page.goto('/plan');
-    await page.waitForLoadState('networkidle');
+
     await page.locator('button', { hasText: 'View Detailed Costs' }).click();
 
     // Verify Cost Transparency Dashboard headers and text
@@ -88,16 +88,16 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // Navigate to pricing page
     await page.goto('/pricing');
-    await page.waitForLoadState('networkidle');
+
 
     // Upgrade to Starter via Stripe
     await page.locator('button:has-text("Upgrade to Starter via Stripe")').click();
 
     // Just wait for URL instead of request matching which is timing out when URL routing is fast
-    await page.waitForURL(/.*\/checkout\?tier=Starter|.*\/checkout|.*\/pricing/, { timeout: 30000 }).catch(() => {});
+    await page.waitForURL(/.*\/checkout.*/, { timeout: 30000 }).catch(() => {});
 
     // Now go to the My Plan page
     await page.goto('/plan');
-    await page.waitForLoadState('networkidle');
+
   });
 });
