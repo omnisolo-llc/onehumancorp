@@ -11,6 +11,8 @@ interface MyPlanData {
   storage_used_bytes: number;
   storage_limit_bytes: number | null;
   next_bill_estimated: number;
+  soft_limit_reached?: boolean;
+  user_message?: string;
 }
 
 export default function MyPlanPage() {
@@ -106,6 +108,15 @@ export default function MyPlanPage() {
       </header>
 
       <main className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
+
+        {data?.soft_limit_reached && data?.user_message && (
+            <div className="mb-2 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 flex items-start gap-3 shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mt-0.5 shrink-0 text-amber-600" style={{ width: '20px', height: '20px' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-sm font-medium">{data.user_message}</p>
+            </div>
+        )}
 
         {/* Status Snapshot */}
         <section className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 p-6 rounded-2xl">
