@@ -29,11 +29,14 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await page.goto('http://mock/setup.html');
 
     // Step 0 -> Step Context
-    await page.locator('#step-initial .next-step-btn').click();
+    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
     await expect(page.locator('#step-context')).toHaveClass(/active/);
 
     // Step Context
     await page.getByTestId('context-local').click();
+    await page.getByTestId('context-local').focus();
+    // Press enter on next button to trigger navigation
+    await page.locator('#step-context .next-step-btn').focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('#step-categories')).toHaveClass(/active/);
 
@@ -76,10 +79,11 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await page.goto('http://mock/setup.html');
 
     // Step 0 -> Step Context
-    await page.locator('#step-initial .next-step-btn').click();
+    await page.getByRole('button', { name: 'Step-by-Step Setup' }).click();
     await expect(page.locator('#step-context')).toHaveClass(/active/);
 
     // Try to proceed without selecting context (fails validation)
+    await page.locator('#step-context .next-step-btn').focus();
     await page.keyboard.press('Enter');
 
     // Should still be on step-context
@@ -123,8 +127,8 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await page.goto('http://mock/setup.html');
 
     // Go to instant build
-    await page.getByRole('button', { name: 'Instant Build' }).click();
-    await expect(page.locator('#step-instant')).toHaveClass(/active/);
+    // Now on step-initial
+    await expect(page.locator('#step-initial')).toHaveClass(/active/);
 
     // Press Enter to submit instant build? No, textarea should not submit on enter.
     // Fill textarea
@@ -132,7 +136,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
     await page.locator('#instant-bio').press('Enter');
 
     // It should add a newline, not advance.
-    await expect(page.locator('#step-instant')).toHaveClass(/active/);
+    await expect(page.locator('#step-initial')).toHaveClass(/active/);
     const val = await page.locator('#instant-bio').inputValue();
     expect(val).toBe('Test bio\n');
   });

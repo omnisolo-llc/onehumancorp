@@ -1,9 +1,31 @@
+import * as fs from 'fs';
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 
 test.describe('Onboarding Wizard E2E Flow', () => {
 
   test.beforeEach(async ({ page }) => {
+    // Clear local storage to ensure fresh state
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+    });
+
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await page.addInitScript(() => {
+      window.__TAURI__ = {
+        core: {
+          invoke: async () => null
+        }
+      };
+    });
+
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
       window.localStorage.clear();
@@ -20,7 +42,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' });
+    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
     await startButton.click();
 
     // Context Card Flow starts in step-context in Tauri
@@ -59,7 +81,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' });
+    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
     await startButton.click();
 
     const contextCard = page.locator('.context-card').first();
@@ -75,7 +97,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Click manual configuration
-    const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' });
+    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
     await startButton.click();
 
     // Jump straight to the name step to test validation
@@ -125,6 +147,19 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   test.beforeEach(async ({ page }) => {
+    // Clear local storage to ensure fresh state
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+    });
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+
     // mock the tauri backend
     await page.addInitScript(() => {
         (window as any).__TAURI__ = {

@@ -31,7 +31,7 @@ test.describe('Keyboard Navigation CUJ', () => {
     await expect(page.locator('#step-initial')).toHaveClass(/active/);
 
     // Start My Business
-    await page.locator('#step-initial .next-step-btn').focus();
+    await page.getByRole('button', { name: 'Step-by-Step Setup' }).focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('#step-context')).toHaveClass(/active/);
 
