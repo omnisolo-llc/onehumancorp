@@ -424,12 +424,14 @@ impl DB {
                     {
                         use std::io::Write;
                         use std::os::unix::fs::OpenOptionsExt;
-                        if let Ok(mut file) = std::fs::OpenOptions::new()
-                            .write(true)
-                            .create_new(true)
-                            .mode(0o600)
-                            .open(&secret_path)
-                        {
+                        let mut options = std::fs::OpenOptions::new();
+                        options.write(true).create_new(true).mode(0o600);
+                        #[cfg(target_os = "linux")]
+                        options.custom_flags(0x00020000); // O_NOFOLLOW
+                        #[cfg(target_os = "macos")]
+                        options.custom_flags(0x0100); // O_NOFOLLOW
+
+                        if let Ok(mut file) = options.open(&secret_path) {
                             let _ = file.write_all(new_key.as_bytes());
                         }
                     }
