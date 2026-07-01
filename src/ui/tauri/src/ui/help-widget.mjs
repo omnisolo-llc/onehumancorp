@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+export function initHelpWidget() {
 // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `
@@ -603,4 +603,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderStep();
         };
     }
-});
+
+}
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initHelpWidget); } else { initHelpWidget(); }
