@@ -73,8 +73,21 @@ impl GatherActVerifyHarness {
                 }
             }
 
+            let mut all_tools = Vec::new();
+            all_tools.extend(gather_tools.clone());
+            all_tools.extend(act_tools.clone());
+            all_tools.extend(verify_tools.clone());
+
+            let prompt_builder = crate::prompt_construction::HierarchicalPromptBuilder::new(
+                &config,
+                &all_tools,
+                None, // cascading_agents_md
+                None, // lightweight_memory_index
+            );
+            let built_system_prompt = prompt_builder.build();
+
             let mut messages = vec![
-                Message::system(config.server_system_message.clone()),
+                Message::system(built_system_prompt.clone()),
                 Message::user(format!("Task: {}", task)),
             ];
 
@@ -124,7 +137,7 @@ impl GatherActVerifyHarness {
 
                 let req = ChatRequest {
                     model: config.model.clone(),
-                    system: config.server_system_message.clone(),
+                    system: built_system_prompt.clone(),
                     messages: current_messages.clone(),
                     tools: tool_defs,
                     max_tokens: 2048,
