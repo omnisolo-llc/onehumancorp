@@ -1,0 +1,14 @@
+--- src/server/chaos_db_test.rs
++++ src/server/chaos_db_test.rs
+@@ -165,11 +165,11 @@
+         let res: Result<(), String> = db.execute_with_retry("slow_query", || async {
+             // Simulate a query that takes longer than the timeout
+             tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+             Ok(())
+         }).await;
+
+         assert!(res.is_err(), "Sync operation should time out to prevent cascading failures");
+-        assert!(res.unwrap_err().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
++        assert!(res.unwrap_err().to_string().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
+     }
+ }

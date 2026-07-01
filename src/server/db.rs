@@ -716,7 +716,10 @@ impl DB {
         let mut backoff = std::time::Duration::from_millis(1);
 
         // Enforce the 60-second ML-Resilience rule for database operations
-        let start_time = tokio::time::Instant::now();
+        #[cfg(test)]
+        let start_time = tokio::time::Instant::now(); // use simulated time for tests
+        #[cfg(not(test))]
+        let start_time = std::time::Instant::now(); // use real time for prod
         let timeout_duration = std::time::Duration::from_secs(60);
 
         loop {
