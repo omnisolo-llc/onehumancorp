@@ -929,6 +929,7 @@
           <div class="triage-tab-container" style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 16px;">
             <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Proposals</button>
             <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Activity</button>
+            <button class="triage-tab" id="tab-financials" onclick="switchTriageTab('financials')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Financials</button>
           </div>
           <div id="unified-agent-feed-section" style="display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box;">
             <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1); width: 100%; box-sizing: border-box;">
@@ -1713,6 +1714,7 @@
         currentTriageTab = tab;
         document.getElementById('tab-proposals').classList.toggle('active', tab === 'proposals');
         document.getElementById('tab-activity').classList.toggle('active', tab === 'activity');
+        document.getElementById('tab-financials').classList.toggle('active', tab === 'financials');
         renderTriageItems(agentFeedItems);
       };
 
@@ -1968,7 +1970,7 @@
                   <div style="font-size: 14px; margin-top: 4px; margin-bottom: 16px; color: #1D1D1F;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
                     <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Send</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='quote.html?id=${payload.quote_id || item.id}&mode=owner'" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Review Estimate</button>
+                    <button class="triage-btn-dismiss" data-testid="review-quote-draft" onclick="window.location.href='quote.html?id=${payload.quote_id || item.id}&mode=owner'" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Review Estimate</button>
                     <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
                   </div>
                 </div>
@@ -2302,7 +2304,38 @@
             </div>
             `;
           }).join('');
-        } else {
+
+        } else if (currentTriageTab === 'financials') {
+          const financials = items.filter(i => (i.payload?.feature_type === 'invoice' || i.context_payload?.feature_type === 'invoice' || i.action_payload?.feature_type === 'invoice' || i.type === 'invoice'));
+          if (financials.length === 0) {
+            triageQueue.innerHTML = '<div class="triage-card empty" data-testid="triage-feed-empty">No pending invoices found.</div>';
+            return;
+          }
+          triageQueue.innerHTML = financials.map(item => {
+            let payload = item.payload || item.context_payload || item.action_payload || {};
+            if (typeof payload === 'string') {
+              try { payload = JSON.parse(payload); } catch(e){}
+            }
+            const clientName = payload.client_name || 'Client';
+            const amount = payload.amount || 0;
+            const status = payload.status || 'Pending';
+            return `
+              <div class="triage-item glassmorphism" data-testid="invoice-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 12px;">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 8px; font-weight: 700;">Invoice</div>
+                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">${status}</div>
+                </div>
+                <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; color: #1D1D1F;">${clientName}</div>
+                <div style="font-size: 14px; margin-top: 4px; color: #1D1D1F;">Amount: $${amount}</div>
+                <div style="margin-top: 12px;">
+                    <div style="width: 100%; background-color: rgba(0,0,0,0.1); border-radius: 4px; height: 8px;">
+                      <div style="width: ${status === 'Paid' ? '100%' : '50%'}; background-color: #0066FF; height: 100%; border-radius: 4px;"></div>
+                    </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+} else {
 
           const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED' || i.lifecycle_state === 'REJECTED' || i.status === 'resolved' || i.status === 'dismissed' || i.status === 'APPROVED' || i.status === 'REJECTED');
           if (activities.length === 0) {

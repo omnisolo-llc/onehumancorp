@@ -35,55 +35,24 @@ export async function POST(request: NextRequest) {
   }
 
   const upstream = backendUrl();
-  if (upstream) {
-    try {
-      const response = await fetch(`${upstream}/api/agents/hire`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          role,
-          providerType: payload?.providerType || 'builtin',
-          model: payload?.model || 'MiniMax-M3',
-          mode: payload?.mode || 'Ask',
-          workspace: payload?.workspace || 'Current business',
-          task: payload?.task || '',
-          skills: payload?.skills || [],
-          connectors: payload?.connectors || [],
-          contextReferences: payload?.contextReferences || '',
-          attachments: payload?.attachments || '',
-          customProvider: payload?.customProvider || '',
-          workDirectory: payload?.workDirectory || '',
-          outputFormat: payload?.outputFormat || 'Brief',
-          taskConstraints: payload?.taskConstraints || '',
-        }),
-        signal: AbortSignal.timeout(15_000),
-      });
-      const data = await response.json().catch(() => null);
-      return NextResponse.json(data || {}, { status: response.status });
-    } catch (error) {
-      return NextResponse.json(
-        { status: 'error', message: 'Backend hire service unavailable' },
-        { status: 503 },
-      );
-    }
+  if (!upstream) {
+    return NextResponse.json(
+      { status: 'error', message: 'Backend hire service unavailable' },
+      { status: 503 },
+    );
   }
 
-  const agentId = `agent-${randomUUID()}`;
-  const workflowId = randomUUID();
-  return NextResponse.json(
-    {
-      id: agentId,
-      status: 'running',
-      agent_id: agentId,
-      workflow_id: workflowId,
-      message: `Hired ${name} as ${role}`,
-      expert: {
+  try {
+    const response = await fetch(`${upstream}/api/agents/hire`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name,
         role,
+        providerType: payload?.providerType || 'builtin',
+        model: payload?.model || 'MiniMax-M3',
         mode: payload?.mode || 'Ask',
         workspace: payload?.workspace || 'Current business',
-        model: payload?.model || 'MiniMax-M3',
         task: payload?.task || '',
         skills: payload?.skills || [],
         connectors: payload?.connectors || [],
@@ -93,8 +62,15 @@ export async function POST(request: NextRequest) {
         workDirectory: payload?.workDirectory || '',
         outputFormat: payload?.outputFormat || 'Brief',
         taskConstraints: payload?.taskConstraints || '',
-      },
-    },
-    { status: 201 },
-  );
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const data = await response.json().catch(() => null);
+    return NextResponse.json(data || {}, { status: response.status });
+  } catch (error) {
+    return NextResponse.json(
+      { status: 'error', message: 'Backend hire service unavailable' },
+      { status: 503 },
+    );
+  }
 }

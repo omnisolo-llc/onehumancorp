@@ -72,6 +72,11 @@ ALTER TABLE IF EXISTS tool_integrations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_tool_integrations ON tool_integrations;
 CREATE POLICY tenant_isolation_tool_integrations ON tool_integrations USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
 
+-- 15. shared_task_dependencies
+ALTER TABLE IF EXISTS shared_task_dependencies ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_shared_task_dependencies ON shared_task_dependencies;
+CREATE POLICY tenant_isolation_shared_task_dependencies ON shared_task_dependencies USING (organization_id::text = current_setting('app.current_tenant', true)) WITH CHECK (organization_id::text = current_setting('app.current_tenant', true));
+
 -- +goose Down
 -- Revert RLS
 DROP POLICY IF EXISTS tenant_isolation_bookings ON bookings;
@@ -115,3 +120,6 @@ ALTER TABLE IF EXISTS task_dependencies DISABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS tenant_isolation_tool_integrations ON tool_integrations;
 ALTER TABLE IF EXISTS tool_integrations DISABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_isolation_shared_task_dependencies ON shared_task_dependencies;
+ALTER TABLE IF EXISTS shared_task_dependencies DISABLE ROW LEVEL SECURITY;

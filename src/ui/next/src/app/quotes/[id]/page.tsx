@@ -29,7 +29,7 @@ export default function QuoteReviewPage() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [approving, setApproving] = useState(false);
+  const [sending, setSending] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
@@ -48,20 +48,20 @@ export default function QuoteReviewPage() {
     fetchQuote();
   }, [id]);
 
-  const handleApprove = async () => {
+  const handleSend = async () => {
     try {
-      setApproving(true);
-      const res = await fetch(`/api/quotes/${id}/approve`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to approve quote');
+      setSending(true);
+      const res = await fetch(`/api/quotes?id=${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...quote, status: 'SENT' }) });
+      if (!res.ok) throw new Error('Failed to send quote');
       const updated = await res.json();
       setQuote(updated);
       if (updated.stripe_payment_link) {
-        alert('Quote Approved! Stripe Payment Link generated.');
+        alert('Quote Sent!');
       }
     } catch (err: any) {
       alert(err.message);
     } finally {
-      setApproving(false);
+      setSending(false);
     }
   };
 
@@ -81,7 +81,7 @@ export default function QuoteReviewPage() {
 
   const saveQuoteChanges = async () => {
     try {
-      setApproving(true);
+      setSending(true);
       const res = await fetch(`/api/quotes?id=${id}`, {
         method: 'POST', // Based on route.ts POST handles update if id is present
         headers: { 'Content-Type': 'application/json' },
@@ -92,7 +92,7 @@ export default function QuoteReviewPage() {
     } catch (err: any) {
       alert(err.message);
     } finally {
-      setApproving(false);
+      setSending(false);
     }
   };
 
@@ -166,18 +166,18 @@ export default function QuoteReviewPage() {
             <button
               id="btn-save-edits"
               onClick={saveQuoteChanges}
-              disabled={approving}
+              disabled={sending}
               className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
             >
-              {approving ? 'Saving...' : 'Save Changes'}
+              {sending ? 'Saving...' : 'Save Changes'}
             </button>
           ) : (
             <button
-              onClick={handleApprove}
-              disabled={approving}
+              onClick={handleSend}
+              disabled={sending}
               className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
             >
-              {approving ? 'Approving...' : 'Approve & Send Quote'}
+              {sending ? 'Sending...' : 'Send Quote to Client'}
             </button>
           )
         )}
