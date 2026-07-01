@@ -10,6 +10,7 @@ pub enum DepartmentType {
     Finance,
     Legal,
     BusinessAdvisory,
+    Retention,
 }
 
 impl FromStr for DepartmentType {
@@ -23,6 +24,7 @@ impl FromStr for DepartmentType {
             "finance" => Ok(DepartmentType::Finance),
             "legal" => Ok(DepartmentType::Legal),
             "businessadvisory" | "business_advisory" => Ok(DepartmentType::BusinessAdvisory),
+            "retention" => Ok(DepartmentType::Retention),
             _ => Err(format!("Unknown department: {}", s)),
         }
     }
@@ -38,6 +40,7 @@ impl std::fmt::Display for DepartmentType {
             DepartmentType::Finance => "finance",
             DepartmentType::Legal => "legal",
             DepartmentType::BusinessAdvisory => "business_advisory",
+            DepartmentType::Retention => "retention",
         };
         write!(f, "{}", s)
     }
