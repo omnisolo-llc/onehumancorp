@@ -52,7 +52,16 @@ async fn invalidate_cache_webhook(
 ) -> impl IntoResponse {
     let cache = get_edge_cache();
     let service = CacheInvalidationService::new(cache);
-    service.invalidate(payload.tags).await;
+    service.invalidate(payload.tags.clone()).await;
+
+    let tags_to_invalidate = payload.tags;
+    tokio::spawn(async move {
+        let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+        for tag in tags_to_invalidate {
+            cdn.invalidate_by_tag(&tag).await;
+        }
+    });
+
     StatusCode::OK
 }
 

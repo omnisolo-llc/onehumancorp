@@ -7,11 +7,52 @@ use axum::{
 };
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
+use std::sync::OnceLock;
+use crate::cache::HybridCache;
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct CachedResponse {
+    pub status: u16,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+}
+
+pub static CDN_CACHE: OnceLock<std::sync::Arc<HybridCache<CachedResponse>>> = OnceLock::new();
+
+pub fn get_cdn_cache() -> std::sync::Arc<HybridCache<CachedResponse>> {
+    CDN_CACHE.get_or_init(|| std::sync::Arc::new(HybridCache::new(None))).clone()
+}
 
 pub async fn edge_caching_middleware(
     req: Request,
     next: Next,
 ) -> Result<impl IntoResponse, axum::http::StatusCode> {
+    let method = req.method().clone();
+    let uri = req.uri().to_string();
+    let is_get = method == axum::http::Method::GET;
+
+    let cdn_cache = get_cdn_cache();
+    let cache_key = format!("cdn:{}", uri);
+
+    if is_get {
+        if let Some((cached, _is_stale)) = cdn_cache.get_with_swr(&cache_key).await {
+            let body = Body::from(cached.body);
+            let mut response = Response::builder()
+                .status(cached.status)
+                .body(body)
+                .unwrap();
+
+            for (k, v) in cached.headers {
+                if let (Ok(hk), Ok(hv)) = (axum::http::HeaderName::try_from(k), axum::http::HeaderValue::try_from(v)) {
+                    response.headers_mut().insert(hk, hv);
+                }
+            }
+            response.headers_mut().insert("X-Cache", "HIT".parse().unwrap());
+            return Ok(response.into_response());
+        }
+    }
+
     let response = next.run(req).await;
 
     let (mut parts, body) = response.into_parts();
@@ -48,7 +89,37 @@ pub async fn edge_caching_middleware(
         }
     }
 
+    parts.headers.insert("X-Cache", "MISS".parse().unwrap());
+
+    if is_get && parts.status.is_success() {
+        let mut tags_vec = Vec::new();
+        if let Some(surrogate) = parts.headers.get("Surrogate-Key") {
+            if let Ok(s) = surrogate.to_str() {
+                for t in s.split(' ') {
+                    if !t.is_empty() {
+                        tags_vec.push(t.to_string());
+                    }
+                }
+            }
+        }
+
+        let mut headers_vec = Vec::new();
+        for (k, v) in parts.headers.iter() {
+            if let Ok(v_str) = v.to_str() {
+                headers_vec.push((k.as_str().to_string(), v_str.to_string()));
+            }
+        }
+
+        let cached_response = CachedResponse {
+            status: parts.status.as_u16(),
+            headers: headers_vec,
+            body: bytes.to_vec(),
+        };
+
+        cdn_cache.set_with_tags(&cache_key, cached_response, tags_vec, std::time::Duration::from_secs(60)).await;
+    }
+
     let new_body = Body::from(bytes.to_vec());
     let new_response = Response::from_parts(parts, new_body);
-    Ok(new_response)
+    Ok(new_response.into_response())
 }
