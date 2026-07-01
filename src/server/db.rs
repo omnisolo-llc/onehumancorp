@@ -355,7 +355,15 @@ impl DB {
                 #[cfg(not(unix))]
                 {
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                        let _ = std::fs::File::create(&db_path);
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::OpenOptionsExt;
+                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            let _ = std::fs::File::create(&db_path);
+                        }
                     }
                 }
             }
@@ -708,7 +716,10 @@ impl DB {
         let mut backoff = std::time::Duration::from_millis(1);
 
         // Enforce the 60-second ML-Resilience rule for database operations
-        let start_time = tokio::time::Instant::now();
+        #[cfg(test)]
+        let start_time = tokio::time::Instant::now(); // use simulated time for tests
+        #[cfg(not(test))]
+        let start_time = std::time::Instant::now(); // use real time for prod
         let timeout_duration = std::time::Duration::from_secs(60);
 
         loop {
@@ -2297,7 +2308,15 @@ mod security_tests_final {
                         let _ = fs::create_dir_all(parent_dir);
 
                         // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-                        let _ = fs::File::create(&db_path);
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::OpenOptionsExt;
+                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            let _ = fs::File::create(&db_path);
+                        }
 
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
