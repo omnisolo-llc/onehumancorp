@@ -2482,16 +2482,36 @@ async fn handle_get_milestone_card(
       <stop offset="0%" style="stop-color:{grad_start};stop-opacity:1" />
       <stop offset="100%" style="stop-color:{grad_end};stop-opacity:1" />
     </linearGradient>
+    <radialGradient id="mesh1" cx="20%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mesh2" cx="80%" cy="80%" r="60%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
   </defs>
+
   <rect width="1200" height="630" fill="url(#grad1)" rx="24" ry="24" filter="url(#drop-shadow)" />
+  <rect width="1200" height="630" fill="url(#mesh1)" rx="24" ry="24" />
+  <rect width="1200" height="630" fill="url(#mesh2)" rx="24" ry="24" />
 
-  <text x="600" y="200" font-family="Outfit, sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
-  <text x="600" y="350" font-family="Outfit, sans-serif" font-size="80" font-weight="700" text-anchor="middle" fill="#ffffff">{title}</text>
-  <text x="600" y="450" font-family="Outfit, sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
+  <g transform="translate(100, 70)">
+    <rect width="1000" height="490" rx="32" ry="32" fill="rgba(255, 255, 255, 0.15)" stroke="rgba(255, 255, 255, 0.4)" stroke-width="2" />
 
-  <rect x="400" y="500" width="400" height="2" fill="#ffffff" opacity="0.3" />
+    <g transform="translate(500, 110)">
+      <circle cx="0" cy="0" r="80" fill="rgba(255, 255, 255, 0.2)" stroke="rgba(255, 255, 255, 0.5)" stroke-width="3" />
+      <text x="0" y="35" font-family="Outfit, sans-serif" font-size="90" text-anchor="middle" fill="#ffffff">{icon}</text>
+    </g>
 
-  <text x="600" y="560" font-family="Outfit, sans-serif" font-size="36" font-weight="700" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
+    <text x="500" y="270" font-family="Outfit, sans-serif" font-size="64" font-weight="700" text-anchor="middle" fill="#ffffff" letter-spacing="-1">{title}</text>
+    <text x="500" y="330" font-family="Outfit, sans-serif" font-size="32" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
+
+    <rect x="300" y="380" width="400" height="2" fill="#ffffff" opacity="0.3" />
+
+    <text x="500" y="440" font-family="Outfit, sans-serif" font-size="28" font-weight="700" text-anchor="middle" fill="#ffffff" letter-spacing="1">{safe_business_name}</text>
+  </g>
+
   {branding}
 </svg>"##,
     grad_start = grad_start,
