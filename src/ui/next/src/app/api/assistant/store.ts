@@ -287,6 +287,7 @@ export type AssistantSettings = {
     Windows: string;
   };
   observationMasking: boolean;
+  enableLazyToolLoading?: boolean;
   installation: {
     Windows: {
       installer: string;
@@ -788,6 +789,7 @@ let settings: AssistantSettings = {
     accountSettingsAcrossDevices: true,
   },
   observationMasking: true,
+    enableLazyToolLoading: false,
   logLocations: {
     macOS: 'Open Log Folder: ~/Library/Logs/Agent',
     Windows: 'Open Log Directory: %LOCALAPPDATA%\\Agent\\Logs',

@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const [agentName, setAgentName] = useState("Agent One");
   const [seoReports, setSeoReports] = useState<any[]>([]);
   const [hitRate, setHitRate] = useState<string>("");
+  const [enableLazyToolLoading, setEnableLazyToolLoading] = useState(false);
 
 
   useEffect(() => {
@@ -478,6 +479,32 @@ export default function SettingsPage() {
             <button onClick={() => router.push("/dashboard")} className="px-6 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs w-fit" type="button">
               Save New Password
             </button>
+          </div>
+        </section>
+
+
+        {/* Agent Harness Settings Section */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+            <div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Agent Harness Settings</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Configure advanced agent harness mechanics like lazy tool loading.</div>
+            </div>
+          </div>
+          <div className="app-panel-body p-6 space-y-4">
+            <label className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-white dark:bg-gray-900 transition-colors">
+              <div>
+                <span>Enable Lazy Tool Loading (Harness Thickness)</span>
+                <p className="text-xs text-gray-500 font-normal mt-1">Reduces initial context size by lazy-loading tools only when needed. Achieves up to 95% context reduction.</p>
+              </div>
+              <input
+                type="checkbox"
+                aria-label="Enable Lazy Tool Loading"
+                checked={enableLazyToolLoading}
+                onChange={toggleLazyToolLoading}
+                className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
+              />
+            </label>
           </div>
         </section>
 

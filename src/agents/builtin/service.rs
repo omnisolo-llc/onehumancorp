@@ -617,7 +617,7 @@ impl AgentServiceImpl {
             enable_single_agent_maximization: false,
             enable_3_stage_anthropic_tool_gating: false,
             enable_vercel_tool_scoping_metric: false,
-            enable_lazy_tool_loading: false,
+            enable_lazy_tool_loading: req.enable_lazy_tool_loading,
             enable_sona_patterns: false,
             sona_patterns_path: None,
             agent_id: self.agent_id.clone(),
@@ -1115,7 +1115,7 @@ impl AgentService for AgentServiceImpl {
                 enable_single_agent_maximization: false,
             enable_3_stage_anthropic_tool_gating: false,
             enable_vercel_tool_scoping_metric: false,
-            enable_lazy_tool_loading: false,
+            enable_lazy_tool_loading: sub_req.enable_lazy_tool_loading,
             enable_sona_patterns: false,
             sona_patterns_path: None,
                 agent_id: self.agent_id.clone(),
@@ -1234,6 +1234,7 @@ impl AgentService for AgentServiceImpl {
 
         let mut client = AgentServiceClient::new(channel);
         let run_req = RunTaskRequest {
+            enable_lazy_tool_loading: sub_req.enable_lazy_tool_loading,
             task: sub_req.task,
             model: sub_req.model,
             llm_provider: sub_req.llm_provider,
@@ -1497,6 +1498,7 @@ pub async fn start_builtin_agent(
                 }
 
                 let req = crate::proto::agent_service::RunTaskRequest {
+                    enable_lazy_tool_loading: false,
                     task_id: shared_task.id.clone(),
                     task: shared_task.title.clone() + "\n" + shared_task.description.as_str(),
                     model,
