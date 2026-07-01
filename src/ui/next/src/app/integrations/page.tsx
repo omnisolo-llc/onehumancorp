@@ -176,7 +176,7 @@ export default function Integrations() {
                 </button>
               </div>
 
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Connect Twilio for WhatsApp</h2>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Connect Twilio for WhatsApp API</h2>
               <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
                 Enter your Twilio API credentials to securely link your WhatsApp Business account. Incoming messages will be automatically routed into Work Triage.
               </p>
