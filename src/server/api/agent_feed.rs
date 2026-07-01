@@ -80,6 +80,8 @@ pub struct UpdateStateRequest {
     pub state: String,
     pub proposed_action: Option<serde_json::Value>,
     pub context_payload: Option<serde_json::Value>,
+    #[serde(default)]
+    pub edited_payload: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -315,10 +317,33 @@ async fn update_feed_item_state(
 
     let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
 
-    if payload.proposed_action.is_some() || payload.context_payload.is_some() {
-        let proposed = payload.proposed_action.clone().map(sqlx::types::Json);
-        let context = payload.context_payload.clone().map(sqlx::types::Json);
-        let _ = repo.update_payloads(&tenant_id, &id, context, proposed).await;
+    if payload.proposed_action.is_some() || payload.context_payload.is_some() || payload.edited_payload.is_some() {
+        let mut proposed = payload.proposed_action.clone();
+
+        if let (Some(edited), Some(prop)) = (&payload.edited_payload, proposed.as_mut()) {
+            if let Some(obj) = prop.as_object_mut() {
+                if obj.contains_key("draft_reply") {
+                    obj.insert("draft_reply".to_string(), serde_json::Value::String(edited.clone()));
+                } else {
+                    obj.insert("message".to_string(), serde_json::Value::String(edited.clone()));
+                }
+            } else {
+                proposed = Some(serde_json::json!({
+                    "message": edited
+                }));
+            }
+        } else if let (Some(edited), None) = (&payload.edited_payload, proposed.as_ref()) {
+            // If the user edited but there wasn't a proposed_action provided in the request payload
+            // we should try to fetch the existing one and update it, but for simplicity here we
+            // just create a new one.
+            proposed = Some(serde_json::json!({
+                "message": edited
+            }));
+        }
+
+        let proposed_json = proposed.map(sqlx::types::Json);
+        let context_json = payload.context_payload.clone().map(sqlx::types::Json);
+        let _ = repo.update_payloads(&tenant_id, &id, context_json, proposed_json).await;
     }
 
     match repo.update_state(&tenant_id, &id, &payload.state).await {
