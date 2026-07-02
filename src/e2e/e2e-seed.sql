@@ -274,6 +274,14 @@ SET customer_id = EXCLUDED.customer_id,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
+
+INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status)
+VALUES
+  ('e2e-booking-old-1', 'e2e-tenant', 'e2e-customer-ben', 'e2e-product-class', CURRENT_TIMESTAMP - interval '30 day', CURRENT_TIMESTAMP - interval '30 day' + interval '1 hour', 'completed'),
+  ('e2e-booking-old-2', 'e2e-tenant', 'e2e-customer-ben', 'e2e-product-class', CURRENT_TIMESTAMP - interval '20 day', CURRENT_TIMESTAMP - interval '20 day' + interval '1 hour', 'completed')
+ON CONFLICT (id) DO NOTHING;
+
+
 INSERT INTO shared_tasks (id, tenant_id, title, description, status, agent_id, priority, payload)
 VALUES
   ('e2e-task-restock', 'e2e-tenant', 'Prepare weekend inventory', 'Review seeded orders and prep ingredients.', 'PENDING', 'e2e-agent-ops', 'P1', '{"source":"database_seed"}'),

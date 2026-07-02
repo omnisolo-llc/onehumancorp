@@ -5,9 +5,6 @@ use std::time::Duration;
 use uuid::Uuid;
 use sqlx::Row;
 use serde_json::json;
-use tokio::time::timeout;
-
-const DB_OP_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub struct BookingReengagementWorker {
     pub db: Arc<DB>,
@@ -18,202 +15,191 @@ impl BookingReengagementWorker {
     pub fn new(db: Arc<DB>) -> Self {
         Self {
             db,
-            poll_interval: Duration::from_secs(10), // Run frequently, jobs are scheduled for 14 days out
+            poll_interval: Duration::from_secs(60 * 60 * 24), // Run daily
         }
     }
 
     pub fn start(&self) {
         let db = self.db.clone();
         let interval_duration = self.poll_interval;
+
+        let llm = ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(
+            std::env::var("OHC_LLM_API_KEY")
+                .or_else(|_| std::env::var("OPENAI_API_KEY"))
+                .unwrap_or_default()
+        );
+        let llm_client = if llm.api_key.is_empty() {
+            None
+        } else {
+            Some(Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::from_config(llm)))
+        };
+
         tokio::spawn(async move {
             let pool = db.pool.clone();
+
+            // Initial delay for tests to pick it up without hammering the DB immediately
+            tokio::time::sleep(Duration::from_secs(5)).await;
+
+            let mut interval = tokio::time::interval(interval_duration);
+
+            // consume first tick which is immediate
+            interval.tick().await;
+
             loop {
-                tokio::time::sleep(interval_duration).await;
-
-                let poll_op = async {
-                    match &db.store {
-                        crate::db::DbStore::Postgres => {
-                            let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-                            let row = sqlx::query(
-                                r#"
-                                SELECT id, tenant_id, payload FROM ohc_job_queue
-                                WHERE status = 'PENDING' AND job_type = 'booking_reengagement_check'
-                                AND next_retry_at <= CURRENT_TIMESTAMP
-                                ORDER BY created_at ASC
-                                LIMIT 1 FOR UPDATE SKIP LOCKED
-                                "#
-                            )
-                            .fetch_optional(&mut *tx)
-                            .await
-                            .map_err(|e| e.to_string())?;
-
-                            if let Some(r) = row {
-                                let id: String = r.get("id");
-                                let tenant_id: String = r.get("tenant_id");
-                                let payload: serde_json::Value = r.get("payload");
-
-                                sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
-                                    .bind(&id)
-                                    .execute(&mut *tx).await.map_err(|e| e.to_string())?;
-
-                                tx.commit().await.map_err(|e| e.to_string())?;
-                                Ok::<_, String>(Some((id, tenant_id, payload)))
-                            } else {
-                                tx.rollback().await.map_err(|e| e.to_string())?;
-                                Ok::<_, String>(None)
-                            }
-                        },
-                        crate::db::DbStore::Sqlite(sqlite_pool) => {
-                             let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
-                            let row = sqlx::query(
-                                r#"
-                                SELECT id, tenant_id, payload FROM ohc_job_queue
-                                WHERE status = 'PENDING' AND job_type = 'booking_reengagement_check'
-                                AND next_retry_at <= CURRENT_TIMESTAMP
-                                ORDER BY created_at ASC
-                                LIMIT 1
-                                "#
-                            )
-                            .fetch_optional(&mut *tx)
-                            .await
-                            .map_err(|e| e.to_string())?;
-
-                            if let Some(r) = row {
-                                let id: String = r.get("id");
-                                let tenant_id: String = r.get("tenant_id");
-                                let payload_str: String = r.get("payload");
-                                let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
-
-                                sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                                    .bind(&id)
-                                    .execute(&mut *tx).await.map_err(|e| e.to_string())?;
-
-                                tx.commit().await.map_err(|e| e.to_string())?;
-                                Ok::<_, String>(Some((id, tenant_id, payload)))
-                            } else {
-                                tx.rollback().await.map_err(|e| e.to_string())?;
-                                Ok::<_, String>(None)
-                            }
-                        }
+                // Attempt to acquire distributed lock
+                let lock_key = "ohc:lock:global:booking_reengagement";
+                let has_lock = match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let result: Result<Option<bool>, _> = sqlx::query_scalar("SELECT pg_try_advisory_lock(hashtext($1))")
+                            .bind(lock_key)
+                            .fetch_one(&pool).await;
+                        result.unwrap_or(Some(false)).unwrap_or(false)
+                    },
+                    crate::db::DbStore::Sqlite(_) => {
+                        // SQLite uses a simple table for locks if needed, or we just rely on single-process
+                        true
                     }
                 };
 
-                let task = match timeout(DB_OP_TIMEOUT, poll_op).await {
-                    Ok(Ok(Some(res))) => res,
-                    Ok(Ok(None)) => continue,
-                    _ => continue,
-                };
+                if has_lock {
+                // Scan for dormant customers:
+                // Historically booked > 1 times, but no bookings in the last 14 days,
+                // and no re-engagement feed item pending for them.
 
-                let (job_id, tenant_id, payload) = task;
-                let customer_id = payload.get("customer_id").and_then(|c| c.as_str()).unwrap_or("");
-                let _product_id = payload.get("product_id").and_then(|p| p.as_str()).unwrap_or("");
-
-                // 1. Check if customer is dormant: has historically booked more than once, but not in the last 14 days.
-                let is_dormant = match &db.store {
+                let dormant_customers = match &db.store {
                     crate::db::DbStore::Postgres => {
-                        sqlx::query_scalar::<_, Option<bool>>(
+                        sqlx::query(
                             r#"
                             WITH customer_stats AS (
-                                SELECT COUNT(*) as total_bookings, MAX(start_time) as last_booking
+                                SELECT tenant_id, customer_id, COUNT(*) as total_bookings, MAX(start_time) as last_booking
                                 FROM bookings
-                                WHERE tenant_id = $1 AND customer_id = $2
+                                GROUP BY tenant_id, customer_id
                             )
-                            SELECT (total_bookings > 1 AND last_booking < CURRENT_TIMESTAMP - INTERVAL '14 days')
-                            FROM customer_stats;
+                            SELECT cs.tenant_id, cs.customer_id, c.name
+                            FROM customer_stats cs
+                            JOIN customers c ON cs.customer_id = c.id AND cs.tenant_id = c.tenant_id
+                            WHERE cs.total_bookings > 1
+                            AND cs.last_booking < CURRENT_TIMESTAMP - INTERVAL '14 days'
+                            AND NOT EXISTS (
+                                SELECT 1 FROM agent_feed_items afi
+                                WHERE afi.tenant_id = cs.tenant_id
+                                AND afi.event_source = 'Sales/CS Agent'
+                                AND afi.context_payload->>'customer_id' = cs.customer_id::text
+                            )
                             "#
                         )
-                        .bind(&tenant_id)
-                        .bind(&customer_id)
-                        .fetch_one(&pool)
+                        .fetch_all(&pool)
                         .await
-                        .unwrap_or(Some(false))
-                        .unwrap_or(false)
                     },
                     crate::db::DbStore::Sqlite(sqlite_pool) => {
-                         sqlx::query_scalar::<_, Option<bool>>(
+                         sqlx::query(
                             r#"
                             WITH customer_stats AS (
-                                SELECT COUNT(*) as total_bookings, MAX(start_time) as last_booking
+                                SELECT tenant_id, customer_id, COUNT(*) as total_bookings, MAX(start_time) as last_booking
                                 FROM bookings
-                                WHERE tenant_id = ? AND customer_id = ?
+                                GROUP BY tenant_id, customer_id
                             )
-                            SELECT (total_bookings > 1 AND last_booking < datetime('now', '-14 days'))
-                            FROM customer_stats;
+                            SELECT cs.tenant_id, cs.customer_id, c.name
+                            FROM customer_stats cs
+                            JOIN customers c ON cs.customer_id = c.id AND cs.tenant_id = c.tenant_id
+                            WHERE cs.total_bookings > 1
+                            AND cs.last_booking < datetime('now', '-14 days')
+                            AND NOT EXISTS (
+                                SELECT 1 FROM agent_feed_items afi
+                                WHERE afi.tenant_id = cs.tenant_id
+                                AND afi.event_source = 'Sales/CS Agent'
+                                AND json_extract(afi.context_payload, '$.customer_id') = cs.customer_id
+                            )
                             "#
                         )
-                        .bind(&tenant_id)
-                        .bind(&customer_id)
-                        .fetch_one(sqlite_pool)
+                        .fetch_all(sqlite_pool)
                         .await
-                        .unwrap_or(Some(false))
-                        .unwrap_or(false)
                     }
                 };
 
-                let has_recent_booking = !is_dormant; // Map logic for the rest of the worker
+                if let Ok(customers) = dormant_customers {
+                    for r in customers {
+                        let tenant_id: String = r.get("tenant_id");
+                        let customer_id: String = match r.try_get::<uuid::Uuid, _>("customer_id") {
+                            Ok(u) => u.to_string(),
+                            Err(_) => r.get::<String, _>("customer_id")
+                        };
+                        let customer_name: String = r.get("name");
 
-                // 2. If no new booking exists, draft a re-engagement message and push to Agent Feed (shared_tasks).
-                if !has_recent_booking {
-                     // Get Customer Name (simplified for worker context)
-                    let customer_name = match &db.store {
-                        crate::db::DbStore::Postgres => {
-                            sqlx::query_scalar::<_, String>("SELECT name FROM customers WHERE id = $1 AND tenant_id = $2")
-                            .bind(&customer_id).bind(&tenant_id)
-                            .fetch_optional(&pool).await.unwrap_or(None).unwrap_or("Valued Customer".to_string())
-                        },
-                        crate::db::DbStore::Sqlite(sqlite_pool) => {
-                             sqlx::query_scalar::<_, String>("SELECT name FROM customers WHERE id = ? AND tenant_id = ?")
-                            .bind(&customer_id).bind(&tenant_id)
-                            .fetch_optional(sqlite_pool).await.unwrap_or(None).unwrap_or("Valued Customer".to_string())
+                        let mut drafted_message = format!("Hi {}, I noticed we haven't had a session in a while! Hope everything is going great with your progress. Would you like to jump back in this week? I have some slots available. Here is a quick booking link: [Link]", customer_name);
+
+                        // If LLM is available, draft a personalized message
+                        if let Some(ref llm) = llm_client {
+                            use ohc_builtin_agent::llm::LlmClient;
+                            let prompt = format!("Draft a short, friendly SMS message to re-engage a customer named {} who hasn't booked a service in 14 days. Include a placeholder [Link] for booking. Keep it under 2 sentences.", customer_name);
+                            let req = ohc_builtin_agent_core::types::ChatRequest {
+                                model: "gpt-4o-mini".to_string(),
+                                system: "You are a helpful customer success assistant. Reply with only the message text.".to_string(),
+                                messages: vec![ohc_builtin_agent_core::types::Message::user(prompt)],
+                                tools: vec![],
+                                max_tokens: 150,
+                                temperature: 0.7,
+                            };
+                            if let Ok(resp) = llm.chat(req).await {
+                                drafted_message = resp.message.content.trim().to_string();
+                            }
                         }
-                    };
 
-                    let drafted_message = format!("Hi {}, I noticed we haven't had a session in a while! Hope everything is going great with your progress. Would you like to jump back in this week? I have some slots available. Here is a quick booking link: [Link]", customer_name);
 
-                    match &db.store {
-                        crate::db::DbStore::Postgres => {
-                            let _ = sqlx::query(
-                                r#"
-                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                VALUES ($1, $2, 'Approve Re-engagement for ' || $3, 'AI detected that ' || $3 || ' is a returning customer who hasn''t booked in 14 days. This follow-up helps maintain momentum.', 'PENDING', 'P1', 'LOW', 'PENDING', $4)
-                                "#
-                            )
-                            .bind(Uuid::new_v4().to_string())
-                            .bind(&tenant_id)
-                            .bind(&customer_name)
-                            .bind(&drafted_message)
-                            .execute(&pool)
-                            .await;
-                        },
-                        crate::db::DbStore::Sqlite(sqlite_pool) => {
-                             let _ = sqlx::query(
-                                r#"
-                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                VALUES (?, ?, 'Approve Re-engagement for ' || ?, 'AI detected that ' || ? || ' is a returning customer who hasn''t booked in 14 days. This follow-up helps maintain momentum.', 'PENDING', 'P1', 'LOW', 'PENDING', ?)
-                                "#
-                            )
-                            .bind(Uuid::new_v4().to_string())
-                            .bind(&tenant_id)
-                            .bind(&customer_name)
-                            .bind(&customer_name)
-                            .bind(&drafted_message)
-                            .execute(sqlite_pool)
-                            .await;
+                        let context_payload = serde_json::json!({
+                            "customer_id": customer_id,
+                            "description": format!("AI detected that {} is a returning customer who hasn't booked in 14 days. This follow-up helps maintain momentum.", customer_name)
+                        });
+
+                        let proposed_action = serde_json::json!({
+                            "action_type": "send_message",
+                            "feature_type": "booking_reengagement",
+                            "message": format!("Approve Re-engagement for {}", customer_name),
+                            "draft_message": drafted_message
+                        });
+
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query(
+                                    r#"
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                    VALUES ($1, $2, 'Sales/CS Agent', $3, $4, 'PENDING_APPROVAL')
+                                    "#
+                                )
+                                .bind(Uuid::new_v4().to_string())
+                                .bind(&tenant_id)
+                                .bind(context_payload.clone())
+                                .bind(proposed_action.clone())
+                                .execute(&pool)
+                                .await;
+                            },
+                            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                                 let _ = sqlx::query(
+                                    r#"
+                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+                                    VALUES (?, ?, 'Sales/CS Agent', ?, ?, 'PENDING_APPROVAL')
+                                    "#
+                                )
+                                .bind(Uuid::new_v4().to_string())
+                                .bind(&tenant_id)
+                                .bind(context_payload.to_string())
+                                .bind(proposed_action.to_string())
+                                .execute(sqlite_pool)
+                                .await;
+                            }
                         }
                     }
                 }
 
-                // 3. Mark Job as Completed
-                 match &db.store {
-                     crate::db::DbStore::Postgres => {
-                          let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
-                          .bind(&job_id).execute(&pool).await;
-                     },
-                     crate::db::DbStore::Sqlite(sqlite_pool) => {
-                           let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                          .bind(&job_id).execute(sqlite_pool).await;
-                     }
-                 }
+
+                    if let crate::db::DbStore::Postgres = &db.store {
+                        let _: Result<Option<bool>, _> = sqlx::query_scalar("SELECT pg_advisory_unlock(hashtext($1))")
+                            .bind("ohc:lock:global:booking_reengagement")
+                            .fetch_one(&pool).await;
+                    }
+                }
+
+                interval.tick().await;
             }
         });
     }
