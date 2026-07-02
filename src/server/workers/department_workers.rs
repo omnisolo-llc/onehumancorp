@@ -1142,7 +1142,7 @@ let db_for_products = self.db.clone();
                             let tenant_id = payload_json.get("tenant_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
 
                             if !session_id.is_empty() {
-                                let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
+                                let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Real Estate, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
 
                                 let mut resolved_payload = serde_json::json!({});
 

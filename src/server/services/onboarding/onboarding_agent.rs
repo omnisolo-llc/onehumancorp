@@ -103,16 +103,17 @@ impl OnboardingAgent {
 
         let prompt = format!(
             "You are the OHC Onboarding Expert assistant. Your goal is to synthesize a fully-operational, mobile-first workspace from a single user prompt.
-Extract the business taxonomy, default any missing fields to sensible industry defaults, and generate the configuration. Do NOT ask follow-up questions unless the input is completely empty or nonsensical.
+Extract the business taxonomy, default any missing fields to sensible industry defaults, and generate the configuration. Do NOT ask follow-up questions unless the input is completely empty or nonsensical, EXCEPT if the business is clearly related to Real Estate / Property Management, in which case you MUST ask ONE clarifying question: 'Do you want to handle maintenance requests through the app?' If they have already answered this question or if the conversation history shows you already asked this, then output [COMPLETE].
 You need to synthesize at least:
 1. What they sell or what service they provide.
-2. A rough idea of their business type (e.g. bakery, handyman, tutor).
+2. A rough idea of their business type (e.g. bakery, handyman, tutor, real estate).
 
 Review the following conversation history:
 {}
 
 If the input is completely empty or nonsensical, reply with a natural, conversational question asking for clarification.
-Otherwise, since you must complete the setup in a single prompt, reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have enough information.
+If the business is Real Estate and you haven't asked about maintenance requests, reply with ONLY the clarifying question.
+Otherwise, reply EXACTLY with the string `[COMPLETE]` followed by a brief confirmation message (e.g., `[COMPLETE] Give me a minute... I'm building your business.`). Do not output anything else if you have enough information.
 
 Your response:",
             conversation_history
@@ -213,6 +214,7 @@ Your response:",
             - Leo (Creator/Tutor): Needs packages, scheduling, and student follow-ups.
             - Fatima (Food Cart): Needs simple order list, pickup timing, and offline flows.
             - Nora (Agency): Needs project intake, proposals, and task assignment.
+            - Elena (Property Manager / Real Estate): Needs property listings, applicant intake forms, showing schedules, and maintenance request workflows if requested.
 
             If the input matches or is similar to these personas, use them for inspiration.
             If the input is an Instagram/social link, infer details from the profile.
@@ -913,12 +915,12 @@ Your response:",
                 ("Interior Design Assessment", "Initial evaluation and report", 7500, "booking"),
                 ("Interior Design Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
-            "Real Estate Agent" => vec![
-                ("Premium Real Estate Agent Package", "Comprehensive service for your needs", 19999, "booking"),
-                ("Basic Real Estate Agent Service", "Essential services to get you started", 9999, "booking"),
-                ("Real Estate Agent Consultation", "Expert advice and planning", 4999, "booking"),
-                ("Real Estate Agent Assessment", "Initial evaluation and report", 7500, "booking"),
-                ("Real Estate Agent Starter Kit", "Everything you need in one bundle", 12000, "physical"),
+            "Real Estate Agent" | "Real Estate" | "Property Manager" => vec![
+                ("Long-Term Lease Showing", "Schedule a viewing for an available unit", 0, "booking"),
+                ("Rental Application", "Submit application for an apartment", 5000, "booking"),
+                ("Tenant Screening", "Comprehensive background and credit check", 3500, "digital"),
+                ("Maintenance Request", "Submit a work order for your unit", 0, "booking"),
+                ("Property Listing Consultation", "Discuss leasing your property with us", 0, "booking"),
             ],
             "Consulting Firm" => vec![
                 ("Premium Consulting Firm Package", "Comprehensive service for your needs", 19999, "booking"),
@@ -1241,13 +1243,6 @@ Your response:",
                 ("Real Estate Investor Consultation", "Expert advice and planning", 4999, "booking"),
                 ("Real Estate Investor Assessment", "Initial evaluation and report", 7500, "booking"),
                 ("Real Estate Investor Starter Kit", "Everything you need in one bundle", 12000, "physical"),
-            ],
-            "Property Manager" => vec![
-                ("Premium Property Manager Package", "Comprehensive service for your needs", 19999, "booking"),
-                ("Basic Property Manager Service", "Essential services to get you started", 9999, "booking"),
-                ("Property Manager Consultation", "Expert advice and planning", 4999, "booking"),
-                ("Property Manager Assessment", "Initial evaluation and report", 7500, "booking"),
-                ("Property Manager Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
             "Travel Agent" => vec![
                 ("Premium Travel Agent Package", "Comprehensive service for your needs", 19999, "booking"),
