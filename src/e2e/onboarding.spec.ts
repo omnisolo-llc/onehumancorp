@@ -55,7 +55,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     // Step Categories
     await expect(page.locator('#step-categories')).toBeVisible();
-    await page.locator('#business-categories').selectOption('Bakery');
+    await page.locator('#business-categories').selectOption('Home Baker');
     await page.locator('#step-categories .next-step-btn').click();
 
     // Step Name
