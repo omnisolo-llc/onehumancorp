@@ -67,7 +67,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">(
     "proposals",
   );
-  const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
+  const [activities, setActivities] = useState<any[]>(initialData?.activity || []);
 
   const groupedProposals = useMemo(() => {
     const groups: Record<string, { groupKey: string; title: string; items: AgentFeedItem[] }> = {};
