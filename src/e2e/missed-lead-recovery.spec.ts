@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { adminPage } from './fixtures';
-import { db } from './db';
+import { db } from './db_utils';
 
 test.describe('Missed Lead Recovery Work Triage UI', () => {
     test.beforeAll(async () => {

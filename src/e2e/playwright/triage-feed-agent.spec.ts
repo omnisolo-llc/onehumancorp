@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../fixtures';
 
 test.describe('Agentic Work Triage Feed', () => {
   test('Owner can review and approve AI-drafted replies', async ({ page, loginAs, adminUser }) => {
