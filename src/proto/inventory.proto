@@ -27,7 +27,29 @@ message CommitInventoryResponse {
   string error_message = 2;
 }
 
+message OfflineTransaction {
+  string product_id = 1;
+  int32 quantity = 2;
+  string client_timestamp = 3;
+  string client_transaction_id = 4;
+}
+
+message SyncOfflineTransactionsRequest {
+  repeated OfflineTransaction transactions = 1;
+}
+
+message SyncTransactionResult {
+  string client_transaction_id = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message SyncOfflineTransactionsResponse {
+  repeated SyncTransactionResult results = 1;
+}
+
 service InventorySyncService {
   rpc ReserveInventory(ReserveInventoryRequest) returns (ReserveInventoryResponse);
   rpc CommitInventory(CommitInventoryRequest) returns (CommitInventoryResponse);
+  rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
 }

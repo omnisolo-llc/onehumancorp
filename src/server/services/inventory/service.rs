@@ -607,6 +607,100 @@ impl InventoryService {
             error_message: "".to_string(),
         })
     }
+
+    pub async fn sync_offline_transaction(
+        &self,
+        tenant_id: &str,
+        product_id: &str,
+        quantity: i32,
+        client_timestamp: &str,
+        client_transaction_id: &str,
+    ) -> Result<CommitResult, String> {
+        use sqlx::Row;
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+        // 1. Record the transaction idempotently
+        let tx_id = Uuid::new_v4().to_string();
+        let client_ts_parsed = chrono::DateTime::parse_from_rfc3339(client_timestamp)
+            .unwrap_or_else(|_| chrono::Utc::now().into())
+            .with_timezone(&chrono::Utc);
+
+        let insert_res = sqlx::query(
+            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, status, product_id, quantity, client_timestamp, client_transaction_id)
+             VALUES ($1, $2, 'offline_client', 0, 'USD', 'COMPLETED', $3, $4, $5, $6)
+             ON CONFLICT (tenant_id, client_transaction_id) DO NOTHING"
+        )
+        .bind(&tx_id)
+        .bind(tenant_id)
+        .bind(product_id)
+        .bind(quantity)
+        .bind(client_ts_parsed)
+        .bind(client_transaction_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        // If no rows were affected, it's a duplicate. We can consider it a success since it's already synced.
+        if insert_res.rows_affected() == 0 {
+            let _ = tx.rollback().await;
+            return Ok(CommitResult {
+                success: true,
+                error_message: "Transaction already synced".to_string(),
+            });
+        }
+
+        // 2. Deduct inventory
+        // Assuming inventory_count and available_quantity exist as per tests in commit_inventory
+        let update_res = sqlx::query(
+            "UPDATE products
+             SET inventory_count = inventory_count - $1,
+                 available_quantity = available_quantity - $1
+             WHERE id = $2 AND tenant_id = $3
+             RETURNING inventory_count"
+        )
+        .bind(quantity)
+        .bind(product_id)
+        .bind(tenant_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        // 3. Handle Oversell
+        if let Some(row) = update_res {
+            let new_stock: i32 = row.try_get("inventory_count").unwrap_or(0);
+            if new_stock < 0 {
+                let action_request_id = Uuid::new_v4().to_string();
+                let payload = serde_json::json!({
+                    "product_id": product_id,
+                    "remaining_stock": new_stock,
+                    "suggested_action": "Resolve Oversell",
+                    "reason": "Offline POS sync resulted in negative inventory"
+                }).to_string();
+
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'inventory_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .bind(&action_request_id)
+                    .bind(tenant_id)
+                    .bind(product_id)
+                    .bind(&payload)
+                    .execute(&mut *tx)
+                    .await;
+            }
+        } else {
+            let _ = tx.rollback().await;
+            return Ok(CommitResult {
+                success: false,
+                error_message: "Product not found".to_string(),
+            });
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        Ok(CommitResult {
+            success: true,
+            error_message: "".to_string(),
+        })
+    }
 }
 
 #[cfg(test)]
@@ -716,5 +810,67 @@ mod tests {
             let failed_res = if res1.success { res2 } else { res1 };
             assert_eq!(failed_res.error_message, "Item is currently being checked out by another customer.");
         }
+    }
+
+    #[tokio::test]
+    async fn test_sync_offline_transaction_oversell() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let pool = crate::db::get_pool();
+        let _db = Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: DbStore::Postgres,
+        });
+
+        let tenant_id = "test_inventory_tenant_offline";
+        let product_id = "test_product_offline";
+        let tx_id = "test_tx_offline_1";
+
+        let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+
+        let _ = sqlx::query("INSERT INTO products (id, tenant_id, name, inventory_count, available_quantity) VALUES ($1, $2, 'Test Product', 1, 1) ON CONFLICT DO NOTHING")
+            .bind(product_id)
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+
+        let _ = sqlx::query("UPDATE products SET inventory_count = 1, available_quantity = 1 WHERE id = $1 AND tenant_id = $2")
+            .bind(product_id)
+            .bind(tenant_id)
+            .execute(&pool)
+            .await;
+
+        let _ = sqlx::query("DELETE FROM pos_offline_transactions WHERE tenant_id = $1 AND client_transaction_id = $2")
+            .bind(tenant_id)
+            .bind(tx_id)
+            .execute(&pool)
+            .await;
+
+        let service = Arc::new(InventoryService::new(None));
+
+        let client_ts = "2023-10-27T10:00:00Z";
+
+        // Request 2 items, which will result in oversell (-1)
+        let res = service.sync_offline_transaction(tenant_id, product_id, 2, client_ts, tx_id).await.unwrap();
+        assert!(res.success);
+
+        // Ensure idempotency
+        let res2 = service.sync_offline_transaction(tenant_id, product_id, 2, client_ts, tx_id).await.unwrap();
+        assert!(res2.success);
+        assert_eq!(res2.error_message, "Transaction already synced");
+
+        let agent_requests_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_action_requests WHERE tenant_id = $1 AND product_id = $2 AND payload->>'suggested_action' = 'Resolve Oversell'")
+            .bind(tenant_id)
+            .bind(product_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert!(agent_requests_count.0 > 0);
     }
 }
