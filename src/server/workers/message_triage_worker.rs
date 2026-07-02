@@ -313,7 +313,56 @@ Output JSON format:
             let mut quote_id_opt: Option<String> = None;
             let mut _quote_total_amount_cents: Option<i64> = None;
 
-            let mut booking_id_opt: Option<String> = None;
+
+            if action_type == "Draft Booking" || action_type == "Draft Quote" {
+                // Route to FulfillmentOrchestrator by enqueueing triage.inquiry job
+                let triage_job_id = Uuid::new_v4().to_string();
+                let triage_payload = serde_json::json!({
+                    "message_id": message_id,
+                    "customer_id": customer_id_val,
+                    "sender_id": sender_id,
+                    "source": source,
+                    "content": customer_message,
+                    "action_type": action_type,
+                    "action_payload": action_payload,
+                    "context_summary": context_summary,
+                    "priority": priority,
+                    "event_source": event_source
+                });
+
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'triage.inquiry', $3, 'PENDING')")
+                            .bind(&triage_job_id)
+                            .bind(&tenant_id)
+                            .bind(triage_payload.to_string())
+                            .execute(&self.db.pool).await;
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'triage.inquiry', ?, 'PENDING')")
+                            .bind(&triage_job_id)
+                            .bind(&tenant_id)
+                            .bind(triage_payload.to_string())
+                            .execute(&*sqlite_pool).await;
+                    }
+                }
+
+                // Mark current message triage as completed
+                match &self.db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
+                            .bind(&job_id)
+                            .execute(&self.db.pool).await;
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(&job_id)
+                            .execute(&*sqlite_pool).await;
+                    }
+                }
+                return Ok(true);
+            }
+let mut booking_id_opt: Option<String> = None;
 
             if action_type == "Draft Booking" {
                 if let Ok(booking_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
@@ -533,7 +582,31 @@ Output JSON format:
                         let _: Result<(), _> = conn.del(&redis_lock_key).await;
                     }
 
-                    if let Err(e) = sqlx::query(
+
+                    let triage_payload = serde_json::json!({
+                        "message_id": message_id,
+                        "customer_id": customer_id_val,
+                        "sender_id": sender_id,
+                        "source": source,
+                        "content": customer_message,
+                        "action_type": action_type,
+                        "action_payload": action_payload,
+                        "context_summary": context_summary,
+                        "priority": priority,
+                        "event_source": event_source,
+                        "quote_id": quote_id_opt,
+                        "booking_id": booking_id_opt
+                    });
+
+                    if action_type == "Draft Booking" || action_type == "Draft Quote" {
+                        if let Err(e) = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'triage.inquiry', $3, 'PENDING')")
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .bind(triage_payload.to_string())
+                            .execute(&self.db.pool).await {
+                                tracing::error!("Failed to insert triage.inquiry job: {}", e);
+                            }
+                    } else if let Err(e) = sqlx::query(
                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
                     )
                     .bind(&agent_feed_item_id)
@@ -661,7 +734,30 @@ Output JSON format:
                         let _: Result<(), _> = conn.del(&redis_lock_key).await;
                     }
 
-                    if let Err(e) = sqlx::query(
+                    let triage_payload = serde_json::json!({
+                        "message_id": message_id,
+                        "customer_id": customer_id_val,
+                        "sender_id": sender_id,
+                        "source": source,
+                        "content": customer_message,
+                        "action_type": action_type,
+                        "action_payload": action_payload,
+                        "context_summary": context_summary,
+                        "priority": priority,
+                        "event_source": event_source,
+                        "quote_id": quote_id_opt,
+                        "booking_id": booking_id_opt
+                    });
+
+                    if action_type == "Draft Booking" || action_type == "Draft Quote" {
+                        if let Err(e) = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'triage.inquiry', ?, 'PENDING')")
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .bind(triage_payload.to_string())
+                            .execute(&*sqlite_pool).await {
+                                tracing::error!("Failed to insert triage.inquiry job: {}", e);
+                            }
+                    } else if let Err(e) = sqlx::query(
                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                     )
                     .bind(&agent_feed_item_id)

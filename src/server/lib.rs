@@ -2586,6 +2586,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
     message_triage_worker.start();
 
+    let fulfillment_worker = Arc::new(crate::workers::fulfillment_orchestrator::FulfillmentOrchestratorWorker::new(db.clone()));
+    fulfillment_worker.start();
+
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
     deposit_follow_up_worker.start();

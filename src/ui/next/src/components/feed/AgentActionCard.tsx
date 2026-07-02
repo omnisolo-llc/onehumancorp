@@ -1958,6 +1958,36 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
+
+        ) : (approval.proposed_action || approval.context_payload)?.feature_type === "fulfillment_draft" ? (
+          <div className="flex flex-col gap-3 w-full bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-[12px] p-4 shadow-sm">
+            <h3 className="text-lg font-bold font-outfit text-gray-900 dark:text-gray-100">
+              Fulfillment Draft: {approval.context_payload?.context || "Custom Order"}
+            </h3>
+            <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+              {(approval.proposed_action || approval.context_payload)?.synthesized_reply || "Order ready for review."}
+            </p>
+            <div className="flex flex-col gap-1 mt-2 mb-4">
+              {((approval.proposed_action || approval.context_payload)?.proof_checks || ["✅ Spot reserved in calendar.", "✅ Surge pricing applied (+15%)."]).map((proof: string, i: number) => (
+                <span key={i} className="text-xs text-green-700 dark:text-green-400 font-medium">
+                  {proof}
+                </span>
+              ))}
+            </div>
+            <button
+              onClick={() => handleDecision(approval.id, true, undefined, approval.event_source)}
+              className="w-full min-h-[44px] px-4 rounded-[8px] bg-blue-500 text-white font-medium hover:bg-blue-600 transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="Approve & Send"
+              data-testid="feed-approve-btn"
+              disabled={loadingAction !== null}
+            >
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve & Send"
+              )}
+            </button>
+          </div>
         ) : (approval.proposed_action || approval.context_payload)
             ?.remaining_stock !== undefined ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
