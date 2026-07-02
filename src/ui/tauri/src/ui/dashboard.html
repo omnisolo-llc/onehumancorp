@@ -1341,7 +1341,8 @@
 
         // Fetch dynamic time savings data
         try {
-          const savingsResponse = await fetch('/api/v1/growth/time-savings');
+          const token = localStorage.getItem('ohc_token') || localStorage.getItem('access_token');
+          const savingsResponse = await fetch('/api/v1/growth/time-savings', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (savingsResponse.ok) {
             const data = await savingsResponse.json();
             currentHoursSaved = data.hours_saved;
@@ -1431,7 +1432,8 @@
       // Fetch Viral Loop Performance Metrics
       async function fetchViralLoopMetrics() {
         try {
-          const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics');
+          const token = localStorage.getItem('ohc_token') || localStorage.getItem('access_token');
+          const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (res.ok) {
             const data = await res.json();
             document.getElementById('viral-loop-invites-sent').innerText = data.total_invites || '0';
@@ -1577,7 +1579,8 @@
 
       async function checkWrapped() {
         try {
-          const res = await fetch('/api/v1/growth/wrapped');
+          const token = localStorage.getItem('ohc_token') || localStorage.getItem('access_token');
+          const res = await fetch('/api/v1/growth/wrapped', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (res.ok) {
             const data = await res.json();
             if (data.total_sales > 0 || data.total_orders > 0) {
@@ -1728,14 +1731,14 @@
         }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
+          const res = await fetch(`/api/ui/dashboard/unified-agent-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
 
           const data = await res.json();
           // Adjust logic to match new ui triage shape if necessary
-          agentFeedItems = data.triage || (Array.isArray(data) ? data : (data.items || []));
+          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
           if (agentFeedItems.length === 0) {
             triageQueue.innerHTML = `
               <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
@@ -1890,8 +1893,8 @@
           }
           triageQueue.innerHTML = groupedCardsHTML.join('') + standaloneProposals.map(item => {
             const actionType = item.action_type || item.proposed_action?.action_type;
-            const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
-            const isDraft = item.proposed_action?.context?.weekly_health_report === true;
+            const description = item.context || item.proposed_action?.message || item.context_payload?.description || item.payload?.description || actionType || 'Agent proposed an action.';
+            const isDraft = item.proposed_action?.context?.weekly_health_report === true || item.context_payload?.weekly_health_report === true;
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
 
 

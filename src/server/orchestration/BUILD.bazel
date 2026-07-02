@@ -77,6 +77,7 @@ rust_library(
         "//src/server/orchestration/departments:marketing_agent.rs",
         "//src/server/orchestration/departments:marketing_seo.rs",
         "//src/server/orchestration/departments:mod.rs",
+        "//src/server/orchestration/departments:handoff_protocol.rs",
         "//src/server/orchestration/departments:operations_agent.rs",
         "//src/server/orchestration/departments:orchestrator.rs",
         "//src/server/orchestration/departments:sales_agent.rs",
