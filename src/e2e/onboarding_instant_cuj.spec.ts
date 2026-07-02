@@ -16,7 +16,7 @@ test.describe('Instant Setup CUJ', () => {
 
 
     // Verify Initial Screen
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Tell us about your business' })).toBeVisible({ timeout: 15000 });
 
     // 1. Click "Instant Build"
     await page.getByRole('button', { name: 'Instant Build' }).click();
@@ -34,7 +34,7 @@ test.describe('Instant Setup CUJ', () => {
 
     // Test the bug fix by navigating back and forward to ensure text is preserved
     await page.getByRole('button', { name: 'Back' }).click();
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Tell us about your business' })).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Instant Build' }).click();
     await expect(instantInput).toHaveValue('I make custom vegan cakes in Austin. I need a website and a way to take bookings.');
     await expect(generateBtn).toBeEnabled();

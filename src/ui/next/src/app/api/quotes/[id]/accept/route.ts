@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
   const tenantId = req.headers.get('x-tenant-id') || 'default';
   const userId = req.headers.get('x-user-id') || 'default';
@@ -10,7 +12,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     'x-user-id': userId,
   };
 
-  const id = params.id;
+  const id = resolvedParams.id;
 
   try {
     const res = await fetch(`${backendUrl}/api/v1/quotes/${id}/accept`, {

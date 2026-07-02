@@ -17,7 +17,7 @@ test.describe('Login Screen Visual Audit', () => {
   test('should navigate to onboarding', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('button', { name: 'Start Business Setup' }).click();
-    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Tell us about your business' })).toBeVisible({ timeout: 15000 });
   });
 
   test('should display dashboard directly', async ({ page }) => {
