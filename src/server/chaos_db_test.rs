@@ -87,7 +87,8 @@ mod chaos_db_tests {
         // Insert a row with NULL
         db.execute_with_retry::<_, _, _, String>("insert_null", || async {
             if let DbStore::Sqlite(pool) = &db.store {
-                sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?)")
+                sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?) \
+                     ON CONFLICT(id) DO UPDATE SET val = excluded.val")
                     .bind("row1")
                     .bind::<Option<String>>(None)
                     .execute(pool)
