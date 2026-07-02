@@ -398,6 +398,9 @@ pub struct InvoiceMobileView {
     pub amount_paid_cents: i32,
     pub created_at: i64,
     pub updated_at: i64,
+    pub base_currency: String,
+    pub transaction_currency: String,
+    pub exchange_rate: f64,
 }
 
 #[derive(Serialize)]
@@ -428,6 +431,9 @@ pub struct InvoiceStandardView {
     pub line_items: Vec<InvoiceLineItemView>,
     pub created_at: i64,
     pub updated_at: i64,
+    pub base_currency: String,
+    pub transaction_currency: String,
+    pub exchange_rate: f64,
 }
 
 pub fn map_invoices_for_mobile(invoices: Vec<::server_ohc::invoice::Invoice>) -> Vec<InvoiceMobileView> {
@@ -443,6 +449,9 @@ pub fn map_invoices_for_mobile(invoices: Vec<::server_ohc::invoice::Invoice>) ->
         amount_paid_cents: inv.amount_paid_cents,
         created_at: inv.created_at,
         updated_at: inv.updated_at,
+        base_currency: inv.base_currency.clone(),
+        transaction_currency: inv.transaction_currency.clone(),
+        exchange_rate: inv.exchange_rate,
     }).collect()
 }
 
@@ -471,6 +480,9 @@ pub fn map_invoices_standard(invoices: Vec<::server_ohc::invoice::Invoice>) -> V
         }).collect(),
         created_at: inv.created_at,
         updated_at: inv.updated_at,
+        base_currency: inv.base_currency.clone(),
+        transaction_currency: inv.transaction_currency.clone(),
+        exchange_rate: inv.exchange_rate,
     }).collect()
 }
 
@@ -649,6 +661,9 @@ mod payload_tests {
             }],
             created_at: 1234567800,
             updated_at: 1234567800,
+            base_currency: "USD".to_string(),
+            transaction_currency: "USD".to_string(),
+            exchange_rate: 1.0,
         };
 
         // Test mobile mapping

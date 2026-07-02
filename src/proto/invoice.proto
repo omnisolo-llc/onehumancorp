@@ -28,6 +28,9 @@ message Invoice {
   repeated InvoiceLineItem line_items = 10;
   int64 created_at = 11;
   int64 updated_at = 12;
+  string base_currency = 17;
+  string transaction_currency = 18;
+  double exchange_rate = 19;
 }
 
 message CreateInvoiceRequest {

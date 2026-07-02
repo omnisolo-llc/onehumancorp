@@ -531,6 +531,30 @@ export default function SettingsPage() {
           </div>
         </section>
 
+
+        {/* Global Sales Settings */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+            <div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Global Sales</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Enable multi-currency processing and localized invoicing.</div>
+            </div>
+          </div>
+          <div className="app-panel-body p-6 space-y-4">
+            <label className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-white dark:bg-gray-900 transition-colors">
+              <div>
+                <span>Enable Global Sales</span>
+                <p className="text-xs text-gray-500 font-normal mt-1">Allow customers to pay in their local currency while you receive funds in your base currency. Finance Agent will autonomously handle tax and localized invoicing.</p>
+              </div>
+              <input
+                type="checkbox"
+                aria-label="Enable Global Sales"
+                className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
+              />
+            </label>
+          </div>
+        </section>
+
         {/* Advanced Section */}
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
