@@ -6198,6 +6198,28 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
+        .route("/api/settings/telemetry", axum::routing::get({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
+                let settings = settings_store.get();
+                axum::response::Json(serde_json::json!({
+                    "product_telemetry_enabled": settings.product_telemetry_enabled,
+                }))
+            }
+        }))
+        .route("/api/settings/telemetry", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let enabled = req.get("product_telemetry_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
+
+                if let Err(e) = settings_store.set_product_telemetry(enabled) {
+                    ::server_telemetry::record_error_signal("[bug] Failed to save telemetry settings");
+                    tracing::error!("Failed to save telemetry settings: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false }));
+                }
+                axum::response::Json(serde_json::json!({ "success": true }))
+            }
+        }))
         .route("/api/settings/voice", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
