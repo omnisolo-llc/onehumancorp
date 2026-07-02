@@ -101,6 +101,9 @@ impl InvoiceService for InvoiceServiceImpl {
             line_items: saved_items,
             created_at: chrono::Utc::now().timestamp(),
             updated_at: chrono::Utc::now().timestamp(),
+            base_currency: "USD".to_string(),
+            transaction_currency: "USD".to_string(),
+            exchange_rate: 1.0
         }))
     }
 
@@ -189,6 +192,9 @@ impl InvoiceService for InvoiceServiceImpl {
             line_items,
             created_at: 0,
             updated_at: 0,
+            base_currency: "USD".to_string(),
+            transaction_currency: "USD".to_string(),
+            exchange_rate: 1.0
         };
 
         Ok(Response::new(invoice))
@@ -239,6 +245,9 @@ impl InvoiceService for InvoiceServiceImpl {
                 line_items: vec![],
                 created_at: 0,
                 updated_at: 0,
+            base_currency: row.try_get("base_currency").unwrap_or_else(|_| "USD".to_string()),
+            transaction_currency: row.try_get("transaction_currency").unwrap_or_else(|_| "USD".to_string()),
+            exchange_rate: row.try_get("exchange_rate").unwrap_or(1.0)
             });
         }
 
@@ -315,6 +324,9 @@ impl InvoiceService for InvoiceServiceImpl {
             line_items,
             created_at: row.try_get("created_at").unwrap_or_default(),
             updated_at: row.try_get("updated_at").unwrap_or_default(),
+            base_currency: row.try_get("base_currency").unwrap_or_else(|_| "USD".to_string()),
+            transaction_currency: row.try_get("transaction_currency").unwrap_or_else(|_| "USD".to_string()),
+            exchange_rate: row.try_get("exchange_rate").unwrap_or(1.0)
         };
 
         Ok(Response::new(invoice))
@@ -353,6 +365,9 @@ impl InvoiceService for InvoiceServiceImpl {
             line_items: vec![line_item1],
             created_at: chrono::Utc::now().timestamp(),
             updated_at: chrono::Utc::now().timestamp(),
+            base_currency: "USD".to_string(),
+            transaction_currency: "USD".to_string(),
+            exchange_rate: 1.0
         };
 
         Ok(Response::new(DraftInvoiceFromContextResponse { draft: Some(invoice) }))
@@ -366,6 +381,9 @@ pub struct CreateInvoiceHttp {
     pub client_name: String,
     pub due_date: i64,
     pub currency: String,
+    pub base_currency: Option<String>,
+    pub transaction_currency: Option<String>,
+    pub exchange_rate: Option<f64>,
     // We avoid using InvoiceLineItem directly in the struct if it doesn't derive Deserialize, but we can accept json values and construct it.
     pub line_items: Vec<serde_json::Value>,
 }
@@ -543,8 +561,11 @@ async fn create_invoice_handler(
         client_id: payload.client_id,
         client_name: payload.client_name,
         due_date: payload.due_date,
-        currency: payload.currency,
+        currency: payload.currency.clone(),
         line_items: mapped_line_items,
+        base_currency: payload.base_currency.unwrap_or_else(|| "USD".to_string()),
+        transaction_currency: payload.transaction_currency.unwrap_or_else(|| payload.currency),
+        exchange_rate: payload.exchange_rate.unwrap_or(1.0),
     });
 
     match service.create_invoice(req).await {
@@ -606,6 +627,9 @@ mod tests {
                     amount: 100.0,
                 }
             ],
+            base_currency: "USD".to_string(),
+            transaction_currency: "USD".to_string(),
+            exchange_rate: 1.0,
         };
 
         let create_resp = service.create_invoice(Request::new(create_req)).await;

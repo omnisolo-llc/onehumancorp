@@ -190,6 +190,9 @@ r#"
                 amount: record.get("amount"),
                 currency: record.get("currency"),
                 timestamp: record.get::<Option<chrono::DateTime<chrono::Utc>>, _>("timestamp").unwrap_or_default().timestamp_millis(),
+                base_currency: "USD".to_string(),
+                transaction_currency: "USD".to_string(),
+                exchange_rate: 1.0,
             });
         }
 

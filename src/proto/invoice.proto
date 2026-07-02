@@ -40,6 +40,9 @@ message CreateInvoiceRequest {
   int64 due_date = 4;
   string currency = 5;
   repeated InvoiceLineItem line_items = 6;
+  string base_currency = 7;
+  string transaction_currency = 8;
+  double exchange_rate = 9;
 }
 
 message GetInvoiceRequest {
