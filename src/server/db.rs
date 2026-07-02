@@ -309,6 +309,7 @@ impl DB {
                                 return Err(e.into());
                             }
                         }
+
                     }
                 }
 
@@ -2349,6 +2350,7 @@ mod security_tests_final {
                                     file.set_permissions(perms)
                                         .expect("Database URL or operation failed in test");
                                 }
+
                             } else {
                                 let mut opts = OpenOptions::new();
                                 opts.read(true).write(true);

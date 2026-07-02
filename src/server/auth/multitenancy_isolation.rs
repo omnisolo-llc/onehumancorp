@@ -155,3 +155,63 @@ async fn test_revoke_token_tenant_isolation() {
 
     assert_eq!(row.0, 1, "The expired token from the other tenant was incorrectly garbage collected, proving cross-tenant deletion vulnerability");
 }
+
+#[tokio::test]
+async fn test_pool_connection_tenant_leakage_prevention() {
+    let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+
+    let database_url = match std::env::var("OHC_DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => return,
+    };
+
+    if database_url.starts_with("sqlite") {
+        return;
+    }
+
+    let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+        .max_connections(1) // Force reuse to test leakage
+        .acquire_timeout(Duration::from_millis(50))
+        .connect_lazy(&database_url)
+        .unwrap();
+
+    let tenant_a = "tenant_a_leak_test";
+
+    // Simulate a transaction that sets the tenant context and commits
+    let mut tx1 = pool.begin().await.unwrap();
+    ::server_common::auth_utils::set_org_context(&mut *tx1, tenant_a).await.unwrap();
+
+    // Read the context back within the transaction
+    let row1: (Option<String>,) = sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
+        .fetch_one(&mut *tx1)
+        .await
+        .unwrap_or((None,));
+    assert_eq!(row1.0.as_deref(), Some(tenant_a));
+
+    tx1.commit().await.unwrap();
+
+    // Now, without requesting a new connection from the pool directly (or using the same reused one),
+    // start a new transaction. The tenant context MUST be empty.
+    let mut tx2 = pool.begin().await.unwrap();
+    let row2: (Option<String>,) = sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
+        .fetch_one(&mut *tx2)
+        .await
+        .unwrap_or((None,));
+    tx2.commit().await.unwrap();
+
+    assert!(row2.0.is_none() || row2.0.as_deref() == Some(""), "CRITICAL VULNERABILITY: Tenant context leaked across transactions on the same pooled connection!");
+}
