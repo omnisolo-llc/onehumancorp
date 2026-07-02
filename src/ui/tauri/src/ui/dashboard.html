@@ -1341,7 +1341,8 @@
 
         // Fetch dynamic time savings data
         try {
-          const savingsResponse = await fetch('/api/v1/growth/time-savings');
+          const token = localStorage.getItem('ohc_token') || localStorage.getItem('access_token');
+          const savingsResponse = await fetch('/api/v1/growth/time-savings', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (savingsResponse.ok) {
             const data = await savingsResponse.json();
             currentHoursSaved = data.hours_saved;
@@ -1431,7 +1432,8 @@
       // Fetch Viral Loop Performance Metrics
       async function fetchViralLoopMetrics() {
         try {
-          const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics');
+          const token = localStorage.getItem('ohc_token') || localStorage.getItem('access_token');
+          const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (res.ok) {
             const data = await res.json();
             document.getElementById('viral-loop-invites-sent').innerText = data.total_invites || '0';
@@ -1577,7 +1579,8 @@
 
       async function checkWrapped() {
         try {
-          const res = await fetch('/api/v1/growth/wrapped');
+          const token = localStorage.getItem('ohc_token') || localStorage.getItem('access_token');
+          const res = await fetch('/api/v1/growth/wrapped', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
           if (res.ok) {
             const data = await res.json();
             if (data.total_sales > 0 || data.total_orders > 0) {
