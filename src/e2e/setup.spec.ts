@@ -28,7 +28,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     const categorySelect = page.getByTestId('business-categories');
     await expect(categorySelect).toBeVisible();
     await page.waitForTimeout(100);
-    await categorySelect.selectOption('Bakery');
+    await categorySelect.selectOption('Home Baker');
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
     // Name step
     await page.getByTestId('business-name').fill('Test Bakery');
@@ -125,7 +125,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
     const categorySelect = page.getByTestId('business-categories');
     await expect(categorySelect).toBeVisible();
-    await categorySelect.selectOption('Bakery');
+    await categorySelect.selectOption('Home Baker');
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
     // Name step - Trigger auto-save
     await page.getByTestId('business-name').fill('AutoSave Bakery');
