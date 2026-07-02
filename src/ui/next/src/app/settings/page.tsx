@@ -75,6 +75,15 @@ export default function SettingsPage() {
         })
         .catch(e => console.error("Failed to load voice settings", e)),
 
+      fetch("/api/settings/telemetry")
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.product_telemetry_enabled !== undefined) {
+            setEnableProductTelemetry(data.product_telemetry_enabled);
+          }
+        })
+        .catch(e => console.error("Failed to load telemetry settings", e)),
+
       fetch("/api/local_seo/discovery_report")
         .then(res => res.json())
         .then(data => {
@@ -104,6 +113,19 @@ export default function SettingsPage() {
       });
     } catch (e) {
       console.error("Failed to save delivery settings", e);
+    }
+  };
+
+  const handleTelemetryChange = async (checked: boolean) => {
+    setEnableProductTelemetry(checked);
+    try {
+      await fetch("/api/settings/telemetry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_telemetry_enabled: checked }),
+      });
+    } catch (e) {
+      console.error("Failed to save telemetry settings", e);
     }
   };
 
@@ -547,6 +569,8 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 aria-label="Enable Product Telemetry (Standalone Mode)"
+                checked={enableProductTelemetry}
+                onChange={(e) => handleTelemetryChange(e.target.checked)}
                 className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
               />
             </label>
