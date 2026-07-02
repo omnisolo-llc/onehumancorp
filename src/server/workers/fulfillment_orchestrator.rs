@@ -111,8 +111,8 @@ impl FulfillmentOrchestratorWorker {
 
             let message_id = payload.get("message_id").and_then(|v| v.as_str()).unwrap_or("");
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
-            let sender_id = payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
-            let source = payload.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let _sender_id = payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+            let _source = payload.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
             let customer_message = payload.get("content").and_then(|v| v.as_str()).unwrap_or("");
             let action_type = payload.get("action_type").and_then(|v| v.as_str()).unwrap_or("");
             let action_payload = payload.get("action_payload").and_then(|v| v.as_str()).unwrap_or("");

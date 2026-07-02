@@ -348,21 +348,11 @@ Output JSON format:
                 }
 
                 // Mark current message triage as completed
-                match &self.db.store {
-                    crate::db::DbStore::Postgres => {
-                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
-                            .bind(&job_id)
-                            .execute(&self.db.pool).await;
-                    },
-                    crate::db::DbStore::Sqlite(sqlite_pool) => {
-                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                            .bind(&job_id)
-                            .execute(&*sqlite_pool).await;
-                    }
-                }
-                return Ok(true);
+                // We let the downstream code clean up Redis locks and complete the job.
+                // We just skipped inserting them directly below.
             }
-let mut booking_id_opt: Option<String> = None;
+
+            let mut booking_id_opt: Option<String> = None;
 
             if action_type == "Draft Booking" {
                 if let Ok(booking_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
@@ -636,9 +626,10 @@ let mut booking_id_opt: Option<String> = None;
                         return Ok(false);
                     }
 
-                    if let Err(e) = sqlx::query(
-                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'CustomerSuccess', $3, 'DRAFT', 'DraftForReview', $4, NOW(), NOW())"
-                    )
+                    if action_type != "Draft Booking" && action_type != "Draft Quote" {
+                        if let Err(e) = sqlx::query(
+                            "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'CustomerSuccess', $3, 'DRAFT', 'DraftForReview', $4, NOW(), NOW())"
+                        )
                     .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
                     .bind(&context_summary)
@@ -653,11 +644,12 @@ let mut booking_id_opt: Option<String> = None;
                         "customer_id": customer_id_val,
                     }))
                     .execute(&self.db.pool).await {
-                        tracing::error!("Failed to insert agent approvals item: {}", e);
-                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
-                            .bind(&job_id)
-                            .execute(&self.db.pool).await;
-                        return Ok(false);
+                            tracing::error!("Failed to insert agent approvals item: {}", e);
+                            let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
+                                .bind(&job_id)
+                                .execute(&self.db.pool).await;
+                            return Ok(false);
+                        }
                     }
 
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
@@ -787,9 +779,10 @@ let mut booking_id_opt: Option<String> = None;
                         return Ok(false);
                     }
 
-                    if let Err(e) = sqlx::query(
-                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, 'CustomerSuccess', ?, 'DRAFT', 'DraftForReview', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                    )
+                    if action_type != "Draft Booking" && action_type != "Draft Quote" {
+                        if let Err(e) = sqlx::query(
+                            "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, 'CustomerSuccess', ?, 'DRAFT', 'DraftForReview', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                        )
                     .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
                     .bind(&context_summary)
@@ -804,11 +797,12 @@ let mut booking_id_opt: Option<String> = None;
                         "customer_id": customer_id_val,
                     }).to_string())
                     .execute(&*sqlite_pool).await {
-                        tracing::error!("Failed to insert agent approvals item (SQLite): {}", e);
-                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                            .bind(&job_id)
-                            .execute(&*sqlite_pool).await;
-                        return Ok(false);
+                            tracing::error!("Failed to insert agent approvals item (SQLite): {}", e);
+                            let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                                .bind(&job_id)
+                                .execute(&*sqlite_pool).await;
+                            return Ok(false);
+                        }
                     }
 
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
