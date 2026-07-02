@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Your Mystery Offer 🎁</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #e0eafc, #cfdef3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 20px;
+      color: #1d1d1f;
+      min-height: 100vh;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.65);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 40px;
+      width: 100%;
+      max-width: 450px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .font-outfit {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-top: 0;
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+
+    .desc {
+      color: #555;
+      font-size: 16px;
+      margin-bottom: 30px;
+      line-height: 1.5;
+    }
+
+    .scratch-container {
+      position: relative;
+      width: 100%;
+      height: 120px;
+      margin-bottom: 30px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px dashed #0066FF;
+      background: #f0f7ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hidden-offer {
+      font-size: 32px;
+      font-weight: 800;
+      color: #0066FF;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .scratch-cover {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #ccc url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="2" fill="%23999"/></svg>');
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: #666;
+      cursor: not-allowed;
+      transition: opacity 0.5s;
+    }
+
+    .scratch-cover.revealed {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    input[type="email"] {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.8);
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      margin-bottom: 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #0066FF;
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    }
+
+    .primary-btn {
+      width: 100%;
+      padding: 16px;
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+    }
+
+    .primary-btn:hover {
+      background-color: #005ce6;
+    }
+
+    .primary-btn:active {
+      transform: scale(0.98);
+    }
+
+    .footer-branding {
+      margin-top: 30px;
+      font-size: 13px;
+      color: #888;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-block;
+      transition: color 0.2s;
+    }
+
+    .footer-branding:hover {
+      color: #555;
+    }
+
+    .share-section {
+      display: none;
+      margin-top: 30px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .share-btn {
+      display: inline-block;
+      width: 100%;
+      padding: 14px;
+      background: #1d1d1f;
+      color: white;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: linear-gradient(135deg, #16161a, #20202a);
+        color: #f5f5f7;
+      }
+      .glass-card {
+        background: rgba(30, 30, 36, 0.7);
+        border-color: rgba(255, 255, 255, 0.1);
+      }
+      .desc {
+        color: #aaa;
+      }
+      input[type="email"] {
+        background: rgba(20, 20, 24, 0.8);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+      .scratch-container {
+        background: #1a202c;
+        border-color: #3182ce;
+      }
+      .scratch-cover {
+        background-color: #4a5568;
+        color: #a0aec0;
+      }
+      .share-section {
+        border-top-color: rgba(255,255,255,0.1);
+      }
+      .share-btn {
+        background: #333;
+      }
+    }
+
+    /* Confetti animation */
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #f00;
+      animation: fall 3s ease-in forwards;
+      opacity: 0;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(500px) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="glass-card" id="main-card">
+    <div style="font-size: 48px; margin-bottom: 16px;">🎁</div>
+    <h1 class="font-outfit" id="display-title">Scratch to Reveal Your Discount!</h1>
+    <p class="desc" id="display-desc">Enter your email to reveal your mystery discount. Share with friends for a chance to win a bigger prize!</p>
+
+    <div class="scratch-container">
+      <div class="hidden-offer" id="display-discount">???</div>
+      <div class="scratch-cover" id="scratch-cover">???</div>
+    </div>
+
+    <div id="form-area">
+      <input type="email" id="email-input" placeholder="Enter your email to unlock">
+      <button class="primary-btn" id="reveal-btn">Reveal My Offer</button>
+    </div>
+
+    <div class="share-section" id="share-section">
+      <h3 style="margin-top:0;">You got it! 🎉</h3>
+      <p style="font-size: 14px; color: #666; margin-bottom: 16px;">We've sent the details to your email. Share this offer with friends to get an extra 10% off!</p>
+      <input type="text" id="share-url" readonly style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; background: #f9f9f9; margin-bottom: 12px; box-sizing: border-box;">
+      <button class="primary-btn" id="copy-btn" style="padding: 12px;">Copy Link</button>
+    </div>
+
+    <a href="/onboarding?ref=mystery_offer&source=viral_widget" target="_blank" class="footer-branding" id="footer-branding">⚡ Powered by OHC</a>
+  </div>
+
+  <script>
+    // Parse URL params
+    const params = new URLSearchParams(window.location.search);
+    const title = params.get('title') || 'Scratch to Reveal Your Discount!';
+    const desc = params.get('desc') || 'Enter your email to reveal your mystery discount. Share with friends for a chance to win a bigger prize!';
+    const discount = params.get('discount') || '50% OFF';
+    const hideBranding = params.get('hideBranding') === 'true';
+    const ref = params.get('ref') || 'e2e';
+
+    // Populate UI
+    document.getElementById('display-title').textContent = title;
+    document.getElementById('display-desc').textContent = desc;
+    document.getElementById('display-discount').textContent = discount;
+    document.getElementById('share-url').value = window.location.href;
+
+    if (hideBranding) {
+      document.getElementById('footer-branding').style.display = 'none';
+    } else {
+      document.getElementById('footer-branding').href = `/onboarding?ref=${ref}&source=mystery_offer`;
+    }
+
+    // Reveal Logic
+    document.getElementById('reveal-btn').addEventListener('click', () => {
+      const email = document.getElementById('email-input').value;
+      if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address.');
+        return;
+      }
+
+      const btn = document.getElementById('reveal-btn');
+      btn.textContent = 'Revealing...';
+      btn.disabled = true;
+
+      // Simulate API call
+      setTimeout(() => {
+        // Reveal scratch card
+        document.getElementById('scratch-cover').classList.add('revealed');
+
+        // Hide form, show share
+        document.getElementById('form-area').style.display = 'none';
+        document.getElementById('share-section').style.display = 'block';
+
+        // Confetti
+        createConfetti();
+      }, 800);
+    });
+
+    // Copy link logic
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+      const urlInput = document.getElementById('share-url');
+      urlInput.select();
+
+      try {
+        await navigator.clipboard.writeText(urlInput.value);
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
+      } catch (err) {
+        console.error('Failed to copy', err);
+      }
+    });
+
+    // Simple Confetti effect
+    function createConfetti() {
+      const card = document.getElementById('main-card');
+      const colors = ['#0066FF', '#FF3B30', '#34C759', '#FFCC00', '#AF52DE'];
+
+      for (let i = 0; i < 30; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+
+        // Random properties
+        const left = Math.random() * 100;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const delay = Math.random() * 2;
+        const duration = 2 + Math.random();
+
+        confetti.style.left = `${left}%`;
+        confetti.style.backgroundColor = color;
+        confetti.style.animationDelay = `${delay}s`;
+        confetti.style.animationDuration = `${duration}s`;
+
+        card.appendChild(confetti);
+
+        // Clean up
+        setTimeout(() => {
+          confetti.remove();
+        }, (delay + duration) * 1000);
+      }
+    }
+  </script>
+</body>
+</html>
