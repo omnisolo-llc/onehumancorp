@@ -33,6 +33,7 @@ test.describe('Automated Re-engagement Agent for Service Bookings', () => {
             await pool.query(`DELETE FROM bookings WHERE tenant_id = $1`, [tenantId]);
             await pool.query(`DELETE FROM customers WHERE id = $1`, [customerId]);
             await pool.query(`DELETE FROM services WHERE id = $1`, [serviceId]);
+            await pool.query(`DELETE FROM shared_tasks WHERE organization_id = $1`, [tenantId]);
             await pool.end();
         }
     });

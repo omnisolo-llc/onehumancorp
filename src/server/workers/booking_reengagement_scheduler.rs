@@ -92,8 +92,6 @@ impl BookingReengagementScheduler {
                         // This prevents spamming.
                         let task_exists: bool = match &db.store {
                             crate::db::DbStore::Postgres => {
-                                let query_str = format!("%Approve Re-engagement for %"); // We can't easily join on name here without more complex query, but we can check if ANY re-engagement task exists for them. Actually, wait. Let's just check the job queue for ANY status within the last 14 days.
-
                                 sqlx::query_scalar::<_, i64>(
                                     "SELECT COUNT(*) FROM ohc_job_queue WHERE tenant_id = $1 AND job_type = 'booking_reengagement_check' AND payload->>'customer_id' = $2 AND created_at > CURRENT_TIMESTAMP - INTERVAL '14 days'"
                                 )

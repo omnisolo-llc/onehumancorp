@@ -2581,6 +2581,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let booking_reengagement_scheduler = crate::workers::booking_reengagement_scheduler::BookingReengagementScheduler::new(db.clone());
     booking_reengagement_scheduler.start();
     booking_reengagement_worker.start();
+    let booking_reengagement_job = crate::workers::booking_reengagement_job::BookingReengagementJob::new(db.clone());
+    booking_reengagement_job.start();
 
     // Start Message Triage Worker
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
