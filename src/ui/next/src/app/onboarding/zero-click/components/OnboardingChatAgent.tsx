@@ -50,32 +50,40 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
-    setIsProvisioning(true);
+    setIsLoading(true);
 
     try {
-      const response = await fetch('/api/v1/onboarding/start_zero_click', {
+      const response = await fetch('/api/v1/onboarding/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userMessage.content }),
+        body: JSON.stringify({ messages: newMessages }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate business');
+      if (!response.ok) throw new Error('Failed to communicate with setup agent');
 
       const data = await response.json();
 
-      // Complete immediately in tests to avoid timeout issues
-      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-         setIsProvisioning(false);
-         onComplete(data);
+      if (data.is_complete) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+        setIsLoading(false);
+        setIsProvisioning(true);
+        // Map the intake data to the expected format and provision
+        if (data.intake_data) {
+           await handleProvisioning(data.intake_data, newMessages.filter(m => m.role === 'user').map(m => m.content).join(" "));
+        } else {
+           // Fallback if no intake data returned
+           setTimeout(() => {
+             setIsProvisioning(false);
+             onComplete({});
+           }, 1500);
+        }
       } else {
-        setTimeout(() => {
-          setIsProvisioning(false);
-          onComplete(data);
-        }, 1500);
+        setIsLoading(false);
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
       }
     } catch (error) {
       console.error("Provisioning error:", error);
-      setIsProvisioning(false);
+      setIsLoading(false);
       setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I ran into an issue processing that. Please try again." }]);
     }
   };
@@ -142,7 +150,8 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   const predefinedChips = [
     "I'm a local baker selling custom cakes",
     "I run a neighborhood handyman service",
-    "I am an online music tutor"
+    "I am an online music tutor",
+    "I manage 15 long-term apartment rentals"
   ];
 
   return (
