@@ -61,8 +61,7 @@ export default function FinancePage() {
     return (
         <AppShell title="Finance">
             <main className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto space-y-6 md:space-y-12 pb-24">
-
-                <header className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <header className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">Finance & Invoicing</h1>
                         <p className="text-gray-500 mt-2 text-sm">Manage your cash flow, invoices, and deposits.</p>
@@ -78,7 +77,6 @@ export default function FinancePage() {
                         </button>
                     </div>
                 </header>
-
 
                 {/* Triage Feed Simulation */}
                 <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 p-4 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors" onClick={handleCreateInvoice}>
@@ -115,8 +113,7 @@ export default function FinancePage() {
                                 <p className="text-sm text-gray-500 mb-4">{invoice.id}</p>
 
                                 <div className="flex justify-between items-end mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-
-                                    <div>
+                                                                        <div>
                                         <p className="text-xs text-gray-500">Amount Due</p>
                                         <p className="text-xl font-bold text-gray-900 dark:text-white">
                                             {invoice.transaction_currency && invoice.transaction_currency !== invoice.base_currency ? (
@@ -129,7 +126,6 @@ export default function FinancePage() {
                                             )}
                                         </p>
                                     </div>
-
                                     <button
                                         className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
                                         onClick={() => { if(invoice.status === 'draft') { setDraftInvoice(invoice); setShowDraftModal(true); } }}

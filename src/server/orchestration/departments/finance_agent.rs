@@ -48,7 +48,6 @@ impl Department for FinanceAgent {
             "Record deposit and track payment".to_string()
         };
 
-
         let mut payload = event.payload.clone();
         if event.event_type == "payment.captured" {
             let tx_currency = event.payload.get("currency").and_then(|v| v.as_str()).unwrap_or("usd").to_uppercase();
@@ -83,7 +82,6 @@ impl Department for FinanceAgent {
                 "operational_action": "Record localized transaction in ledger",
             });
         } else if event.event_type == "charge.dispute.created" {
-
             // Reconstruct the simulated payload the UI expects for dispute resolution
             payload = serde_json::json!({
                 "feature_type": "dispute_resolution",
