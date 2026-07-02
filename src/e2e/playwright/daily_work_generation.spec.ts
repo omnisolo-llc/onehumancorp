@@ -29,11 +29,11 @@ test.describe('Autonomous AI Work Triage and Daily Work Generation', () => {
     await expect(page.locator('text=Loading your work feed...')).not.toBeVisible({ timeout: 10000 });
 
     // 3. Verify the surfaced actionable card
-    const card = page.locator(`[data-testid="triage-card-${workItemId}"]`);
+    const card = page.locator(`[data-testid="daily-work-card-${workItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
 
     // Find the approve button
-    const approveButton = card.locator(`[data-testid="triage-approve-${workItemId}"]`);
+    const approveButton = card.locator(`[data-testid="approve-${workItemId}"]`);
     await expect(approveButton).toBeVisible();
 
     // Check touch target for mobile
