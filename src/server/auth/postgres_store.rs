@@ -512,7 +512,7 @@ mod auth_utils_tests {
             .connect_lazy(&database_url)
             .unwrap();
 
-        let repo = PgUserRepository::new(pool.clone());
+        let _repo = PgUserRepository::new(pool.clone());
 
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let mut tx = pool.begin().await.unwrap();
