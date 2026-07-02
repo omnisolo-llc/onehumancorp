@@ -106,4 +106,16 @@ mod tests {
         let decision = check_token_budget(&mut tracker, 0, 100);
         assert_eq!(decision.action, BudgetAction::Stop);
     }
+    #[test]
+    fn test_budget_diminishing_returns() {
+        let mut tracker = BudgetTracker {
+            continuation_count: 3,
+            last_delta_tokens: 400,
+            last_global_turn_tokens: 0,
+        };
+        let decision = check_token_budget(&mut tracker, 10000, 400); // delta is 400
+        assert_eq!(decision.action, BudgetAction::Stop);
+        assert!(decision.diminishing);
+    }
+
 }
