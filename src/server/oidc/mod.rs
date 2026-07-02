@@ -229,6 +229,7 @@ mod tests {
 
     #[test]
     fn test_is_blocked_ip() {
+        temp_env::with_vars(vec![("OHC_ALLOW_LOCAL_IPS", None::<String>)], || {
         assert!(is_blocked_ip("127.0.0.1".parse().unwrap()));
         assert!(is_blocked_ip("0.0.0.0".parse().unwrap()));
         assert!(is_blocked_ip("169.254.169.254".parse().unwrap())); // Link local
@@ -248,6 +249,7 @@ mod tests {
         assert!(is_blocked_ip("fc00::1".parse().unwrap()));
         // IPv4-mapped IPv6
         assert!(is_blocked_ip("::ffff:127.0.0.1".parse().unwrap()));
+        });
     }
 
     #[test]
