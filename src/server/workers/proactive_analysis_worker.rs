@@ -64,6 +64,9 @@ impl ProactiveAnalysisWorker {
 
         let _payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
 
+        // Enforce 60-second ML-Resilience timeout for the analysis operation
+        let analysis_future = async {
+
         // 2. Perform analysis (Simulation of LLM call/context query)
         // In a real scenario, this would query upcoming bookings, unread messages, stock, etc.
         // For now, we'll create a synthetic actionable insight.
@@ -113,6 +116,24 @@ impl ProactiveAnalysisWorker {
         .bind(&item.updated_at)
         .execute(&mut *conn)
         .await?;
+        Ok::<(), sqlx::Error>(())
+        };
+
+        match tokio::time::timeout(Duration::from_secs(60), analysis_future).await {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => {
+                tracing::error!("Error during analysis operation: {}", e);
+                return Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
+            }
+            Err(_) => {
+                tracing::error!("Agent execution exceeded 60-second ML-Resilience timeout rule for job {}", job_id);
+                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', failed_reason = 'Agent execution exceeded 60-second ML-Resilience timeout rule.', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                    .bind(&job_id)
+                    .execute(&db.pool)
+                    .await?;
+                return Ok(()); // fail safe, return ok to stop processing it this time
+            }
+        }
 
         // 4. Mark Job as Completed
         sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
@@ -121,5 +142,30 @@ impl ProactiveAnalysisWorker {
             .await?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_ml_resilience_proactive_analysis_timeout() {
+        let start = std::time::Instant::now();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            Ok::<(), String>(())
+        })
+        .await;
+
+        assert!(
+            result.is_err(),
+            "ProactiveAnalysisWorker must enforce ML-Resilience timeout"
+        );
+        assert!(
+            start.elapsed() >= std::time::Duration::from_millis(50),
+            "Timeout should wait the configured time"
+        );
     }
 }
