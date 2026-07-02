@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Viral Post Generator Soft Paywall', () => {
     test('should show soft paywall modal when attempting to remove branding', async ({ page }) => {
         // Go to the generator page
-        await page.goto('/viral-post-generator');
+        await page.goto('/viral-post-generator.html');
+        await page.waitForLoadState('networkidle');
 
         // Check if the page title is correct
         await expect(page.locator('text=Promoter Agent Post Generator')).toBeVisible();
@@ -35,6 +36,8 @@ test.describe('Viral Post Generator Soft Paywall', () => {
         // Since clicking it normally opens a blank page, we can mock or just verify its presence.
         // Actually, let's close the modal for a clean state using the 'X' button
         const closeButton = page.locator('button', { hasText: '×' });
+        // Wait for it to be visible first
+        await expect(closeButton).toBeVisible();
         await closeButton.click();
 
         // Wait for modal to disappear
@@ -50,7 +53,8 @@ test.describe('Viral Post Generator Soft Paywall', () => {
         const generatedSection = page.locator('div', { hasText: 'Generated Post' }).nth(1); // The heading might be caught
 
         // Let's explicitly look for text that was generated
-        await expect(page.locator('text=Just dropped something special!')).toBeVisible();
+        // wait for result to be visible
+        await expect(page.locator('text=Just dropped something special!')).toBeVisible({ timeout: 10000 });
         await expect(page.locator('text=Super Nova')).toBeVisible();
         await expect(page.locator('text=instant social proof')).toBeVisible();
 

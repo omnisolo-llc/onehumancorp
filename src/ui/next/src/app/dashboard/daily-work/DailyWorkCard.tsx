@@ -24,7 +24,7 @@ export function DailyWorkCard({ item, onApprove, onDismiss }: Props) {
 
   return (
     <div
-      data-testid="daily-work-card"
+      data-testid={`daily-work-card-${item.id}`}
       className="glassmorphism p-5 shadow-sm flex flex-col gap-4 mb-4"
     >
       <div className="flex justify-between items-start">

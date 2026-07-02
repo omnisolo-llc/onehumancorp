@@ -8,6 +8,11 @@ export default function InvoiceGeneratorPage() {
   const [currency, setCurrency] = useState('USD');
   const [projectDetails, setProjectDetails] = useState('');
   const [amount, setAmount] = useState('');
+
+  const [baseCurrency, setBaseCurrency] = useState('USD');
+  const [transactionCurrency, setTransactionCurrency] = useState('USD');
+  const [exchangeRate, setExchangeRate] = useState(1.0);
+
   const [shareLink, setShareLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [tenantId, setTenantId] = useState('my-store');
@@ -33,6 +38,9 @@ export default function InvoiceGeneratorPage() {
       projectDetails,
       amount,
       currency,
+      baseCurrency: "USD",
+      transactionCurrency: currency,
+      exchangeRate: currency !== "USD" ? 1.09 : 1.0,
       splitPartnerId: isSplitEnabled ? splitContact : undefined,
       splitPercentage: isSplitEnabled ? splitPercentage : undefined
     };
@@ -91,6 +99,41 @@ export default function InvoiceGeneratorPage() {
               />
             </div>
 
+<<<<<<< HEAD
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Base Currency</label>
+                <input
+                  type="text"
+                  value={baseCurrency}
+                  onChange={(e) => setBaseCurrency(e.target.value)}
+                  placeholder="e.g. USD"
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Transaction Currency</label>
+                <input
+                  type="text"
+                  value={transactionCurrency}
+                  onChange={(e) => setTransactionCurrency(e.target.value)}
+                  placeholder="e.g. EUR"
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Amount ($)</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="e.g. 1500.00"
+                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+=======
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
@@ -115,6 +158,7 @@ export default function InvoiceGeneratorPage() {
                   <option value="CAD">CAD ($)</option>
                 </select>
               </div>
+>>>>>>> 7fbc126c (feat: Add Multi-Currency & Instant Localized Invoicing Architecture)
             </div>
 
 

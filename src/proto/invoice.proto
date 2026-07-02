@@ -18,6 +18,9 @@ message Invoice {
   string status = 4;
   int64 due_date = 5;
   string currency = 6;
+  string base_currency = 17;
+  string transaction_currency = 18;
+  double exchange_rate = 19;
   double total_amount = 7;
   int32 total_amount_cents = 13;
   string payment_status = 14;
@@ -39,6 +42,9 @@ message CreateInvoiceRequest {
   string client_name = 3;
   int64 due_date = 4;
   string currency = 5;
+  string base_currency = 7;
+  string transaction_currency = 8;
+  double exchange_rate = 9;
   repeated InvoiceLineItem line_items = 6;
 }
 
