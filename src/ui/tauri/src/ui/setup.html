@@ -2806,27 +2806,28 @@
 
         populateForm();
 
+        const steps = [
+          "step-initial",
+          "step-context",
+          "step-categories",
+          "step-name",
+          "step-assistant",
+          "step-admin",
+          "step-offer",
+          "step-location",
+          "step-target-audience",
+          "step-domain",
+          "step-template",
+          "step-instant",
+          "step-chat",
+        ];
+
         if (state.step === undefined || state.step === 0) {
           goToStep("step-initial", false);
+        } else if (state.step < steps.length) {
+          goToStep(steps[state.step], false);
         } else {
-          const steps = [
-            "step-initial",
-            "step-context",
-            "step-categories",
-            "step-name",
-            "step-assistant",
-            "step-admin",
-            "step-offer",
-            "step-location",
-            "step-target-audience",
-            "step-domain",
-            "step-template",
-            "step-instant",
-            "step-chat",
-          ];
-          if (state.step < steps.length) {
-            goToStep(steps[state.step], false);
-          }
+          goToStep("step-initial", false);
         }
       }
       loadState();
