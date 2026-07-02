@@ -30,6 +30,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/link-in-bio.spec.ts",
     "//src/ui/next:src/e2e/share_and_save_widget.spec.ts",
     "//src/ui/next:src/e2e/milestone-loop.spec.ts",
+    "//src/ui/next:src/e2e/cart-recovery-auth.spec.ts",
     "//src/ui/next:src/e2e/milestones.spec.ts",
     "//src/ui/next:src/e2e/onboarding.spec.ts",
     "//src/ui/next:src/e2e/onboarding_error_banner.spec.ts",

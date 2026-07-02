@@ -295,7 +295,8 @@
 
     async function fetchCartCount() {
       try {
-        const response = await fetch('/api/v1/growth/campaign/abandoned-carts-count');
+        const token = localStorage.getItem('ohc_token');
+        const response = await fetch('/api/v1/growth/campaign/abandoned-carts-count', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
         if (response.ok) {
           const data = await response.json();
           cartCount = data.count || 0;
