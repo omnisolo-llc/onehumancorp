@@ -257,6 +257,7 @@
         <div class="grid">
           <!-- My Plan Widget -->
           <div class="ohc-growth-card glassmorphism app-card app-panel" id="my-plan-widget">
+            <h1 style="margin-top: 0; font-size: 24px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">My Plan</h1>
             <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Plan: <span id="my-plan-name" style="color: #0066FF;"></span></h2>
 
             <h2 class="app-panel-title text-xl font-bold font-outfit text-gray-900" style="margin-top: 0; margin-bottom: 20px;">Your Current Usage</h2>
@@ -293,7 +294,7 @@
 
           <!-- Cost Dashboard Widget -->
           <div class="ohc-growth-card glassmorphism" id="cost-dashboard-widget" style="display:none;">
-            <h1 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency Dashboard</h1><button id="back-to-my-plan" class="btn-outline" style="margin-bottom: 12px; display: inline-block; cursor: pointer;">Back to My Plan</button>
+            <h1 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency Dashboard</h1><a id="back-to-my-plan" class="btn-outline" style="margin-bottom: 12px; display: inline-block; cursor: pointer;; text-decoration: none;" href="/plan">Back to My Plan</a>
 
 
 
@@ -1709,20 +1710,12 @@
         const costDashboardWidget = document.getElementById('cost-dashboard-widget');
 
         if (viewDetailedCostsBtn && myPlanWidget && costDashboardWidget) {
-            viewDetailedCostsBtn.addEventListener('click', () => {
-                myPlanWidget.style.display = 'none';
-                window.history.pushState({}, '', '/cost-dashboard');
-                costDashboardWidget.style.display = 'block';
-            });
+            viewDetailedCostsBtn.addEventListener('click', () => { window.location.href='/cost-dashboard'; });
         }
 
 
         if (backToMyPlanBtn && myPlanWidget && costDashboardWidget) {
-            backToMyPlanBtn.addEventListener('click', () => {
-                myPlanWidget.style.display = 'block';
-                window.history.pushState({}, '', '/plan');
-                costDashboardWidget.style.display = 'none';
-            });
+            backToMyPlanBtn.addEventListener('click', (e) => { e.preventDefault(); window.location.href='/plan'; });
         }
 
         // Auto-show correct widget based on path
