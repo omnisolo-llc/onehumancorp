@@ -273,7 +273,7 @@ export default function CostDashboardPage() {
             <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4">
                <div className="flex justify-between items-center">
                    <div>
-                       <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Transparency Dashboard</h2>
+                       <h1 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">Cost Transparency Dashboard</h1>
                        <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
                    </div>
                    <button id="download-invoice-btn" onClick={handleDownloadInvoice} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors">
