@@ -1710,23 +1710,23 @@
         const costDashboardWidget = document.getElementById('cost-dashboard-widget');
 
         if (viewDetailedCostsBtn && myPlanWidget && costDashboardWidget) {
-            viewDetailedCostsBtn.addEventListener('click', () => { window.location.href='/cost-dashboard'; });
+            viewDetailedCostsBtn.addEventListener('click', () => { window.location.href='cost-dashboard.html?view=cost-dashboard'; });
         }
 
 
         if (backToMyPlanBtn && myPlanWidget && costDashboardWidget) {
-            backToMyPlanBtn.addEventListener('click', (e) => { e.preventDefault(); window.location.href='/plan'; });
+            backToMyPlanBtn.addEventListener('click', (e) => { e.preventDefault(); window.location.href='cost-dashboard.html'; });
         }
 
         // Auto-show correct widget based on path
-        if (window.location.pathname.includes('cost-dashboard')) {
+        if (window.location.href.includes('view=cost-dashboard') || window.location.pathname.endsWith('/cost-dashboard')) {
             if (myPlanWidget) myPlanWidget.style.display = 'none';
-                window.history.pushState({}, '', '/cost-dashboard');
+
             if (costDashboardWidget) costDashboardWidget.style.display = 'block';
         } else {
             // Default to My Plan
             if (myPlanWidget) myPlanWidget.style.display = 'block';
-                window.history.pushState({}, '', '/plan');
+
             if (costDashboardWidget) costDashboardWidget.style.display = 'none';
         }
     });
