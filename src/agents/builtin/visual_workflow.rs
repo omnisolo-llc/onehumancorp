@@ -141,10 +141,10 @@ impl WorkflowExecutor {
     }
 
     pub async fn execute(&self, input_vars: HashMap<String, String>) -> Result<String, String> {
-        let mut state: HashMap<String, String> = input_vars.clone();
+        let state: HashMap<String, String> = input_vars.clone();
 
         // Find input node to start
-        let mut current_node_id = self
+        let start_node_id = self
             .graph
             .nodes
             .iter()
@@ -152,255 +152,22 @@ impl WorkflowExecutor {
             .map(|n| n.id.clone())
             .ok_or_else(|| "No input node found in graph".to_string())?;
 
-        let nodes_map: HashMap<String, Node> = self
-            .graph
-            .nodes
-            .iter()
-            .map(|n| (n.id.clone(), n.clone()))
-            .collect();
+        let (final_state, stopped_at) = self.execute_from_node(start_node_id, state).await?;
 
-        let mut outgoing_edges: HashMap<String, Vec<String>> = HashMap::new();
-        for edge in &self.graph.edges {
-            outgoing_edges
-                .entry(edge.source.clone())
-                .or_default()
-                .push(edge.target.clone());
-        }
-
-        let mut visit_counts = std::collections::HashMap::new();
-
-        loop {
-            let node = nodes_map
-                .get(&current_node_id)
-                .ok_or_else(|| format!("Node not found: {}", current_node_id))?;
-
-            let count = visit_counts.entry(current_node_id.clone()).or_insert(0);
-            *count += 1;
-
-            if *count > self.config.max_workflow_cycles.unwrap_or(1) {
-                return Err("Visual Orchestrator cycle detected".to_string());
-            }
-
-            match &node.node_type {
-                NodeType::ParallelFork { targets } => {
-                    let mut handles = Vec::new();
-                    for target in targets {
-                        let target_clone = target.clone();
-                        let state_clone = state.clone();
-
-                        let agent_clone = self.agent.clone();
-                        let tools_clone = self.tools.clone();
-                        let sub_agents_clone = self.sub_agents.clone();
-                        let config_clone = self.config.clone();
-                        let graph_clone = self.graph.clone();
-
-                        let handle = tokio::spawn(async move {
-                            let sub_executor = WorkflowExecutor::new(
-                                graph_clone,
-                                agent_clone,
-                                tools_clone,
-                                sub_agents_clone,
-                                config_clone,
-                            );
-                            sub_executor
-                                .execute_from_node(target_clone, state_clone)
-                                .await
-                        });
-                        handles.push(handle);
-                    }
-
-                    let results = futures::future::join_all(handles).await;
-
-                    let mut join_node_opt = None;
-                    for res in results {
-                        match res {
-                            Ok(Ok((final_state, stopped_at))) => {
-                                for (k, v) in final_state {
-                                    state.insert(k, v);
-                                }
-                                if let Some(join) = stopped_at {
-                                    join_node_opt = Some(join);
-                                }
-                            }
-                            Ok(Err(e)) => return Err(format!("Parallel branch failed: {}", e)),
-                            Err(e) => return Err(format!("Task join failed: {}", e)),
-                        }
-                    }
-
-                    if let Some(join_node) = join_node_opt {
-                        current_node_id = join_node;
-                        continue;
-                    } else {
-                        return Ok(
-                            "Parallel execution completed without reaching a join or output"
-                                .to_string(),
-                        );
-                    }
-                }
-                NodeType::ParallelJoin {
-                    state_keys,
-                    output_key,
-                } => {
-                    let mut merged_data = Vec::new();
-                    for key in state_keys {
-                        if let Some(val) = state.get(key) {
-                            merged_data.push(val.clone());
-                        }
-                    }
-                    merged_data.sort();
-                    let merged_string =
-                        serde_json::to_string(&merged_data).unwrap_or_else(|_| "[]".to_string());
-                    state.insert(output_key.clone(), merged_string);
-                }
-                NodeType::Input { name: _ } => {
-                    // Start execution
-                }
-                NodeType::HumanInLoop { prompt_template } => {
-                    let mut prompt = prompt_template.clone();
-                    for (k, v) in &state {
-                        prompt = prompt.replace(&format!("{{{{{}}}}}", k), v);
-                    }
-                    return Err(format!("USER_FIXABLE: Human in loop required: {}", prompt));
-                }
-                NodeType::Llm { prompt_template } => {
-                    let mut prompt = prompt_template.clone();
-                    for (k, v) in &state {
-                        prompt = prompt.replace(&format!("{{{{{}}}}}", k), v);
-                    }
-
-                    let mut on_event = |_| {};
-                    let result = self
-                        .agent
-                        .run(&self.config, &prompt, &mut on_event)
-                        .await
-                        .map_err(|e| format!("LLM node {} failed: {}", node.id, e))?;
-
-                    state.insert(node.id.clone(), result);
-                }
-                NodeType::Tool {
-                    tool_name,
-                    args_template,
-                } => {
-                    let mut args_json = args_template.clone();
-                    for (k, v) in &state {
-                        args_json = args_json.replace(&format!("{{{{{}}}}}", k), v);
-                    }
-
-                    let args: serde_json::Value =
-                        serde_json::from_str(&args_json).map_err(|e| {
-                            format!("Tool node {} failed to parse args: {}", node.id, e)
-                        })?;
-
-                    let tool = self
-                        .tools
-                        .iter()
-                        .find(|t| &t.name == tool_name)
-                        .ok_or_else(|| format!("Tool {} not found", tool_name))?;
-
-                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2, &crate::agent::AgentRunConfig::default()).await;
-
-                    let result_str = match result {
-                        Ok(res) => res,
-                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                            ohc_builtin_agent_core::types::format_llm_recoverable_error(&tool_name, &msg)
-                        }
-                        Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
-                            return Err(format!("USER_FIXABLE: {}", msg));
-                        }
-                        Err(ohc_builtin_agent_core::types::ToolError::Fatal(msg)) => {
-                            return Err(format!("Fatal tool error: {}", msg));
-                        }
-                        Err(ohc_builtin_agent_core::types::ToolError::Unexpected(msg)) => {
-                            return Err(format!("Unexpected tool error: {}", msg));
-                        }
-                        Err(e) => {
-                            return Err(format!("Tool {} execution failed: {}", tool_name, e));
-                        }
-                    };
-
-                    state.insert(node.id.clone(), result_str);
-                }
-                NodeType::Condition {
-                    condition_expression,
-                    true_target,
-                    false_target,
-                } => {
-                    let mut expr = condition_expression.clone();
-                    for (k, v) in &state {
-                        expr = expr.replace(&format!("{{{{{}}}}}", k), v);
-                    }
-
-                    let is_true = evaluate_condition(&expr);
-
-                    current_node_id = if is_true {
-                        true_target.clone()
-                    } else {
-                        false_target.clone()
-                    };
-                    // Condition nodes dictate explicit routing, skip standard edge traversal
-                    continue;
-                }
-                NodeType::SubAgent {
-                    agent_name,
-                    task_template,
-                } => {
-                    let mut task = task_template.clone();
-                    for (k, v) in &state {
-                        task = task.replace(&format!("{{{{{}}}}}", k), v);
-                    }
-
-                    let sub_agent = self
-                        .sub_agents
-                        .get(agent_name)
-                        .ok_or_else(|| format!("SubAgent {} not found", agent_name))?;
-
-                    let mut on_event = |_| {};
-                    let result = sub_agent
-                        .run(&self.config, &task, &mut on_event)
-                        .await
-                        .map_err(|e| format!("SubAgent node {} failed: {}", node.id, e))?;
-
-                    state.insert(node.id.clone(), result);
-                }
-                NodeType::Merge {
-                    state_keys,
-                    output_key,
-                } => {
-                    let mut merged_data = Vec::new();
-                    for key in state_keys {
-                        if let Some(val) = state.get(key) {
-                            merged_data.push(val.clone());
-                        }
-                    }
-                    merged_data.sort();
-                    let merged_string =
-                        serde_json::to_string(&merged_data).unwrap_or_else(|_| "[]".to_string());
-                    state.insert(output_key.clone(), merged_string);
-                }
-                NodeType::Output => {
+        if let Some(last_node) = stopped_at {
+            if let Some(node) = self.graph.nodes.iter().find(|n| n.id == last_node) {
+                if matches!(node.node_type, NodeType::Output) {
                     if let Some(edge) = self
                         .graph
                         .edges
                         .iter()
-                        .find(|e| e.target == current_node_id)
-                        && let Some(val) = state.get(&edge.source)
+                        .find(|e| e.target == last_node)
+                        && let Some(val) = final_state.get(&edge.source)
                     {
                         return Ok(val.clone());
                     }
                     return Ok("Visual orchestration completed with no data".to_string());
                 }
-            }
-
-            // Move to next node
-            let next_nodes = outgoing_edges.get(&current_node_id);
-            if let Some(nexts) = next_nodes {
-                if !nexts.is_empty() {
-                    current_node_id = nexts[0].clone();
-                } else {
-                    break;
-                }
-            } else {
-                break;
             }
         }
 
