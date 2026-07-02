@@ -127,6 +127,8 @@ pub async fn get_daily_work_handler(
                     let t_bg1 = t_bg.clone();
                     let t_bg2 = t_bg.clone();
 
+
+
             let pool_env = db_bg.pool.clone();
             let t_env = t_bg.clone();
             let (work_res, orders_res, env_res) = tokio::join!(
@@ -135,8 +137,8 @@ pub async fn get_daily_work_handler(
                 sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC").bind(&t_env).fetch_all(&pool_env)
             );
 
-                    work_res.map(|rows| {
-                        use sqlx::Row;
+            work_res.map(|rows| {
+use sqlx::Row;
                         let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                             serde_json::json!({
                                 "id": r.get::<String, _>("id"),
@@ -147,10 +149,20 @@ pub async fn get_daily_work_handler(
                                 "status": r.get::<String, _>("status")
                             })
                         }).collect();
-
+                if let Ok(orders) = orders_res {
+                    for o in orders {
+                        items.push(serde_json::json!({
+                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                            "intent": "recent_order",
+                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                            "suggested_actions": null,
+                        }));
+                    }
+                }
                 if let Ok(envelopes) = env_res {
                     for e in envelopes {
-                        let payload_val: serde_json::Value = e.try_get("payload").unwrap_or_else(|_| serde_json::json!({}));
+                        let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                        let payload_val: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
                         items.push(serde_json::json!({
                             "id": e.try_get::<String, _>("id").unwrap_or_default(),
                             "intent": "task_envelope",
@@ -161,6 +173,7 @@ pub async fn get_daily_work_handler(
                     }
                 }
                 items
+            })
 
                 },
                 crate::db::DbStore::Sqlite(pool) => {
@@ -168,6 +181,8 @@ pub async fn get_daily_work_handler(
                     let pool2 = pool.clone();
                     let t_bg1 = t_bg.clone();
                     let t_bg2 = t_bg.clone();
+
+
 
             let pool_env = pool.clone();
             let t_env = t_bg.clone();
@@ -177,8 +192,8 @@ pub async fn get_daily_work_handler(
                 sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = ? AND status != 'COMPLETED' ORDER BY created_at DESC").bind(&t_env).fetch_all(&pool_env)
             );
 
-                    work_res.map(|rows| {
-                        use sqlx::Row;
+            work_res.map(|rows| {
+use sqlx::Row;
                         let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                             let customer_info_str: Option<String> = r.try_get("customer_info").ok();
                             let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
@@ -200,7 +215,16 @@ pub async fn get_daily_work_handler(
                                 "status": status
                             })
                         }).collect();
-
+                if let Ok(orders) = orders_res {
+                    for o in orders {
+                        items.push(serde_json::json!({
+                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                            "intent": "recent_order",
+                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                            "suggested_actions": null,
+                        }));
+                    }
+                }
                 if let Ok(envelopes) = env_res {
                     for e in envelopes {
                         let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
@@ -215,6 +239,7 @@ pub async fn get_daily_work_handler(
                     }
                 }
                 items
+            })
 
                 }
             };
@@ -235,6 +260,8 @@ pub async fn get_daily_work_handler(
             let t_bg1 = tenant_id.clone();
             let t_bg2 = tenant_id.clone();
 
+
+
             let pool_env = db.pool.clone();
             let t_env = tenant_id.clone();
             let (work_res, orders_res, env_res) = tokio::join!(
@@ -244,7 +271,7 @@ pub async fn get_daily_work_handler(
             );
 
             work_res.map(|rows| {
-                use sqlx::Row;
+use sqlx::Row;
                 let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                     serde_json::json!({
                         "id": r.get::<String, _>("id"),
@@ -255,10 +282,20 @@ pub async fn get_daily_work_handler(
                         "status": r.get::<String, _>("status")
                     })
                 }).collect();
-
+                if let Ok(orders) = orders_res {
+                    for o in orders {
+                        items.push(serde_json::json!({
+                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                            "intent": "recent_order",
+                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                            "suggested_actions": null,
+                        }));
+                    }
+                }
                 if let Ok(envelopes) = env_res {
                     for e in envelopes {
-                        let payload_val: serde_json::Value = e.try_get("payload").unwrap_or_else(|_| serde_json::json!({}));
+                        let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                        let payload_val: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
                         items.push(serde_json::json!({
                             "id": e.try_get::<String, _>("id").unwrap_or_default(),
                             "intent": "task_envelope",
@@ -269,6 +306,7 @@ pub async fn get_daily_work_handler(
                     }
                 }
                 items
+            })
 
         },
         crate::db::DbStore::Sqlite(pool) => {
@@ -276,6 +314,8 @@ pub async fn get_daily_work_handler(
             let pool2 = pool.clone();
             let t_bg1 = tenant_id.clone();
             let t_bg2 = tenant_id.clone();
+
+
 
             let pool_env = pool.clone();
             let t_env = tenant_id.clone();
@@ -286,7 +326,7 @@ pub async fn get_daily_work_handler(
             );
 
             work_res.map(|rows| {
-                use sqlx::Row;
+use sqlx::Row;
                 let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                     let customer_info_str: Option<String> = r.try_get("customer_info").ok();
                     let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
@@ -308,7 +348,16 @@ pub async fn get_daily_work_handler(
                         "status": status
                     })
                 }).collect();
-
+                if let Ok(orders) = orders_res {
+                    for o in orders {
+                        items.push(serde_json::json!({
+                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                            "intent": "recent_order",
+                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                            "suggested_actions": null,
+                        }));
+                    }
+                }
                 if let Ok(envelopes) = env_res {
                     for e in envelopes {
                         let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
@@ -323,6 +372,7 @@ pub async fn get_daily_work_handler(
                     }
                 }
                 items
+            })
 
         }
     };

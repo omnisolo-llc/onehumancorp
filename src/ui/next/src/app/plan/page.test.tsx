@@ -36,6 +36,8 @@ describe('MyPlanPage', () => {
             storage_used_bytes: 2 * 1024 * 1024, // 2MB
             storage_limit_bytes: 5 * 1024 * 1024 * 1024, // 5GB
             next_bill_estimated: 2900,
+            soft_limit_reached: false,
+            user_message: "You've reached your Free tier limit of 100 AI actions. Upgrade to unlock more power!",
           }),
         };
       }
@@ -59,6 +61,33 @@ describe('MyPlanPage', () => {
     expect(screen.getByText('My Plan')).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
     expect(screen.getByText('$29.00')).toBeDefined();
+  });
+
+  it('renders soft limit reached message', async () => {
+    (global.fetch as any).mockImplementation(async (url) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({
+            current_plan: 'Starter',
+            ai_actions_used: 1000,
+            ai_actions_limit: 1000,
+            storage_used_bytes: 2 * 1024 * 1024, // 2MB
+            storage_limit_bytes: 5 * 1024 * 1024 * 1024, // 5GB
+            next_bill_estimated: 2900,
+            soft_limit_reached: true,
+            user_message: "You've reached your Starter tier limit of 1000 AI actions. Upgrade to unlock more power!",
+          }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    await act(async () => {
+      render(<MyPlanPage />);
+    });
+
+    expect(screen.getByText("You've reached your Starter tier limit of 1000 AI actions. Upgrade to unlock more power!")).toBeDefined();
   });
 
   it('navigates to pricing on upgrade click', async () => {

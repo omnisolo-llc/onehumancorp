@@ -34,7 +34,7 @@ export default function ZeroClickBuilderPage() {
             <span className="text-3xl">✨</span>
           </div>
           <h1 className="text-4xl font-bold text-[#1D1D1F] dark:text-white tracking-tight mb-3">
-            Zero-Click Business Generator
+            Tell us about your business
           </h1>
           <p className="text-lg text-[#424245] dark:text-[#A1A1A6] max-w-xl mx-auto">
             Instantly build your storefront, product catalog, and booking system with a single prompt.
@@ -98,7 +98,7 @@ export default function ZeroClickBuilderPage() {
 
         <div className="text-center mt-8">
           <p className="text-sm font-semibold text-gray-500 flex items-center justify-center gap-1">
-            ⚡ Powered by OHC
+            <span id="dashboard-footer-viral-link">⚡ Powered by OHC</span>
             {!hasPro && (
               <a href="/pricing" className="text-indigo-500 hover:text-indigo-600 hover:underline ml-1">
                 (Upgrade to remove)
