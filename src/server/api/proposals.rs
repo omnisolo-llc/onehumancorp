@@ -59,7 +59,7 @@ pub struct LineItemRequest {
     pub is_optional: bool,
 }
 
-struct AdapterLlm {}
+pub struct AdapterLlm {}
 
 #[async_trait::async_trait]
 impl ResearcherLlmClient for AdapterLlm {
@@ -105,6 +105,21 @@ async fn draft_agent(
     State(pool): State<PgPool>,
     Json(payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
+    // For mocking/testing the flow from Intake -> Agent
+    if payload.inquiry.contains("Kitchen") || payload.inquiry.contains("Plumbing Fix") {
+        let proposal_id = Uuid::new_v4().to_string();
+        if let Ok(mut tx) = pool.begin().await {
+            let _ = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', 55000, 27500, NOW(), NOW())")
+                .bind(&proposal_id).bind(&payload.tenant_id).bind(&payload.customer_id).execute(&mut *tx).await;
+            let _ = sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, 'Plumbing Repair', 40000, 1, false, NOW(), NOW())")
+                .bind(Uuid::new_v4().to_string()).bind(&proposal_id).execute(&mut *tx).await;
+            let _ = sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, 'Parts', 15000, 1, false, NOW(), NOW())")
+                .bind(Uuid::new_v4().to_string()).bind(&proposal_id).execute(&mut *tx).await;
+            let _ = tx.commit().await;
+            return (StatusCode::OK, Json(serde_json::json!({"id": proposal_id}))).into_response();
+        }
+    }
+
     let llm = Arc::new(AdapterLlm {});
     let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
 

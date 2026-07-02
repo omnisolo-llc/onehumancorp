@@ -22,7 +22,7 @@ test.describe('Autonomous Proposal Flow', () => {
     await expect(quoteCard).toBeVisible({ timeout: 15000 });
 
     // 2. Opening the review modal
-    const reviewBtn = page.getByTestId('review-quote-draft').first();
+    const reviewBtn = page.getByTestId('edit-quote-draft').first();
     await reviewBtn.click();
 
     const modal = page.locator('role=dialog');

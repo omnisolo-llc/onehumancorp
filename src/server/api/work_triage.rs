@@ -31,14 +31,96 @@ pub async fn simulate_inbound_signal_handler(
     let work_item_id = format!("wi-{}", Uuid::new_v4());
 
     // Basic LLM simulation
-    let intent = "inquiry".to_string();
-    let customer_info = serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"});
-    let suggested_actions = serde_json::json!([
-        {
-            "action_type": "Draft Reply",
-            "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend"
+    let is_proposal = payload.payload.get("is_proposal").and_then(|v| v.as_bool()).unwrap_or(false);
+
+    let intent;
+    let customer_info;
+    let suggested_actions;
+
+    if is_proposal {
+        intent = "service_inquiry".to_string();
+        customer_info = serde_json::json!({"name": "Carlos (Kitchen Repair)", "message": "I need some help fixing my kitchen cabinets and installing a new sink."});
+
+        let inquiry = "I need some help fixing my kitchen cabinets and installing a new sink.";
+        let customer_id = "cust-123";
+
+        // Call the internal LLM proposal drafter explicitly
+        let mut new_proposal_id = Uuid::new_v4().to_string();
+
+        let client = reqwest::Client::new();
+        // Since we are running the API, we call ourselves or call the inner logic.
+        // For simplicity, we just use the LLM Adapter here inline, as it's the exact flow requested.
+        let llm = Arc::new(crate::api::proposals::AdapterLlm {});
+        let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
+
+        let req = ohc_builtin_agent::types::ChatRequest {
+            model: "default-model".to_string(),
+            system: system_prompt,
+            messages: vec![ohc_builtin_agent::types::Message::user(inquiry.to_string())],
+            temperature: 0.1,
+            max_tokens: 1024,
+            tools: vec![],
+        };
+
+        let mut total_amount_cents = 50000;
+        let mut required_deposit_cents = 25000;
+        let mut suggested_price_str = "500.00".to_string();
+        let mut scope_str = "Kitchen Repair".to_string();
+
+        use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
+        if let Ok(res) = llm.chat(req).await {
+            let json_str = res.message.content.trim();
+            let json_str = json_str.strip_prefix("```json").unwrap_or(json_str);
+            let json_str = json_str.strip_suffix("```").unwrap_or(json_str).trim();
+
+            if let Ok(line_items) = serde_json::from_str::<Vec<crate::api::proposals::LineItemRequest>>(json_str) {
+                total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+                required_deposit_cents = total_amount_cents / 2; // 50/50 split as requested
+                suggested_price_str = format!("{:.2}", (total_amount_cents as f64) / 100.0);
+                scope_str = line_items.iter().map(|li| li.description.clone()).collect::<Vec<String>>().join(", ");
+
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())")
+                            .bind(&new_proposal_id).bind(&tenant_id).bind(customer_id).bind(total_amount_cents).bind(required_deposit_cents).execute(&db.pool).await;
+                        for item in line_items {
+                            let _ = sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())")
+                                .bind(Uuid::new_v4().to_string()).bind(&new_proposal_id).bind(&item.description).bind(item.unit_price_cents).bind(item.quantity).bind(item.is_optional).execute(&db.pool).await;
+                        }
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let _ = sqlx::query("INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                            .bind(&new_proposal_id).bind(&tenant_id).bind(customer_id).bind(total_amount_cents).bind(required_deposit_cents).execute(pool).await;
+                        for item in line_items {
+                            let _ = sqlx::query("INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                .bind(Uuid::new_v4().to_string()).bind(&new_proposal_id).bind(&item.description).bind(item.unit_price_cents).bind(item.quantity).bind(item.is_optional).execute(pool).await;
+                        }
+                    }
+                }
+            }
         }
-    ]);
+
+        suggested_actions = serde_json::json!([
+            {
+                "feature_type": "quote_draft",
+                "quote_id": new_proposal_id,
+                "customer_inquiry": inquiry,
+                "service": "Kitchen Repair",
+                "suggested_price": suggested_price_str,
+                "scope": scope_str,
+                "suggested_time": "4 hours"
+            }
+        ]);
+    } else {
+        intent = "inquiry".to_string();
+        customer_info = serde_json::json!({"name": "Instagram DM", "message": "Do you have vegan chocolate cake available this weekend?"});
+        suggested_actions = serde_json::json!([
+            {
+                "action_type": "Draft Reply",
+                "message": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend"
+            }
+        ]);
+    }
 
     match &db.store {
         crate::db::DbStore::Postgres => {
