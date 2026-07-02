@@ -16,7 +16,7 @@ impl CalComClient {
 
 impl CalComClient {
     pub async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String> {
-        let url = format!("https://api.cal.com/v1/availability");
+        let url = "https://api.cal.com/v1/availability".to_string();
 
         let res = self.http_client.get(&url)
             .query(&[
@@ -41,7 +41,7 @@ impl CalComClient {
     }
 
     pub async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
-        let url = format!("https://api.cal.com/v1/bookings");
+        let url = "https://api.cal.com/v1/bookings".to_string();
 
         let payload = serde_json::json!({
             "title": summary,
@@ -71,7 +71,7 @@ impl CalComClient {
     }
 
     pub async fn get_booking_link(&self, event_type: &str) -> Result<String, String> {
-        let url = format!("https://api.cal.com/v1/event-types");
+        let url = "https://api.cal.com/v1/event-types".to_string();
 
         let res = self.http_client.get(&url)
             .query(&[("apiKey", &self.access_token)])

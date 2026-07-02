@@ -47,7 +47,7 @@ mod tests {
         let data = b"hello world";
         let compressed = gzip_compress(data).unwrap();
         
-        assert!(compressed.len() > 0);
+        assert!(!compressed.is_empty());
         
         let mut decoder = GzDecoder::new(&compressed[..]);
         let mut decompressed = Vec::new();
