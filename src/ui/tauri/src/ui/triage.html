@@ -619,15 +619,60 @@
 
         const listEl = document.getElementById("triage-list");
         if (items.length === 0) {
-          listEl.innerHTML = `<div class="app-empty" style="padding: 40px 20px; text-align: center;" data-testid="triage-feed-empty">
-            <div style="font-size: 32px; margin-bottom: 12px;">✨</div>
-            <div style="font-size: 18px; font-weight: 600;">All caught up! You're a hero.</div>
-            <div style="font-size: 14px; margin-top: 8px; opacity: 0.7;">Your AI assistant has handled all outstanding items. Great job!</div>
-          </div>`;
+          listEl.innerHTML = `
+            <div class="triage-card" style="text-align: center; padding: 48px 24px; color: #6b7280; box-shadow: none; border: 1px dashed rgba(0, 0, 0, 0.2); background: transparent;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 16px; opacity: 0.5;">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              <h3 style="margin: 0 0 8px 0; color: #111827; font-weight: 600;">All clear. No pending tasks.</h3>
+            </div>
+          `;
           return;
         }
 
         listEl.innerHTML = items.map(item => {
+          if (item.intent === "task_envelope") {
+            const payload = item.suggested_actions || {};
+            const title = payload.title || "New Task";
+            const body = payload.body || "Task is waiting for review.";
+            const cost = payload.cost || 0;
+            const buttonText = payload.button_text || "Approve & Send Quote";
+
+            let costHtml = "";
+            if (cost > 0) {
+              costHtml = `
+                <div style="background: rgba(243, 244, 246, 0.8); border-radius: 8px; padding: 12px; margin: 16px 0; border: 1px solid rgba(229, 231, 235, 0.8);">
+                  <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px;">
+                    <span style="color: #6b7280;">Total Cost:</span>
+                    <span style="font-weight: 500;">$${(cost / 100).toFixed(2)}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span style="color: #6b7280;">Deposit Required (33%):</span>
+                    <span style="font-weight: 500;">$${((cost / 3) / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+              `;
+            }
+
+            return `
+              <div class="triage-card glassmorphism">
+                <div class="triage-header" style="display: flex; justify-content: space-between; align-items: flex-start; background: transparent; border-bottom: none; padding: 20px 20px 0 20px;">
+                  <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">${title}</h3>
+                  <span class="app-badge warn" style="background: rgba(239, 246, 255, 0.8); color: #1d4ed8; border: 1px solid rgba(191, 219, 254, 0.8);">Action Required</span>
+                </div>
+                <div style="padding: 12px 20px;">
+                  <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">${body}</p>
+                  ${costHtml}
+                  <div style="display: flex; gap: 12px; margin-top: 16px; margin-bottom: 8px;">
+                    <button onclick="handleSaveDecision('${item.id}')" style="flex: 1; background: #0066FF; color: white; border: none; min-height: 44px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background 0.2s;">${buttonText}</button>
+                    <button onclick="cancelEdit()" style="flex: 1; background: rgba(255, 255, 255, 0.8); color: #374151; border: 1px solid rgba(209, 213, 219, 0.8); min-height: 44px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background 0.2s;">Edit</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+
           const displaySource = item.customer_id || item.source || "Unknown Source";
           const displayContext = item.context || item.customer_info?.message || item.intent || "No context provided";
 
