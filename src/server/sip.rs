@@ -160,7 +160,7 @@ impl SipDB {
                 Ok(Ok(_)) => return Ok(()),
                 Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
-                    let retry = err_str.contains("serialization failure") || err_str.contains("deadlock detected") || err_str.contains("database is locked") || err_str.contains("busy");
+                    let retry = err_str.contains("serialization failure") || err_str.contains("timeout") || err_str.contains("deadlock detected") || err_str.contains("database is locked") || err_str.contains("busy");
 
                     if retry {
                         attempt += 1;
