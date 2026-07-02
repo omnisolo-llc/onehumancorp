@@ -6813,6 +6813,12 @@ async fn create_ui_bom_item_handler(
         .route("/chaos-report", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
         }))
+        .route("/api/ui/dashboard.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
+        }))
+        .route("/dashboard.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
+        }))
         .route("/agent-audit-dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/agent-audit-dashboard.html"))
         }))
