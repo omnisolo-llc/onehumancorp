@@ -168,37 +168,48 @@ impl BookingReengagementWorker {
                         }
                     };
 
-                    let drafted_message = format!("Hi {}, I noticed we haven't had a session in a while! Hope everything is going great with your progress. Would you like to jump back in this week? I have some slots available. Here is a quick booking link: [Link]", customer_name);
+                    let context_payload = json!({
+                        "feature_type": "booking_reengagement",
+                        "customer_name": customer_name,
+                        "description": format!("AI detected {} is a dormant customer. Please reach out and offer them a new booking slot.", customer_name)
+                    });
 
                     match &db.store {
                         crate::db::DbStore::Postgres => {
-                            let _ = sqlx::query(
-                                r#"
-                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                VALUES ($1, $2, 'Approve Re-engagement for ' || $3, 'AI detected that ' || $3 || ' is a returning customer who hasn''t booked in 14 days. This follow-up helps maintain momentum.', 'PENDING', 'P1', 'LOW', 'PENDING', $4)
-                                "#
-                            )
-                            .bind(Uuid::new_v4().to_string())
-                            .bind(&tenant_id)
-                            .bind(&customer_name)
-                            .bind(&drafted_message)
-                            .execute(&pool)
-                            .await;
+                            let service = crate::services::agent_feed::service::AgentFeedService::new(pool.clone());
+                            let _ = service.process_event(&tenant_id, "sales", &context_payload).await;
                         },
-                        crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        crate::db::DbStore::Sqlite(_) => {
+                             // AgentFeedService only supports Postgres pool currently, so we fallback for sqlite manually
+                             let ai_prompt = format!("Generate a friendly, context-aware re-engagement SMS message for a customer named {} who hasn't booked in a while. Suggest they book a new slot.", customer_name);
+                             let ai_prompt_reduced = crate::pricing::compression::reduce_tokens(&ai_prompt);
+                             let drafted_message = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                                 Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&ai_prompt_reduced).await.unwrap_or_else(|_| "Hi! It's been a while, would you like to book a new session?".to_string()),
+                                 Ok("minimax") => {
+                                     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                                     crate::minimax::MinimaxClient::new(api_key).reason(&ai_prompt_reduced).await.unwrap_or_else(|_| "Hi! It's been a while, would you like to book a new session?".to_string())
+                                 }
+                                 _ => crate::minimax::LocalLLMClient::new().reason(&ai_prompt_reduced).await.unwrap_or_else(|_| "Hi! It's been a while, would you like to book a new session?".to_string()),
+                             };
+
+                             let proposed_action = json!({
+                                 "action_type": "send_message",
+                                 "draft_action": drafted_message,
+                                 "message": drafted_message
+                             });
+
                              let _ = sqlx::query(
-                                r#"
-                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                VALUES (?, ?, 'Approve Re-engagement for ' || ?, 'AI detected that ' || ? || ' is a returning customer who hasn''t booked in 14 days. This follow-up helps maintain momentum.', 'PENDING', 'P1', 'LOW', 'PENDING', ?)
-                                "#
-                            )
-                            .bind(Uuid::new_v4().to_string())
-                            .bind(&tenant_id)
-                            .bind(&customer_name)
-                            .bind(&customer_name)
-                            .bind(&drafted_message)
-                            .execute(sqlite_pool)
-                            .await;
+                                 r#"
+                                 INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                                 VALUES (?, ?, 'sales', ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                 "#
+                             )
+                             .bind(Uuid::new_v4().to_string())
+                             .bind(&tenant_id)
+                             .bind(sqlx::types::Json(context_payload))
+                             .bind(sqlx::types::Json(proposed_action))
+                             .execute(&db.pool)
+                             .await;
                         }
                     }
                 }
