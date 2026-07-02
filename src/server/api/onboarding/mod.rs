@@ -17,7 +17,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
         .route("/setup-health", get(setup_health_check))
-        .layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware))
+        .layer(axum::middleware::from_fn(::server_auth::oidc_auth_middleware))
         .with_state(agent);
 
     // Convert to accept MeshTransport state

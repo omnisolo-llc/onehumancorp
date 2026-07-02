@@ -12,6 +12,8 @@ rust_library(
         "sqlite_store.rs",
         "user_repository.rs",
         "multitenancy_isolation.rs",
+        "oidc_middleware.rs",
+
     ],
     edition = "2024",
     crate_root = "mod.rs",

@@ -1,6 +1,7 @@
 #![allow(clippy::all)]
 pub use ::server_common as common;
 pub use ::server_ohc as ohc;
+pub use oidc_middleware::oidc_auth_middleware;
 pub use ::server_oidc as oidc;
 
 pub mod orchestration;
@@ -8,6 +9,7 @@ pub mod postgres_store;
 pub mod sqlite_store;
 pub mod user_repository;
 pub mod grpc;
+pub mod oidc_middleware;
 
 use std::collections::HashMap;
 
