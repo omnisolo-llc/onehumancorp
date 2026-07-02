@@ -7,11 +7,11 @@ test.describe('Multi-Currency & Instant Localized Invoicing', () => {
 
     // Expect the Global Sales heading to be visible
     const globalSalesHeading = page.locator('text="Global Sales"');
-    await expect(globalSalesHeading).toBeVisible();
+    await expect(globalSalesHeading.first()).toBeVisible();
 
     // Verify toggle exists
     const globalSalesToggle = page.locator('text="Automatically handle multi-currency payments and localize invoices."');
-    await expect(globalSalesToggle).toBeVisible();
+    await expect(globalSalesToggle.first()).toBeVisible();
 
     // 2. Go to Invoice Generator and create a multi-currency invoice
     await page.goto('/invoice-generator');

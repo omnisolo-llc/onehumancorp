@@ -523,7 +523,7 @@ export default function SettingsPage() {
                 type="checkbox"
                 aria-label="Enable Lazy Tool Loading"
                 checked={enableLazyToolLoading}
-                onChange={toggleLazyToolLoading}
+                  onChange={(e) => setEnableLazyToolLoading(e.target.checked)}
                 className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
               />
             </label>
