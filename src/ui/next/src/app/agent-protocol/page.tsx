@@ -87,7 +87,7 @@ export default function AgentProtocolPage() {
   }, [selectedTaskId]);
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
+    <div className="max-w-6xl mx-auto p-8 font-sans">
       <h1 className="text-3xl font-bold mb-4">Agent Protocol UI</h1>
       <p className="text-gray-600 mb-8">
         Interact with the standardized Agent Protocol (AutoGPT Unique Harness Innovations).
@@ -103,7 +103,7 @@ export default function AgentProtocolPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm">
+        <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
           <h2 className="text-xl font-bold mb-4">Tasks</h2>
 
           <div className="flex space-x-2 mb-6">
@@ -112,12 +112,12 @@ export default function AgentProtocolPage() {
               placeholder="New Task Input..."
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
-              className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-white/65 backdrop-blur-[30px] saturate-[210%]"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white/65 backdrop-blur-[30px] saturate-[210%] focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors shadow-sm"
             />
             <button
               onClick={createTask}
               disabled={loading}
-              className="bg-[#0071E3] text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="bg-[#0071E3] text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-sm transition-colors font-medium"
             >
               Create
             </button>
@@ -127,7 +127,7 @@ export default function AgentProtocolPage() {
             {tasks.map((task) => (
               <li
                 key={task.task_id}
-                className={`p-3 border rounded-md cursor-pointer transition ${selectedTaskId === task.task_id ? 'border-[#0066FF] bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                className={`p-4 border rounded-xl cursor-pointer transition shadow-sm bg-white/80 backdrop-blur-[30px] saturate-[210%] ${selectedTaskId === task.task_id ? 'border-[#0066FF] ring-1 ring-[#0066FF] bg-blue-50/50' : 'border-gray-200 hover:bg-gray-50/80'}`}
                 onClick={() => setSelectedTaskId(task.task_id)}
               >
                 <div className="font-semibold">{task.input || 'Untitled Task'}</div>
@@ -138,7 +138,7 @@ export default function AgentProtocolPage() {
           </ul>
         </div>
 
-        <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm">
+        <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
           <h2 className="text-xl font-bold mb-4">Steps</h2>
           {!selectedTaskId ? (
             <div className="text-gray-500 text-sm italic">Select a task to view its steps.</div>
@@ -150,12 +150,12 @@ export default function AgentProtocolPage() {
                   placeholder="Optional Step Input..."
                   value={stepInput}
                   onChange={(e) => setStepInput(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 bg-white/65 backdrop-blur-[30px] saturate-[210%]"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white/65 backdrop-blur-[30px] saturate-[210%] focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors shadow-sm"
                 />
                 <button
                   onClick={executeStep}
                   disabled={loading}
-                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 shadow-sm transition-colors font-medium"
                 >
                   Execute Step
                 </button>
@@ -163,7 +163,7 @@ export default function AgentProtocolPage() {
 
               <ul className="space-y-4">
                 {steps.map((step, idx) => (
-                  <li key={step.step_id} className="p-4 border rounded-md border-gray-200">
+                  <li key={step.step_id} className="p-4 border rounded-xl border-gray-200 shadow-sm bg-white/80 backdrop-blur-[30px] saturate-[210%]">
                     <div className="flex justify-between mb-2">
                       <span className="font-bold text-sm">Step {idx + 1}</span>
                       <span className={`text-xs px-2 py-1 rounded-full ${step.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
