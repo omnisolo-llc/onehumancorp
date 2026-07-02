@@ -1031,9 +1031,9 @@
         triageSection.style.display = 'block';
         try {
           // Adjust port for Tauri dev server, or use relative if integrated
-          let url = '/api/ui/dashboard/unified-feed';
+          let url = '/api/ui/dashboard/unified-agent-feed';
           if (false) {
-            url = '/api/ui/dashboard/unified-feed';
+            url = '/api/ui/dashboard/unified-agent-feed';
           }
 
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
@@ -1041,7 +1041,22 @@
           if (!res.ok) throw new Error("Failed to load");
 
           const data = await res.json();
-          let items = data.triage || data.agent_feed || (Array.isArray(data) ? data : (data.items || []));
+
+          // Handle new unified-agent-feed shape while maintaining fallback
+          let parsedData = data;
+          if (typeof data === 'string') {
+              try { parsedData = JSON.parse(data); } catch(e){}
+          }
+          let pending_approvals = parsedData.pending_approvals || [];
+          let agent_feed = parsedData.agent_feed || [];
+          let items = [...pending_approvals, ...agent_feed];
+
+          if (items.length === 0) {
+             if (parsedData.triage) items = parsedData.triage;
+             else if (Array.isArray(parsedData)) items = parsedData;
+             else if (parsedData.items) items = parsedData.items;
+             else if (parsedData.agent_feed) items = parsedData.agent_feed;
+          }
 
           if (!Array.isArray(items) || items.length === 0) {
             triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
