@@ -2156,8 +2156,9 @@
                   ${draftMessage}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Send Draft</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve</button>
+                  <button class="triage-btn-edit" data-testid="triage-edit-${item.id}" onclick="handleTriageEdit('${item.id}')" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid #0066FF; border-radius: 8px; color: #0066FF; padding: 12px; font-weight: 600; cursor: pointer;">Edit</button>
+                  <button class="triage-btn-reject" data-testid="triage-reject-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 59, 48, 0.1); border: 1px solid rgba(255, 59, 48, 0.3); border-radius: 8px; color: #FF3B30; padding: 12px; font-weight: 600; cursor: pointer;">Reject</button>
                 </div>
               </div>
             `;
@@ -2283,8 +2284,11 @@
                   ${description}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px; flex-direction: column;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; width: 100%; background: #FF9500; color: white; padding: 12px; border-radius: 16px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(255,149,0,0.3); cursor: pointer;">Approve & Execute</button>
-                  <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; width: 100%; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 16px; color: #995500; padding: 12px; font-weight: 600; cursor: pointer;">Dismiss</button>
+                  <div style="display: flex; gap: 8px; width: 100%;">
+                    <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; min-height: 44px; min-width: 44px; background: #FF9500; color: white; padding: 12px; border-radius: 16px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(255,149,0,0.3); cursor: pointer;">Approve</button>
+                    <button class="triage-btn-edit" data-testid="triage-edit-${item.id}" onclick="handleTriageEdit('${item.id}')" style="flex: 1; min-height: 44px; min-width: 44px; background: rgba(255,255,255,0.8); color: #FF9500; padding: 12px; border-radius: 16px; font-weight: 600; border: 1px solid #FF9500; cursor: pointer;">Edit</button>
+                    <button class="triage-btn-reject" data-testid="triage-reject-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; min-height: 44px; min-width: 44px; background: rgba(255,59,48,0.1); color: #FF3B30; padding: 12px; border-radius: 16px; font-weight: 600; border: 1px solid rgba(255,59,48,0.3); cursor: pointer;">Reject</button>
+                  </div>
                 </div>
               </div>
             `;

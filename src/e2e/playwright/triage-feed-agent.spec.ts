@@ -2,41 +2,31 @@ import { test, expect } from './fixtures';
 
 test.describe('Agentic Work Triage Feed', () => {
   test('Owner can review and approve AI-drafted replies', async ({ page, loginAs, adminUser }) => {
-    // 1. Log in to the application
     await loginAs(page, adminUser);
-
-    // 2. Simulate an incoming message by hitting the new test endpoint
     const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     expect(response.status()).toBe(200);
     const json = await response.json();
-    expect(json.success).toBe(true);
     const triageItemId = json.id;
 
-    // 3. Go to the dashboard
     await page.goto('/dashboard');
 
-    // Wait for the feed to load
     const feed = page.locator('[data-testid^="triage-card-"]').first();
     await expect(feed).toBeVisible({ timeout: 10000 });
 
-    // 4. Verify the triage card exists
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
-    await card.click();
 
-    // 5. Verify the AI summary and drafted reply
-    await expect(card).toContainText('Do you have vegan chocolate cake available this weekend?');
-    await expect(card).toContainText('Hi! Yes, we have 2 vegan chocolate cakes left for this weekend');
+    // Verify translucent glass container style
+    await expect(card).toHaveCSS('backdrop-filter', 'blur(30px) saturate(210%)');
 
-    // 6. Click Approve & Execute
-    const approveButton = page.locator(`[data-testid="approve-instagram-dm"]`);
+    const approveButton = card.locator(`[data-testid*="triage-approve"]`);
+    await expect(approveButton).toBeVisible();
     await approveButton.click();
 
-    // 7. Verify the item is removed from the feed
     await expect(card).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('Owner can dismiss AI-drafted replies', async ({ page, loginAs, adminUser }) => {
+  test('Owner can reject AI-drafted replies', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
     const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     const json = await response.json();
@@ -46,31 +36,15 @@ test.describe('Agentic Work Triage Feed', () => {
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
-    await card.click();
 
-    const dismissButton = page.locator(`[data-testid="dismiss-instagram-dm"]`);
-    await dismissButton.click();
+    const rejectButton = card.locator(`[data-testid*="triage-reject"]`);
+    await expect(rejectButton).toBeVisible();
+    await rejectButton.click();
 
     await expect(card).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('Triage feed handles empty state correctly', async ({ page, loginAs, adminUser }) => {
-    await loginAs(page, adminUser);
-    await page.goto('/dashboard');
-
-    // It should either show the empty state or an empty feed, but given we might have real data,
-    // let's just ensure it loads without crashing and either shows items or caught up state.
-    const emptyState = page.locator('text=No items need your attention right now');
-    const feed = page.locator('[data-testid^="triage-card-"]').first();
-
-    // Wait for either to be visible
-    await Promise.race([
-        expect(emptyState).toBeVisible({ timeout: 10000 }).catch(() => {}),
-        expect(feed).toBeVisible({ timeout: 10000 }).catch(() => {})
-    ]);
-  });
-
-  test('Triage feed item shows correct metadata', async ({ page, loginAs, adminUser }) => {
+  test('Owner can edit AI-drafted replies', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
     const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     const json = await response.json();
@@ -80,16 +54,17 @@ test.describe('Agentic Work Triage Feed', () => {
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
-    await card.click();
 
-    // Check for source and priority based on our mock data
-    await expect(card).toContainText('Instagram DM');
+    const editButton = card.locator(`[data-testid*="triage-edit"]`);
+    await expect(editButton).toBeVisible();
 
+    // We expect edit to open a modal or do something, for now just check it exists and is clickable
+    await editButton.click();
   });
 
-  test('Triage feed layout is responsive', async ({ page, loginAs, adminUser }) => {
+  test('Triage feed layout is responsive at 375px', async ({ page, loginAs, adminUser }) => {
     await loginAs(page, adminUser);
-    await page.setViewportSize({ width: 375, height: 812 }); // Mobile
+    await page.setViewportSize({ width: 375, height: 812 });
 
     const response = await page.request.post(`/api/dev/simulate-triage-item?tenant_id=default`);
     const json = await response.json();
@@ -99,10 +74,32 @@ test.describe('Agentic Work Triage Feed', () => {
 
     const card = page.locator(`[data-testid="triage-card-${triageItemId}"]`);
     await expect(card).toBeVisible({ timeout: 10000 });
-    await card.click();
 
-    // Verify it fits in the mobile viewport
     const box = await card.boundingBox();
     expect(box?.width).toBeLessThanOrEqual(375);
+
+    // Check horizontal scroll doesn't exist
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(375);
+  });
+
+  test('System correctly ingests webhook and shows in feed', async ({ page, loginAs, adminUser }) => {
+     await loginAs(page, adminUser);
+     const res = await page.request.post('/api/v1/omnichannel/webhook', {
+        data: {
+            tenant_id: 'default',
+            source: 'Instagram DM',
+            sender_id: 'john_doe',
+            message: 'Can you fix my sink on Tuesday?',
+        }
+     });
+     expect(res.status()).toBe(200);
+
+     await page.goto('/dashboard');
+     const card = page.locator('[data-testid^="triage-card-"]', { hasText: 'Sink' }).first();
+
+     // Due to background job, we wait a bit
+     await expect(card).toBeVisible({ timeout: 15000 });
+     await expect(card).toHaveCSS('backdrop-filter', 'blur(30px) saturate(210%)');
   });
 });

@@ -562,6 +562,26 @@ Output JSON format:
                             .execute(&self.db.pool).await;
                         return Ok(false);
                     }
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO daily_work_items (id, tenant_id, intent, customer_info, suggested_actions, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING', NOW(), NOW())"
+                    )
+                    .bind(format!("triage-work-{}", Uuid::new_v4()))
+                    .bind(&tenant_id)
+                    .bind("triage_message")
+                    .bind(serde_json::json!({
+                        "message": customer_message,
+                        "customer_id": customer_id_val,
+                        "source": event_source
+                    }))
+                    .bind(serde_json::json!({
+                        "action_type": action_type,
+                        "draft_reply": action_payload,
+                        "message": action_payload
+                    }))
+                    .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert daily work item: {}", e);
+                    }
+
 
                     if let Err(e) = sqlx::query(
                         "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'CustomerSuccess', $3, 'DRAFT', 'DraftForReview', $4, NOW(), NOW())"
@@ -690,6 +710,26 @@ Output JSON format:
                             .execute(&*sqlite_pool).await;
                         return Ok(false);
                     }
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO daily_work_items (id, tenant_id, intent, customer_info, suggested_actions, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    )
+                    .bind(format!("triage-work-{}", Uuid::new_v4()))
+                    .bind(&tenant_id)
+                    .bind("triage_message")
+                    .bind(serde_json::json!({
+                        "message": customer_message,
+                        "customer_id": customer_id_val,
+                        "source": event_source
+                    }).to_string())
+                    .bind(serde_json::json!({
+                        "action_type": action_type,
+                        "draft_reply": action_payload,
+                        "message": action_payload
+                    }).to_string())
+                    .execute(&*sqlite_pool).await {
+                        tracing::error!("Failed to insert daily work item (SQLite): {}", e);
+                    }
+
 
                     if let Err(e) = sqlx::query(
                         "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, 'CustomerSuccess', ?, 'DRAFT', 'DraftForReview', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
