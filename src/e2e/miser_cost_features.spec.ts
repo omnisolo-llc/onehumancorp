@@ -18,7 +18,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('text=Total Costs')).toBeVisible();
     await expect(page.locator('text=Projected Monthly Cost').first()).toBeVisible();
 
-    const backToMyPlanBtn = page.locator('a', { hasText: 'Back to My Plan' });
+    const backToMyPlanBtn = page.locator('button', { hasText: 'Back to My Plan' });
     await expect(backToMyPlanBtn).toBeVisible();
     await backToMyPlanBtn.click();
     await expect(page.locator('text=Your Current Usage')).toBeVisible({ timeout: 5000 });

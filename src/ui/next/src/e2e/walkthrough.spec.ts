@@ -6,7 +6,7 @@ test.describe('Interactive Walkthroughs', () => {
     await page.goto('/builder');
 
     // Open the help widget
-    const helpButton = page.locator('#help-widget-container button').first();
+    const helpButton = page.locator('button[aria-label="Help"]').first();
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 
@@ -16,7 +16,7 @@ test.describe('Interactive Walkthroughs', () => {
     await tourButton.click();
 
     // Assert the first step is shown
-    const speechBubble = page.locator('div[role="dialog"]');
+    const speechBubble = page.locator('.ohc-walkthrough-bubble').first();
     await expect(speechBubble).toBeVisible();
     await expect(page.getByText('Learn how to easily set up your store and accept your first payment.')).toBeVisible();
 
@@ -43,7 +43,7 @@ test.describe('Interactive Walkthroughs', () => {
     await page.goto('/builder');
 
     // Open help widget
-    const helpButton = page.locator('#help-widget-container button').first();
+    const helpButton = page.locator('button[aria-label="Help"]').first();
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 
@@ -52,11 +52,11 @@ test.describe('Interactive Walkthroughs', () => {
     await tourButton.click();
 
     // Assert the first step is shown
-    const speechBubble = page.locator('div[role="dialog"]');
+    const speechBubble = page.locator('.ohc-walkthrough-bubble').first();
     await expect(speechBubble).toBeVisible();
 
     // Highlight overlay should be visible
-    const highlightOverlay = page.locator('.fixed.z-\\[90\\]');
+    const highlightOverlay = page.locator('.ohc-walkthrough-overlay');
     await expect(highlightOverlay).toBeVisible();
 
     // Click the skip/close button in the walkthrough header

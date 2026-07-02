@@ -353,6 +353,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:invoice_followup_worker_test.rs",
     "//src/server/workers:calendar_sync.rs",
     "//src/server/workers:booking_reengagement.rs",
+    "//src/server/workers:booking_reengagement_job.rs",
     "//src/server/workers:booking_reengagement_test.rs",
     "//src/server/workers:mod.rs",
     "//src/server/workers:agent_action_worker.rs",
