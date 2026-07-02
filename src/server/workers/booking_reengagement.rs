@@ -66,9 +66,11 @@ impl BookingReengagementWorker {
                 // Historically booked > 1 times, but no bookings in the last 14 days,
                 // and no re-engagement feed item pending for them.
 
-                let dormant_customers = match &db.store {
+                let mut extracted_customers = Vec::new();
+
+                match &db.store {
                     crate::db::DbStore::Postgres => {
-                        sqlx::query(
+                        let rows = sqlx::query(
                             r#"
                             WITH customer_stats AS (
                                 SELECT tenant_id, customer_id, COUNT(*) as total_bookings, MAX(start_time) as last_booking
@@ -89,10 +91,22 @@ impl BookingReengagementWorker {
                             "#
                         )
                         .fetch_all(&pool)
-                        .await
+                        .await;
+
+                        if let Ok(customers) = rows {
+                            for r in customers {
+                                let tenant_id: String = r.get("tenant_id");
+                                let customer_id: String = match r.try_get::<uuid::Uuid, _>("customer_id") {
+                                    Ok(u) => u.to_string(),
+                                    Err(_) => r.get::<String, _>("customer_id")
+                                };
+                                let customer_name: String = r.get("name");
+                                extracted_customers.push((tenant_id, customer_id, customer_name));
+                            }
+                        }
                     },
                     crate::db::DbStore::Sqlite(sqlite_pool) => {
-                         sqlx::query(
+                         let rows = sqlx::query(
                             r#"
                             WITH customer_stats AS (
                                 SELECT tenant_id, customer_id, COUNT(*) as total_bookings, MAX(start_time) as last_booking
@@ -113,18 +127,23 @@ impl BookingReengagementWorker {
                             "#
                         )
                         .fetch_all(sqlite_pool)
-                        .await
+                        .await;
+
+                        if let Ok(customers) = rows {
+                            for r in customers {
+                                let tenant_id: String = r.get("tenant_id");
+                                let customer_id: String = match r.try_get::<uuid::Uuid, _>("customer_id") {
+                                    Ok(u) => u.to_string(),
+                                    Err(_) => r.get::<String, _>("customer_id")
+                                };
+                                let customer_name: String = r.get("name");
+                                extracted_customers.push((tenant_id, customer_id, customer_name));
+                            }
+                        }
                     }
                 };
 
-                if let Ok(customers) = dormant_customers {
-                    for r in customers {
-                        let tenant_id: String = r.get("tenant_id");
-                        let customer_id: String = match r.try_get::<uuid::Uuid, _>("customer_id") {
-                            Ok(u) => u.to_string(),
-                            Err(_) => r.get::<String, _>("customer_id")
-                        };
-                        let customer_name: String = r.get("name");
+                for (tenant_id, customer_id, customer_name) in extracted_customers {
 
                         let mut drafted_message = format!("Hi {}, I noticed we haven't had a session in a while! Hope everything is going great with your progress. Would you like to jump back in this week? I have some slots available. Here is a quick booking link: [Link]", customer_name);
 
