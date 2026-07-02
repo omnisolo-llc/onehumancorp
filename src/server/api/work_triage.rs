@@ -453,3 +453,126 @@ pub async fn approve_daily_work_handler(
     }
 
 }
+
+pub async fn list_action_cards_handler(
+    State(db): State<Arc<DB>>,
+    Query(query): Query<UiTenantQuery>,
+) -> axum::response::Response {
+    let tenant_id = ui_tenant_id(&query);
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let res = sqlx::query(
+                "SELECT id, tenant_id, message_id, card_type, content_json, status, CAST(created_at AS text) as created_at FROM action_cards WHERE tenant_id = $1 AND status = 'pending' ORDER BY created_at DESC"
+            )
+            .bind(&tenant_id)
+            .fetch_all(&db.pool)
+            .await;
+
+            match res {
+                Ok(rows) => {
+                    use sqlx::Row;
+                    let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+                        serde_json::json!({
+                            "id": r.get::<String, _>("id"),
+                            "tenant_id": r.get::<String, _>("tenant_id"),
+                            "message_id": r.try_get::<Option<String>, _>("message_id").ok().flatten(),
+                            "card_type": r.get::<String, _>("card_type"),
+                            "content_json": r.get::<String, _>("content_json"),
+                            "status": r.get::<String, _>("status"),
+                            "created_at": r.try_get::<String, _>("created_at").unwrap_or_default(),
+                        })
+                    }).collect();
+                    (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
+                }
+                Err(e) => {
+                    tracing::error!("Failed to list action cards: {}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Database error"}))).into_response()
+                }
+            }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            let res = sqlx::query(
+                "SELECT id, tenant_id, message_id, card_type, content_json, status, CAST(created_at AS text) as created_at FROM action_cards WHERE tenant_id = ? AND status = 'pending' ORDER BY created_at DESC"
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await;
+
+            match res {
+                Ok(rows) => {
+                    use sqlx::Row;
+                    let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+                        serde_json::json!({
+                            "id": r.get::<String, _>("id"),
+                            "tenant_id": r.get::<String, _>("tenant_id"),
+                            "message_id": r.try_get::<Option<String>, _>("message_id").ok().flatten(),
+                            "card_type": r.get::<String, _>("card_type"),
+                            "content_json": r.get::<String, _>("content_json"),
+                            "status": r.get::<String, _>("status"),
+                            "created_at": r.try_get::<String, _>("created_at").unwrap_or_default(),
+                        })
+                    }).collect();
+                    (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
+                }
+                Err(e) => {
+                    tracing::error!("Failed to list action cards: {}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Database error"}))).into_response()
+                }
+            }
+        }
+    }
+}
+
+pub async fn approve_action_card_handler(
+    State(db): State<Arc<DB>>,
+    Path(id): Path<String>,
+    Query(query): Query<UiTenantQuery>,
+    Json(payload): Json<ApproveDailyWorkRequest>,
+) -> axum::response::Response {
+    let tenant_id = ui_tenant_id(&query);
+    let target_status = if payload.action_status == "DISMISSED" {
+        "discarded"
+    } else {
+        "approved"
+    };
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let res = sqlx::query(
+                "UPDATE action_cards SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3"
+            )
+            .bind(target_status)
+            .bind(&id)
+            .bind(&tenant_id)
+            .execute(&db.pool)
+            .await;
+
+            match res {
+                Ok(_) => (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response(),
+                Err(e) => {
+                    tracing::error!("Failed to update action card: {}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Database error"}))).into_response()
+                }
+            }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            let res = sqlx::query(
+                "UPDATE action_cards SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?"
+            )
+            .bind(target_status)
+            .bind(&id)
+            .bind(&tenant_id)
+            .execute(pool)
+            .await;
+
+            match res {
+                Ok(_) => (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response(),
+                Err(e) => {
+                    tracing::error!("Failed to update action card: {}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Database error"}))).into_response()
+                }
+            }
+        }
+    }
+}

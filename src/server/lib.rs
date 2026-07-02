@@ -6337,6 +6337,8 @@ async fn create_ui_bom_item_handler(
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/action-cards", axum::routing::get(crate::api::work_triage::list_action_cards_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/action-cards/action/:id", axum::routing::post(crate::api::work_triage::approve_action_card_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))

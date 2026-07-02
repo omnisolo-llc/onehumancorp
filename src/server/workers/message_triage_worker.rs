@@ -587,6 +587,39 @@ Output JSON format:
                         return Ok(false);
                     }
 
+                    // Insert into unified_messages
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO unified_messages (id, tenant_id, channel, sender_id, raw_payload, normalized_text, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending') ON CONFLICT DO NOTHING"
+                    )
+                    .bind(&message_id)
+                    .bind(&tenant_id)
+                    .bind(&source)
+                    .bind(&sender_id)
+                    .bind(serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string()))
+                    .bind(&customer_message)
+                    .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert into unified_messages: {}", e);
+                    }
+
+                    // Insert into action_cards
+                    let action_card_id = format!("ac-{}", Uuid::new_v4());
+                    let card_type = if action_type == "Draft Booking" { "booking_approval" } else if action_type == "Draft Quote" { "quote_approval" } else { "reply_draft" };
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO action_cards (id, tenant_id, message_id, card_type, content_json, status) VALUES ($1, $2, $3, $4, $5, 'pending')"
+                    )
+                    .bind(&action_card_id)
+                    .bind(&tenant_id)
+                    .bind(&message_id)
+                    .bind(card_type)
+                    .bind(serde_json::json!({
+                        "original_message": customer_message,
+                        "generated_response": action_payload,
+                        "context_used": context_summary,
+                    }).to_string())
+                    .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert action card: {}", e);
+                    }
+
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
                         .bind(&job_id)
                         .execute(&self.db.pool).await;
@@ -713,6 +746,39 @@ Output JSON format:
                             .bind(&job_id)
                             .execute(&*sqlite_pool).await;
                         return Ok(false);
+                    }
+
+                    // Insert into unified_messages
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO unified_messages (id, tenant_id, channel, sender_id, raw_payload, normalized_text, status) VALUES (?, ?, ?, ?, ?, ?, 'pending') ON CONFLICT DO NOTHING"
+                    )
+                    .bind(&message_id)
+                    .bind(&tenant_id)
+                    .bind(&source)
+                    .bind(&sender_id)
+                    .bind(serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string()))
+                    .bind(&customer_message)
+                    .execute(&*sqlite_pool).await {
+                        tracing::error!("Failed to insert into unified_messages (SQLite): {}", e);
+                    }
+
+                    // Insert into action_cards
+                    let action_card_id = format!("ac-{}", Uuid::new_v4());
+                    let card_type = if action_type == "Draft Booking" { "booking_approval" } else if action_type == "Draft Quote" { "quote_approval" } else { "reply_draft" };
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO action_cards (id, tenant_id, message_id, card_type, content_json, status) VALUES (?, ?, ?, ?, ?, 'pending')"
+                    )
+                    .bind(&action_card_id)
+                    .bind(&tenant_id)
+                    .bind(&message_id)
+                    .bind(card_type)
+                    .bind(serde_json::json!({
+                        "original_message": customer_message,
+                        "generated_response": action_payload,
+                        "context_used": context_summary,
+                    }).to_string())
+                    .execute(&*sqlite_pool).await {
+                        tracing::error!("Failed to insert action card (SQLite): {}", e);
                     }
 
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
