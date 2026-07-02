@@ -155,7 +155,7 @@ impl StripeClient {
         let mut form = std::collections::HashMap::new();
         form.insert("customer".to_string(), customer_id.to_string());
         let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string());
-        form.insert("return_url".to_string(), format!("{}/pricing.html", base_url));
+        form.insert("return_url".to_string(), format!("{}/pricing", base_url));
 
         let res = reqwest::Client::new()
             .post(format!("{}/v1/billing_portal/sessions", Self::api_base()))
