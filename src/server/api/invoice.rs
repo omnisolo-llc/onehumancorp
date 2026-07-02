@@ -557,6 +557,9 @@ async fn create_invoice_handler(
         client_name: payload.client_name,
         due_date: payload.due_date,
         currency: payload.currency,
+        base_currency: "USD".to_string(), // Provide default or extract from payload if present
+        transaction_currency: "USD".to_string(),
+        exchange_rate: 1.0,
         line_items: mapped_line_items,
     });
 
@@ -609,6 +612,9 @@ mod tests {
             client_name: "Test Client".to_string(),
             due_date: chrono::Utc::now().timestamp(),
             currency: "USD".to_string(),
+            base_currency: "USD".to_string(),
+            transaction_currency: "USD".to_string(),
+            exchange_rate: 1.0,
             line_items: vec![
                 InvoiceLineItem {
                     id: "".to_string(),
@@ -657,6 +663,9 @@ mod payload_tests {
             status: "DRAFT".to_string(),
             due_date: 1234567890,
             currency: "USD".to_string(),
+            base_currency: "USD".to_string(),
+            transaction_currency: "USD".to_string(),
+            exchange_rate: 1.0,
             total_amount: 100.0,
             total_amount_cents: 10000,
             payment_status: "UNPAID".to_string(),
