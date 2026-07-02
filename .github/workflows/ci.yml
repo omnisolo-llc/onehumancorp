@@ -105,17 +105,11 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo rm -rf "/usr/local/lib/android"
-          sudo rm -rf "/usr/share/swift"
-          sudo rm -rf "/opt/hostedtoolcache/go"
-          sudo chmod -R 777 "/tmp/node-compile-cache" || true
-          sudo rm -rf "/tmp/node-compile-cache" || true
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
@@ -260,17 +254,11 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo rm -rf "/usr/local/lib/android"
-          sudo rm -rf "/usr/share/swift"
-          sudo rm -rf "/opt/hostedtoolcache/go"
-          sudo chmod -R 777 "/tmp/node-compile-cache" || true
-          sudo rm -rf "/tmp/node-compile-cache" || true
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -342,17 +330,11 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo rm -rf "/usr/local/lib/android"
-          sudo rm -rf "/usr/share/swift"
-          sudo rm -rf "/opt/hostedtoolcache/go"
-          sudo chmod -R 777 "/tmp/node-compile-cache" || true
-          sudo rm -rf "/tmp/node-compile-cache" || true
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-
 
       - name: Set Bazel cache week
         run: echo "CACHE_WEEK=$(date +%G-W%V)" >> "$GITHUB_ENV"
@@ -465,17 +447,11 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo rm -rf "/usr/local/lib/android"
-          sudo rm -rf "/usr/share/swift"
-          sudo rm -rf "/opt/hostedtoolcache/go"
-          sudo chmod -R 777 "/tmp/node-compile-cache" || true
-          sudo rm -rf "/tmp/node-compile-cache" || true
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-
 
       - name: Install Kubernetes tools
         run: |
@@ -599,17 +575,11 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
           sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          sudo rm -rf "/usr/local/lib/android"
-          sudo rm -rf "/usr/share/swift"
-          sudo rm -rf "/opt/hostedtoolcache/go"
-          sudo chmod -R 777 "/tmp/node-compile-cache" || true
-          sudo rm -rf "/tmp/node-compile-cache" || true
           docker image prune --all --force
           sudo rm -rf /usr/lib/jvm
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
-
 
       - name: Verify Docker is available
         run: |
