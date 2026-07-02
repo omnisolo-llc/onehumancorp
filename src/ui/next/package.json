@@ -11,6 +11,7 @@
   "dependencies": {
     "@bazel/bazelisk": "^1.28.1",
     "@journeyapps/wa-sqlite": "^1.7.0",
+    "@playwright/test": "^1.61.1",
     "@powersync/react": "^1.10.0",
     "@powersync/web": "^1.38.3",
     "@stripe/terminal-js": "^0.26.0",
@@ -21,6 +22,7 @@
     "dompurify": "^3.0.6",
     "framer-motion": "^12.40.0",
     "pg": "^8.21.0",
+    "playwright": "^1.61.1",
     "postcss-loader": "^8.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

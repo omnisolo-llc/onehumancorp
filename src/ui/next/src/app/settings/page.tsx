@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const [seoReports, setSeoReports] = useState<any[]>([]);
   const [hitRate, setHitRate] = useState<string>("");
   const [enableLazyToolLoading, setEnableLazyToolLoading] = useState(false);
+  const [enableProductTelemetry, setEnableProductTelemetry] = useState(false);
 
 
   useEffect(() => {
