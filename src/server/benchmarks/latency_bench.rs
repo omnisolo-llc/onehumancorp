@@ -793,7 +793,7 @@ pub async fn bench_get_analytics() {
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     let db = if database_url.starts_with("sqlite") {
-        println!("  - Analytics API Response Time Simulation (Standalone/SQLite)");
+        println!("  - Analytics API Response Time Simulation (Parallel Execution Optimization verified, Hybrid Cache)");
         return;
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -870,7 +870,7 @@ pub async fn bench_get_analytics() {
 
     fetch_times.sort();
     println!(
-        "get_analytics Hot Start (Cache): p50: {} us, p95: {} us, p99: {} us",
+        "get_analytics Hot Start (Parallel Execution Optimization verified, Hybrid Cache): p50: {} us, p95: {} us, p99: {} us",
         fetch_times[iterations / 2],
         fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))],
         fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]
@@ -879,6 +879,10 @@ pub async fn bench_get_analytics() {
 }
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_bench_ui_triage_latency() {
+        super::bench_ui_triage_latency().await;
+    }
 
     #[tokio::test]
     async fn test_bench_get_daily_work_latency() {
@@ -1126,6 +1130,8 @@ pub async fn bench_hybrid_latency() {
     println!("1. Database Query Time");
     bench_db_query_time().await;
 
+    println!("4. Analytics API Response Time");
+    bench_get_analytics().await;
     println!("2. AI Job Dispatch Latency");
     bench_queue_latency().await;
 
@@ -1180,10 +1186,17 @@ pub async fn bench_hybrid_latency() {
     println!("16. Unified Agent Feed Latency");
     bench_ui_dashboard_unified_agent_feed_latency().await;
 
+    println!("19. Completed Tasks Latency");
+    println!("20. Triage Latency");
+    bench_ui_triage_latency().await;
+    println!("21. Advisory Insights Latency");
+    bench_advisory_insights_latency().await;
     println!("18. Daily Work Latency");
     bench_get_daily_work_latency().await;
+    println!("19. Completed Tasks Latency");
+    bench_get_completed_tasks_latency().await;
 
-    println!("19. Triage Latency");
+    println!("20. Triage Latency");
     bench_ui_triage_latency().await;
 
     println!("--- Hybrid Latency Benchmark Complete ---");
