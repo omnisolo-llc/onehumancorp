@@ -102,7 +102,7 @@ export default function FinancePage() {
                                 <div className="flex justify-between items-end mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                                     <div>
                                         <p className="text-xs text-gray-500">Amount Due</p>
-                                        <p className="text-xl font-bold text-gray-900 dark:text-white">${invoice.total_amount.toFixed(2)}</p>
+                                        <p className="text-xl font-bold text-gray-900 dark:text-white">{invoice.base_currency === invoice.transaction_currency ? "$" + invoice.total_amount.toFixed(2) : `$${invoice.total_amount.toFixed(2)} (${invoice.transaction_currency})`}</p>
                                     </div>
                                     <button
                                         className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
