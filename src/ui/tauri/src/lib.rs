@@ -1,3 +1,5 @@
+pub mod offline;
+
 use tauri::Manager;
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
