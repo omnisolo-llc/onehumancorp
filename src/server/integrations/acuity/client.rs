@@ -16,7 +16,7 @@ impl AcuityClient {
     }
 
     pub async fn get_appointment_types(&self) -> Result<String, String> {
-        let url = format!("https://acuityscheduling.com/api/v1/appointment-types");
+        let url = "https://acuityscheduling.com/api/v1/appointment-types".to_string();
         let res = self.http_client.get(&url)
             .basic_auth(&self.user_id, Some(&self.api_key))
             .send()

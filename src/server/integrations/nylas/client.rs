@@ -14,7 +14,7 @@ impl NylasClient {
     }
 
     pub async fn get_calendars(&self) -> Result<String, String> {
-        let url = format!("https://api.nylas.com/calendars");
+        let url = "https://api.nylas.com/calendars".to_string();
         let res = self.http_client.get(&url)
             .bearer_auth(&self.access_token)
             .send()

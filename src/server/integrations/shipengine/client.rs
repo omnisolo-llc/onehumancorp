@@ -14,7 +14,7 @@ impl ShipengineClient {
     }
 
     pub async fn create_label(&self, carrier_id: &str, service_code: &str) -> Result<String, String> {
-        let url = format!("https://api.shipengine.com/v1/labels");
+        let url = "https://api.shipengine.com/v1/labels".to_string();
         let payload = serde_json::json!({
             "shipment": {
                 "carrier_id": carrier_id,

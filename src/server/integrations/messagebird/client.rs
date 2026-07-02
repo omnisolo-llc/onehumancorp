@@ -14,7 +14,7 @@ impl MessageBirdClient {
     }
 
     pub async fn send_sms(&self, originator: &str, recipients: &str, body: &str) -> Result<String, String> {
-        let url = format!("https://rest.messagebird.com/messages");
+        let url = "https://rest.messagebird.com/messages".to_string();
         let payload = serde_json::json!({
             "originator": originator,
             "recipients": recipients,
