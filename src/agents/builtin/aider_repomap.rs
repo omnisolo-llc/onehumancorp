@@ -26,6 +26,64 @@ impl RepoMap {
         Ok(result)
     }
 
+    fn extract_signatures(path: &Path) -> Vec<String> {
+        let mut signatures = Vec::new();
+        let content = match fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(_) => return signatures,
+        };
+
+        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+
+        for line in content.lines() {
+            let trimmed = line.trim();
+            match ext {
+                "rs" => {
+                    if trimmed.starts_with("fn ")
+                        || trimmed.starts_with("pub fn ")
+                        || trimmed.starts_with("pub(crate) fn ")
+                        || trimmed.starts_with("struct ")
+                        || trimmed.starts_with("pub struct ")
+                        || trimmed.starts_with("impl ")
+                        || trimmed.starts_with("trait ")
+                        || trimmed.starts_with("pub trait ")
+                        || trimmed.starts_with("enum ")
+                        || trimmed.starts_with("pub enum ")
+                    {
+                        signatures.push(trimmed.to_string());
+                    }
+                }
+                "go" => {
+                    if trimmed.starts_with("func ") || trimmed.starts_with("type ") {
+                        signatures.push(trimmed.to_string());
+                    }
+                }
+                "ts" | "js" => {
+                    if trimmed.starts_with("class ")
+                        || trimmed.starts_with("export class ")
+                        || trimmed.starts_with("function ")
+                        || trimmed.starts_with("export function ")
+                        || trimmed.starts_with("interface ")
+                        || trimmed.starts_with("export interface ")
+                        || trimmed.starts_with("type ")
+                        || trimmed.starts_with("export type ")
+                    {
+                        signatures.push(trimmed.to_string());
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Limit the number of signatures to avoid blowing up the map
+        if signatures.len() > 50 {
+            signatures.truncate(50);
+            signatures.push("...".to_string());
+        }
+
+        signatures
+    }
+
     fn walk_dir(
         &self,
         dir: &Path,
@@ -65,6 +123,23 @@ impl RepoMap {
                     format!("{}│   ", prefix)
                 };
                 self.walk_dir(&path, &new_prefix, output)?;
+            } else {
+                let signatures = Self::extract_signatures(&path);
+                if !signatures.is_empty() {
+                    let new_prefix = if is_last {
+                        format!("{}    ", prefix)
+                    } else {
+                        format!("{}│   ", prefix)
+                    };
+                    for (j, sig) in signatures.iter().enumerate() {
+                        let sig_pointer = if j == signatures.len() - 1 {
+                            "└── "
+                        } else {
+                            "├── "
+                        };
+                        output.push_str(&format!("{}{}{} \n", new_prefix, sig_pointer, sig));
+                    }
+                }
             }
         }
 
@@ -77,6 +152,7 @@ mod tests {
     use super::*;
     use std::fs::{self, File};
     use tempfile::TempDir;
+    use std::io::Write;
 
     #[test]
     fn test_repo_map_generation() {
@@ -85,8 +161,12 @@ mod tests {
 
         // Create some files and directories
         fs::create_dir(root.join("src")).unwrap();
-        File::create(root.join("src/main.rs")).unwrap();
-        File::create(root.join("src/lib.rs")).unwrap();
+
+        let mut main_rs = File::create(root.join("src/main.rs")).unwrap();
+        main_rs.write_all(b"fn main() {\n    println!(\"Hello\");\n}\n").unwrap();
+
+        let mut lib_rs = File::create(root.join("src/lib.rs")).unwrap();
+        lib_rs.write_all(b"pub struct MyStruct;\n\nimpl MyStruct {}\n").unwrap();
 
         fs::create_dir(root.join("docs")).unwrap();
         File::create(root.join("docs/readme.md")).unwrap();
@@ -104,24 +184,62 @@ mod tests {
         let repo_map = RepoMap::new(root);
         let output = repo_map.generate_map().unwrap();
 
-        // The expected output should be sorted and look like:
-        // ├── Cargo.toml
-        // ├── docs
-        // │   └── readme.md
-        // └── src
-        //     ├── lib.rs
-        //     └── main.rs
-
         let expected_lines: Vec<&str> = vec![
             "├── Cargo.toml",
             "├── docs",
             "│   └── readme.md",
             "└── src",
             "    ├── lib.rs",
+            "    │   ├── pub struct MyStruct;",
+            "    │   └── impl MyStruct {}",
             "    └── main.rs",
+            "        └── fn main() {",
         ];
 
-        let actual_lines: Vec<&str> = output.lines().collect();
+        let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();
+        assert_eq!(actual_lines, expected_lines);
+    }
+
+    #[test]
+    fn test_repo_map_extract_signatures_go() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        let mut main_go = File::create(root.join("main.go")).unwrap();
+        main_go.write_all(b"package main\n\ntype MyType struct {}\n\nfunc main() {\n}\n").unwrap();
+
+        let repo_map = RepoMap::new(root);
+        let output = repo_map.generate_map().unwrap();
+
+        let expected_lines: Vec<&str> = vec![
+            "└── main.go",
+            "    ├── type MyType struct {}",
+            "    └── func main() {",
+        ];
+
+        let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();
+        assert_eq!(actual_lines, expected_lines);
+    }
+
+    #[test]
+    fn test_repo_map_extract_signatures_ts() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        let mut main_ts = File::create(root.join("main.ts")).unwrap();
+        main_ts.write_all(b"export interface Config {}\n\nclass App {}\n\nfunction start() {}\n").unwrap();
+
+        let repo_map = RepoMap::new(root);
+        let output = repo_map.generate_map().unwrap();
+
+        let expected_lines: Vec<&str> = vec![
+            "└── main.ts",
+            "    ├── export interface Config {}",
+            "    ├── class App {}",
+            "    └── function start() {}",
+        ];
+
+        let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();
         assert_eq!(actual_lines, expected_lines);
     }
 }
