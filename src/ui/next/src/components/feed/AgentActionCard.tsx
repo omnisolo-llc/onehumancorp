@@ -140,6 +140,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ||
           (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "order_draft" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "instagram_dm" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "subscription_replenishment") && (
@@ -1221,7 +1223,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "booking_draft" ? (
+            ?.feature_type === "booking_draft" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "order_draft" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <textarea
