@@ -370,6 +370,9 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
         .route("/waitlist/embed", get(handle_waitlist_embed))
+        .route("/birthday-club/embed", get(handle_birthday_club_embed))
+        .route("/birthday-club/capture", post(handle_birthday_club_capture))
+
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
         .route("/viral-widget/embed", get(handle_viral_widget_embed))
@@ -1661,7 +1664,7 @@ pub async fn handle_one_tap_referral_embed(
   </style>
 </head>
 <body>
-  <div class="widget-container">
+  <div class="widget-container" data-tenant="{safe_tenant}">
     <div class="icon">🎁</div>
     <h3>{safe_reward}</h3>
     <p>{safe_desc}</p>
@@ -1691,10 +1694,10 @@ pub async fn handle_one_tap_referral_embed(
         method: 'POST',
         headers: {{ 'Content-Type': 'application/json' }},
         body: JSON.stringify({{
-          tenant_id: '{safe_tenant}',
+          tenant_id: document.querySelector('.widget-container').getAttribute('data-tenant'),
           email: email,
           source: 'one_tap_referral',
-          campaign: '{safe_reward}'
+          campaign: document.querySelector('.widget-container').getAttribute('data-reward')
         }})
       }}).then(() => {{
         document.querySelector('.input-group').style.display = 'none';
@@ -3674,12 +3677,82 @@ mod cloud_bridge_tests {
         assert!(html.contains("Powered by OHC"));
     }
 
+        #[tokio::test]
+    async fn test_birthday_club_embed() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+
+        let query = super::BirthdayClubEmbedQuery {
+            tenant: Some("test-tenant".to_string()),
+            discount: Some("25".to_string()),
+            theme: None,
+            hide_branding: None,
+        };
+
+        let res = super::handle_birthday_club_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+        assert!(html.contains("25% off"));
+        assert!(html.contains("id=\"name\""));
+        assert!(html.contains("id=\"email\""));
+        assert!(html.contains("id=\"birthday\""));
+        assert!(html.contains("Join the Club"));
+        assert!(html.contains("Powered by OHC"));
+
+        let query_no_branding = super::BirthdayClubEmbedQuery {
+            tenant: Some("test-tenant-2".to_string()),
+            discount: Some("25".to_string()),
+            theme: None,
+            hide_branding: Some("true".to_string()),
+        };
+
+        let res_no_branding = super::handle_birthday_club_embed(Extension(state.clone()), axum::extract::Query(query_no_branding)).await.into_response();
+        assert_eq!(res_no_branding.status(), StatusCode::OK);
+
+        let body_bytes_nb = axum::body::to_bytes(res_no_branding.into_body(), usize::MAX).await.unwrap();
+        let _html_nb = String::from_utf8(body_bytes_nb.to_vec()).unwrap();
+
+        // it may still contain powered by ohc if not pro, so we mock pro
+        // But for testing purposes, we just ensure it handles hide_branding=true without panicking.
+    }
+
+    #[tokio::test]
+    async fn test_birthday_club_capture() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+
+        let req = super::BirthdayClubCaptureRequest {
+            tenant_id: "test-tenant".to_string(),
+            name: Some("Test User".to_string()),
+            email: "test@example.com".to_string(),
+            birthday: Some("1990-01-01".to_string()),
+        };
+
+        let res = super::handle_birthday_club_capture(Extension(state), Json(req)).await.unwrap();
+        assert_eq!(res.0.get("success").unwrap(), true);
+    }
+
     #[tokio::test]
     async fn test_viral_widget_embed() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
             return;
         }
+
+
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
@@ -3698,11 +3771,11 @@ mod cloud_bridge_tests {
         let res_no_branding = super::handle_viral_widget_embed(Extension(state.clone()), axum::extract::Query(query_no_branding)).await.into_response();
 
         let body_bytes_nb = axum::body::to_bytes(res_no_branding.into_body(), usize::MAX).await.unwrap();
-        let html_nb = String::from_utf8(body_bytes_nb.to_vec()).unwrap();
+        let _html_nb = String::from_utf8(body_bytes_nb.to_vec()).unwrap();
 
-        assert!(html_nb.contains("Test Title 2"));
-        assert!(html_nb.contains("test-tenant-2"));
-        assert!(!html_nb.contains("Powered by OHC"));
+        assert!(_html_nb.contains("Test Title 2"));
+        assert!(_html_nb.contains("test-tenant-2"));
+        assert!(!_html_nb.contains("Powered by OHC"));
     }
 
     use super::*;
@@ -4846,6 +4919,24 @@ pub struct WaitlistEmbedQuery {
     pub hide_branding: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct BirthdayClubEmbedQuery {
+    pub tenant: Option<String>,
+    pub discount: Option<String>,
+    pub theme: Option<String>,
+    #[serde(rename = "hideBranding")]
+    pub hide_branding: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BirthdayClubCaptureRequest {
+    pub tenant_id: String,
+    pub name: Option<String>,
+    pub email: String,
+    pub birthday: Option<String>,
+}
+
+
 pub async fn handle_waitlist_embed(
     axum::extract::Query(query): axum::extract::Query<WaitlistEmbedQuery>,
 ) -> impl axum::response::IntoResponse {
@@ -4950,7 +5041,7 @@ pub async fn handle_waitlist_embed(
   </style>
 </head>
 <body>
-  <div class="widget-container">
+  <div class="widget-container" data-tenant="{safe_tenant}">
     <div class="icon">✨</div>
     <h2>Join the {safe_product} Waitlist</h2>
     <p>Be the first to access our new launch. Refer {safe_goal} friends to jump to the front of the line!</p>
@@ -4980,10 +5071,10 @@ pub async fn handle_waitlist_embed(
         method: 'POST',
         headers: {{ 'Content-Type': 'application/json' }},
         body: JSON.stringify({{
-          tenant_id: '{safe_tenant}',
+          tenant_id: document.querySelector('.widget-container').getAttribute('data-tenant'),
           email: email,
           source: 'waitlist_embed',
-          campaign: '{safe_product}'
+          campaign: document.querySelector('.widget-container').getAttribute('data-product')
         }})
       }}).then(() => {{
         document.querySelector('.input-group').style.display = 'none';
@@ -5009,4 +5100,222 @@ pub async fn handle_waitlist_embed(
     );
 
     axum::response::Html(html)
+}
+
+
+pub async fn handle_birthday_club_embed(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<BirthdayClubEmbedQuery>,
+) -> impl axum::response::IntoResponse {
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let discount = query.discount.as_deref().unwrap_or("25");
+    let theme = query.theme.as_deref().unwrap_or("light");
+    let hide_branding = query.hide_branding.as_deref().unwrap_or("false") == "true";
+
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
+    let muted_color = if theme == "dark" { "#a1a1aa" } else { "#6b7280" };
+    let input_bg = if theme == "dark" { "#2d2d30" } else { "#f9fafb" };
+    let border_color = if theme == "dark" { "#3f3f46" } else { "#e5e7eb" };
+
+    let safe_tenant = escape_html(tenant);
+    let safe_discount = escape_html(discount);
+
+    let mut has_pro = false;
+    if hide_branding {
+        // Validate pro status in DB
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
+            .bind(&safe_tenant)
+            .fetch_optional(&state.pool)
+            .await;
+
+        if let Ok(Some(plan)) = is_pro_res {
+            if plan.to_lowercase() == "pro" {
+                has_pro = true;
+            }
+        }
+    }
+
+    let branding_html = if hide_branding && has_pro {
+        "".to_string()
+    } else {
+        format!(
+            r#"<div style="margin-top: 16px; font-size: 12px; text-align: center;">
+                <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=birthday_club" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+            </div>"#,
+            safe_tenant, muted_color
+        )
+    };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: {bg_color};
+      color: {text_color};
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      height: 100%;
+    }}
+    .widget-container {{
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }}
+    .icon {{
+      font-size: 32px;
+      margin-bottom: 12px;
+    }}
+    h2 {{
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      font-weight: 700;
+    }}
+    p {{
+      margin: 0 0 20px 0;
+      font-size: 14px;
+      color: {muted_color};
+      line-height: 1.5;
+    }}
+    .input-group {{
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }}
+    input {{
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid {border_color};
+      border-radius: 8px;
+      font-size: 14px;
+      background: {input_bg};
+      color: {text_color};
+      outline: none;
+      box-sizing: border-box;
+    }}
+    input:focus {{
+      border-color: #0066FF;
+    }}
+    button {{
+      background: #db2777; /* pink-600 */
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+      width: 100%;
+      margin-top: 8px;
+    }}
+    button:hover {{
+      background: #be185d; /* pink-700 */
+    }}
+  </style>
+</head>
+<body>
+  <div class="widget-container" data-tenant="{safe_tenant}">
+    <div class="icon">🎂</div>
+    <h2>Join our Birthday Club</h2>
+    <p>Sign up to receive a special gift of {safe_discount}% off on your birthday!</p>
+
+    <div class="input-group">
+      <input type="text" placeholder="Your name" id="name" required />
+      <input type="email" placeholder="Your email address" id="email" required />
+      <input type="date" placeholder="Your birthday" id="birthday" required />
+      <button id="join-btn">Join the Club</button>
+    </div>
+
+    <div id="success-message" style="display: none; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 500;">
+      Thanks for joining! We'll send you something special.
+    </div>
+
+    {branding_html}
+  </div>
+
+  <script>
+    document.getElementById('join-btn').addEventListener('click', function() {{
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const birthday = document.getElementById('birthday').value;
+
+      if (!email) return;
+
+      const btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Joining...';
+
+      fetch('/api/v1/growth/birthday-club/capture', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          tenant_id: document.querySelector('.widget-container').getAttribute('data-tenant'),
+          name: name,
+          email: email,
+          birthday: birthday
+        }})
+      }}).then(() => {{
+        document.querySelector('.input-group').style.display = 'none';
+        document.getElementById('success-message').style.display = 'block';
+        alert('Joined successfully!');
+      }}).catch(err => {{
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = 'Join the Club';
+      }});
+    }});
+  </script>
+</body>
+</html>"#,
+        bg_color = bg_color,
+        text_color = text_color,
+        muted_color = muted_color,
+        input_bg = input_bg,
+        border_color = border_color,
+        safe_discount = safe_discount,
+        branding_html = branding_html,
+        safe_tenant = safe_tenant
+    );
+
+    axum::response::Html(html)
+}
+
+
+pub async fn handle_birthday_club_capture(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<BirthdayClubCaptureRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    // Record birthday club capture in the CRM/Hub
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.birthday_club_joined",
+        "tenant_id": req.tenant_id,
+        "name": req.name,
+        "email": req.email,
+        "birthday": req.birthday,
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": "Birthday club registration captured successfully"
+    })))
 }

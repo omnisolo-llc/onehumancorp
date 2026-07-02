@@ -956,18 +956,7 @@ pub async fn razorpay_webhook_handler(
 
             // Dispatch payment.captured event to Finance agent for split tag evaluation
             let orch = webhook_state.orchestrator.clone();
-            let mut payload_val = serde_json::to_value(&payload).unwrap_or(serde_json::Value::Null);
-
-            // Ensure currency and amount are injected into payload for FinanceAgent
-            if let Some(obj) = payload_val.as_object_mut() {
-                if !obj.contains_key("currency") {
-                    obj.insert("currency".to_string(), serde_json::json!("USD"));
-                }
-                if !obj.contains_key("amount") {
-                    obj.insert("amount".to_string(), serde_json::json!(0));
-                }
-            }
-
+            let payload_val = serde_json::to_value(&payload).unwrap_or(serde_json::Value::Null);
             let _order_id_val = order_id.clone();
             tokio::spawn(async move {
                 let evt = crate::orchestration::departments::types::DepartmentEvent {

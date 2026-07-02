@@ -267,11 +267,11 @@ export default function Dashboard() {
         setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
         if (approvalsData && Array.isArray(approvalsData) && approvalsData.length > 0 && !agentFeedData.items?.length) {
-            setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED"));
-            setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED"));
+            setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED" && i.status !== "PAUSED"));
+            setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED" || i.status === "PAUSED"));
         } else if (agentFeedData && agentFeedData.items) {
-            setPendingApprovals(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-            setActivities(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
+            setPendingApprovals(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED" && i.lifecycle_state !== "PAUSED"));
+            setActivities(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED" || i.lifecycle_state === "PAUSED").map((a: any) => ({
                 id: a.id,
                 event_type: a.lifecycle_state,
                 department: a.event_source,
