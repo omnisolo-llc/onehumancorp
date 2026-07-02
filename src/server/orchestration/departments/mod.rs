@@ -1,5 +1,6 @@
 pub mod types;
 pub mod orchestrator;
+pub mod handoff_protocol;
 
 pub use types::*;
 pub use orchestrator::*;

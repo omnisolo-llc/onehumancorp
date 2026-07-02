@@ -127,4 +127,20 @@ mod tests {
             panic!("Expected LlmRecoverable error");
         }
     }
+
+    #[tokio::test]
+    async fn test_lazy_load_tool_empty_args() {
+        let active_tools = Arc::new(RwLock::new(HashSet::new()));
+        let available_tools = Arc::new(vec!["Bash".to_string()]);
+        let tool = lazy_load_tool(active_tools.clone(), available_tools);
+
+        let args = serde_json::json!({
+            "tool_names": []
+        });
+
+        let res = tool.execute.execute(args).await;
+        assert!(res.is_ok());
+        let msg = res.unwrap();
+        assert!(msg.contains("No valid tool names provided to load"));
+    }
 }

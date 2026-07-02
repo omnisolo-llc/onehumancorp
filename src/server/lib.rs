@@ -132,6 +132,11 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
     m.insert("ohc-floating-help-btn".to_string(), "Open Help Center.".to_string());
 
+    m.insert("checkout-title-tooltip".to_string(), "Review your order summary and provide payment details to complete the checkout.".to_string());
+    m.insert("checkout-plan-upgrade-tooltip".to_string(), "Upgrading your plan gives you access to premium features.".to_string());
+    m.insert("checkout-cancel-tooltip".to_string(), "Cancel the checkout process and return to the previous page.".to_string());
+    m.insert("checkout-pay-tooltip".to_string(), "Complete your secure payment.".to_string());
+
     m.insert("cart-recovery-tooltip".to_string(), "Recover abandoned carts with personalized AI follow-ups.".to_string());
     m.insert("flash-sale-tooltip".to_string(), "Create high-converting flash sale countdown widgets.".to_string());
     m.insert("pre-order-tooltip".to_string(), "Launch an omnichannel pre-order engine with tiered waitlist capabilities.".to_string());
