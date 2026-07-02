@@ -1889,3 +1889,186 @@ mod native_booking_tests {
         assert_eq!(res.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProposedBooking {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub customer_id: Uuid,
+    pub conversation_id: Uuid,
+    pub requested_service: String,
+    pub proposed_time: String,
+    pub estimated_value: f64,
+    pub status: String,
+    pub created_at_unix: i64,
+    pub updated_at_unix: i64,
+}
+
+impl BookingService {
+    pub async fn create_proposed_booking(
+        tenant_id: Uuid,
+        customer_id: Uuid,
+        conversation_id: Uuid,
+        requested_service: String,
+        proposed_time: String,
+        estimated_value: f64,
+    ) -> Result<ProposedBooking, sqlx::Error> {
+        let pool = get_pool();
+        let id = Uuid::new_v4();
+        let now = Utc::now().timestamp();
+
+        sqlx::query(
+            r#"
+            INSERT INTO proposed_bookings (id, tenant_id, customer_id, conversation_id, requested_service, proposed_time, estimated_value, status, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9), to_timestamp($10))
+            "#,
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(customer_id)
+        .bind(conversation_id)
+        .bind(requested_service.clone())
+        .bind(proposed_time.clone())
+        .bind(estimated_value)
+        .bind("pending")
+        .bind(now)
+        .bind(now)
+        .execute(&pool)
+        .await?;
+
+        Ok(ProposedBooking {
+            id,
+            tenant_id,
+            customer_id,
+            conversation_id,
+            requested_service,
+            proposed_time,
+            estimated_value,
+            status: "pending".to_string(),
+            created_at_unix: now,
+            updated_at_unix: now,
+        })
+    }
+
+    pub async fn approve_proposed_booking(
+        id: Uuid,
+        tenant_id: Uuid,
+    ) -> Result<ProposedBooking, sqlx::Error> {
+        let pool = get_pool();
+        let now = Utc::now().timestamp();
+
+        let row = sqlx::query(
+            r#"
+            UPDATE proposed_bookings
+            SET status = 'approved', updated_at = to_timestamp($1)
+            WHERE id = $2 AND tenant_id = $3
+            RETURNING customer_id, conversation_id, requested_service, proposed_time, estimated_value, extract(epoch from created_at)::bigint as created_at_unix
+            "#,
+        )
+        .bind(now)
+        .bind(id)
+        .bind(tenant_id)
+        .fetch_one(&pool)
+        .await?;
+
+        Ok(ProposedBooking {
+            id,
+            tenant_id,
+            customer_id: row.try_get("customer_id").unwrap_or_default(),
+            conversation_id: row.try_get("conversation_id").unwrap_or_default(),
+            requested_service: row.try_get("requested_service").unwrap_or_default(),
+            proposed_time: row.try_get("proposed_time").unwrap_or_default(),
+            estimated_value: row.try_get("estimated_value").unwrap_or_default(),
+            status: "approved".to_string(),
+            created_at_unix: row.try_get("created_at_unix").unwrap_or(0),
+            updated_at_unix: now,
+        })
+    }
+
+    pub async fn get_proposed_bookings(tenant_id: Uuid) -> Result<Vec<ProposedBooking>, sqlx::Error> {
+        let pool = get_pool();
+
+        let rows = sqlx::query(
+            r#"
+            SELECT id, customer_id, conversation_id, requested_service, proposed_time, estimated_value, status, extract(epoch from created_at)::bigint as created_at_unix, extract(epoch from updated_at)::bigint as updated_at_unix
+            FROM proposed_bookings
+            WHERE tenant_id = $1
+            ORDER BY created_at DESC
+            "#,
+        )
+        .bind(tenant_id)
+        .fetch_all(&pool)
+        .await?;
+
+        let mut bookings = Vec::new();
+        for row in rows {
+            bookings.push(ProposedBooking {
+                id: row.try_get("id").unwrap_or_default(),
+                tenant_id,
+                customer_id: row.try_get("customer_id").unwrap_or_default(),
+                conversation_id: row.try_get("conversation_id").unwrap_or_default(),
+                requested_service: row.try_get("requested_service").unwrap_or_default(),
+                proposed_time: row.try_get("proposed_time").unwrap_or_default(),
+                estimated_value: row.try_get("estimated_value").unwrap_or_default(),
+                status: row.try_get("status").unwrap_or_default(),
+                created_at_unix: row.try_get("created_at_unix").unwrap_or(0),
+                updated_at_unix: row.try_get("updated_at_unix").unwrap_or(0),
+            });
+        }
+
+        Ok(bookings)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkTask {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub booking_id: Uuid,
+    pub description: String,
+    pub status: String,
+    pub scheduled_time_unix: i64,
+    pub created_at_unix: i64,
+    pub updated_at_unix: i64,
+}
+
+impl BookingService {
+    pub async fn create_work_task(
+        tenant_id: Uuid,
+        booking_id: Uuid,
+        description: String,
+        scheduled_time_unix: i64,
+    ) -> Result<WorkTask, sqlx::Error> {
+        let pool = get_pool();
+        let id = Uuid::new_v4();
+        let now = Utc::now().timestamp();
+
+        sqlx::query(
+            r#"
+            INSERT INTO work_tasks (id, tenant_id, booking_id, description, status, scheduled_time, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, to_timestamp($6), to_timestamp($7), to_timestamp($8))
+            "#,
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(booking_id)
+        .bind(description.clone())
+        .bind("open")
+        .bind(scheduled_time_unix)
+        .bind(now)
+        .bind(now)
+        .execute(&pool)
+        .await?;
+
+        Ok(WorkTask {
+            id,
+            tenant_id,
+            booking_id,
+            description,
+            status: "open".to_string(),
+            scheduled_time_unix,
+            created_at_unix: now,
+            updated_at_unix: now,
+        })
+    }
+}

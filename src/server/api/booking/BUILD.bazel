@@ -7,6 +7,7 @@ exports_files(
         "reserve.rs",
         "available_slots.rs",
         "create_service.rs",
+        "proposed.rs",
     ],
     visibility = ["//visibility:public"],
 )

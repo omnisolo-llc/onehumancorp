@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package ohc.booking;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/booking;bookingpb";
+
+message ProposedBooking {
+    string id = 1;
+    string tenant_id = 2;
+    string customer_id = 3;
+    string conversation_id = 4;
+    string requested_service = 5;
+    string proposed_time = 6;
+    double estimated_value = 7;
+    string status = 8; // "pending", "approved", "rejected", "confirmed"
+    int64 created_at_unix = 9;
+    int64 updated_at_unix = 10;
+}
+
+message WorkTask {
+    string id = 1;
+    string tenant_id = 2;
+    string booking_id = 3;
+    string description = 4;
+    string status = 5; // "open", "in_progress", "completed", "cancelled"
+    int64 scheduled_time_unix = 6;
+    int64 created_at_unix = 7;
+    int64 updated_at_unix = 8;
+}
+
+message CreateProposedBookingRequest {
+    string tenant_id = 1;
+    string customer_id = 2;
+    string conversation_id = 3;
+    string requested_service = 4;
+    string proposed_time = 5;
+    double estimated_value = 6;
+}
+
+message ApproveProposedBookingRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+
+message GetProposedBookingsRequest {
+    string tenant_id = 1;
+}
+
+message GetProposedBookingsResponse {
+    repeated ProposedBooking bookings = 1;
+}
+
+service BookingService {
+    rpc CreateProposedBooking(CreateProposedBookingRequest) returns (ProposedBooking);
+    rpc ApproveProposedBooking(ApproveProposedBookingRequest) returns (ProposedBooking);
+    rpc GetProposedBookings(GetProposedBookingsRequest) returns (GetProposedBookingsResponse);
+}
