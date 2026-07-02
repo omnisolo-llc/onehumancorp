@@ -182,6 +182,20 @@ export default function FeedPage() {
     }
   };
 
+  const simulateBookingDraft = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-booking-draft', { method: 'POST' });
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const simulateDisputeDraft = async () => {
     try {
       setLoading(true);
@@ -613,6 +627,14 @@ export default function FeedPage() {
              className="text-xs bg-[#FFF5E5] text-[#FF9500] border border-[#FFD699] px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Dispute
+          </button>
+
+          <button
+             onClick={simulateBookingDraft}
+             data-testid="simulate-booking-btn"
+             className="text-xs bg-green-100 text-green-700 border border-green-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Booking
           </button>
         </div>
       </div>
