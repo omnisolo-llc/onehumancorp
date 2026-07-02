@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
             <button class="ohc-help-tab" data-target="tab-tours">Interactive Tours</button>
             <button class="ohc-help-tab" data-target="tab-videos">Videos</button>
-            <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask anything">Ask anything</button>
+            <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
         </div>
 
         <div id="tab-articles" class="ohc-help-content active">
@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div id="ohc-help-chat-input-container">
-                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
+                <input type="text" id="ohc-help-chat-input" placeholder="Ask AI...">
                 <button id="ohc-help-chat-send" aria-label="Send message">Send</button>
             </div>
         </div>
