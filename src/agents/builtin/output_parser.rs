@@ -61,19 +61,17 @@ impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
 
         // Fallback mechanic: Legacy RetryWithErrorOutputParser
         let content = msg.content.trim();
-        let json_str = if content.starts_with("```json") {
-            content
-                .trim_start_matches("```json")
-                .trim_end_matches("```")
-                .trim()
-        } else if content.starts_with("```") {
-            content
-                .trim_start_matches("```")
-                .trim_end_matches("```")
-                .trim()
-        } else {
-            content
-        };
+        let mut json_str = content;
+
+        if let Some(start) = content.find("```json") {
+            if let Some(end) = content[start + 7..].rfind("```") {
+                json_str = content[start + 7..start + 7 + end].trim();
+            }
+        } else if let Some(start) = content.find("```") {
+            if let Some(end) = content[start + 3..].rfind("```") {
+                json_str = content[start + 3..start + 3 + end].trim();
+            }
+        }
 
         if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
             return Ok(parsed);
@@ -123,31 +121,22 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
 
         // Fallback: If it's pure markdown JSON block, attempt to parse it directly
         let content = msg.content.trim();
-        let json_str = if content.starts_with("```json") {
-            content
-                .trim_start_matches("```json")
-                .trim_end_matches("```")
-                .trim()
-        } else if content.starts_with("```") {
-            content
-                .trim_start_matches("```")
-                .trim_end_matches("```")
-                .trim()
-        } else {
-            content
-        };
+        let mut json_str = content;
+
+        if let Some(start) = content.find("```json") {
+            if let Some(end) = content[start + 7..].rfind("```") {
+                json_str = content[start + 7..start + 7 + end].trim();
+            }
+        } else if let Some(start) = content.find("```") {
+            if let Some(end) = content[start + 3..].rfind("```") {
+                json_str = content[start + 3..start + 3 + end].trim();
+            }
+        }
 
         if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
             return Ok(parsed);
         }
 
-        let s = msg.content.trim();
-        if s.starts_with("```json") && s.ends_with("```") {
-            let json_str = s[7..s.len() - 3].trim();
-            if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
-                return Ok(parsed);
-            }
-        }
         // Strict enforcement: Rely entirely on native tool_calls API objects.
         Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
     }
@@ -334,7 +323,12 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
             });
         } else {
             current_req.messages.push(msg.clone());
-            let error_context = if parse_error_msg.contains("Validation Error") {
+            let error_context = if parse_error_msg.contains("Expected native tool_calls") {
+                format!(
+                    "Validation Error: You returned plain text instead of using a tool call. You MUST use the `structured_output` tool call. Do not return raw JSON text.\nFailed completion: {}",
+                    msg.content
+                )
+            } else if parse_error_msg.contains("Validation Error") {
                 format!(
                     "{}\nFailed completion: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
                     parse_error_msg, msg.content
@@ -656,6 +650,23 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
         assert_eq!(result.expect("Expected TestOutput in test").result, "recovered");
+    }
+
+    #[tokio::test]
+    async fn test_parse_structured_output_with_preamble() {
+        // Fallback mechanic now seamlessly extracts the JSON even with preamble and postamble text
+        let client = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![create_text_resp(
+                "Here is the parsed JSON output for your request:\n```json\n{\n  \"result\": \"success_preamble\"\n}\n```\nLet me know if you need anything else!",
+            )]),
+        });
+
+        let req = create_test_req();
+        let result: TestOutput =
+            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3)
+                .await
+                .expect("Expected TestOutput in test");
+        assert_eq!(result.result, "success_preamble");
     }
 
     #[tokio::test]
