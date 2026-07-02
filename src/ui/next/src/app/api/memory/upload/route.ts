@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     if (!res.ok) {
        console.error("Backend POST failed:", res.status, res.statusText);
-       // Instead of returning mock data, return the real error
+       // Return the real error
        return NextResponse.json({ error: "Backend error", status: res.statusText }, { status: res.status });
     }
 

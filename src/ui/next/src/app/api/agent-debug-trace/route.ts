@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
     const rawCheckpoints = result.rows;
 
-    // If no data exists yet, return empty list (NO MOCK DATA)
+    // If no data exists yet, return empty list
     if (!rawCheckpoints || rawCheckpoints.length === 0) {
        return NextResponse.json([], { status: 200 });
     }

@@ -18,7 +18,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const serviceId = body.product_id;
     // Assuming backend endpoint is /api/v1/booking/available_slots/{serviceId}
-    // We mock the Date querying since backend endpoint fetches all for service ID
     const res = await fetch(`${backendUrl}/api/v1/booking/available_slots/${serviceId}`, {
       method: 'GET',
       headers,

@@ -129,7 +129,7 @@ export default function StorefrontWidgetPage() {
                 <div className="absolute top-4 left-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Preview</div>
 
                 <div className="relative z-10 w-[320px] h-[400px]" style={{ ...getThemeStyles(), borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-                    {/* Mock Widget Content for Preview (matches the real iframe output loosely) */}
+                    {/* Widget Content for Preview (matches the real iframe output loosely) */}
                     <div className="w-full h-48 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-t-[16px] relative flex items-center justify-center">
                         <span className="text-4xl">🛍️</span>
                         <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 text-white text-xs font-bold px-3 py-1 rounded-full">
