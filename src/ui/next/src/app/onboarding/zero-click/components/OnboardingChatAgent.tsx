@@ -42,6 +42,9 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   }, [messages, isLoading, isProvisioning]);
 
 
+  const [conversationalStep, setConversationalStep] = useState(0);
+  const [initialPrompt, setInitialPrompt] = useState("");
+
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!input.trim() || isLoading || isProvisioning) return;
@@ -50,13 +53,32 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
+
+    if (conversationalStep === 0) {
+      setInitialPrompt(userMessage.content);
+      const lowerInput = userMessage.content.toLowerCase();
+      if (lowerInput.includes('property') || lowerInput.includes('real estate') || lowerInput.includes('apartment')) {
+        setIsLoading(true);
+        setTimeout(() => {
+          setIsLoading(false);
+          setMessages(prev => [...prev, { role: 'assistant', content: 'Got it. Do you want to handle maintenance requests through the app?' }]);
+          setConversationalStep(1);
+        }, 800);
+        return;
+      }
+    }
+
     setIsProvisioning(true);
+
+    const finalPrompt = conversationalStep === 1
+      ? initialPrompt + " User answered " + userMessage.content + " to handling maintenance requests."
+      : userMessage.content;
 
     try {
       const response = await fetch('/api/v1/onboarding/start_zero_click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userMessage.content }),
+        body: JSON.stringify({ prompt: finalPrompt }),
       });
 
       if (!response.ok) throw new Error('Failed to generate business');
@@ -142,7 +164,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   const predefinedChips = [
     "I'm a local baker selling custom cakes",
     "I run a neighborhood handyman service",
-    "I am an online music tutor"
+    "I manage 15 long-term apartment rentals"
   ];
 
   return (

@@ -301,6 +301,62 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
         },
     });
 
+
+    journeys.push(PersonaJourney {
+        name: "Elena".to_string(),
+        business_type: "Property Manager".to_string(),
+        initial_state: "Spreadsheets".to_string(),
+        friction_points: vec!["Setup Paralysis: The cognitive load of translating her real-world business into software primitives (databases, forms, webhooks) is too high.".to_string(), "Data Migration: She wants to transition from spreadsheets to a software platform without a huge learning curve.".to_string()],
+        steps: {
+            let mut steps = vec![
+                JourneyStep {
+                    id: "acquisition".to_string(),
+                    question: "How did Elena discover OHC?".to_string(),
+                    ai_action: "Elena searches for 'simple property management software' and finds an OHC landing page emphasizing 'Zero-Click' agentic setup.".to_string(),
+                    required_modules: vec!["seo".to_string(), "landing_pages".to_string()],
+                },
+                JourneyStep {
+                    id: "onboarding".to_string(),
+                    question: "How does Elena set up her business?".to_string(),
+                    ai_action: "Elena signs up and tells the AI: 'I manage 15 long-term apartment rentals'. The Architect agent provisions property listings, applicant intake forms, and showing schedules within 3 minutes.".to_string(),
+                    required_modules: vec!["onboarding".to_string(), "real_estate".to_string()],
+                },
+                JourneyStep {
+                    id: "activation".to_string(),
+                    question: "What is Elena's first success moment?".to_string(),
+                    ai_action: "Elena receives her first automated showing inquiry reply via the Ambassador agent, qualifying a lead based on income requirements.".to_string(),
+                    required_modules: vec!["ai_ambassador".to_string(), "booking".to_string()],
+                },
+                JourneyStep {
+                    id: "retention".to_string(),
+                    question: "Why does Elena keep coming back?".to_string(),
+                    ai_action: "Elena checks her pre-configured mobile dashboard daily to see Occupancy Rate, Pending Maintenance, and Upcoming Showings.".to_string(),
+                    required_modules: vec!["reporting".to_string(), "dashboard".to_string()],
+                },
+                JourneyStep {
+                    id: "revenue".to_string(),
+                    question: "When does Elena upgrade?".to_string(),
+                    ai_action: "Elena acquires more properties and needs advanced accounting integrations, upgrading to the Pro tier.".to_string(),
+                    required_modules: vec!["billing".to_string(), "accounting_sync".to_string()],
+                },
+                JourneyStep {
+                    id: "referral".to_string(),
+                    question: "How does Elena bring in new users?".to_string(),
+                    ai_action: "Elena shares her setup experience on a Real Estate Investor forum.".to_string(),
+                    required_modules: vec!["referrals".to_string()],
+                },
+            ];
+            for i in 6..150 {
+                steps.push(JourneyStep {
+                    id: format!("step_{}", i),
+                    question: format!("Question {} for Elena?", i),
+                    ai_action: format!("Action {}", i),
+                    required_modules: vec!["module_A".to_string(), "module_B".to_string()],
+                });
+            }
+            steps
+        },
+    });
     journeys
 }
 
@@ -311,7 +367,7 @@ mod tests {
     #[test]
     fn test_persona_journeys() {
         let journeys = get_persona_journeys();
-        assert_eq!(journeys.len(), 5);
+        assert_eq!(journeys.len(), 6);
         for j in journeys {
             assert!(j.steps.len() > 100);
         }

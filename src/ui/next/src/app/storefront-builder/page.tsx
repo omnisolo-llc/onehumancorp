@@ -292,7 +292,7 @@ export default function StorefrontBuilderPage() {
                       }
                     }
                   }}
-                  placeholder="e.g. I run a mobile dog grooming service in Portland"
+                  placeholder="e.g. I manage 15 long-term apartment rentals"
                   rows={6}
                 />
               </WithTooltip>

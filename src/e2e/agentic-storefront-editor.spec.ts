@@ -11,9 +11,7 @@ test.describe('Agentic Storefront Editor', () => {
     await expect(page.locator('text=Welcome to OHC Smart Builder')).toBeVisible();
 
     // Enter bio
-    await page.fill('textarea[placeholder="e.g. I run a mobile dog grooming service in Portland"]', 'Maya the home baker, I bake custom vegan cakes.');
-
-    // Click Generate
+    await page.fill('textarea[placeholder="e.g. I manage 15 long-term apartment rentals"]', 'I manage 15 long-term apartment rentals');
     await page.click('button:has-text("Build My Storefront")');
 
     // Wait for generation to finish and preview mode to appear

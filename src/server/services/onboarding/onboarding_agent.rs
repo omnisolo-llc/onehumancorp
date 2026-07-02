@@ -171,7 +171,7 @@ Your response:",
                 // E2E Test / Local adapter mock fallback when no LLM is configured
                 return Ok(IntakeData {
                     business_name: "Mock Business".to_string(),
-                    business_type: "Mock Type".to_string(),
+                    business_type: "Property Manager".to_string(),
                     categories: vec!["physical".to_string()],
                     initial_products: vec![
                         IntakeProduct {
@@ -213,6 +213,7 @@ Your response:",
             - Leo (Creator/Tutor): Needs packages, scheduling, and student follow-ups.
             - Fatima (Food Cart): Needs simple order list, pickup timing, and offline flows.
             - Nora (Agency): Needs project intake, proposals, and task assignment.
+            - Elena (Property Manager): Needs property listings, showing schedules, applicant screening, maintenance requests.
 
             If the input matches or is similar to these personas, use them for inspiration.
             If the input is an Instagram/social link, infer details from the profile.
@@ -1243,11 +1244,11 @@ Your response:",
                 ("Real Estate Investor Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
             "Property Manager" => vec![
-                ("Premium Property Manager Package", "Comprehensive service for your needs", 19999, "booking"),
-                ("Basic Property Manager Service", "Essential services to get you started", 9999, "booking"),
-                ("Property Manager Consultation", "Expert advice and planning", 4999, "booking"),
-                ("Property Manager Assessment", "Initial evaluation and report", 7500, "booking"),
-                ("Property Manager Starter Kit", "Everything you need in one bundle", 12000, "physical"),
+                ("Apartment Showing", "Schedule a tour of our available properties", 0, "booking"),
+                ("Rental Application Fee", "Application processing fee", 5000, "physical"),
+                ("Security Deposit", "Standard security deposit", 100000, "physical"),
+                ("Property Management Consultation", "Discuss management for your properties", 0, "booking"),
+                ("Maintenance Call", "Schedule a repair or maintenance visit", 7500, "booking"),
             ],
             "Travel Agent" => vec![
                 ("Premium Travel Agent Package", "Comprehensive service for your needs", 19999, "booking"),
@@ -2851,11 +2852,13 @@ pub fn onboarding_feature_state(
 ) -> serde_json::Value {
     let has_services = business_type == "Service Business"
         || business_type == "Service"
+        || business_type == "Property Manager"
         || req.selling_categories.iter().any(|category| category == "services");
     let has_products = req
         .selling_categories
         .iter()
         .any(|category| category == "physical" || category == "digital")
+        || business_type == "Property Manager"
         || !req.first_product_name.trim().is_empty();
     let has_food = business_type == "Restaurant / Food"
         || business_type == "Food Cart"
@@ -3154,6 +3157,43 @@ mod tests {
         // This test will likely fail without a real API key if it actually calls the API,
         // but we want to verify the method existence and basic logic.
         // In a real scenario we'd use a trait and mock it.
+    }
+
+
+    #[test]
+    fn test_onboarding_feature_state_property_manager() {
+        let req = StartOnboardingRequest {
+            business_type: "Property Manager".to_string(),
+            company_name: "Elena Properties".to_string(),
+            company_description: "15 long-term rentals".to_string(),
+            selling_categories: vec![],
+            payment_pref: "online".to_string(),
+            admin_email: "elena@example.com".to_string(),
+            admin_name: "Elena".to_string(),
+            admin_password: "password123".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "Apartment Showing".to_string(),
+            first_product_price: "0.00".to_string(),
+            domain_choice: "subdomain".to_string(),
+            price_type: "fixed".to_string(),
+            location: "Chicago, IL".to_string(),
+            target_audience: "Renters".to_string(),
+            initial_products: vec![],
+            ai_agents: vec![],
+            ai_auto_respond: false, deposit_percentage: None, lead_time_days: None,
+        };
+
+        let state = onboarding_feature_state(&req, "Elena Properties", &req.business_type, &req.location);
+
+        assert_eq!(state["unified_storefront"], true);
+        assert_eq!(state["enable_ecommerce"], true);
+        assert_eq!(state["enable_booking"], true);
+        assert_eq!(state["artifacts"]["storefront"]["supports_products"], true);
+        assert_eq!(state["artifacts"]["storefront"]["supports_bookings"], true);
+
+        let modules = state["generated_modules"].as_array().unwrap();
+        assert!(modules.iter().any(|module| module == "products"));
+        assert!(modules.iter().any(|module| module == "bookings"));
     }
 
     #[test]
