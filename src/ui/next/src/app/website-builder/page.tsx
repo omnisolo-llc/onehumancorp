@@ -379,6 +379,12 @@ export default function WebsiteBuilderPage() {
                     >
                       Restaurant
                     </button>
+                    <button
+                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-[rgba(255,255,255,0.65)] dark:hover:bg-white/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-left"
+                      onClick={() => { setBusinessType('Real Estate'); setWizardStep(2); }}
+                    >
+                      Real Estate
+                    </button>
                   </div>
                 </>
               )}
