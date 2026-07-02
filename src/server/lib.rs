@@ -6760,6 +6760,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/booking/reserve", api::booking::reserve::router(db.clone()))
         .nest("/api/v1/booking/available_slots", api::booking::available_slots::router(db.clone()))
         .nest("/api/v1/booking/services", api::booking::create_service::router(db.clone()))
+        .nest("/api/v1/booking/proposed", api::booking::proposed::router())
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
 
 
