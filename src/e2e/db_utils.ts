@@ -17,3 +17,7 @@ export async function e2eDbQuery(query: string, values?: any[]) {
     client.release();
   }
 }
+
+export const db = {
+  query: e2eDbQuery,
+};
