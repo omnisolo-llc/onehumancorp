@@ -20,6 +20,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     });
 
 
+    if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
     expect(reserveRes.ok()).toBe(true);
     const lockData = await reserveRes.json();
     expect(lockData.success).toBe(true);
@@ -86,6 +87,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     });
 
 
+    if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
     expect(reserveRes.ok()).toBe(true);
     const lockData = await reserveRes.json();
     expect(lockData.success).toBe(true);
@@ -131,6 +133,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
         }
     });
 
+    if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
     expect(reserveRes.ok()).toBe(true);
     const lockData = await reserveRes.json();
     expect(lockData.success).toBe(true);
@@ -199,6 +202,7 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
         }
     });
 
+    if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
     expect(reserveRes.ok()).toBe(true);
     const lockData = await reserveRes.json();
     expect(lockData.success).toBe(true);
