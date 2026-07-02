@@ -3751,7 +3751,7 @@ pub async fn update_ui_triage_action_handler(
                 let mut action_payload_opt = None;
 
                 // Check if there is a proposed action to execute from legacy triage
-                if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = $1 AND tenant_id = $2 UNION ALL SELECT action_type, action_payload AS payload FROM unified_triage_actions WHERE id = $1 AND tenant_id = $2")
+                if let Ok(Some(row)) = sqlx::query("SELECT action_type, action_payload AS payload FROM unified_triage_actions WHERE id = $1 AND tenant_id = $2")
                     .bind(&payload.triage_item_id)
                     .bind(&tenant_id)
                     .fetch_optional(&mut *tx)
@@ -4015,9 +4015,7 @@ pub async fn update_ui_triage_action_handler(
                 let mut action_type_opt = None;
                 let mut action_payload_opt = None;
 
-                if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = ? AND tenant_id = ? UNION ALL SELECT action_type, action_payload AS payload FROM unified_triage_actions WHERE id = ? AND tenant_id = ?")
-                    .bind(&payload.triage_item_id)
-                    .bind(&tenant_id)
+                if let Ok(Some(row)) = sqlx::query("SELECT action_type, action_payload AS payload FROM unified_triage_actions WHERE id = ? AND tenant_id = ?")
                     .bind(&payload.triage_item_id)
                     .bind(&tenant_id)
                     .fetch_optional(&mut *tx)
@@ -4892,9 +4890,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             match &db1.store {
                 crate::db::DbStore::Postgres => {
                     let query_str = if mobile_optimized {
-                        "SELECT id, status, CAST(created_at AS text) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
+                        "SELECT a.id, a.status, CAST(a.created_at AS text) AS created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id WHERE a.tenant_id = $1 AND a.status != 'resolved' AND a.status != 'dismissed' ORDER BY a.created_at DESC LIMIT 50"
                     } else {
-                        "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS text) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
+                        "SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, CAST(a.created_at AS text) AS created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id WHERE a.tenant_id = $1 AND a.status != 'resolved' AND a.status != 'dismissed' ORDER BY a.created_at DESC LIMIT 50"
                     };
                     if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(&db1.pool).await {
                         for row in rows {
@@ -4926,9 +4924,9 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     let query_str = if mobile_optimized {
-                        "SELECT id, status, CAST(created_at AS TEXT) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
+                        "SELECT a.id, a.status, CAST(a.created_at AS TEXT) AS created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id WHERE a.tenant_id = ? AND a.status != 'resolved' AND a.status != 'dismissed' ORDER BY a.created_at DESC LIMIT 50"
                     } else {
-                        "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS TEXT) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
+                        "SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, CAST(a.created_at AS TEXT) AS created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id WHERE a.tenant_id = ? AND a.status != 'resolved' AND a.status != 'dismissed' ORDER BY a.created_at DESC LIMIT 50"
                     };
                     if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(pool).await {
                         for row in rows {
