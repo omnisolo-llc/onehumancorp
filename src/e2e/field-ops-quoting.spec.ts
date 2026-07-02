@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { memberPage } from './fixtures';
-import { executeSql } from './db_utils';
+import { e2eDbQuery as executeSql } from './db_utils';
 
 test.describe('Autonomous Field Service Quoting & Deposit Engine', () => {
   let customerId: string;
