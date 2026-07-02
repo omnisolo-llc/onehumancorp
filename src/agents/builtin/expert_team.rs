@@ -1,6 +1,6 @@
 #![allow(clippy::needless_borrow)]
 use crate::types::{ChatRequest, Message};
-use futures::future::join_all;
+
 
 /// Tencent Workbuddy (Expert Team) Feature
 /// Product: Tencent Cloud Intelligent Agent Platform
@@ -93,7 +93,7 @@ pub struct ExpertTeamManager<T: ExpertTeamLlmClient + ?Sized> {
     pub domain_experts: Vec<DomainExpert<T>>,
 }
 
-impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
+impl<T: ExpertTeamLlmClient + ?Sized + 'static> ExpertTeamManager<T> {
     pub fn new(lead: &str, experts: Vec<DomainExpert<T>>) -> Self {
         Self {
             lead_agent_name: lead.to_string(),
@@ -154,24 +154,24 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
 
     /// Execute the parallel tasks with the team of domain experts.
     /// Incorporates concurrent execution and the "condensed summaries" rule.
-    pub async fn execute_parallel_tasks(
+    pub async fn execute_parallel_tasks<'a>(
         &self,
-        task: &str,
-        trace: &mut SkillTrace,
-    ) -> Result<Vec<String>, String> {
+        task: &'a str,
+        trace: &'a mut SkillTrace,
+    ) -> Result<Vec<String>, String> where T: 'a {
         // Prepare futures for parallel execution
-        let mut futures = Vec::new();
+        let mut join_handles = Vec::new();
 
-        // Note: we'll simulate parallel execution with futures::future::join_all,
-        // but since `execute` mutates `trace`, we'll need to handle it carefully in Rust.
-        // For the sake of this pattern, we will return the skills from each expert and merge them back.
+        // We use true parallel execution via tokio::spawn.
+        // Since `execute` mutates `trace`, we will return the skills from each expert
+        // and merge them back in the main thread.
 
         for expert in &self.domain_experts {
             let role_name = expert.role.clone();
             let llm_clone = expert.llm.clone();
             let task_clone = task.to_string();
 
-            let fut = async move {
+            let handle = tokio::spawn(async move {
                 let mut local_trace = SkillTrace::new();
                 let expert_instance = DomainExpert {
                     role: role_name,
@@ -194,11 +194,17 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
                     }
                 }
                 (Err(last_err), local_trace.skills_used)
-            };
-            futures.push(fut);
+            });
+            join_handles.push(handle);
         }
 
-        let results = join_all(futures).await;
+        let mut results = Vec::new();
+        for handle in join_handles {
+            match handle.await {
+                Ok(res) => results.push(res),
+                Err(e) => results.push((Err(format!("Task panicked or cancelled: {:?}", e)), Vec::new())),
+            }
+        }
 
         let mut condensed_summaries = Vec::new();
 
