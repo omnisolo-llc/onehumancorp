@@ -567,7 +567,7 @@ mod security_tests {
             .connect_lazy(&database_url)
             .unwrap();
 
-        let _repo = PgUserRepository::new(pool.clone());
+        let repo = PgUserRepository::new(pool.clone());
 
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
@@ -610,7 +610,7 @@ mod security_tests {
             .connect_lazy(&database_url)
             .unwrap();
 
-        let _repo = PgUserRepository::new(pool.clone());
+        let repo = PgUserRepository::new(pool.clone());
         let exp = Utc::now() + chrono::Duration::hours(1);
 
         // This validates the context threading through the trait boundaries
@@ -713,7 +713,7 @@ mod security_tests {
             .unwrap();
 
         let uid = sqlx::types::Uuid::new_v4().to_string();
-        let _repo = PgUserRepository::new(pool.clone());
+        let repo = PgUserRepository::new(pool.clone());
         let user = User {
             id: format!("test-id-pg-parity-{}", uid),
             username: format!("test-user-pg-parity-{}", uid),
