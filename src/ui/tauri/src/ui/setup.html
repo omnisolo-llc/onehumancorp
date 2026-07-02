@@ -3437,8 +3437,8 @@
 
       window.goToStep = goToStep;
 
-      // Enter key support for select inputs
-      document.querySelectorAll("select").forEach((input) => {
+      // Enter key support for inputs
+      document.querySelectorAll("select, input").forEach((input) => {
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             e.preventDefault();
