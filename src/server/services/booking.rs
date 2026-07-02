@@ -287,6 +287,24 @@ impl BookingService {
         .execute(&mut *tx)
         .await;
 
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let payload = serde_json::json!({
+            "customer_id": booking.customer_id,
+            "product_id": booking.product_id
+        }).to_string();
+
+        #[cfg(feature = "sqlite")]
+        let query = "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) \
+                 VALUES ($1, $2, 'booking_reengagement_check', $3, 'PENDING', datetime('now', '+14 days'))";
+
+        #[cfg(not(feature = "sqlite"))]
+        let query = "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) \
+                 VALUES ($1, $2, 'booking_reengagement_check', $3, 'PENDING', CURRENT_TIMESTAMP + INTERVAL '14 days')";
+
+        sqlx::query(query)
+        .bind(&job_id).bind(&booking.tenant_id).bind(&payload)
+        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }

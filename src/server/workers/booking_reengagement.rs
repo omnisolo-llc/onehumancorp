@@ -173,10 +173,10 @@ impl BookingReengagementWorker {
                     match &db.store {
                         crate::db::DbStore::Postgres => {
                             let _ = sqlx::query(
-                                r#"
+                                r"
                                 INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
                                 VALUES ($1, $2, 'Approve Re-engagement for ' || $3, 'AI detected that ' || $3 || ' is a returning customer who hasn''t booked in 14 days. This follow-up helps maintain momentum.', 'PENDING', 'P1', 'LOW', 'PENDING', $4)
-                                "#
+                                "
                             )
                             .bind(Uuid::new_v4().to_string())
                             .bind(&tenant_id)
