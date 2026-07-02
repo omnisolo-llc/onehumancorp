@@ -73,6 +73,6 @@ use axum::{routing::post, Router};
 pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/", post(create_proposed_booking))
-        .route("/:id/approve", post(approve_proposed_booking))
-        .route("/list/:tenant_id", axum::routing::get(list_proposed_bookings))
+        .route("/{id}/approve", post(approve_proposed_booking))
+        .route("/list/{tenant_id}", axum::routing::get(list_proposed_bookings))
 }
