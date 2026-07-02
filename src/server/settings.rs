@@ -33,6 +33,7 @@ pub struct AppSettings {
     pub voice_receptionist_number: Option<String>,
     pub voice_receptionist_persona: Option<String>,
     pub voice_receptionist_instructions: Option<String>,
+    pub product_telemetry_enabled: bool,
 }
 
 impl AppSettings {
@@ -57,6 +58,7 @@ impl AppSettings {
             voice_receptionist_number: None,
             voice_receptionist_persona: Some("Friendly".to_string()),
             voice_receptionist_instructions: None,
+            product_telemetry_enabled: false,
         }
     }
 }
@@ -146,6 +148,13 @@ impl Store {
         data.voice_receptionist_number = number;
         data.voice_receptionist_persona = persona;
         data.voice_receptionist_instructions = instructions;
+        drop(data);
+        self.save()
+    }
+
+    pub fn set_product_telemetry(&self, enabled: bool) -> Result<(), String> {
+        let mut data = self.data.write().unwrap();
+        data.product_telemetry_enabled = enabled;
         drop(data);
         self.save()
     }

@@ -76,7 +76,7 @@ impl UserRepository for PgUserRepository {
         } else {
             let query = r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5::jsonb, $6, $10, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
             "#;
             sqlx::query(query)
             .bind(&user.id)
@@ -85,10 +85,10 @@ impl UserRepository for PgUserRepository {
             .bind(&user.password_hash)
             .bind(roles_json)
             .bind(user.active)
+            .bind(org_id)
             .bind(&user.oidc_subject)
             .bind(user.created_at)
             .bind(user.updated_at)
-            .bind(org_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -512,7 +512,7 @@ mod auth_utils_tests {
             .connect_lazy(&database_url)
             .unwrap();
 
-        let repo = PgUserRepository::new(pool.clone());
+        let _repo = PgUserRepository::new(pool.clone());
 
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let mut tx = pool.begin().await.unwrap();

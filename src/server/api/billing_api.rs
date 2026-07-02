@@ -117,6 +117,19 @@ pub async fn report_cost_handler(
         hub.get_cost_auditor().record_manual_cost(agent_id, &tenant_id, req.value);
     }
 
+    let pool = crate::db::get_pool();
+    let mut labels = req.labels.clone();
+    labels.insert("tenant_id".to_string(), tenant_id.clone());
+    let labels_value = serde_json::to_value(labels).unwrap_or(serde_json::json!({}));
+
+    let _ = ::server_telemetry::buffer_metric_i64(
+        &pool,
+        &req.metric_name,
+        "gauge",
+        req.value,
+        labels_value
+    ).await;
+
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
