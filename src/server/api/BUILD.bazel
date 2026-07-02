@@ -248,3 +248,22 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+
+rust_test(
+    name = "omni_inbox_webhook_test",
+    srcs = ["omni_inbox_webhook_test.rs", "omni_inbox_webhook.rs"],
+    crate_root = "omni_inbox_webhook_test.rs",
+    deps = [
+        "//src/server:server_lib",
+        "@rules_rust//tools/runfiles",
+        "@crates//:axum",
+        "@crates//:tokio",
+        "@crates//:tower",
+        "@crates//:sqlx",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+        "@crates//:tracing",
+    ],
+)
