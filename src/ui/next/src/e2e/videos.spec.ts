@@ -9,7 +9,7 @@ test.describe("In-App Video Tutorials", () => {
     await page.goto("/dashboard"); // Use the dashboard or any public page where layout applies
 
     // The help widget should be present.
-    const helpButton = page.locator("#help-widget-container button").first();
+    const helpButton = page.locator("button[aria-label=\"Help\"]").first();
     await expect(helpButton).toBeVisible();
 
     // Click the help widget floating button to open the menu
@@ -41,7 +41,7 @@ test.describe("In-App Video Tutorials", () => {
     await videoContainer.click();
 
     // Verify the modal player opens
-    const modalContainer = page.locator("div.fixed.z-\\[100\\]");
+    const modalContainer = page.getByRole("dialog").locator("..").first();
     await expect(modalContainer).toBeVisible();
 
     // Verify the modal has the correct mobile constraints (max-w-[375px])

@@ -15,7 +15,7 @@ test.describe('Release Notes & Changelog', () => {
         await expect(page.locator('h1', { hasText: 'Release Notes & Changelog' })).toBeVisible();
 
         // Verify release notes content is rendered
-        await expect(page.locator('h2').first()).toBeVisible();
+        await expect(page.locator('h2', { hasText: 'v1.2.0' })).toBeVisible();
 
         // Wait for images to load, which proves the API correctly fetched the screenshot URL
         // In our manual test setup, we added a placeholder image to the top version
