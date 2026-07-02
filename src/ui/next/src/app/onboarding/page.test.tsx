@@ -661,6 +661,9 @@ describe("OnboardingWizard", () => {
     // By default, since the store initializes with empty agents, we might not see any badges immediately.
     // However, if the store had active agents, they would appear.
     // The auto-respond toggle remains.
+    const salesAgent = screen.getByText("Sales Assistant");
+    await user.click(salesAgent);
+    expect(useOnboardingStore.getState().aiAgents).toContain("Sales");
 
     // Check toggle
     // Checkbox might be hidden by sr-only or similar, use label text instead or get by id
