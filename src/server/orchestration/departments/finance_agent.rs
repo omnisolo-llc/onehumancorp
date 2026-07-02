@@ -39,7 +39,7 @@ impl Department for FinanceAgent {
         };
 
         let action_description = if event.event_type == "payment.captured" {
-            "Analyze transaction for split tags and record ledger split".to_string()
+            "Draft localized invoice for cross-border payment".to_string()
         } else if event.event_type == "charge.dispute.created" {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
@@ -49,7 +49,24 @@ impl Department for FinanceAgent {
         };
 
         let mut payload = event.payload.clone();
-        if event.event_type == "charge.dispute.created" {
+        if event.event_type == "payment.captured" {
+            let transaction_currency = event.payload.get("currency").and_then(|v| v.as_str()).unwrap_or("USD").to_uppercase();
+            let amount = event.payload.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            // Assume the agent determines base currency or fetches it; here we'll default to USD for now.
+            // In a full implementation, it might fetch from tenant settings.
+            let base_currency = "USD".to_string();
+
+            payload = serde_json::json!({
+                "feature_type": "localized_invoice_drafting",
+                "transaction_currency": transaction_currency,
+                "base_currency": base_currency,
+                "amount": amount,
+                "exchange_rate": 1.0, // Assuming 1:1 if unknown, real integration would fetch from MultiCurrencyLedger
+                "operational_action": "Draft localized invoice with base_currency and transaction_currency",
+                "customer_id": event.payload.get("customer").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+        } else if event.event_type == "charge.dispute.created" {
             // Reconstruct the simulated payload the UI expects for dispute resolution
             payload = serde_json::json!({
                 "feature_type": "dispute_resolution",

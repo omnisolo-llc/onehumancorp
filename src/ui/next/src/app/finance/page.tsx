@@ -8,6 +8,7 @@ export default function FinancePage() {
     const [loading, setLoading] = useState(true);
     const [showDraftModal, setShowDraftModal] = useState(false);
     const [draftInvoice, setDraftInvoice] = useState<any>(null);
+    const [globalSalesEnabled, setGlobalSalesEnabled] = useState(false);
 
     const fetchInvoices = async () => {
         try {
@@ -60,9 +61,26 @@ export default function FinancePage() {
     return (
         <AppShell title="Finance">
             <main className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto space-y-6 md:space-y-12 pb-24">
-                <header className="mb-4">
-                    <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">Finance & Invoicing</h1>
-                    <p className="text-gray-500 mt-2 text-sm">Manage your cash flow, invoices, and deposits.</p>
+                <header className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">Finance & Invoicing</h1>
+                        <p className="text-gray-500 mt-2 text-sm">Manage your cash flow, invoices, and deposits.</p>
+                    </div>
+                    <div className="flex items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">Global Sales</span>
+                            <span className="text-xs text-gray-500">Auto-convert & localize</span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={globalSalesEnabled}
+                                onChange={() => setGlobalSalesEnabled(!globalSalesEnabled)}
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
                 </header>
 
                 {/* Triage Feed Simulation */}
@@ -102,7 +120,16 @@ export default function FinancePage() {
                                 <div className="flex justify-between items-end mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                                     <div>
                                         <p className="text-xs text-gray-500">Amount Due</p>
-                                        <p className="text-xl font-bold text-gray-900 dark:text-white">${invoice.total_amount.toFixed(2)}</p>
+                                        <div className="flex items-baseline gap-2">
+                                            <p className="text-xl font-bold text-gray-900 dark:text-white">
+                                                {invoice.base_currency === 'EUR' ? '€' : '$'}{invoice.total_amount.toFixed(2)}
+                                            </p>
+                                            {globalSalesEnabled && invoice.transaction_currency && invoice.transaction_currency !== invoice.base_currency && (
+                                                <span className="text-xs font-medium text-gray-400">
+                                                    (Paid in {invoice.transaction_currency})
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <button
                                         className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"

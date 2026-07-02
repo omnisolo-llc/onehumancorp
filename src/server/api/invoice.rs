@@ -37,9 +37,13 @@ impl InvoiceService for InvoiceServiceImpl {
 
         let stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
+        let base_currency = if req.base_currency.is_empty() { "USD".to_string() } else { req.base_currency.clone() };
+        let transaction_currency = if req.transaction_currency.is_empty() { req.currency.clone() } else { req.transaction_currency.clone() };
+        let exchange_rate = if req.exchange_rate == 0.0 { 1.0 } else { req.exchange_rate };
+
         sqlx::query(
-            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, base_currency, transaction_currency, exchange_rate, total_amount, stripe_payment_link)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
         )
         .bind(&invoice_id)
         .bind(&req.tenant_id)
@@ -48,6 +52,9 @@ impl InvoiceService for InvoiceServiceImpl {
         .bind(&status)
         .bind(req.due_date)
         .bind(&req.currency)
+        .bind(&base_currency)
+        .bind(&transaction_currency)
+        .bind(exchange_rate)
         .bind(total_amount)
         .bind(&stripe_payment_link)
         .execute(&mut *tx)
@@ -91,6 +98,9 @@ impl InvoiceService for InvoiceServiceImpl {
             status,
             due_date: req.due_date,
             currency: req.currency,
+            base_currency,
+            transaction_currency,
+            exchange_rate,
             total_amount,
             total_amount_cents: (total_amount * 100.0) as i32,
             payment_status: "draft".to_string(),
@@ -150,6 +160,9 @@ impl InvoiceService for InvoiceServiceImpl {
         let first_row_status: String = rows[0].try_get("status").unwrap_or_default();
         let first_row_due_date: i64 = rows[0].try_get("due_date").unwrap_or_default();
         let first_row_currency: String = rows[0].try_get("currency").unwrap_or_default();
+        let first_row_base_currency: String = rows[0].try_get("base_currency").unwrap_or_default();
+        let first_row_transaction_currency: String = rows[0].try_get("transaction_currency").unwrap_or_default();
+        let first_row_exchange_rate: f64 = rows[0].try_get("exchange_rate").unwrap_or_default();
         let first_row_total_amount: f64 = rows[0].try_get("total_amount").unwrap_or_default();
         let first_row_total_amount_cents: i32 = rows[0].try_get("total_amount_cents").unwrap_or_default();
         let first_row_payment_status: String = rows[0].try_get("payment_status").unwrap_or_default();
@@ -179,6 +192,9 @@ impl InvoiceService for InvoiceServiceImpl {
             status: first_row_status,
             due_date: first_row_due_date,
             currency: first_row_currency,
+            base_currency: first_row_base_currency,
+            transaction_currency: first_row_transaction_currency,
+            exchange_rate: first_row_exchange_rate,
             total_amount: first_row_total_amount,
             total_amount_cents: first_row_total_amount_cents,
             payment_status: first_row_payment_status,
@@ -229,6 +245,9 @@ impl InvoiceService for InvoiceServiceImpl {
                 status: row.try_get("status").unwrap_or_default(),
                 due_date: row.try_get("due_date").unwrap_or_default(),
                 currency: row.try_get("currency").unwrap_or_default(),
+                base_currency: row.try_get("base_currency").unwrap_or_default(),
+                transaction_currency: row.try_get("transaction_currency").unwrap_or_default(),
+                exchange_rate: row.try_get("exchange_rate").unwrap_or_default(),
                 total_amount: row.try_get("total_amount").unwrap_or_default(),
                 total_amount_cents: row.try_get("total_amount_cents").unwrap_or_default(),
                 payment_status: row.try_get("payment_status").unwrap_or_default(),
@@ -305,6 +324,9 @@ impl InvoiceService for InvoiceServiceImpl {
             status: row.try_get("status").unwrap_or_default(),
             due_date: row.try_get("due_date").unwrap_or_default(),
             currency: row.try_get("currency").unwrap_or_default(),
+            base_currency: row.try_get("base_currency").unwrap_or_default(),
+            transaction_currency: row.try_get("transaction_currency").unwrap_or_default(),
+            exchange_rate: row.try_get("exchange_rate").unwrap_or_default(),
             total_amount: row.try_get("total_amount").unwrap_or_default(),
             total_amount_cents: row.try_get("total_amount_cents").unwrap_or_default(),
             payment_status: row.try_get("payment_status").unwrap_or_default(),
@@ -343,6 +365,9 @@ impl InvoiceService for InvoiceServiceImpl {
             status: "draft".to_string(),
             due_date: chrono::Utc::now().timestamp() + 30 * 24 * 3600, // +30 days
             currency: "USD".to_string(),
+            base_currency: "USD".to_string(),
+            transaction_currency: "USD".to_string(),
+            exchange_rate: 1.0,
             total_amount: 1500.0,
             total_amount_cents: 150000,
             payment_status: "draft".to_string(),
