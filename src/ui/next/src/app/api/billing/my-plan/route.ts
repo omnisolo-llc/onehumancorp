@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
     const authHeader = request.headers.get('Authorization');
 
-    // Fallback to local rust server port 8080 if running standalone
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    // Fallback to local rust server port 18789 if running standalone
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:18789';
 
     try {
         const response = await fetch(`${backendUrl}/api/billing/my-plan`, {
