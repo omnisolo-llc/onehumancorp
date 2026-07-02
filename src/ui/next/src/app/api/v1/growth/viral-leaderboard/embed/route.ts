@@ -28,17 +28,17 @@ export async function GET(request: Request) {
     const border = isDark ? '#333333' : '#e5e7eb';
     const rowBg = isDark ? '#27272a' : '#f9fafb';
 
-    const mockData = metric === 'buyers'
-      ? [
-          { name: 'Sarah J.', score: '24 purchases', emoji: '🥇' },
-          { name: 'Michael T.', score: '18 purchases', emoji: '🥈' },
-          { name: 'Emma W.', score: '12 purchases', emoji: '🥉' }
-        ]
-      : [
-          { name: 'Alex K.', score: '15 referrals', emoji: '🥇' },
-          { name: 'Jessica L.', score: '11 referrals', emoji: '🥈' },
-          { name: 'Ryan P.', score: '8 referrals', emoji: '🥉' }
-        ];
+    const backendUrl = process.env.OHC_CORE_URL || 'http://127.0.0.1:18789';
+    let leaderboardData: any[] = [];
+    try {
+        const res = await fetch(`${backendUrl}/api/v1/growth/viral-leaderboard/data?tenant=${encodedTenant}&metric=${encodeURIComponent(metric)}`);
+        if (!res.ok) {
+            return new NextResponse("Backend service unavailable", { status: 502 });
+        }
+        leaderboardData = await res.json();
+    } catch (e) {
+        return new NextResponse("Backend service unavailable", { status: 502 });
+    }
 
     const html = `
 <!DOCTYPE html>
@@ -141,15 +141,15 @@ export async function GET(request: Request) {
             <div class="subtitle">Monthly Top Performers</div>
         </div>
         <div class="leaderboard">
-            ${mockData.map(row => `
+            ${Array.isArray(leaderboardData) ? leaderboardData.map(row => `
                 <div class="row">
-                    <div class="rank">${row.emoji}</div>
+                    <div class="rank">${escapeHtml(row.emoji || '⭐')}</div>
                     <div class="info">
                         <div class="name">${escapeHtml(row.name)}</div>
                         <div class="score">${escapeHtml(row.score)}</div>
                     </div>
                 </div>
-            `).join('')}
+            `).join('') : ''}
         </div>
         ${rawBranding ? `
         <div class="footer">

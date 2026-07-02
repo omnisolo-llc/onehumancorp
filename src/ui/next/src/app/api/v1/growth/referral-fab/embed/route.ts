@@ -137,9 +137,23 @@ export async function GET(request: Request) {
         e.preventDefault();
         const email = document.getElementById('ohc-referral-email').value;
         if (email) {
-            // Mock API call
-            form.style.display = 'none';
-            successDiv.style.display = 'flex';
+            fetch('/api/v1/growth/referrals/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenantId: '${escapedTenant}', email: email })
+            }).then(res => {
+                if (res.ok) return res.json();
+                throw new Error('Backend failed');
+            }).then(data => {
+                form.style.display = 'none';
+                successDiv.style.display = 'flex';
+                if (data && data.link) {
+                    linkInput.value = data.link;
+                }
+            }).catch(err => {
+                console.error('Failed to generate referral', err);
+                // Fail gracefully, could show error message
+            });
         }
     });
 
