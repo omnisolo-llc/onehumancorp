@@ -80,7 +80,7 @@
       input {
         width: 100%;
         padding: 14px;
-        min-height: 44px !important;
+        min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
@@ -146,7 +146,7 @@
         color: white;
         border: none;
         padding: 14px 24px;
-        min-height: 44px !important;
+        min-height: 44px;
         border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
@@ -662,7 +662,7 @@
         color: #1d1d1f;
         width: 100%;
         padding: 14px;
-        min-height: 44px !important;
+        min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
@@ -764,7 +764,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        min-height: 44px !important;
+        min-height: 44px;
         border-radius: 8px;
         cursor: pointer;
         transition:
@@ -799,7 +799,7 @@
         box-shadow: none;
         border: 1px solid rgba(0, 0, 0, 0.1);
         margin-top: 10px;
-        min-height: 44px !important;
+        min-height: 44px;
       }
       .btn-secondary:hover {
         background-color: rgba(0, 0, 0, 0.05);
@@ -826,7 +826,7 @@
         min-height: 44px;
         flex: 0 0 auto;
         padding: 8px 16px;
-        min-height: 44px !important;
+        min-height: 44px;
         display: flex;
         align-items: center;
         border-radius: 8px;
@@ -1030,7 +1030,7 @@
           box-sizing: border-box;
           min-height: 44px;
           border-radius: 8px;
-          min-height: 44px !important;
+          min-height: 44px;
         }
       }
 
@@ -1118,8 +1118,8 @@
       .glassmorphism.panel {
         border-radius: 16px;
       }
-          #instant-bio { min-height: 44px !important; box-sizing: border-box; }
-      .context-card { min-height: 44px !important; box-sizing: border-box; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; }
+      .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
 
     <style>
@@ -1227,10 +1227,16 @@
           box-shadow: 0 0 0 1px #0066ff;
         }
       }
-          #instant-bio { min-height: 44px !important; box-sizing: border-box; }
-      .context-card { min-height: 44px !important; box-sizing: border-box; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; }
+      .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
-  </head>
+
+    <style>
+      input.glassmorphism, select.glassmorphism, textarea.glassmorphism, button.glassmorphism {
+        border-radius: 8px !important;
+      }
+    </style>
+</head>
   <body>
     <div class="container glassmorphism" id="form-container">
       <!-- Step 0: Initial Screen -->
@@ -4603,8 +4609,8 @@
       .ohc-tooltip.visible {
         opacity: 1;
       }
-          #instant-bio { min-height: 44px !important; box-sizing: border-box; }
-      .context-card { min-height: 44px !important; box-sizing: border-box; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; }
+      .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
