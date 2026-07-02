@@ -493,34 +493,6 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        if event.payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
-            let description = "The Ambassador drafted a response for your review.".to_string();
-            let action_payload = event.payload.clone();
-
-            let approval_req = self.orchestrator.execute_action(
-                DepartmentType::CustomerSuccess,
-                description,
-                event.tenant_id.clone(),
-                risk.clone(),
-                action_payload.clone(),
-            ).await.map_err(|e| e.to_string())?;
-
-            if risk == ActionRisk::AutoExecute {
-                let approved_event = DepartmentEvent {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: event.tenant_id.clone(),
-                    event_type: "agent:customer_success:approved".to_string(),
-                    payload: serde_json::json!({
-                        "original_payload": action_payload,
-                        "approval_id": approval_req.id
-                    }),
-                };
-                let _ = self.orchestrator.dispatch_event(approved_event).await;
-            }
-
-            return Ok(());
-        }
-
         self.orchestrator.execute_action(
             DepartmentType::CustomerSuccess,
             "Send personalized thank you & shipping ETA".to_string(),
