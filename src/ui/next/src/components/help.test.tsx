@@ -89,13 +89,13 @@ describe('HelpWidget', () => {
   });
 
   it('renders the help widget', async () => {
-    render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
+    render(<TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider>);
     expect(screen.getByRole('button', { name: 'Help' })).toBeInTheDocument();
   });
 
   it('fetches dynamic walkthroughs when clicked and handles fallback data', async () => {
     const user = userEvent.setup();
-    render(<div><div id="test-target">Mock Target</div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><div id="test-target">Mock Target</div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
@@ -120,7 +120,7 @@ describe('HelpWidget', () => {
 
   it('switches to the Ask anything tab and submits a message', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
@@ -144,7 +144,7 @@ describe('HelpWidget', () => {
 
   it('handles empty chat message gracefully', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
@@ -158,7 +158,7 @@ describe('HelpWidget', () => {
 
   it('switches to the Videos tab and plays a video', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
@@ -188,7 +188,7 @@ describe('HelpWidget', () => {
 
   it('closes video modal when clicking on the backdrop overlay', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
@@ -217,7 +217,7 @@ describe('HelpWidget', () => {
 
   it('does not close video modal when clicking inside the modal content', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
@@ -246,7 +246,7 @@ describe('HelpWidget', () => {
 
   it('switches to the What is New tab and renders content', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
@@ -262,7 +262,7 @@ describe('HelpWidget', () => {
 
   it('renders articles and handles search', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
@@ -283,7 +283,7 @@ describe('HelpWidget', () => {
 
   it('closes the help widget when clicking close button', async () => {
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
@@ -295,7 +295,7 @@ describe('HelpWidget', () => {
   });
 
   it('opens chat on open-help-chat event', async () => {
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     act(() => {
         window.dispatchEvent(new CustomEvent('open-help-chat'));
@@ -316,7 +316,7 @@ describe('HelpWidget', () => {
     });
 
     const user = userEvent.setup();
-    render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(<div><TooltipProvider><WalkthroughProvider><div id="ai-chat-trigger" /><div id="help-widget-container" /><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);
