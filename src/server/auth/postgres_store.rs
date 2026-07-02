@@ -512,7 +512,7 @@ mod auth_utils_tests {
             .connect_lazy(&database_url)
             .unwrap();
 
-        let repo = PgUserRepository::new(pool.clone());
+        let _repo = PgUserRepository::new(pool.clone());
 
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let mut tx = pool.begin().await.unwrap();
@@ -567,14 +567,14 @@ mod security_tests {
             .connect_lazy(&database_url)
             .unwrap();
 
-        let repo = PgUserRepository::new(pool.clone());
+        let _repo = PgUserRepository::new(pool.clone());
 
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
             let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
             assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
-            let res = repo.get_by_id("dummy_id", "system").await;
+            let res = _repo.get_by_id("dummy_id", "system").await;
             assert!(res.is_err(), "Must reject system id in multitenant mode");
             assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }).await;
@@ -610,18 +610,18 @@ mod security_tests {
             .connect_lazy(&database_url)
             .unwrap();
 
-        let repo = PgUserRepository::new(pool.clone());
+        let _repo = PgUserRepository::new(pool.clone());
         let exp = Utc::now() + chrono::Duration::hours(1);
 
         // This validates the context threading through the trait boundaries
-        let res = repo.revoke_token("test-token-jti".to_string(), exp, "test-tenant").await;
+        let res = _repo.revoke_token("test-token-jti".to_string(), exp, "test-tenant").await;
 
         // Depending on test db state, it might be an error (missing migrations), but we just ensure it executes cleanly.
         assert!(res.is_ok() || res.is_err());
 
         let jti = "test-token-jti-2".to_string();
         let exp2 = Utc::now() - chrono::Duration::hours(1); // Already expired
-        let res2 = repo.revoke_token(jti.clone(), exp2, "test-tenant-2").await;
+        let res2 = _repo.revoke_token(jti.clone(), exp2, "test-tenant-2").await;
         assert!(res2.is_ok() || res2.is_err());
     }
 
@@ -674,8 +674,8 @@ mod security_tests {
             let dummy_user = dummy_user.clone();
             let pool_clone = pool.clone();
             async move {
-                let repo = PgUserRepository::new(pool_clone);
-                let res = repo.update_user(dummy_user, "system").await;
+                let _repo = PgUserRepository::new(pool_clone);
+                let res = _repo.update_user(dummy_user, "system").await;
                 assert!(res.is_err(), "Must reject system org_id");
             }
         }).await;
@@ -713,7 +713,7 @@ mod security_tests {
             .unwrap();
 
         let uid = sqlx::types::Uuid::new_v4().to_string();
-        let repo = PgUserRepository::new(pool.clone());
+        let _repo = PgUserRepository::new(pool.clone());
         let user = User {
             id: format!("test-id-pg-parity-{}", uid),
             username: format!("test-user-pg-parity-{}", uid),
@@ -751,7 +751,7 @@ mod security_tests {
                     .await;
 
                 // Pass a different org_id argument to verify the model binds `org_id` argument instead
-                repo.create_user(user.clone(), &org_id).await.unwrap();
+                _repo.create_user(user.clone(), &org_id).await.unwrap();
 
                 let row = sqlx::query("SELECT tenant_id FROM users WHERE id = $1")
                     .bind(&user.id)
