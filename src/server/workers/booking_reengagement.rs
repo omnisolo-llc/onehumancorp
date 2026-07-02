@@ -208,8 +208,6 @@ impl BookingReengagementWorker {
                             }
                         }
                     }
-                }
-
 
                     if let crate::db::DbStore::Postgres = &db.store {
                         let _: Result<Option<bool>, _> = sqlx::query_scalar("SELECT pg_advisory_unlock(hashtext($1))")
