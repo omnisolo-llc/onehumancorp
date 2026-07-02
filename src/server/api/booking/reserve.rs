@@ -130,6 +130,27 @@ async fn handle_reserve(
             .into_response();
     }
 
+    // Enqueue a job to check for re-engagement 14 days later
+    let payload_json = serde_json::json!({
+        "customer_id": c_id.map(|id| id.to_string()).unwrap_or_default(),
+        "product_id": payload.service_id,
+    });
+
+    let next_retry_at = chrono::Utc::now() + chrono::Duration::days(14);
+
+    let _ = sqlx::query(
+        r#"
+        INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
+        VALUES ($1, $2, 'booking_reengagement_check', $3, 'PENDING', $4)
+        "#,
+    )
+    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(&tenant_id)
+    .bind(payload_json)
+    .bind(next_retry_at)
+    .execute(&mut *tx)
+    .await;
+
     // Attempt to mark block as booked
     let _ = sqlx::query(
         r#"
