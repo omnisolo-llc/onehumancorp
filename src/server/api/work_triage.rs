@@ -85,6 +85,11 @@ pub async fn simulate_inbound_signal_handler(
         }
     }
 
+    if let Some(c) = DAILY_WORK_CACHE.get() {
+        c.invalidate(&format!("daily_work:{}:mobile:false", tenant_id)).await;
+        c.invalidate(&format!("daily_work:{}:mobile:true", tenant_id)).await;
+    }
+
     (axum::http::StatusCode::OK, Json(serde_json::json!({"id": work_item_id, "success": true}))).into_response()
 }
 
@@ -107,8 +112,8 @@ pub async fn get_daily_work_handler(
 ) -> axum::response::Response {
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let cache_key = format!("daily_work:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = DAILY_WORK_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+    let cache_key = format!("daily_work:{}:mobile:{}", tenant_id, mobile_optimized);
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -127,10 +132,10 @@ pub async fn get_daily_work_handler(
                     let t_bg1 = t_bg.clone();
                     let t_bg2 = t_bg.clone();
                     let (work_res, orders_res) = tokio::join!(
-                        sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
-                        sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2)
+                        tokio::spawn(async move { sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await }),
+                        tokio::spawn(async move { sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2).await })
                     );
-                    work_res.map(|rows| {
+                    work_res.unwrap_or(Err(sqlx::Error::RowNotFound)).map(|rows| {
                         use sqlx::Row;
                         let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                             serde_json::json!({
@@ -142,7 +147,7 @@ pub async fn get_daily_work_handler(
                                 "status": r.get::<String, _>("status")
                             })
                         }).collect();
-                        if let Ok(orders) = orders_res {
+                        if let Ok(Ok(orders)) = orders_res {
                             for o in orders {
                                 items.push(serde_json::json!({
                                     "id": o.try_get::<String, _>("id").unwrap_or_default(),
@@ -161,10 +166,10 @@ pub async fn get_daily_work_handler(
                     let t_bg1 = t_bg.clone();
                     let t_bg2 = t_bg.clone();
                     let (work_res, orders_res) = tokio::join!(
-                        sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
-                        sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2)
+                        tokio::spawn(async move { sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await }),
+                        tokio::spawn(async move { sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2).await })
                     );
-                    work_res.map(|rows| {
+                    work_res.unwrap_or(Err(sqlx::Error::RowNotFound)).map(|rows| {
                         use sqlx::Row;
                         let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                             let customer_info_str: Option<String> = r.try_get("customer_info").ok();
@@ -187,7 +192,7 @@ pub async fn get_daily_work_handler(
                                 "status": status
                             })
                         }).collect();
-                        if let Ok(orders) = orders_res {
+                        if let Ok(Ok(orders)) = orders_res {
                             for o in orders {
                                 items.push(serde_json::json!({
                                     "id": o.try_get::<String, _>("id").unwrap_or_default(),
@@ -218,10 +223,10 @@ pub async fn get_daily_work_handler(
             let t_bg1 = tenant_id.clone();
             let t_bg2 = tenant_id.clone();
             let (work_res, orders_res) = tokio::join!(
-                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
-                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2)
+                tokio::spawn(async move { sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await }),
+                tokio::spawn(async move { sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2).await })
             );
-            work_res.map(|rows| {
+            work_res.unwrap_or(Err(sqlx::Error::RowNotFound)).map(|rows| {
                 use sqlx::Row;
                 let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                     serde_json::json!({
@@ -233,7 +238,7 @@ pub async fn get_daily_work_handler(
                         "status": r.get::<String, _>("status")
                     })
                 }).collect();
-                if let Ok(orders) = orders_res {
+                if let Ok(Ok(orders)) = orders_res {
                     for o in orders {
                         items.push(serde_json::json!({
                             "id": o.try_get::<String, _>("id").unwrap_or_default(),
@@ -252,10 +257,10 @@ pub async fn get_daily_work_handler(
             let t_bg1 = tenant_id.clone();
             let t_bg2 = tenant_id.clone();
             let (work_res, orders_res) = tokio::join!(
-                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
-                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2)
+                tokio::spawn(async move { sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await }),
+                tokio::spawn(async move { sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2).await })
             );
-            work_res.map(|rows| {
+            work_res.unwrap_or(Err(sqlx::Error::RowNotFound)).map(|rows| {
                 use sqlx::Row;
                 let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                     let customer_info_str: Option<String> = r.try_get("customer_info").ok();
@@ -278,7 +283,7 @@ pub async fn get_daily_work_handler(
                         "status": status
                     })
                 }).collect();
-                if let Ok(orders) = orders_res {
+                if let Ok(Ok(orders)) = orders_res {
                     for o in orders {
                         items.push(serde_json::json!({
                             "id": o.try_get::<String, _>("id").unwrap_or_default(),
@@ -331,6 +336,10 @@ pub async fn approve_daily_work_handler(
             .execute(&db.pool).await;
 
             if res.is_ok() {
+                if let Some(c) = DAILY_WORK_CACHE.get() {
+                    c.invalidate(&format!("daily_work:{}:mobile:false", tenant_id)).await;
+                    c.invalidate(&format!("daily_work:{}:mobile:true", tenant_id)).await;
+                }
                 (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
             } else {
                 (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
@@ -346,6 +355,10 @@ pub async fn approve_daily_work_handler(
             .execute(pool).await;
 
             if res.is_ok() {
+                if let Some(c) = DAILY_WORK_CACHE.get() {
+                    c.invalidate(&format!("daily_work:{}:mobile:false", tenant_id)).await;
+                    c.invalidate(&format!("daily_work:{}:mobile:true", tenant_id)).await;
+                }
                 (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
             } else {
                 (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response()
