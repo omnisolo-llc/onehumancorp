@@ -202,6 +202,19 @@ impl OHCJobQueue {
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
+
+                // Notify owner/operator that the agent is PAUSED due to failure
+                let _ = sqlx::query(
+                    r#"
+                    INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                    VALUES ($1, $2, 'AI Agent Paused: System Queue', 'A background agent job failed permanently and is paused.', 'PENDING', 'P1', 'LOW', 'PAUSED', 'System is paused. Please manually check business performance or wait for the system to recover.')
+                    "#
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
                 sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
                     .bind(next_retry)
                     .bind(job_id)
