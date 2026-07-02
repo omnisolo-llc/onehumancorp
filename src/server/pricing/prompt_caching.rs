@@ -70,9 +70,13 @@ impl PromptCache {
                 r.token_count
             ); // pii-safe
 
+            let pricing = super::calculator::get_pricing(model);
+            let cost_dollars = (r.token_count as f64 / 1_000_000.0) * pricing.cached_cost;
+            let cost_cents = (cost_dollars * 100.0).round() as i64;
+
             if let Some(store) = &self.telemetry_store {
                 store.llm_cost_counter.add(
-                    0,
+                    cost_cents as u64,
                     &[
                         opentelemetry::KeyValue::new("cache_hit", "true"),
                         opentelemetry::KeyValue::new("model", model.to_string()),
@@ -80,9 +84,7 @@ impl PromptCache {
                 );
             }
 
-            let pricing = super::calculator::get_pricing(model);
-            let cost_dollars = (r.token_count as f64 / 1_000_000.0) * pricing.cached_cost;
-            (cost_dollars * 100.0).round() as i64
+            cost_cents
         } else {
             0
         };

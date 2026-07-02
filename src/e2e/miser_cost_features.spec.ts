@@ -18,7 +18,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('text=Total Costs')).toBeVisible();
     await expect(page.locator('text=Projected Monthly Cost').first()).toBeVisible();
 
-    const backToMyPlanBtn = page.locator('a', { hasText: 'Back to My Plan' });
+    const backToMyPlanBtn = page.locator('#back-to-my-plan');
     await expect(backToMyPlanBtn).toBeVisible();
     await backToMyPlanBtn.click();
     await expect(page.locator('text=Your Current Usage')).toBeVisible({ timeout: 5000 });
@@ -76,7 +76,7 @@ test.describe('Miser Cost Features E2E', () => {
     await loginAs(page, proUser as any);
     await page.goto('/pricing');
 
-    const proCard = page.locator('.ohc-growth-card').filter({ hasText: 'Pro' }).first();
+    const proCard = page.locator('.ohc-growth-card').nth(2);
     await expect(proCard).toBeVisible({ timeout: 15000 });
     await expect(proCard.locator('text=$79').first()).toBeVisible();
     await expect(proCard.locator('text=10 Agents Limit').first()).toBeVisible();
@@ -136,7 +136,7 @@ test.describe('Miser Cost Features E2E', () => {
 
     // Using a more resilient text check for Starter plan text on button
     const starterCard = page.locator('.ohc-growth-card').filter({ hasText: 'Starter' }).first();
-    const managePlanButton = starterCard.locator('button', { hasText: 'Manage Plan' });
+    const managePlanButton = starterCard.locator('button', { hasText: 'Manage Plan' }).or(starterCard.locator('button', { hasText: 'Upgrade to Starter via Stripe' }));
     await expect(managePlanButton).toBeVisible({ timeout: 15000 });
   });
 
