@@ -42,7 +42,7 @@ test.describe('Zero-Click Business Generator CUJ', () => {
         });
     });
 
-    await page.route('**/success.html', async route => {
+    await page.route('**/success.html*', async route => {
         await route.fulfill({
             status: 200,
             contentType: 'text/html',
