@@ -15,7 +15,6 @@ use serde_json::json;
 /// - Unbatched: 100 * $0.25 = $25.00 in fixed fees
 /// - Batched (1 payout of $1000): 1 * $0.25 = $0.25 in fixed fees
 /// - Total savings = $24.75 per 100 transactions!
-
 pub struct PayoutBatcher {
     pool: Option<Arc<PgPool>>,
     batch_threshold_cents: i64,
