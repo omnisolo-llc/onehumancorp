@@ -126,7 +126,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: redis:7-alpine
+    image: redis:7
     pull_policy: missing
     ports:
       - "${OHC_DOCKER_VALKEY_PORT:-6379}:6379"
@@ -147,7 +147,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: postgres:15-alpine
+    image: postgres:15
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
