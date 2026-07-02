@@ -8,6 +8,7 @@ import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
 
 
+import { CFOAgentCard } from "./CFOAgentCard";
 
 
 import { useEffect, useMemo, useState } from "react";
@@ -376,6 +377,7 @@ export default function Dashboard() {
       <VoiceAssistantFAB />
 
       <MorningBriefingCard tenant={tenantId()} />
+      <CFOAgentCard />
       <AIFeaturePaywallWidget />
 
       <InteractiveWalkthrough
