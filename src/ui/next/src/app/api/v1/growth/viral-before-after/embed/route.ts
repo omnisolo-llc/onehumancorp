@@ -193,11 +193,11 @@ export async function GET(request: Request) {
 
             <input type="range" min="0" max="100" value="50" class="slider-input" id="slider" aria-label="Percentage of before photo shown" />
         </div>
-        ${rawBranding ? \`
+        ${rawBranding ? `
         <div class="footer">
             <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank">⚡ Powered by OHC</a>
         </div>
-        \` : ''}
+        ` : ""}
     </div>
 
     <script>
