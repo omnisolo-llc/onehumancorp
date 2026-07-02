@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
 import { SyncManager } from '../../../lib/sync/SyncManager';
+import { WalkthroughTarget } from '../../../components/Walkthrough';
 
 interface StripeTerminalClientProps {
   onSuccess?: () => void;
@@ -389,7 +390,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   };
 
   return (
-    <div id="pos-keypad" className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50">
+    <WalkthroughTarget id="pos-keypad">
+    <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50">
       <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
       <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 
@@ -577,9 +579,11 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
       {connectedReader ? (
         <div className="flex gap-2 mt-4">
-          <button id="charge-btn" onClick={processPayment} disabled={reserving || typeof window !== 'undefined' && !navigator.onLine} className={`flex-1 bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all charge-btn ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+          <WalkthroughTarget id="charge-btn" className="flex-1 flex">
+          <button onClick={processPayment} disabled={reserving || typeof window !== 'undefined' && !navigator.onLine} className={`flex-1 w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all charge-btn ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
             {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
           </button>
+          </WalkthroughTarget>
           <button id="cash-btn" onClick={processCashSale} disabled={reserving} className={`flex-1 bg-gradient-to-b from-[#34C759] to-[#28A745] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-green-500/30 transition-all cash-btn ${reserving ? 'opacity-50' : 'hover:shadow-green-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
             {reserving ? 'Processing...' : `Cash $${(amount / 100).toFixed(2)}`}
           </button>
@@ -592,5 +596,6 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         </div>
       )}
     </div>
+    </WalkthroughTarget>
   );
 }

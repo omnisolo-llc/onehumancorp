@@ -124,11 +124,7 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
 
-    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
-    m.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
-    m.insert("help-search-tooltip".to_string(), "Search for help articles and videos...".to_string());
     m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
-    m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
     m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
     m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
     m.insert("dashboard-widget-btn".to_string(), "Build a referral widget for your website.".to_string());
@@ -144,7 +140,6 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("spin-to-win-tooltip".to_string(), "Create interactive discount wheels to capture emails.".to_string());
     m.insert("trial-extension-tooltip".to_string(), "Share your setup on X to instantly unlock 7 extra days of Pro.".to_string());
     m.insert("field-ops-tooltip".to_string(), "Offline-first mobile route management for field service workers.".to_string());
-    m.insert("my-plan-tooltip".to_string(), "Manage your subscription, usage, and billing.".to_string());
     m.insert("proposal-draft-tooltip".to_string(), "Generate complex AI proposals instantly.".to_string());
     m.insert("settings-widget-tooltip".to_string(), "Manage your account and preferences.".to_string());
 
@@ -164,22 +159,8 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     // Fallback tooltips matching frontend
     m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest updates.".to_string());
     m.insert("api-docs-tooltip".to_string(), "Connect custom tools with your account. Only needed for advanced setups.".to_string());
-    m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages. Reply or assign them to an AI agent.".to_string());
-    m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
-    m.insert("total-sales-tooltip".to_string(), "Total revenue generated from all your orders.".to_string());
-    m.insert("kairos-nav-link-tooltip".to_string(), "See what your AI helpers are planning. Watch them work on your tasks.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Access the Help Center, AI Support, or Tutorials.".to_string());
     m.insert("help-btn-tooltip-appshell".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
-    m.insert("change-vibe-tooltip".to_string(), "Change the theme and colors of your website.".to_string());
-    m.insert("remove-branding-tooltip".to_string(), "Upgrade to Premium to remove OHC branding.".to_string());
-    m.insert("settings-verify-tooltip".to_string(), "Verify your number to receive critical notifications.".to_string());
-    m.insert("settings-otp-tooltip".to_string(), "Click to confirm the code sent to your phone.".to_string());
-    m.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
     m.insert("morning-briefing".to_string(), "Your AI Decision Assistant's daily summary.".to_string());
-    m.insert("checkout-cancel-tooltip".to_string(), "Go back to the previous screen without subscribing.".to_string());
-    m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
-    m.insert("my-plan-tooltip".to_string(), "View and manage your subscription plan and usage.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
     m.insert("walkthrough-btn-tooltip".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
     m.insert("checkout-pay-now-tooltip".to_string(), "Click here to securely finish your purchase and process your payment.".to_string());
@@ -195,12 +176,6 @@ pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("nav-agents".to_string(), "AI Helpers. These are your digital employees.".to_string());
     m.insert("ohc-help-btn".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
     m.insert("ohc-floating-help-btn".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages. Reply or assign them to an AI agent.".to_string());
-    m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
-    m.insert("total-sales-tooltip".to_string(), "Total revenue generated from all your orders.".to_string());
-    m.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
     m.insert("pos-walkthrough-btn".to_string(), "Take a tour of Quick Charge POS".to_string());
     m.insert("assistant-walkthrough-btn".to_string(), "Take a tour of the Assistant Workspace".to_string());
     m.insert("remove-branding-tooltip".to_string(), "Upgrade to Premium to remove OHC branding.".to_string());
