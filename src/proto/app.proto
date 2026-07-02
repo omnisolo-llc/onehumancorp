@@ -33,6 +33,9 @@ message Order {
   string status = 5;
   int64 created_at_unix = 6;
   string currency = 7;
+  string base_currency = 8;
+  string transaction_currency = 9;
+  double exchange_rate = 10;
 }
 
 message Quote {

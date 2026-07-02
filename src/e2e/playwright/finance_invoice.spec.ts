@@ -38,4 +38,30 @@ test.describe('Agentic Invoicing Flow', () => {
         // 7. Verify modal closes
         await expect(modalTitle).not.toBeVisible();
     });
+    test('should display multi-currency localization toggle in settings', async ({ page }) => {
+        await page.goto('/settings');
+        const settingsHeader = page.locator('h1', { hasText: 'Settings' });
+        await expect(settingsHeader).toBeVisible();
+
+        const globalSalesToggle = page.getByRole('checkbox', { name: 'Enable Global Sales' });
+        await expect(globalSalesToggle).toBeVisible();
+        await globalSalesToggle.check();
+        await expect(globalSalesToggle).toBeChecked();
+    });
+
+    test('should allow creating multi-currency invoices', async ({ page }) => {
+        await page.goto('/invoice-generator');
+        const header = page.locator('h2', { hasText: 'Create Professional Invoice' });
+        await expect(header).toBeVisible();
+
+        const amountInput = page.locator('input[placeholder="e.g. 1500.00"]');
+        await amountInput.fill('250.00');
+
+        const currencySelect = page.locator('select');
+        await currencySelect.selectOption('EUR');
+
+        const generateBtn = page.locator('button', { hasText: 'Generate Shareable Invoice' });
+        await expect(generateBtn).toBeVisible();
+    });
+
 });

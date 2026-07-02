@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 export default function InvoiceGeneratorPage() {
   const [clientName, setClientName] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [projectDetails, setProjectDetails] = useState('');
   const [amount, setAmount] = useState('');
   const [shareLink, setShareLink] = useState('');
@@ -31,6 +32,7 @@ export default function InvoiceGeneratorPage() {
       clientName,
       projectDetails,
       amount,
+      currency,
       splitPartnerId: isSplitEnabled ? splitContact : undefined,
       splitPercentage: isSplitEnabled ? splitPercentage : undefined
     };
@@ -89,15 +91,30 @@ export default function InvoiceGeneratorPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Amount ($)</label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g. 1500.00"
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="e.g. 1500.00"
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div className="w-1/3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none"
+                >
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="CAD">CAD ($)</option>
+                </select>
+              </div>
             </div>
 
 

@@ -39,7 +39,7 @@ impl Department for FinanceAgent {
         };
 
         let action_description = if event.event_type == "payment.captured" {
-            "Analyze transaction for split tags and record ledger split".to_string()
+            "Analyze transaction for localized cross-border multi-currency ledger split and draft invoice".to_string()
         } else if event.event_type == "charge.dispute.created" {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
@@ -49,7 +49,20 @@ impl Department for FinanceAgent {
         };
 
         let mut payload = event.payload.clone();
-        if event.event_type == "charge.dispute.created" {
+        if event.event_type == "payment.captured" {
+            let currency = event.payload.get("currency").and_then(|v| v.as_str()).unwrap_or("USD");
+            if currency != "USD" {
+                payload = serde_json::json!({
+                    "feature_type": "localized_invoice",
+                    "transaction_currency": currency,
+                    "base_currency": "USD",
+                    "exchange_rate": 1.0, // Should be fetched from external fx oracle
+                    "operational_action": "Draft localized invoice and record multi-currency split",
+                    "amount": event.payload.get("amount").and_then(|v| v.as_i64()).unwrap_or(0),
+                    "customer_id": event.payload.get("customer").and_then(|v| v.as_str()).unwrap_or(""),
+                });
+            }
+        } else if event.event_type == "charge.dispute.created" {
             // Reconstruct the simulated payload the UI expects for dispute resolution
             payload = serde_json::json!({
                 "feature_type": "dispute_resolution",

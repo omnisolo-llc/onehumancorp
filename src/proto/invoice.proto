@@ -23,6 +23,9 @@ message Invoice {
   string payment_status = 14;
   int32 view_count = 15;
   int32 amount_paid_cents = 16;
+  string base_currency = 17;
+  string transaction_currency = 18;
+  double exchange_rate = 19;
   string stripe_invoice_id = 8;
   string stripe_payment_link = 9;
   repeated InvoiceLineItem line_items = 10;

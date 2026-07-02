@@ -110,6 +110,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
         created_at_unix: now.timestamp(),
         members,
         role_profiles: default_software_company_role_profiles(),
+        global_sales_enabled: false,
     }
 }
 
@@ -225,6 +226,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
         created_at_unix: now.timestamp(),
         members,
         role_profiles: default_digital_marketing_role_profiles(),
+        global_sales_enabled: false,
     }
 }
 

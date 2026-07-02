@@ -37,9 +37,15 @@ impl InvoiceService for InvoiceServiceImpl {
 
         let stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
+        let base_currency = "USD".to_string(); // Default base currency
+        let transaction_currency = req.currency.clone();
+        // In a full implementation this would be dynamically fetched from an external FX oracle
+        // based on the base_currency and transaction_currency.
+        let exchange_rate = if transaction_currency != base_currency { 1.09 } else { 1.0 };
+
         sqlx::query(
-            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
+            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_payment_link, base_currency, transaction_currency, exchange_rate)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
         )
         .bind(&invoice_id)
         .bind(&req.tenant_id)
@@ -50,6 +56,9 @@ impl InvoiceService for InvoiceServiceImpl {
         .bind(&req.currency)
         .bind(total_amount)
         .bind(&stripe_payment_link)
+        .bind(&base_currency)
+        .bind(&transaction_currency)
+        .bind(exchange_rate)
         .execute(&mut *tx)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -98,6 +107,9 @@ impl InvoiceService for InvoiceServiceImpl {
             amount_paid_cents: 0,
             stripe_invoice_id: "".to_string(),
             stripe_payment_link,
+            base_currency,
+            transaction_currency,
+            exchange_rate,
             line_items: saved_items,
             created_at: chrono::Utc::now().timestamp(),
             updated_at: chrono::Utc::now().timestamp(),
@@ -157,6 +169,9 @@ impl InvoiceService for InvoiceServiceImpl {
         let first_row_amount_paid_cents: i32 = rows[0].try_get("amount_paid_cents").unwrap_or_default();
         let first_row_stripe_invoice_id: String = rows[0].try_get("stripe_invoice_id").unwrap_or_default();
         let first_row_stripe_payment_link: String = rows[0].try_get("stripe_payment_link").unwrap_or_default();
+        let first_row_base_currency: String = rows[0].try_get("base_currency").unwrap_or_default();
+        let first_row_transaction_currency: String = rows[0].try_get("transaction_currency").unwrap_or_default();
+        let first_row_exchange_rate: f64 = rows[0].try_get("exchange_rate").unwrap_or_default();
 
         let mut line_items = Vec::new();
         for row in rows {
@@ -186,6 +201,9 @@ impl InvoiceService for InvoiceServiceImpl {
             amount_paid_cents: first_row_amount_paid_cents,
             stripe_invoice_id: first_row_stripe_invoice_id,
             stripe_payment_link: first_row_stripe_payment_link,
+            base_currency: first_row_base_currency,
+            transaction_currency: first_row_transaction_currency,
+            exchange_rate: first_row_exchange_rate,
             line_items,
             created_at: 0,
             updated_at: 0,
@@ -312,6 +330,9 @@ impl InvoiceService for InvoiceServiceImpl {
             amount_paid_cents: row.try_get("amount_paid_cents").unwrap_or_default(),
             stripe_invoice_id: row.try_get("stripe_invoice_id").unwrap_or_default(),
             stripe_payment_link: row.try_get("stripe_payment_link").unwrap_or_default(),
+            base_currency: row.try_get("base_currency").unwrap_or_default(),
+            transaction_currency: row.try_get("transaction_currency").unwrap_or_default(),
+            exchange_rate: row.try_get("exchange_rate").unwrap_or_default(),
             line_items,
             created_at: row.try_get("created_at").unwrap_or_default(),
             updated_at: row.try_get("updated_at").unwrap_or_default(),

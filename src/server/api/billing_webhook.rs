@@ -394,6 +394,10 @@ pub async fn stripe_webhook_handler(
 
                         if let Some((amount, currency)) = payment_info {
                             let tx_id = uuid::Uuid::new_v4().to_string();
+
+                            let base_currency = "USD".to_string(); // In reality fetched from tenant config
+                            let exchange_rate = if currency != base_currency { 1.09 } else { 1.0 }; // Call to FX oracle
+
                             if let Err(e) = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
                                 .bind(tenant_id)
                                 .bind(&tx_id)

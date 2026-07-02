@@ -316,6 +316,22 @@ export default function SettingsPage() {
                 </label>
               </div>
             </div>
+
+            <div className="pt-6 border-t border-gray-100">
+              <h3 className="text-sm font-semibold font-outfit text-gray-900 mb-4">Global Preferences</h3>
+              <div className="flex flex-col gap-3">
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 bg-gray-50/30 cursor-pointer">
+                  <input
+                    aria-label="Enable Global Sales"
+                    type="checkbox"
+                    checked={(tenant as any).globalSalesEnabled || false}
+                    onChange={(e) => setTenant({ ...tenant, globalSalesEnabled: e.target.checked } as any)}
+                    className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-gray-800">Global Sales (Multi-currency Localized Invoicing)</span>
+                </label>
+              </div>
+            </div>
           </div>
         </section>
 

@@ -22,6 +22,7 @@ message Organization {
   repeated TeamMember members = 6;
   repeated RoleProfile role_profiles = 7;
   string tier = 8;
+  bool global_sales_enabled = 9;
 }
 
 message TeamMember {
