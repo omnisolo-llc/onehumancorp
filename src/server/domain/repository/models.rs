@@ -45,6 +45,7 @@ pub struct Tenant {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
     pub version: Option<i64>,
+    pub global_sales_enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -120,6 +121,9 @@ pub struct Order {
     pub estimated_duration_days: Option<i32>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub base_currency: Option<String>,
+    pub transaction_currency: Option<String>,
+    pub exchange_rate: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -323,6 +327,9 @@ pub struct Invoice {
     pub split_percentage: Option<f64>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub base_currency: Option<String>,
+    pub transaction_currency: Option<String>,
+    pub exchange_rate: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -346,6 +353,9 @@ pub struct PaymentEvent {
     pub method: String,
     pub created_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
+    pub base_currency: Option<String>,
+    pub transaction_currency: Option<String>,
+    pub exchange_rate: Option<f64>,
 }
 
 

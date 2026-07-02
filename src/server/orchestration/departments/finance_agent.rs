@@ -39,7 +39,7 @@ impl Department for FinanceAgent {
         };
 
         let action_description = if event.event_type == "payment.captured" {
-            "Analyze transaction for split tags and record ledger split".to_string()
+            "Process multi-currency payment and generate localized invoice".to_string()
         } else if event.event_type == "charge.dispute.created" {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
@@ -48,8 +48,42 @@ impl Department for FinanceAgent {
             "Record deposit and track payment".to_string()
         };
 
+
         let mut payload = event.payload.clone();
-        if event.event_type == "charge.dispute.created" {
+        if event.event_type == "payment.captured" {
+            let tx_currency = event.payload.get("currency").and_then(|v| v.as_str()).unwrap_or("usd").to_uppercase();
+            let base_currency = event.payload.get("base_currency").and_then(|v| v.as_str()).unwrap_or("USD").to_uppercase();
+            let amount = event.payload.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
+            let mut exchange_rate = 1.0;
+            let mut localized_invoice_drafted = false;
+
+            // Simple simulated check for Global Sales / multi-currency
+            // A real implementation would fetch live rates based on tenant's base currency and transaction currency
+            if tx_currency != base_currency {
+                if tx_currency == "EUR" {
+                    exchange_rate = 1.1; // Simulated exchange rate EUR -> USD
+                } else if tx_currency == "GBP" {
+                    exchange_rate = 1.25;
+                } else if tx_currency == "CAD" {
+                    exchange_rate = 0.74;
+                }
+                localized_invoice_drafted = true;
+            }
+
+            payload = serde_json::json!({
+                "feature_type": "localized_invoicing",
+                "transaction_currency": tx_currency,
+                "base_currency": base_currency,
+                "exchange_rate": exchange_rate,
+                "original_amount": amount,
+                "base_amount": (amount as f64 * exchange_rate).round() as i64,
+                "localized_invoice_drafted": localized_invoice_drafted,
+                "original_message": format!("Captured payment of {} {} (Base: {}).", amount, tx_currency, base_currency),
+                "generated_response": if localized_invoice_drafted { "Autonomously drafted a localized tax-compliant invoice." } else { "Payment recorded." },
+                "operational_action": "Record localized transaction in ledger",
+            });
+        } else if event.event_type == "charge.dispute.created" {
+
             // Reconstruct the simulated payload the UI expects for dispute resolution
             payload = serde_json::json!({
                 "feature_type": "dispute_resolution",
