@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+      }
+      .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .modal-overlay.active { display: flex; }
+      .modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        width: 90%;
+        max-width: 400px;
+        position: relative;
+        text-align: center;
+      }
+      .primary-btn {
+        background-color: #0066FF;
+        color: white;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 100%;
+        margin-top: 10px;
+      }
+      .secondary-btn {
+        background-color: transparent;
+        color: #0066FF;
+        border: 1px solid #0066FF;
+        padding: 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 100%;
+        margin-top: 10px;
+      }
+      .variant-card {
+        background: white;
+        border: 1px solid #eaeaea;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        text-align: left;
+      }
+      .platform-badge {
+        font-size: 10px;
+        background: #f0f0f0;
+        padding: 4px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+      .variant-content {
+        margin: 12px 0;
+        font-size: 14px;
+      }
+      .spinner {
+        display: none;
+        border: 3px solid rgba(255,255,255,0.3);
+        border-top: 3px solid white;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Viral Post Generator</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 400px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      box-sizing: border-box;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 10px 0;
+      color: #1d1d1f;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #86868b;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .input-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #1d1d1f;
+      margin-bottom: 8px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.1);
+      background: rgba(255, 255, 255, 0.65);
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    .branding-toggle {
+        display: flex;
+        align-items: center;
+        margin-top: 10px;
+        margin-bottom: 16px;
+    }
+    .branding-toggle input {
+        margin-right: 8px;
+    }
+    .branding-toggle label {
+        margin-bottom: 0;
+        font-weight: normal;
+        font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container glassmorphism">
+    <div style="display:flex; justify-content: space-between; align-items:center;">
+        <button onclick="window.history.back()" style="background:transparent; border:none; color:#0066FF; cursor:pointer;">&larr; Back</button>
+    </div>
+    <h1>Promoter Agent Post Generator 🚀</h1>
+    <p class="subtitle">Automate your marketing with our AI promoter agent.</p>
+
+    <div class="input-group">
+      <label for="product-name">Product Name</label>
+      <input type="text" id="product-name" placeholder="e.g. Signature Coffee Blend">
+    </div>
+
+    <div class="input-group">
+      <label for="product-desc">Key Benefit</label>
+      <input type="text" id="product-desc" placeholder="e.g. a bold start to your morning">
+    </div>
+
+    <div class="branding-toggle">
+        <input type="checkbox" id="remove-branding" />
+        <label for="remove-branding">Remove "Powered by OHC" branding (Pro)</label>
+    </div>
+
+    <button id="generate-btn" class="primary-btn">
+      <span id="btn-text">Generate Post</span>
+      <div class="spinner" id="btn-spinner"></div>
+    </button>
+
+    <div id="results-section" style="display:none; margin-top:20px;">
+      <h3>Generated Post</h3>
+      <div id="variants-container"></div>
+    </div>
+  </div>
+
+  <!-- Paywall Modal -->
+  <div class="modal-overlay paywall-modal" id="paywall-modal">
+    <div class="modal-content">
+      <button class="modal-close" id="close-paywall" style="position:absolute; right:16px; top:16px; background:transparent; border:none; font-size:20px; cursor:pointer;">&times;</button>
+      <div style="font-size:40px; margin-bottom:10px;">🚀</div>
+      <h2 class="modal-title" style="font-family:'Outfit'">Upgrade to Pro</h2>
+      <p class="modal-desc" style="color:#666; font-size:14px;">Make the post 100% white-labeled. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
+
+      <button class="primary-btn" id="upgrade-btn">Upgrade to Pro</button>
+      <button class="primary-btn" id="share-to-unlock-btn" style="background-color: #000; color:white;">Share on X to Unlock for Free</button>
+      <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500; text-align: center;">Verifying...</p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      let hasPro = false;
+      try { hasPro = localStorage.getItem('has_pro') === 'true'; } catch(e) {}
+
+      const removeBrandingCheckbox = document.getElementById('remove-branding');
+      const paywallModal = document.getElementById('paywall-modal');
+      const closePaywallBtn = document.getElementById('close-paywall');
+
+      removeBrandingCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked && !hasPro) {
+          e.target.checked = false;
+          paywallModal.classList.add('active');
+        }
+      });
+
+      closePaywallBtn.addEventListener('click', () => {
+        paywallModal.classList.remove('active');
+      });
+
+      document.getElementById('upgrade-btn').addEventListener('click', () => {
+        window.location.href = 'pricing.html';
+      });
+
+      const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
+      const softPaywallStatus = document.getElementById('soft-paywall-status');
+
+      shareToUnlockBtn.addEventListener('click', async () => {
+          let tenantId = "demo";
+          try { tenantId = localStorage.getItem('tenant') || "demo"; } catch(e) {}
+          const message = `I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://app.onehumancorp.com/setup.html?ref=${tenantId}`;
+          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+
+          window.open(shareUrl, '_blank');
+
+          shareToUnlockBtn.style.display = 'none';
+          softPaywallStatus.style.display = 'block';
+          softPaywallStatus.innerText = 'Verifying Share...';
+
+          try {
+            let url = '/api/v1/growth/trial-extension/claim';
+            if (window.location.protocol === 'file:') {
+                url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+            }
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+
+            if (response.ok) {
+              softPaywallStatus.innerText = 'Unlocked!';
+              hasPro = true;
+              localStorage.setItem('has_pro', 'true');
+
+              setTimeout(() => {
+                paywallModal.classList.remove('active');
+                removeBrandingCheckbox.checked = true;
+
+                // reset state for next time
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 1500);
+            } else {
+              softPaywallStatus.innerText = 'Failed to claim trial extension.';
+              setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 3000);
+            }
+          } catch (e) {
+            console.error(e);
+            softPaywallStatus.innerText = 'Error claiming trial extension.';
+            setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+            }, 3000);
+          }
+        });
+
+      document.getElementById('generate-btn').addEventListener('click', async () => {
+        const name = document.getElementById('product-name').value.trim();
+        const desc = document.getElementById('product-desc').value.trim();
+        const isBrandingRemoved = removeBrandingCheckbox.checked;
+
+        if (!name || !desc) {
+          alert("Please enter a product name and key benefit.");
+          return;
+        }
+
+        const btn = document.getElementById('generate-btn');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('btn-spinner');
+        const resultsSection = document.getElementById('results-section');
+        const container = document.getElementById('variants-container');
+
+        btn.disabled = true;
+        btnText.style.display = 'none';
+        spinner.style.display = 'block';
+        resultsSection.style.display = 'none';
+        container.innerHTML = '';
+
+        let tenantId = "demo";
+        try { tenantId = localStorage.getItem('tenant') || "demo"; } catch(e) {}
+
+        try {
+          const payload = {
+            name: name,
+            description: desc
+          };
+
+          let url = '/api/v1/growth/promoter/generate';
+          if (window.location.protocol === 'file:') {
+            url = 'http://127.0.0.1:18789/api/v1/growth/promoter/generate';
+          }
+
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.variants && data.variants.length > 0) {
+              data.variants.forEach((v, index) => {
+                const card = document.createElement('div');
+                card.className = 'variant-card';
+                let contentWithBranding = v.content;
+                if (!isBrandingRemoved) {
+                    contentWithBranding += `\n\n⚡ Powered by OHC`;
+                }
+
+                card.innerHTML = `
+                  <span class="platform-badge">${v.platform}</span>
+                  <div class="variant-content">${contentWithBranding}</div>
+                  <button class="primary-btn" id="copy-btn-${index}">Copy to Clipboard</button>
+                `;
+                container.appendChild(card);
+
+                card.querySelector(`#copy-btn-${index}`).addEventListener('click', (e) => {
+                  navigator.clipboard.writeText(contentWithBranding).then(() => {
+                    e.target.innerText = "Copied!";
+                    e.target.style.background = "#34C759";
+                    setTimeout(() => {
+                        e.target.innerText = "Copy to Clipboard";
+                        e.target.style.background = "#0066FF";
+                    }, 2000);
+                  });
+                });
+              });
+              resultsSection.style.display = 'block';
+            } else {
+              alert("Failed to generate variants.");
+            }
+          } else {
+            // fallback if api fails (like in test environments without API key)
+            const fallbackContent = `Just dropped something special! 🚀 Introducing the new ${name}. If you've been looking for ${desc}, this is for you.\n\nShop now: https://${tenantId}.ohc.app`;
+            const card = document.createElement('div');
+            card.className = 'variant-card';
+            let contentWithBranding = fallbackContent;
+            if (!isBrandingRemoved) {
+                contentWithBranding += `\n\n⚡ Powered by OHC`;
+            }
+            card.innerHTML = `
+                  <span class="platform-badge">Generated</span>
+                  <div class="variant-content">${contentWithBranding}</div>
+                  <button class="primary-btn" id="copy-btn-fallback">Copy to Clipboard</button>
+            `;
+            container.appendChild(card);
+            card.querySelector(`#copy-btn-fallback`).addEventListener('click', (e) => {
+                  navigator.clipboard.writeText(contentWithBranding).then(() => {
+                    e.target.innerText = "Copied!";
+                    e.target.style.background = "#34C759";
+                    setTimeout(() => {
+                        e.target.innerText = "Copy to Clipboard";
+                        e.target.style.background = "#0066FF";
+                    }, 2000);
+                  });
+            });
+            resultsSection.style.display = 'block';
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Network error.");
+        } finally {
+          btn.disabled = false;
+          btnText.style.display = 'inline';
+          spinner.style.display = 'none';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
