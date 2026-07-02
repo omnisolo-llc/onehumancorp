@@ -178,6 +178,8 @@
         margin-bottom: 24px;
         width: 100%;
         max-height: 200px;
+        flex-grow: 1;
+        min-height: 0;
         overflow-y: auto;
       }
       .product-btn {
@@ -193,6 +195,8 @@
         flex-direction: column;
         justify-content: space-between;
         min-height: 80px;
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
       }
       .product-btn:active {
         transform: scale(0.95);
@@ -1060,6 +1064,8 @@
                   infoDiv.onclick = (e) => {
                       if (!isSoldOut) {
                           selectProduct(p.id, priceCents, title);
+                          document.querySelectorAll(".product-btn").forEach(b => b.classList.remove("selected"));
+                          btn.classList.add("selected");
                       }
                   };
                   infoDiv.innerHTML = `
