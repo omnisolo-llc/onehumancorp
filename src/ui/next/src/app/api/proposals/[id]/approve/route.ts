@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const backendUrl = process.env.NEXT_PUBLIC_OHC_API_URL || 'http://localhost:18789';
+    const params = await context.params;
     const id = params.id;
 
     const res = await fetch(`${backendUrl}/api/proposals/${id}/approve`, {
