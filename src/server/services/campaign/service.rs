@@ -569,7 +569,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
     async fn test_create_draft_campaign() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool));
@@ -595,7 +594,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+
     async fn test_add_asset_to_campaign() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool));
@@ -635,7 +634,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+
     async fn test_launch_campaign_requires_asset() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool));
@@ -670,7 +669,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
     async fn test_complete_campaign_flow() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
@@ -742,7 +740,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+
     async fn test_launch_campaign_requires_third_party_activation_dispatch() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
@@ -797,7 +795,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+
     async fn test_tenant_isolation() {
         let (pool1, tenant_1) = setup_db().await;
         let (_, tenant_2) = setup_db().await; // Setup second tenant, using same DB structure
