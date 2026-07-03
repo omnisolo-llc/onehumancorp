@@ -22,7 +22,8 @@ impl Department for FinanceAgent {
             "tenant.payment.received".to_string(),
             "payment.captured".to_string(),
             "charge.dispute.created".to_string(),
-            "invoice.overdue".to_string()
+            "invoice.overdue".to_string(),
+            "project_milestone_completed".to_string()
         ]
     }
 
@@ -44,6 +45,8 @@ impl Department for FinanceAgent {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
             "Draft personalized invoice follow-up for review".to_string()
+        } else if event.event_type == "project_milestone_completed" {
+            "Draft invoice for project milestone".to_string()
         } else {
             "Record deposit and track payment".to_string()
         };
@@ -70,6 +73,24 @@ impl Department for FinanceAgent {
                 "generated_response": format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id),
                 "operational_action": "Draft personalized reminder",
                 "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+        } else if event.event_type == "project_milestone_completed" {
+            let milestone_id = event.payload.get("milestone_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let project_id = event.payload.get("project_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let amount_cents = event.payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+            let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("Project milestone");
+
+            payload = serde_json::json!({
+                "feature_type": "invoice_draft",
+                "milestone_id": milestone_id,
+                "project_id": project_id,
+                "customer_id": customer_id,
+                "amount_cents": amount_cents,
+                "description": description,
+                "original_message": description,
+                "generated_response": format!("Drafting an invoice of ${} for milestone {}.", amount_cents as f64 / 100.0, description),
+                "operational_action": "Create draft invoice via Stripe",
             });
         }
 

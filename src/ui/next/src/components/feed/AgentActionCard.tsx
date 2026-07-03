@@ -130,6 +130,10 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.remaining_stock !== undefined ||
           (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_draft" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "quote_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "social_post_draft" ||
@@ -590,6 +594,46 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+            {((approval.proposed_action || approval.context_payload)?.feature_type === "invoice_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_followup") && (
+              <div
+                className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
+                data-testid="invoice-draft-card"
+              >
+                <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Draft Invoice:{" "}
+                  {(approval.proposed_action || approval.context_payload)
+                    ?.original_message ||
+                    (approval.proposed_action || approval.context_payload)
+                      ?.description || "Invoice"}
+                </div>
+                <div className="flex flex-col gap-1 text-sm text-gray-800 dark:text-gray-200">
+                  <span className="font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider text-xs">
+                    Drafted Response
+                  </span>
+                  <div className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 italic">
+                    "
+                    {(approval.proposed_action || approval.context_payload)
+                      ?.generated_response ||
+                      (approval.proposed_action || approval.context_payload)
+                        ?.draft_reply || "Invoice generated."}
+                    "
+                  </div>
+                </div>
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
@@ -2002,6 +2046,52 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_followup" ? (
+          <>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+              aria-label="Approve & Send"
+              data-testid="feed-approve-btn"
+              disabled={loadingAction !== null}
+            >
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve & Send"
+              )}
+            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() =>
+                  handleDecision(
+                    approval.id,
+                    false,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                aria-label="Dismiss"
+                data-testid="feed-dismiss-btn"
+                disabled={loadingAction !== null}
+              >
+                {isActionLoading("dismiss") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  "Dismiss"
+                )}
+              </button>
+            </div>
+          </>
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "quote_draft" ? (
           <>
