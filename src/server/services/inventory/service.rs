@@ -195,6 +195,21 @@ impl InventoryService {
                     .execute(&pool)
                     .await;
 
+                let cs_action_request_id = Uuid::new_v4().to_string();
+                let cs_payload = serde_json::json!({
+                    "product_id": product_id,
+                    "suggested_action": "Notify Customer of Out of Stock",
+                    "reason": "Lock contention on limited item during checkout"
+                }).to_string();
+
+                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'NotifyCustomer', 'Pending', 0.99, $3, $4::jsonb, 'inventory_service', 'customer_success', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .bind(&cs_action_request_id)
+                    .bind(tenant_id)
+                    .bind(product_id)
+                    .bind(&cs_payload)
+                    .execute(&pool)
+                    .await;
+
                 let product_title: String = sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
                     .bind(product_id)
                     .bind(tenant_id)
