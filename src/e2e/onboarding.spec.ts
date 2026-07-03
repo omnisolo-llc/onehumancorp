@@ -256,6 +256,8 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const errorBlock = page.locator('#instant-error');
     await expect(errorBlock).toBeVisible();
 
+    await expect(generateButton).toHaveText('Generate My Workspace');
+
     // Typing clears the error
     await bioInput.fill("New text");
     await expect(errorBlock).not.toBeVisible();
