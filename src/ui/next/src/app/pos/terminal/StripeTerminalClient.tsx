@@ -391,13 +391,13 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
   return (
     <WalkthroughTarget id="pos-keypad">
-    <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-[32px] saturate-[200%] border border-white/50">
+    <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-3xl saturate-200 border border-white/60">
       <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
-      <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
+      <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-xl saturate-200 text-red-800 border-red-200' : 'bg-gray-50/50 backdrop-blur-md text-gray-700 border-gray-200/50'}`}>Status: {status}</p>
 
       {pendingReconciliation.length > 0 && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-[30px] saturate-[210%] p-4">
-           <div className="bg-white/85 backdrop-blur-[40px] saturate-[210%] border border-white/50 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+           <div className="bg-white/85 backdrop-blur-3xl saturate-200 border border-white/60 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
              <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
              <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
              <ul className="space-y-2 mb-6">
@@ -566,7 +566,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           </button>
           <ul className="mt-4 space-y-2">
             {discoveredReaders.map(reader => (
-              <li key={reader.id} className="flex justify-between items-center p-4 border border-white/50 rounded-2xl bg-white/60 backdrop-blur-[30px] saturate-[210%] shadow-sm transition-all hover:bg-white/80">
+              <li key={reader.id} className="flex justify-between items-center p-4 border border-white/40 rounded-2xl bg-white/50 backdrop-blur-2xl saturate-200 shadow-sm transition-all hover:bg-white/70">
                 <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
                 <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-5 py-2 min-h-[44px] min-w-[44px] rounded-xl text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
                   Connect
