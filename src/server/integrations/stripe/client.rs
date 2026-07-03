@@ -185,6 +185,69 @@ impl StripeClient {
         })
     }
 
+    pub async fn create_draft_invoice(&self, customer_id: &str, amount_usd: f64, description: &str) -> Result<StripeInvoice, String> {
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            return Ok(StripeInvoice {
+                id: format!("in_draft_{}", uuid::Uuid::new_v4()),
+                amount_due: (amount_usd * 100.0) as i64,
+                status: "draft".to_string(),
+                invoice_pdf: None,
+            });
+        }
+        let api_key = api_key_res.unwrap();
+        let amount_cents = (amount_usd * 100.0).round() as i64;
+
+        // 1. Create an Invoice Item
+        let mut form_item = std::collections::HashMap::new();
+        form_item.insert("customer".to_string(), customer_id.to_string());
+        form_item.insert("amount".to_string(), amount_cents.to_string());
+        form_item.insert("currency".to_string(), "usd".to_string());
+        form_item.insert("description".to_string(), description.to_string());
+
+        let res_item = reqwest::Client::new()
+            .post(format!("{}/v1/invoiceitems", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&form_item)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe InvoiceItem request failed: {}", e))?;
+
+        if !res_item.status().is_success() {
+            let status = res_item.status();
+            let text = res_item.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error creating invoice item ({}): {}", status, text));
+        }
+
+        // 2. Create the Invoice
+        let mut form_inv = std::collections::HashMap::new();
+        form_inv.insert("customer".to_string(), customer_id.to_string());
+        form_inv.insert("auto_advance".to_string(), "false".to_string()); // Leave as draft
+
+        let res_inv = reqwest::Client::new()
+            .post(format!("{}/v1/invoices", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&form_inv)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Invoice request failed: {}", e))?;
+
+        if !res_inv.status().is_success() {
+            let status = res_inv.status();
+            let text = res_inv.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error creating invoice ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res_inv.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        Ok(StripeInvoice {
+            id: json["id"].as_str().unwrap_or_default().to_string(),
+            amount_due: json["amount_due"].as_i64().unwrap_or(amount_cents),
+            status: json["status"].as_str().unwrap_or("draft").to_string(),
+            invoice_pdf: json["invoice_pdf"].as_str().map(|s| s.to_string()),
+        })
+    }
+
     pub async fn list_invoices(&self, _customer_id: &str) -> Result<Vec<StripeInvoice>, String> {
         Ok(vec![
             StripeInvoice {
@@ -194,6 +257,58 @@ impl StripeClient {
                 invoice_pdf: Some("https://pay.stripe.com/invoice/acct_.../pdf".to_string()),
             }
         ])
+    }
+
+    pub async fn finalize_and_send_invoice(&self, invoice_id: &str) -> Result<StripeInvoice, String> {
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            return Ok(StripeInvoice {
+                id: invoice_id.to_string(),
+                amount_due: 0,
+                status: "open".to_string(),
+                invoice_pdf: None,
+            });
+        }
+        let api_key = api_key_res.unwrap();
+
+        // Finalize invoice
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/invoices/{}/finalize", Self::api_base(), invoice_id))
+            .basic_auth(api_key, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Finalize Invoice request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error finalizing invoice ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        // Send invoice
+        let res_send = reqwest::Client::new()
+            .post(format!("{}/v1/invoices/{}/send", Self::api_base(), invoice_id))
+            .basic_auth(api_key, Some(""))
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Send Invoice request failed: {}", e))?;
+
+        if !res_send.status().is_success() {
+            let status = res_send.status();
+            let text = res_send.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error sending invoice ({}): {}", status, text));
+        }
+
+        let json_send: serde_json::Value = res_send.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        Ok(StripeInvoice {
+            id: json_send["id"].as_str().unwrap_or_default().to_string(),
+            amount_due: json_send["amount_due"].as_i64().unwrap_or(0),
+            status: json_send["status"].as_str().unwrap_or("open").to_string(),
+            invoice_pdf: json_send["invoice_pdf"].as_str().map(|s| s.to_string()),
+        })
     }
 
     pub async fn cancel_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
