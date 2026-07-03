@@ -14,6 +14,9 @@ describe('GrowBusinessCard', () => {
     const promoterLink = screen.getByText('Promoter Agent');
     expect(promoterLink).toHaveAttribute('href', '/viral-post-generator');
 
+    const giveawayLink = screen.getByText('Giveaway');
+    expect(giveawayLink).toHaveAttribute('href', '/giveaway');
+
     const widgetLink = screen.getByText('Viral Widget');
     expect(widgetLink).toHaveAttribute('href', '/viral-powered-by-ohc-widget');
 
