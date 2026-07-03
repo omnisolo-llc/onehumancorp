@@ -32,7 +32,6 @@ export default function ZeroClickBuilderPage() {
       }
 
       const data = await response.json();
-      console.log('Success:', data);
       setBuilderState('success');
     } catch (err) {
       console.error(err);

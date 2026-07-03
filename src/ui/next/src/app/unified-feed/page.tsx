@@ -34,12 +34,10 @@ export default function UnifiedFeed() {
 
   const handleApprove = (itemId: string) => {
     // Send approval to backend
-    console.log('Approved:', itemId);
   };
 
   const handleEdit = (itemId: string) => {
     // Open edit modal
-    console.log('Edit:', itemId);
   };
 
   if (loading) return <div className="p-4 text-center">Loading feed...</div>;

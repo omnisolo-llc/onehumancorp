@@ -33,7 +33,7 @@ pub async fn create_proposed_booking(
     {
         Ok(booking) => (StatusCode::CREATED, Json(booking)).into_response(),
         Err(e) => {
-            eprintln!("Failed to create proposed booking: {:?}", e);
+            tracing::error!("Failed to create proposed booking: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create booking").into_response()
         }
     }
@@ -51,7 +51,7 @@ pub async fn approve_proposed_booking(
     match BookingService::approve_proposed_booking(id, payload.tenant_id).await {
         Ok(booking) => (StatusCode::OK, Json(booking)).into_response(),
         Err(e) => {
-            eprintln!("Failed to approve proposed booking: {:?}", e);
+            tracing::error!("Failed to approve proposed booking: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to approve booking").into_response()
         }
     }
@@ -63,7 +63,7 @@ pub async fn list_proposed_bookings(
     match BookingService::get_proposed_bookings(tenant_id).await {
         Ok(bookings) => (StatusCode::OK, Json(bookings)).into_response(),
         Err(e) => {
-            eprintln!("Failed to list proposed bookings: {:?}", e);
+            tracing::error!("Failed to list proposed bookings: {:?}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch bookings").into_response()
         }
     }
