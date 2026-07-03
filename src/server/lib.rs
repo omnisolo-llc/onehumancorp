@@ -2733,11 +2733,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let orch_clone = dept_orchestrator.clone();
     tokio::spawn(async move {
         while let Ok(event) = products_rx.recv().await {
-            if event.action == "ProductCreated" || event.action == "ProductUpdated" {
+            if event.action == "ProductCreated" || event.action == "ProductUpdated" || event.action == "tenant.product.created" || event.action == "tenant.product.updated" {
                 if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                     if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                         let tenant_id = payload_json.get("organization_id").and_then(|v| v.as_str()).unwrap_or("system").to_string();
-                        let event_type = if event.action == "ProductCreated" {
+                        let event_type = if event.action == "ProductCreated" || event.action == "tenant.product.created" {
                             "tenant.product.created".to_string()
                         } else {
                             "tenant.product.updated".to_string()

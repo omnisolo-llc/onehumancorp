@@ -958,13 +958,13 @@ impl PromoterWorker {
 let db_for_products = self.db.clone();
         tokio::spawn(async move {
             while let Ok(event) = product_rx.recv().await {
-                if event.action == "ProductCreated" || event.action == "ProductUpdated" {
+                if event.action == "ProductCreated" || event.action == "ProductUpdated" || event.action == "tenant.product.created" || event.action == "tenant.product.updated" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let org_id = payload_json.get("tenant_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
                             let mut product_id = String::new();
                             let mut product_name = String::new();
-                            if let Some(pid) = payload_json.get("product_id").and_then(|p| p.as_str()) {
+                            if let Some(pid) = payload_json.get("product_id").and_then(|p| p.as_str()).or_else(|| payload_json.get("id").and_then(|p| p.as_str())) {
                                 product_id = pid.to_string();
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", pid)).await;
@@ -986,6 +986,30 @@ let db_for_products = self.db.clone();
                             }
 
                             if !product_id.is_empty() && !product_name.is_empty() {
+                                // Double check if already created draft
+                                let sanitized_name = product_name.replace("%", "\\%").replace("_", "\\_");
+                                match &db_for_products.store {
+                                    crate::db::DbStore::Postgres => {
+                                        if let Ok(count) = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_feed_items WHERE tenant_id = $1 AND proposed_action::text LIKE $2")
+                                            .bind(&org_id)
+                                            .bind(format!("%{}%", sanitized_name))
+                                            .fetch_one(&db_for_products.pool).await {
+                                                if count > 0 {
+                                                    continue;
+                                                }
+                                        }
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        if let Ok(count) = sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_feed_items WHERE tenant_id = ? AND proposed_action LIKE ?")
+                                            .bind(&org_id)
+                                            .bind(format!("%{}%", sanitized_name))
+                                            .fetch_one(pool).await {
+                                                if count > 0 {
+                                                    continue;
+                                                }
+                                        }
+                                    }
+                                }
                                 let prompt = format!("You are The Promoter, an AI social media manager. Generate 3 variant captions (TikTok, Instagram, Facebook) to promote the new product '{}'. Format the output as JSON with keys 'tiktok', 'instagram', 'facebook'.", product_name);
 
                                 let mut drafted_msg = r#"{"tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}"#.to_string();

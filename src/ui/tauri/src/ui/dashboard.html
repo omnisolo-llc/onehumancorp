@@ -1984,7 +1984,7 @@
 
 
 
-          if (actionType === 'SocialPostDraft' || item.context_payload?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft') {
+          if (actionType === 'SocialPostDraft' || item.context_payload?.feature_type === 'social_post_draft' || item.payload?.feature_type === 'social_post_draft' || item.proposed_action?.feature_type === 'social_post_draft') {
             let parsedPayload = item.proposed_action || item.context_payload || {};
             return `
               <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
