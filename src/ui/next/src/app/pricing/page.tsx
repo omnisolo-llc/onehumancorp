@@ -269,7 +269,7 @@ export default function PricingPage() {
               </div>
               <div>
                   <h3 className="font-semibold text-gray-800">What is the storage limit?</h3>
-                  <p className="text-gray-600 text-sm mt-1 leading-relaxed">Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
+                  <p className="text-gray-600 text-sm mt-1 leading-relaxed">Storage limits vary by plan, starting at 2GB for Free and up to 500GB for Business.</p>
               </div>
             </div>
         </div>
