@@ -21,7 +21,9 @@ use redis::AsyncCommands;
 pub struct MobileAgentFeedItem {
     pub id: String,
     pub event_source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub context_payload: Option<sqlx::types::Json<serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub proposed_action: Option<sqlx::types::Json<serde_json::Value>>,
     pub lifecycle_state: String,
     pub created_at: Option<DateTime<Utc>>,
