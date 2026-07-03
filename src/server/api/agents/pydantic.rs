@@ -17,14 +17,15 @@ pub struct PydanticValidateResponse {
     pub is_recoverable: bool,
 }
 
-pub fn router() -> Router {
+pub fn router<S>() -> Router<S> where S: Clone + Send + Sync + 'static {
     Router::new().route("/", post(validate_pydantic))
 }
 
 async fn validate_pydantic(
     Json(payload): Json<PydanticValidateRequest>,
 ) -> axum::response::Response {
-    use axum::response::IntoResponse;
+    use axum::response::{IntoResponse, Response};
+use axum::http::StatusCode;
     use ohc_builtin_agent::types::{format_pydantic_error_string, format_pydantic_error};
 
     let mut err_msg = None;
@@ -72,7 +73,7 @@ async fn validate_pydantic(
                     is_recoverable: false,
                 }),
             )
-                .into();
+                .into_response();
         }
     }
 
@@ -85,7 +86,7 @@ async fn validate_pydantic(
                 is_recoverable,
             }),
         )
-            .into()
+            .into_response()
     } else {
         (
             axum::http::StatusCode::OK,
@@ -95,6 +96,6 @@ async fn validate_pydantic(
                 is_recoverable: false,
             }),
         )
-            .into()
+            .into_response()
     }
 }

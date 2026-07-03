@@ -101,6 +101,7 @@ SERVER_RS_SRCS = [
     "//src/server/api/agents:translation.rs",
     "//src/server/api/agents:webhook.rs",
     "//src/server/api/agents:client_intake.rs",
+    "//src/server/api/agents:pydantic.rs",
     "//src/server/api/onboarding:mod.rs",
     "//src/server/api/inbox:srcs",
     "//src/server/api/ohc_job_queue:srcs",
