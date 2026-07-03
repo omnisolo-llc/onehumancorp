@@ -569,7 +569,7 @@ async fn handle_trial_extension_claim(
     };
 
     // First check if already claimed
-    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1 OR tenant_id = $1")
+    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1 OR tenant_id = $1")
         .bind(parsed_uuid)
         .fetch_optional(&state.pool)
         .await
@@ -3398,7 +3398,7 @@ mod tests {
 
         assert_eq!(plan_tier, "pro");
 
-        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1::uuid")
+        let has_claimed: bool = sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1::uuid")
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
 
