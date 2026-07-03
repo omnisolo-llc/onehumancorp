@@ -5194,7 +5194,7 @@ async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mob
         crate::db::DbStore::Postgres => {
             if mobile_optimized {
                 sqlx::query(
-                    "SELECT id, title, status, created_at, updated_at FROM shared_tasks WHERE (organization_id = $1) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, title, status, created_at, updated_at FROM shared_tasks WHERE tenant_id = $1 AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)
@@ -5211,7 +5211,7 @@ async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mob
                 }).collect::<Vec<_>>())
             } else {
                 sqlx::query(
-                    "SELECT id, title, description, status, created_at, updated_at FROM shared_tasks WHERE (organization_id = $1) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT $2"
+                    "SELECT id, title, description, status, created_at, updated_at FROM shared_tasks WHERE tenant_id = $1 AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT $2"
                 )
                 .bind(tenant_id)
                 .bind(limit)

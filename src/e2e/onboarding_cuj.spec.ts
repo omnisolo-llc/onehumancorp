@@ -51,7 +51,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     const categorySelect = page.getByTestId('business-categories');
     await expect(categorySelect).toBeVisible();
-    await categorySelect.selectOption('Bakery');
+    await categorySelect.selectOption('Home Baker');
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
 
     await page.getByTestId('business-name').fill('Maya');
@@ -98,7 +98,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     const categorySelect = page.getByTestId('business-categories');
     await expect(categorySelect).toBeVisible();
-    await categorySelect.selectOption('Bakery');
+    await categorySelect.selectOption('Home Baker');
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
 
     await page.getByTestId('business-name').fill('M');
@@ -118,7 +118,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.locator('label', { hasText: 'Storefront or Cafe' }).click();
     await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
     const categorySelect = page.getByTestId('business-categories');
-    await categorySelect.selectOption('Bakery');
+    await categorySelect.selectOption('Home Baker');
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
     await page.getByTestId('business-name').fill('Maya');
     await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
@@ -149,7 +149,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     const categorySelect = page.getByTestId('business-categories');
     await expect(categorySelect).toBeVisible();
-    await categorySelect.selectOption('Bakery');
+    await categorySelect.selectOption('Home Baker');
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
 
     await page.getByTestId('business-name').fill('Maya');
@@ -171,7 +171,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     const categorySelect = page.getByTestId('business-categories');
     await expect(categorySelect).toBeVisible();
-    await categorySelect.selectOption('Bakery');
+    await categorySelect.selectOption('Home Baker');
     await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
 
     await page.getByTestId('business-name').fill('Maya');
