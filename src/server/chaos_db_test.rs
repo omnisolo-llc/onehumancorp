@@ -87,7 +87,8 @@ mod chaos_db_tests {
         // Insert a row with NULL
         db.execute_with_retry::<_, _, _, String>("insert_null", || async {
             if let DbStore::Sqlite(pool) = &db.store {
-                sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?)")
+                sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?) \
+                     ON CONFLICT(id) DO UPDATE SET val = excluded.val")
                     .bind("row1")
                     .bind::<Option<String>>(None)
                     .execute(pool)
@@ -169,6 +170,6 @@ mod chaos_db_tests {
         }).await;
 
         assert!(res.is_err(), "Sync operation should time out to prevent cascading failures");
-        assert!(res.unwrap_err().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
+        assert!(res.unwrap_err().to_string().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
     }
 }
