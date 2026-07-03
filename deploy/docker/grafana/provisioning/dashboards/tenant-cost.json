@@ -43,7 +43,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "ohc_llm_cost_total",
+          "expr": "ohc_llm_cost_total_cents",
           "legendFormat": "LLM Cost - {{organization_id}}",
           "range": true,
           "refId": "A"
@@ -71,7 +71,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "ohc_storage_savings_total",
+          "expr": "ohc_storage_savings_total_cents",
           "legendFormat": "Storage Savings - {{organization_id}}",
           "range": true,
           "refId": "A"
