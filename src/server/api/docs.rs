@@ -62,11 +62,23 @@ pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<Stri
     Json(steps)
 }
 
-pub async fn get_tooltips() -> Json<std::collections::HashMap<String, String>> {
-    let registry = crate::get_tooltips_registry().read().unwrap();
+pub async fn get_tooltips(headers: axum::http::HeaderMap) -> Json<std::collections::HashMap<String, String>> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+    let pool = crate::db::get_pool();
     let mut tooltips = std::collections::HashMap::new();
-    for (k, v) in registry.iter() {
-        tooltips.insert(k.clone(), v.clone());
+    if let Ok(rows) = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1").bind(tenant_id)
+        .fetch_all(&pool)
+        .await
+    {
+        for row in rows {
+            use sqlx::Row;
+            let id: String = row.get("id");
+            let text: String = row.get("text");
+            tooltips.insert(id, text);
+        }
     }
     Json(tooltips)
 }
@@ -82,9 +94,15 @@ pub struct SuccessResponse {
     pub success: bool,
 }
 
-pub async fn update_tooltip(axum::extract::Json(payload): axum::extract::Json<TooltipPayload>) -> Json<SuccessResponse> {
-    let mut registry = crate::get_tooltips_registry().write().unwrap();
-    registry.insert(payload.id, payload.text);
+pub async fn update_tooltip(headers: axum::http::HeaderMap, axum::extract::Json(payload): axum::extract::Json<TooltipPayload>) -> Json<SuccessResponse> {
+    let tenant_id = headers
+        .get("x-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default");
+    let pool = crate::db::get_pool();
+    let _ = sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET text = EXCLUDED.text").bind(payload.id).bind(tenant_id).bind(payload.text)
+        .execute(&pool)
+        .await;
     Json(SuccessResponse { success: true })
 }
 
