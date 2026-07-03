@@ -144,10 +144,45 @@ async fn handle_reserve(
     .execute(&mut *tx)
     .await;
 
+
+    // Add feed item
+    let feed_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query(
+        r#"
+        INSERT INTO agent_feed (id, tenant_id, event_source, lifecycle_state, context_payload)
+        VALUES ($1, $2, 'booking_request', 'new', $3)
+        "#
+    )
+    .bind(&feed_id)
+    .bind(&tenant_id)
+    .bind(serde_json::json!({
+        "booking_id": booking_id,
+        "service_id": payload.service_id,
+        "start_time": payload.start_time,
+        "end_time": payload.end_time
+    }))
+    .execute(&mut *tx)
+    .await;
+
     let _ = tx.commit().await;
 
+
+
     // Check if deposit is required
-    let requires_deposit = false; // We can read from services table, hardcoded to false here for now.
+    let mut requires_deposit = false;
+    if let Ok(Some(price)) = sqlx::query_scalar::<_, i64>(
+        "SELECT price_cents FROM services WHERE id = $1 AND tenant_id = $2"
+    )
+    .bind(&payload.service_id)
+    .bind(&tenant_id)
+    .fetch_optional(&pool)
+    .await
+    {
+        if price > 0 {
+            requires_deposit = true;
+        }
+    }
+
 
     let checkout_url = if requires_deposit {
         Some(format!("/api/v1/booking/deposit?booking_id={}", booking_id))
