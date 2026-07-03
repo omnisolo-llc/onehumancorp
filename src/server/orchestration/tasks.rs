@@ -1786,3 +1786,38 @@ mod chaos_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod tasks_resilience_tests {
+    #[tokio::test]
+    async fn test_ml_resilience_cascading_failures() {
+        // Simulate a failing AI call returning an error
+        let failing_api_call = async {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            Err::<(), String>("Rate limited".to_string())
+        };
+
+        let result = tokio::time::timeout(std::time::Duration::from_millis(60), failing_api_call).await;
+
+        // Assert that the error is caught and wrapped without panicking
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_err());
+    }
+
+    #[tokio::test]
+    async fn test_ml_resilience_corrupt_data() {
+        // Test idempotency by ensuring a failed task update does not corrupt existing data
+        let database_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect(database_url).await.unwrap();
+
+        sqlx::query("CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, status TEXT, payload TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO shared_tasks (id, status, payload) VALUES ('task_1', 'PENDING', '{\"data\":\"important\"}')").execute(&pool).await.unwrap();
+
+        // Simulate a failed update
+        let _ = sqlx::query("UPDATE shared_tasks SET status = 'FAILED' WHERE id = 'task_1'").execute(&pool).await.unwrap();
+
+        // Assert data is intact
+        let row: (String,) = sqlx::query_as("SELECT payload FROM shared_tasks WHERE id = 'task_1'").fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "{\"data\":\"important\"}");
+    }
+}

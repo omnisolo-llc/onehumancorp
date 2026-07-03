@@ -149,7 +149,7 @@ export default function PricingPage() {
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
                 <li className="flex items-center gap-2"><span>✓</span> 1 Agent Limit</li>
                 <li className="flex items-center gap-2"><span>✓</span> 100 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 2GB Storage Quota</li>
+                <li className="flex items-center gap-2"><span>✓</span> 500MB Storage Quota</li>
                 <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
               </ul>
             </div>

@@ -64,19 +64,27 @@ impl NamespaceJsonStore {
         let content = serde_json::to_string_pretty(entries)
             .map_err(|e| format!("Failed to serialize JSON: {}", e))?;
 
-        let mut file = fs::File::create(&tmp_path)
-            .await
-            .map_err(|e| format!("Failed to create temp file: {}", e))?;
-        file.write_all(content.as_bytes())
-            .await
-            .map_err(|e| format!("Failed to write temp file: {}", e))?;
-        file.sync_all()
-            .await
-            .map_err(|e| format!("Failed to sync temp file: {}", e))?;
+        let mut file = match fs::File::create(&tmp_path).await {
+            Ok(f) => f,
+            Err(e) => return Err(format!("Failed to create temp file: {}", e)),
+        };
 
-        fs::rename(&tmp_path, &path)
-            .await
-            .map_err(|e| format!("Failed to commit file: {}", e))?;
+        if let Err(e) = file.write_all(content.as_bytes()).await {
+            drop(file);
+            let _ = fs::remove_file(&tmp_path).await;
+            return Err(format!("Failed to write temp file: {}", e));
+        }
+
+        if let Err(e) = file.sync_all().await {
+            drop(file);
+            let _ = fs::remove_file(&tmp_path).await;
+            return Err(format!("Failed to sync temp file: {}", e));
+        }
+
+        if let Err(e) = fs::rename(&tmp_path, &path).await {
+            let _ = fs::remove_file(&tmp_path).await;
+            return Err(format!("Failed to commit file: {}", e));
+        }
         Ok(())
     }
 }

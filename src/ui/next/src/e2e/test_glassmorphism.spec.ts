@@ -61,7 +61,7 @@ test.describe('Premium Aesthetics Verification', () => {
 
   test('Verify glassmorphism effect on Setup Wizard', async ({ page }) => {
     await page.goto('/onboarding');
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     // The wizard container usually has glassmorphism

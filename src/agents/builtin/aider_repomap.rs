@@ -151,8 +151,8 @@ impl RepoMap {
 mod tests {
     use super::*;
     use std::fs::{self, File};
-    use tempfile::TempDir;
     use std::io::Write;
+    use tempfile::TempDir;
 
     #[test]
     fn test_repo_map_generation() {
@@ -163,10 +163,14 @@ mod tests {
         fs::create_dir(root.join("src")).unwrap();
 
         let mut main_rs = File::create(root.join("src/main.rs")).unwrap();
-        main_rs.write_all(b"fn main() {\n    println!(\"Hello\");\n}\n").unwrap();
+        main_rs
+            .write_all(b"fn main() {\n    println!(\"Hello\");\n}\n")
+            .unwrap();
 
         let mut lib_rs = File::create(root.join("src/lib.rs")).unwrap();
-        lib_rs.write_all(b"pub struct MyStruct;\n\nimpl MyStruct {}\n").unwrap();
+        lib_rs
+            .write_all(b"pub struct MyStruct;\n\nimpl MyStruct {}\n")
+            .unwrap();
 
         fs::create_dir(root.join("docs")).unwrap();
         File::create(root.join("docs/readme.md")).unwrap();
@@ -206,7 +210,9 @@ mod tests {
         let root = temp_dir.path();
 
         let mut main_go = File::create(root.join("main.go")).unwrap();
-        main_go.write_all(b"package main\n\ntype MyType struct {}\n\nfunc main() {\n}\n").unwrap();
+        main_go
+            .write_all(b"package main\n\ntype MyType struct {}\n\nfunc main() {\n}\n")
+            .unwrap();
 
         let repo_map = RepoMap::new(root);
         let output = repo_map.generate_map().unwrap();
@@ -227,7 +233,9 @@ mod tests {
         let root = temp_dir.path();
 
         let mut main_ts = File::create(root.join("main.ts")).unwrap();
-        main_ts.write_all(b"export interface Config {}\n\nclass App {}\n\nfunction start() {}\n").unwrap();
+        main_ts
+            .write_all(b"export interface Config {}\n\nclass App {}\n\nfunction start() {}\n")
+            .unwrap();
 
         let repo_map = RepoMap::new(root);
         let output = repo_map.generate_map().unwrap();

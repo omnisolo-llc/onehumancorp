@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const [seoReports, setSeoReports] = useState<any[]>([]);
   const [hitRate, setHitRate] = useState<string>("");
   const [enableLazyToolLoading, setEnableLazyToolLoading] = useState(false);
+  const [productTelemetryEnabled, setProductTelemetryEnabled] = useState(false);
 
 
   useEffect(() => {
@@ -79,7 +80,7 @@ export default function SettingsPage() {
         .then(res => res.json())
         .then(data => {
           if (data && data.product_telemetry_enabled !== undefined) {
-            setEnableProductTelemetry(data.product_telemetry_enabled);
+            setProductTelemetryEnabled(data.product_telemetry_enabled);
           }
         })
         .catch(e => console.error("Failed to load telemetry settings", e)),
@@ -117,7 +118,7 @@ export default function SettingsPage() {
   };
 
   const handleTelemetryChange = async (checked: boolean) => {
-    setEnableProductTelemetry(checked);
+    setProductTelemetryEnabled(checked);
     try {
       await fetch("/api/settings/telemetry", {
         method: "POST",
@@ -569,7 +570,7 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 aria-label="Enable Product Telemetry (Standalone Mode)"
-                checked={enableProductTelemetry}
+                checked={productTelemetryEnabled}
                 onChange={(e) => handleTelemetryChange(e.target.checked)}
                 className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
               />

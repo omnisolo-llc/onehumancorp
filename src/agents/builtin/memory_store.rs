@@ -1297,7 +1297,6 @@ impl Anthropic3TierMemoryStore {
             .await
             .map_err(|e| e.to_string())
     }
-
 }
 
 #[async_trait]
@@ -4195,7 +4194,7 @@ async fn test_conflict_resolution() {
             reliability_score INTEGER DEFAULT 50,
             owner_override BOOLEAN DEFAULT FALSE,
             metadata TEXT
-        );"
+        );",
     )
     .execute(&pool)
     .await

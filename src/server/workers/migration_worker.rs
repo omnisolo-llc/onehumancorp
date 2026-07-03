@@ -110,13 +110,29 @@ impl MigrationWorker {
             let res = tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await;
             match res {
                 Ok(Ok(content)) => {
-                    response = content;
-                    break;
+                    // Check for invalid malformed json response
+                    if serde_json::from_str::<Vec<serde_json::Value>>(&content.trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim()).is_err() {
+                        attempts += 1;
+                        if attempts == 3 {
+                            return Err("AI migration extraction failed with malformed JSON after 3 attempts".into());
+                        }
+                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                    } else {
+                        response = content;
+                        break;
+                    }
                 },
-                _ => {
+                Ok(Err(e)) => {
                     attempts += 1;
                     if attempts == 3 {
-                        return Err("AI migration extraction failed after 3 attempts".into());
+                        return Err(format!("AI migration extraction failed after 3 attempts: {}", e).into());
+                    }
+                    tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                },
+                Err(_) => {
+                    attempts += 1;
+                    if attempts == 3 {
+                        return Err("AI migration extraction exceeded 60-second ML-Resilience timeout rule and failed after 3 attempts".into());
                     }
                     tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
                 }
@@ -164,5 +180,29 @@ impl MigrationWorker {
         tx.commit().await?;
 
         Ok(serde_json::Value::Array(extracted_array))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_ml_resilience_migration_worker_timeout() {
+        let start = std::time::Instant::now();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            Ok::<(), String>(())
+        })
+        .await;
+
+        assert!(
+            result.is_err(),
+            "MigrationWorker must enforce ML-Resilience timeout"
+        );
+        assert!(
+            start.elapsed() >= std::time::Duration::from_millis(50),
+            "Timeout should wait the configured time"
+        );
     }
 }

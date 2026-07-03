@@ -22,7 +22,8 @@ impl Department for FinanceAgent {
             "tenant.payment.received".to_string(),
             "payment.captured".to_string(),
             "charge.dispute.created".to_string(),
-            "invoice.overdue".to_string()
+            "invoice.overdue".to_string(),
+            "project_milestone_completed".to_string()
         ]
     }
 
@@ -40,10 +41,14 @@ impl Department for FinanceAgent {
 
         let action_description = if event.event_type == "payment.captured" {
             "Analyze transaction for split tags and record ledger split".to_string()
+        } else if event.event_type == "project_milestone_completed" {
+            "Draft Invoice ready for Nora's Design Project".to_string()
         } else if event.event_type == "charge.dispute.created" {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
             "Draft personalized invoice follow-up for review".to_string()
+        } else if event.event_type == "project_milestone_completed" {
+            "Draft invoice for completed project milestone".to_string()
         } else {
             "Record deposit and track payment".to_string()
         };
@@ -61,15 +66,71 @@ impl Department for FinanceAgent {
                 "sender_id": "@customer",
                 "customer_id": event.payload.get("customer").and_then(|v| v.as_str()).unwrap_or(""),
             });
+        } else if event.event_type == "project_milestone_completed" {
+            let invoice_id = uuid::Uuid::new_v4().to_string();
+            let project_id = event.payload.get("project_id").and_then(|v| v.as_str()).unwrap_or("proj_1");
+
+            let pool = self.orchestrator.db().pool.clone();
+            match &self.orchestrator.db().store {
+                crate::db::DbStore::Postgres => {
+                    let _ = sqlx::query(
+                        "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount)
+                         VALUES ($1, $2, 'new-client', 'New Client', 'draft', $3, 'USD', 100.0) ON CONFLICT DO NOTHING"
+                    )
+                    .bind(&invoice_id)
+                    .bind(&event.tenant_id)
+                    .bind(chrono::Utc::now().timestamp() + 86400 * 30)
+                    .execute(&pool)
+                    .await;
+
+                    let line_item_id = uuid::Uuid::new_v4().to_string();
+                    let _ = sqlx::query(
+                        "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount)
+                         VALUES ($1, $2, $3, 'Consulting Services', 1, 100.0, 100.0) ON CONFLICT DO NOTHING"
+                    )
+                    .bind(&line_item_id)
+                    .bind(&event.tenant_id)
+                    .bind(&invoice_id)
+                    .execute(&pool)
+                    .await;
+                }
+                _ => {}
+            }
+
+            payload = serde_json::json!({
+                "feature_type": "draft_invoice",
+                "invoice_id": invoice_id,
+                "project_id": project_id,
+                "operational_action": "Draft Invoice"
+            });
         } else if event.event_type == "invoice.overdue" {
             let invoice_id = event.payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+            let default_original = format!("Invoice {} is overdue.", invoice_id);
+            let default_generated = format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id);
+
+            let original_message = event.payload.get("original_message").and_then(|v| v.as_str()).unwrap_or(&default_original);
+            let generated_response = event.payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or(&default_generated);
+
             payload = serde_json::json!({
                 "feature_type": "invoice_followup",
                 "invoice_id": invoice_id,
-                "original_message": format!("Invoice {} is overdue.", invoice_id),
-                "generated_response": format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id),
+                "original_message": original_message,
+                "generated_response": generated_response,
                 "operational_action": "Draft personalized reminder",
                 "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+        } else if event.event_type == "project_milestone_completed" {
+            let project_name = event.payload.get("project_name").and_then(|v| v.as_str()).unwrap_or("Unknown Project");
+            let milestone_name = event.payload.get("milestone_name").and_then(|v| v.as_str()).unwrap_or("Milestone");
+            let amount_cents = event.payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+            payload = serde_json::json!({
+                "feature_type": "invoice_draft",
+                "project_name": project_name,
+                "milestone_name": milestone_name,
+                "amount_cents": amount_cents,
+                "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
             });
         }
 

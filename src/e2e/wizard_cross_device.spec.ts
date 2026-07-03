@@ -32,7 +32,7 @@ test.describe('Wizard Cross Device E2E', () => {
     await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
 
     await expect(page.getByRole('heading', { name: /What's your category?/ })).toBeVisible();
-    await page.locator('#business-categories').selectOption('Bakery');
+    await page.locator('#business-categories').selectOption('Home Baker');
     await page.locator('#step-categories .next-step-btn').click();
 
     await expect(page.getByRole('heading', { name: /What's the name of your business?/ })).toBeVisible();

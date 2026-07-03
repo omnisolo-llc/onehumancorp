@@ -2669,7 +2669,11 @@ impl Agent {
                 {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Unexpected(msg)) => {
-                        return Err(format!("Error executing planned step: Unexpected error: {}", msg).into());
+                        return Err(format!(
+                            "Error executing planned step: Unexpected error: {}",
+                            msg
+                        )
+                        .into());
                     }
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -2679,7 +2683,11 @@ impl Agent {
                             tokio::time::sleep(backoff).await;
                             continue;
                         } else {
-                            return Err(format!("Error executing planned step: Transient error after retries: {}", msg).into());
+                            return Err(format!(
+                                "Error executing planned step: Transient error after retries: {}",
+                                msg
+                            )
+                            .into());
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
@@ -5223,8 +5231,10 @@ mod tests {
                 } else {
                     // Check if the prompt contains the recoverable error
                     let last_msg = _req.messages.last().unwrap();
-                    let expected_error =
-                        crate::types::format_llm_recoverable_error("failing_tool", "Failing for test");
+                    let expected_error = crate::types::format_llm_recoverable_error(
+                        "failing_tool",
+                        "Failing for test",
+                    );
                     let has_error = last_msg.tool_results.iter().any(|r| {
                         r.content.contains("LLM-Recoverable Error")
                             || r.error.contains(&expected_error)
@@ -5284,7 +5294,8 @@ mod tests {
         // assert_eq!(result.unwrap(), "I fixed the error");
 
         // Verify the ToolCall event has the LlmRecoverable message
-        let expected_error = crate::types::format_llm_recoverable_error("failing_tool", "Failing for test");
+        let expected_error =
+            crate::types::format_llm_recoverable_error("failing_tool", "Failing for test");
         let _has_recoverable_event = events.iter().any(|e| {
             if let AgentEvent::ToolCall { result, .. } = e {
                 result.contains(&expected_error)

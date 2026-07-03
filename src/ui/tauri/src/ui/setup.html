@@ -44,24 +44,22 @@
       }
      /* OHC Premium Glassmorphism */
       .glassmorphism {
+        border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
+          border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-      }
-      @media (prefers-color-scheme: dark) {
       }
 
       h1 {
@@ -80,7 +78,7 @@
       input {
         width: 100%;
         padding: 14px;
-        min-height: 44px !important;
+        min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
@@ -127,7 +125,7 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 8px;
+        border-radius: 8px !important;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       @media (prefers-color-scheme: dark) {
@@ -136,7 +134,7 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 8px;
+          border-radius: 8px !important;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
       }
@@ -146,7 +144,7 @@
         color: white;
         border: none;
         padding: 14px 24px;
-        min-height: 44px !important;
+        min-height: 44px;
         border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
@@ -163,13 +161,23 @@
       }
 
       .error-msg {
-        color: #ff3b30;
-        font-size: 12px;
-        margin-top: -15px;
-        margin-bottom: 15px;
+        background: rgba(255, 59, 48, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 59, 48, 0.5);
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 8px;
+        margin-bottom: 16px;
+        min-height: 44px;
         display: none;
+        align-items: center;
+        justify-content: flex-start;
+        color: #ff3b30;
+        font-size: 14px;
+        font-weight: 600;
         text-align: left;
-      }
+    }
 
       .invalid-input {
         background: rgba(255, 59, 48, 0.1) !important;
@@ -662,7 +670,7 @@
         color: #1d1d1f;
         width: 100%;
         padding: 14px;
-        min-height: 44px !important;
+        min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px;
@@ -764,7 +772,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
         padding: 12px 16px;
-        min-height: 44px !important;
+        min-height: 44px;
         border-radius: 8px;
         cursor: pointer;
         transition:
@@ -799,7 +807,7 @@
         box-shadow: none;
         border: 1px solid rgba(0, 0, 0, 0.1);
         margin-top: 10px;
-        min-height: 44px !important;
+        min-height: 44px;
       }
       .btn-secondary:hover {
         background-color: rgba(0, 0, 0, 0.05);
@@ -826,7 +834,7 @@
         min-height: 44px;
         flex: 0 0 auto;
         padding: 8px 16px;
-        min-height: 44px !important;
+        min-height: 44px;
         display: flex;
         align-items: center;
         border-radius: 8px;
@@ -1030,7 +1038,14 @@
           box-sizing: border-box;
           min-height: 44px;
           border-radius: 8px;
-          min-height: 44px !important;
+          min-height: 44px;
+        }
+        .persona-row {
+          flex-direction: column;
+        }
+        .work-context-cards {
+          display: flex;
+          flex-direction: column;
         }
       }
 
@@ -1118,8 +1133,8 @@
       .glassmorphism.panel {
         border-radius: 16px;
       }
-          #instant-bio { min-height: 44px !important; box-sizing: border-box; }
-      .context-card { min-height: 44px !important; box-sizing: border-box; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; }
+      .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
 
     <style>
@@ -1227,10 +1242,16 @@
           box-shadow: 0 0 0 1px #0066ff;
         }
       }
-          #instant-bio { min-height: 44px !important; box-sizing: border-box; }
-      .context-card { min-height: 44px !important; box-sizing: border-box; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; }
+      .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
-  </head>
+
+    <style>
+      input.glassmorphism, select.glassmorphism, textarea.glassmorphism, button.glassmorphism {
+        border-radius: 8px !important;
+      }
+    </style>
+</head>
   <body>
     <div class="container glassmorphism" id="form-container">
       <!-- Step 0: Initial Screen -->
@@ -2581,7 +2602,7 @@
 
         if (persona === "Baker") {
           state.work_context = "Storefront";
-          state.categories = "Bakery";
+          state.categories = "Home Baker";
           state.business_name = "Maya's Bakery";
           state.assistant_name = "Cookie";
           state.assistant_tone = "Friendly";
@@ -3100,14 +3121,14 @@
             'input[name="work_context"]:checked',
           );
           if (!selected) {
-            errors.context.style.display = "block";
+            errors.context.style.display = "flex";
             isValid = false;
           } else {
             state.work_context = selected.value;
           }
         } else if (stepId === "step-categories") {
           if (inputs.categories.value.trim() === "") {
-            errors.categories.style.display = "block";
+            errors.categories.style.display = "flex";
             inputs.categories.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3118,7 +3139,7 @@
         } else if (stepId === "step-name") {
           if (inputs.name.value.trim().length < 3) {
             errors.name.innerText = "Business Name must be at least 3 characters.";
-            errors.name.style.display = "block";
+            errors.name.style.display = "flex";
             inputs.name.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3208,7 +3229,7 @@
         } else if (stepId === "step-location") {
           if (inputs.location.value.trim() === "") {
             errors.location.innerText = "Please tell us your location.";
-            errors.location.style.display = "block";
+            errors.location.style.display = "flex";
             inputs.location.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3219,7 +3240,7 @@
         } else if (stepId === "step-target-audience") {
           if (inputs.target_audience.value.trim() === "") {
             errors.target_audience.innerText = "Please tell us your target audience.";
-            errors.target_audience.style.display = "block";
+            errors.target_audience.style.display = "flex";
             inputs.target_audience.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3347,7 +3368,7 @@
           "Other",
         ],
         Storefront: [
-          "Bakery",
+          "Home Baker",
           "Cafe",
           "Restaurant",
           "Retail",
@@ -3437,8 +3458,8 @@
 
       window.goToStep = goToStep;
 
-      // Enter key support for select inputs
-      document.querySelectorAll("select").forEach((input) => {
+      // Enter key support for inputs
+      document.querySelectorAll("select, input").forEach((input) => {
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -3988,7 +4009,7 @@
                 clearInterval(window.generateStorefrontLoadingInterval);
                 delete window.generateStorefrontLoadingInterval;
             }
-            generateStorefrontBtn.innerHTML = "Next";
+            generateStorefrontBtn.innerHTML = "Generate My Workspace";
           }
         });
       }
@@ -4603,8 +4624,8 @@
       .ohc-tooltip.visible {
         opacity: 1;
       }
-          #instant-bio { min-height: 44px !important; box-sizing: border-box; }
-      .context-card { min-height: 44px !important; box-sizing: border-box; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; }
+      .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
@@ -4769,8 +4790,8 @@
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
+                    <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                 </div>
             `;
 

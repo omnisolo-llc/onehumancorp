@@ -1,10 +1,16 @@
 --- src/server/chaos_db_test.rs
 +++ src/server/chaos_db_test.rs
-@@ -165,11 +165,11 @@
-         let res: Result<(), String> = db.execute_with_retry("slow_query", || async {
-             // Simulate a query that takes longer than the timeout
-             tokio::time::sleep(std::time::Duration::from_secs(65)).await;
-             Ok(())
+@@ -106,7 +106,8 @@
+         // Insert a row with NULL
+         db.execute_with_retry::<_, _, _, String>("insert_null", || async {
+             if let DbStore::Sqlite(pool) = &db.store {
+-                sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?)")
++                sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?) \
++                     ON CONFLICT(id) DO UPDATE SET val = excluded.val")
+                     .bind("row1")
+                     .bind::<Option<String>>(None)
+                     .execute(pool)
+@@ -165,6 +166,6 @@
          }).await;
 
          assert!(res.is_err(), "Sync operation should time out to prevent cascading failures");
