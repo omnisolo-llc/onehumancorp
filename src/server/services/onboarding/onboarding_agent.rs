@@ -169,6 +169,29 @@ Your response:",
             Some(m) => m,
             None => {
                 // E2E Test / Local adapter mock fallback when no LLM is configured
+                let input_lower = input.to_lowercase();
+                if input_lower.contains("apartment") || input_lower.contains("rental") || input_lower.contains("manage") {
+                    return Ok(IntakeData {
+                        business_name: "Elena's Rentals".to_string(),
+                        business_type: "Property Management".to_string(),
+                        categories: vec!["real_estate".to_string()],
+                        initial_products: vec![
+                            IntakeProduct {
+                                name: "1BR Apartment Lease".to_string(),
+                                price: "1500.00".to_string(),
+                                description: Some("Long-term apartment rental".to_string()),
+                                variants: None,
+                            },
+                        ],
+                        location: Some("Chicago, IL".to_string()),
+                        target_audience: Some("Long-term renters".to_string()),
+                        initial_tasks: Some(vec!["Setup property listings".to_string(), "Configure showing schedule".to_string()]),
+                        sample_customer_name: Some("John Tenant".to_string()),
+                        sample_customer_email: Some("john@example.com".to_string()),
+                        deposit_percentage: Some(100),
+                        lead_time_days: Some(30),
+                    });
+                }
                 return Ok(IntakeData {
                     business_name: "Mock Business".to_string(),
                     business_type: "Mock Type".to_string(),
@@ -213,6 +236,7 @@ Your response:",
             - Leo (Creator/Tutor): Needs packages, scheduling, and student follow-ups.
             - Fatima (Food Cart): Needs simple order list, pickup timing, and offline flows.
             - Nora (Agency): Needs project intake, proposals, and task assignment.
+            - Elena (Real Estate): Needs property listings, applicant screening, maintenance requests, and showing scheduling.
 
             If the input matches or is similar to these personas, use them for inspiration.
             If the input is an Instagram/social link, infer details from the profile.
@@ -677,6 +701,7 @@ Your response:",
         let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
         let strategy = match business_type {
             "Service Business" => "booking",
+            "Property Management" => "booking",
             _ => "physical",
         };
 

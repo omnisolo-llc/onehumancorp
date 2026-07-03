@@ -37,54 +37,25 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     // Route all API calls to the real backend
     await page.route('http://mock/api/**/*', async route => {
         const url = new URL(route.request().url());
-        if (url.pathname === '/api/onboarding/chat') {
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    reply: "Give me a minute... I'm building your business.",
-                    is_complete: true,
-                    intake_data: {
-                        business_name: "Plumber Joe",
-                        business_type: "Local Service",
-                        categories: ["plumbing"],
-                        location: "Local",
-                        target_audience: "General",
-                        initial_products: [
-                            { name: "Pipe Fix", price: "100.00" }
-                        ]
-                    }
-                })
+        url.host = '127.0.0.1:18789';
+        url.protocol = 'http:';
+        try {
+            const response = await page.request.fetch(url.toString(), {
+                method: route.request().method(),
+                headers: route.request().headers(),
+                data: route.request().postDataBuffer(),
             });
-        } else if (url.pathname === '/api/onboarding/start') {
             await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    organization_id: "test-org",
-                    user_id: "test-user"
-                })
+                response,
             });
-        } else {
-            url.host = '127.0.0.1:18789';
-            url.protocol = 'http:';
-            try {
-                const response = await page.request.fetch(url.toString(), {
-                    method: route.request().method(),
-                    headers: route.request().headers(),
-                    data: route.request().postDataBuffer(),
-                });
-                await route.fulfill({
-                    response,
-                });
-            } catch (e) {
-                await route.abort('failed');
-            }
+        } catch (e) {
+            await route.abort('failed');
         }
     });
 
 
     // Go to the onboarding setup
+    await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('http://mock/setup.html');
 
     // Wait for the container to be visible
@@ -110,7 +81,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
 
     // Send the first message
     const chatInput = page.locator('#chat-input');
-    await chatInput.fill("I am a plumber fixing pipes and stuff.");
+    await chatInput.fill("I manage 15 long-term apartment rentals.");
 
     // We expect the send button to have a height >= 44px
     const sendBtn = page.locator('#chat-send-btn');
@@ -120,7 +91,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     await sendBtn.click();
 
     // Check that the user message appears
-    await expect(chatMessages).toContainText('YouI am a plumber fixing pipes and stuff.');
+    await expect(chatMessages).toContainText('YouI manage 15 long-term apartment rentals.');
 
     // Check that the assistant replies immediately completing setup (via the updated backend behavior/mock)
     await expect(chatMessages).toContainText("Give me a minute... I'm building your business.");
