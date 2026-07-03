@@ -344,4 +344,37 @@ mod tests {
         assert!(!resolved_id4.is_empty());
         assert_ne!(resolved_id4, "cust-1");
     }
+
+    use axum::extract::State;
+    use axum::Json;
+    use axum::response::IntoResponse;
+    use axum::http::StatusCode;
+
+    #[tokio::test]
+    async fn test_handle_omnichannel_webhook() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let schema = "CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT); CREATE TABLE customer_identities (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT NOT NULL, channel TEXT NOT NULL, channel_identity TEXT NOT NULL, UNIQUE(tenant_id, channel, channel_identity)); CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, content TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, created_at TEXT); CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT); CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, job_type TEXT, payload TEXT, status TEXT);";
+        sqlx::query(schema).execute(&pool).await.unwrap();
+        let db = DB {
+            pool: sqlx::PgPool::connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        };
+
+        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+        let orchestrator = std::sync::Arc::new(crate::orchestration::departments::DepartmentOrchestrator::new(std::sync::Arc::new(db.clone()), mesh));
+
+        let app_state = AppState { db: std::sync::Arc::new(db), orchestrator };
+
+        let payload = OmnichannelPayload {
+            tenant_id: "t-1".into(),
+            channel: "sms".into(),
+            sender_id: "+123".into(),
+            message: "Hello".into(),
+        };
+
+        let res = handle_omnichannel_webhook(State(app_state), Json(payload)).await.into_response();
+
+        assert_eq!(res.status(), StatusCode::OK);
+    }
 }
