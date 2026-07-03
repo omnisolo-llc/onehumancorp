@@ -8,7 +8,13 @@ pub async fn handle_booking_action(tenant_id: &str, payload: &Value, pool: &PgPo
         let draft_reply = payload.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("");
 
         // 1. Update booking status
-        sqlx::query("UPDATE bookings SET status = 'pending_payment', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+        let _ = sqlx::query("UPDATE bookings SET status = 'pending_payment', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+            .bind(booking_id)
+            .bind(tenant_id)
+            .execute(pool)
+            .await;
+
+        let _ = sqlx::query("UPDATE booking_slots SET status = 'soft_locked', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
             .bind(booking_id)
             .bind(tenant_id)
             .execute(pool)

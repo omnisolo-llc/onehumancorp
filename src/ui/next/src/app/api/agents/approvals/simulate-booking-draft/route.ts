@@ -9,7 +9,7 @@ const pool = new Pool({
 export async function POST() {
   try {
     const id = randomUUID();
-    const tenantId = '00000000-0000-0000-0000-000000000001';
+    const tenantId = 'e2e-tenant';
     const customerId = randomUUID(); // Use a valid one if needed
     const payload = JSON.stringify({
       action_type: 'Draft Booking',

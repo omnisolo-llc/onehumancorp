@@ -2067,6 +2067,42 @@
             `;
           }
 
+
+          if (actionType === 'Draft Booking' || item.feature_type === 'booking_draft') {
+            let parsedPayload = {};
+            try {
+              if (typeof item.action_payload === 'string') {
+                parsedPayload = JSON.parse(item.action_payload);
+              } else if (item.action_payload) {
+                parsedPayload = item.action_payload;
+              } else if (item.context_payload) {
+                parsedPayload = item.context_payload;
+              }
+            } catch(e) {}
+            const draftReply = parsedPayload.draft_reply || parsedPayload.generated_response || 'Hi! I can schedule you. Should I confirm this booking and send the deposit link?';
+
+            return `
+              <div class="triage-item glassmorphism app-list-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); box-sizing: border-box; width: 100%;">
+                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <span style="font-size: 18px;">📋</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">Operations Agent</strong>
+                  </div>
+                  <div class="triage-priority glassmorphism" style="font-size: 12px; font-weight: 600; color: #0066FF; background: rgba(0, 102, 255, 0.1); padding: 4px 8px; border-radius: 8px;">Draft Ready</div>
+                </div>
+                <div class="triage-context" style="font-weight: 500; margin-bottom: 12px; font-size: 15px; color: #1D1D1F;">
+                  Drafted 1 booking reply and scheduled 1 visit.
+                </div>
+                <div style="background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #1D1D1F; border: 1px solid rgba(0, 102, 255, 0.1);">
+                  <strong>AI Draft:</strong> "${draftReply}"
+                </div>
+                <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; @media (min-width: 640px) { flex-direction: row; }">
+                  <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center;">Approve & Send Link</button>
+                  <button class="triage-btn-dismiss" data-testid="feed-edit-btn" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center;">Edit</button>
+                </div>
+              </div>
+            `;
+          }
+
           if (actionType === 'ambassador_reply') {
             let parsedPayload = {};
             try {

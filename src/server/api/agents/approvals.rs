@@ -122,6 +122,7 @@ where
         .route("/ledger", get(list_ledger_entries))
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
         .route("/simulate-quote-draft", post(simulate_quote_draft))
+        .route("/simulate-booking-draft", post(simulate_booking_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
         .route("/simulate-promoter-draft", post(simulate_promoter_draft))
@@ -606,6 +607,42 @@ async fn simulate_autonomous_booking_quote(
         Err(e) => {
             tracing::error!("Failed to simulate autonomous booking quote: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
+
+async fn simulate_booking_draft(
+    State(_orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(pool): Extension<sqlx::PgPool>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "00000000-0000-0000-0000-000000000001".to_string());
+    let id = uuid::Uuid::new_v4();
+
+    let payload = serde_json::json!({
+        "action_type": "Draft Booking",
+        "suggested_time": "Tuesday at 2:00 PM",
+        "requested_service": "Repair Service",
+        "estimated_value": 150.0,
+        "customer_message": "Hi, I need a repair on Tuesday. Are you free?",
+        "draft_reply": "Hi! I can schedule you for Tuesday at 2:00 PM for the repair. The estimate is $150. Should I confirm this booking and send the deposit link?"
+    });
+
+    let q = sqlx::query(
+        "INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, payload, agent_type, source) VALUES ($1, $2, 'Draft Booking', 'Pending', 0.95, $3, 'booking', 'CUSTOMER_INQUIRY')"
+    )
+    .bind(id.to_string())
+    .bind(tenant_id)
+    .bind(payload)
+    .execute(&pool)
+    .await;
+
+    match q {
+        Ok(_) => Json(serde_json::json!({ "success": true, "id": id })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate booking draft: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed").into_response()
         }
     }
 }

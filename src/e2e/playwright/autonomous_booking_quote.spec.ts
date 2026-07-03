@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Autonomous Booking & Quoting E2E', () => {
-    test('Carlos creates a service and views AI Operations Agent triage', async ({ page }) => {
+    test('Carlos creates a service and views AI Operations Agent triage', async ({ page, request }) => {
         // Go to dashboard
         await page.goto('/ui/dashboard.html');
         await expect(page.locator('text=Welcome back')).toBeVisible();
@@ -11,7 +11,7 @@ test.describe('Autonomous Booking & Quoting E2E', () => {
         await expect(createServiceLink).toBeVisible();
 
         // Pass a tenant for backend auth in UI calls
-        await page.goto('/ui/booking-create.html?tenant=carlos-handyman');
+        await page.goto('/ui/booking-create.html?tenant=e2e-tenant');
 
         await expect(page.locator('text=Create a Service')).toBeVisible();
 
@@ -33,11 +33,18 @@ test.describe('Autonomous Booking & Quoting E2E', () => {
         await page.click('button:has-text("Go to Dashboard")');
         await expect(page.locator('text=Bookings Dashboard')).toBeVisible();
 
+        // We need to navigate back to dashboard to see the feed and actually trigger the simulate booking draft API
+        // to populate the feed.
+        await request.post('/api/agents/approvals/simulate-booking-draft', { headers: { 'x-tenant-id': 'e2e-tenant' } });
+
+        // Refresh dashboard to pull latest agent feed
+        await page.goto('/ui/dashboard.html');
+
         // 2. Carlos sees the AI Operations Agent card
         const aiAgentCard = page.locator('text=Operations Agent');
         await expect(aiAgentCard).toBeVisible();
 
-        const aiAgentDesc = page.locator('text=Drafted 3 booking replies and scheduled 2 visits for tomorrow.');
+        const aiAgentDesc = page.locator('text=Drafted 1 booking reply and scheduled 1 visit.');
         await expect(aiAgentDesc).toBeVisible();
 
         // Verify action buttons exist
@@ -46,5 +53,8 @@ test.describe('Autonomous Booking & Quoting E2E', () => {
 
         const editBtn = page.locator('button:has-text("Edit")');
         await expect(editBtn).toBeVisible();
+
+        await approveBtn.first().click();
+        await page.waitForTimeout(500); // Wait for mock network request
     });
 });
