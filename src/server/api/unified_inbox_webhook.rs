@@ -61,6 +61,7 @@ pub struct UnifiedTriageAction {
     pub tenant_id: String,
     pub thread_id: String,
     pub action_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub action_payload: Option<String>,
     pub status: String,
     pub created_at: String,
@@ -506,6 +507,7 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                 }
                 for action in &mut triage_actions {
                     action.tenant_id = String::new();
+                    action.action_payload = None;
                 }
             }
 

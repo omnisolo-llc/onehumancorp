@@ -16,7 +16,7 @@ test.describe('Onboarding Error Banner UI', () => {
     });
 
     // Proceed to the end of the form by clicking through steps
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
     await expect(page.getByText("What's the name of your business?")).toBeVisible();
 

@@ -277,7 +277,7 @@
     });
 
     document.getElementById('upgrade-btn').addEventListener('click', () => {
-      window.location.href = '/pricing.html';
+      window.location.href = '/pricing';
     });
 
     document.getElementById('share-unlock-btn').addEventListener('click', () => {
@@ -298,21 +298,46 @@
       try {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
 
-        let baseUrl = window.location.origin;
-        if (baseUrl === 'file://' || baseUrl.includes('localhost') || baseUrl === 'null') {
-          baseUrl = 'https://app.onehumancorp.com';
+        let apiUrl = '/api/v1/growth/job-board/generate';
+        if (window.__TAURI__ && window.__TAURI__.core) {
+            apiUrl = 'http://127.0.0.1:18789/api/v1/growth/job-board/generate';
         }
 
-        const embedUrl = `${baseUrl}/ui/job-board-embed.html?tenant=${tenantId}&company=${encodeURIComponent(companyName)}&hideBranding=${hideBranding}`;
+        const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+            },
+            body: JSON.stringify({
+                title: companyName,
+                description: 'Viral Job Board widget'
+            })
+        });
 
-        let embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea; background: transparent;"></iframe>`;
+        if (res.ok) {
+            const data = await res.json();
+            const jobBoardLink = data.job_board_link;
 
-        if (!hideBranding) {
-            embedCode += `\n<div style="text-align: center; font-size: 12px; margin-top: 8px;"><a href="${baseUrl}/setup.html?ref=${tenantId}" target="_blank" style="color: #888; text-decoration: none;">⚡ Powered by OHC</a></div>`;
+            let baseUrl = window.location.origin;
+            if (baseUrl === 'file://' || baseUrl.includes('localhost') || baseUrl === 'null') {
+              baseUrl = 'https://app.onehumancorp.com';
+            }
+
+            const embedUrl = `${baseUrl}/ui/job-board-embed.html?tenant=${tenantId}&company=${encodeURIComponent(companyName)}&hideBranding=${hideBranding}&board_url=${encodeURIComponent(jobBoardLink)}`;
+
+            let embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea; background: transparent;"></iframe>`;
+
+            if (!hideBranding) {
+                embedCode += `\n<div style="text-align: center; font-size: 12px; margin-top: 8px;"><a href="${baseUrl}/setup.html?ref=${tenantId}" target="_blank" style="color: #888; text-decoration: none;">⚡ Powered by OHC</a></div>`;
+            }
+
+            document.getElementById('embed-code').value = embedCode;
+            document.getElementById('result-area').style.display = 'block';
+        } else {
+            console.error('Failed to generate job board');
+            alert('Failed to generate. Please try again.');
         }
-
-        document.getElementById('embed-code').value = embedCode;
-        document.getElementById('result-area').style.display = 'block';
 
       } catch (err) {
         console.error("Error generating job board:", err);

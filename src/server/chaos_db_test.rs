@@ -170,6 +170,6 @@ mod chaos_db_tests {
         }).await;
 
         assert!(res.is_err(), "Sync operation should time out to prevent cascading failures");
-        assert!(res.unwrap_err().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
+        assert!(res.unwrap_err().to_string().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
     }
 }

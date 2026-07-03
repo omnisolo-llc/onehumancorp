@@ -10,11 +10,13 @@ test.describe('Glassmorphism UI Premium Design Standards', () => {
             return {
                 backdropFilter: computed.backdropFilter,
                 webkitBackdropFilter: computed.webkitBackdropFilter,
-                backgroundColor: computed.backgroundColor
+                backgroundColor: computed.backgroundColor,
+                borderRadius: computed.borderRadius
             };
         });
         expect(style.backdropFilter).toContain('blur(30px)');
         expect(style.backdropFilter).toContain('saturate(210%)');
+        expect(style.borderRadius).toContain('16px');
     }
   });
 

@@ -1223,7 +1223,7 @@ describe("OnboardingWizard", () => {
     const backButton = screen.getAllByRole("button", { name: /Back/i })[0];
     await user.click(backButton);
 
-    screen.getByText("10-Minute Setup Wizard");
+    screen.getByText("Setup Assistant");
     expect(useOnboardingStore.getState().step).toBe(-2);
   });
 
@@ -1360,7 +1360,7 @@ describe("OnboardingWizard", () => {
       );
     });
 
-    const continueButton = screen.queryByRole("button", { name: /Next/i, hidden: true }) || screen.getAllByText(/Next/i)[0].closest("button")!;
+    const continueButton = screen.queryByRole("button", { name: /Next/i, hidden: true }) || screen.getAllByText(/Next/i)[screen.getAllByText(/Next/i).length - 1].closest("button")!;
     await user.click(continueButton);
 
     await waitFor(() => {

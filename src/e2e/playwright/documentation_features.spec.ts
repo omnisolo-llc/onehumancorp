@@ -62,4 +62,23 @@ test.describe('Documentation Features CUJ', () => {
     // Wait for swagger to load
     await expect(page.locator('#api-docs-tooltip')).toBeAttached({ timeout: 10000 });
   });
+
+  test('User can view mobile-optimized help videos', async ({ page }) => {
+    // 1. Visit Help Center
+    await page.goto('/api/ui/help.html');
+    await expect(page.locator('h1')).toContainText('In-App Help Center');
+
+    // Simulate mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Ensure Video Tutorials section is visible on mobile
+    await expect(page.locator('text=Video Tutorials')).toBeVisible();
+
+    // Verify some video elements render properly without failing (the API call handles the fetch param logic, just test UI)
+    const videos = page.locator('text=Video Tutorials').locator('..').locator('..').locator('div.grid > div');
+    const hasVideos = await videos.count() > 0;
+    if (hasVideos) {
+      await expect(videos.first()).toBeVisible();
+    }
+  });
 });

@@ -379,7 +379,9 @@ where
         .route("/one-tap-referral/embed", get(handle_one_tap_referral_embed))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/quiz/generate", post(handle_generate_viral_quiz))
+        .route("/job-board/generate", post(handle_job_board_generate))
         .route("/referrals/generate", post(handle_referral_generate))
+        .route("/viral-loop/metrics", get(handle_viral_loop_metrics))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/seasonal-promo/generate", post(handle_promo_generate))
@@ -700,6 +702,36 @@ pub struct InviteIdRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralGenerateResponse {
     pub referral_link: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JobBoardGenerateRequest {
+    pub title: String,
+    pub description: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct JobBoardGenerateResponse {
+    pub job_board_link: String,
+}
+
+async fn handle_job_board_generate(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<JobBoardGenerateRequest>,
+) -> Result<Json<JobBoardGenerateResponse>, StatusCode> {
+    let board_id = uuid::Uuid::new_v4().to_string();
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.job_board_generated",
+        "tenant_id": auth_info.org_id,
+        "board_id": board_id,
+        "title": req.title
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(JobBoardGenerateResponse {
+        job_board_link: format!("https://ohc.app/jobs/{}", board_id),
+    }))
 }
 
 
@@ -2911,6 +2943,15 @@ async fn handle_create_team_invite(
     }
 }
 
+async fn handle_viral_loop_metrics(
+    Extension(state): Extension<GrowthState>,
+) -> impl IntoResponse {
+    let (invites_sent, invites_accepted) = state.viral_loop_tracker.get_metrics();
+    Json(serde_json::json!({
+        "invites_sent": invites_sent,
+        "invites_accepted": invites_accepted
+    }))
+}
 
 #[cfg(test)]
 mod tests {
@@ -4203,7 +4244,12 @@ pub async fn handle_viral_widget_embed(
         <h2>{title}</h2>
         <p>This is a viral widget for {tenant}. Share it with your friends!</p>
         <button onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share Now</button>
-"#
+"#,
+        bg_color = bg_color,
+        border_color = border_color,
+        text_color = text_color,
+        title = title,
+        tenant = tenant
     );
 
     if show_branding {

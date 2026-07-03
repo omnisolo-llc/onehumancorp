@@ -1013,36 +1013,7 @@ let db_for_products = self.db.clone();
                                         _ => {
                                             attempts += 1;
                                             if attempts == MAX_RETRIES {
-                                                match &db_for_products.store {
-                                                    crate::db::DbStore::Postgres => {
-                                                        let task_id_fail = Uuid::new_v4().to_string();
-                                                        let _ = sqlx::query(
-                                                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
-                                                        )
-                                                        .bind(&task_id_fail)
-                                                        .bind(&org_id)
-                                                        .bind("marketing")
-                                                        .bind(serde_json::json!({"description": "Failed to generate social post draft.", "feature_type": "social_post_draft"}))
-                                                        .bind(serde_json::json!({}))
-                                                        .bind("FAILED")
-                                                        .execute(&db_for_products.pool)
-                                                        .await;
-                                                    },
-                                                    crate::db::DbStore::Sqlite(pool) => {
-                                                        let task_id_fail = Uuid::new_v4().to_string();
-                                                        let _ = sqlx::query(
-                                                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
-                                                        )
-                                                        .bind(&task_id_fail)
-                                                        .bind(&org_id)
-                                                        .bind("marketing")
-                                                        .bind(serde_json::json!({"description": "Failed to generate social post draft.", "feature_type": "social_post_draft"}))
-                                                        .bind(serde_json::json!({}))
-                                                        .bind("FAILED")
-                                                        .execute(pool)
-                                                        .await;
-                                                    }
-                                                }
+                                                break;
                                             }
                                             tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
                                         }
@@ -1142,7 +1113,7 @@ let db_for_products = self.db.clone();
                             let tenant_id = payload_json.get("tenant_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
 
                             if !session_id.is_empty() {
-                                let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
+                                let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Real Estate, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
 
                                 let mut resolved_payload = serde_json::json!({});
 

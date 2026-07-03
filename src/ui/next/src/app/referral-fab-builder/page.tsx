@@ -151,7 +151,7 @@ export default function ReferralFabBuilder() {
 
         {/* Preview Section */}
         <div className="bg-white/50 backdrop-blur-3xl rounded-[40px] border-[8px] border-white/60 shadow-2xl overflow-hidden relative flex flex-col h-[600px] lg:h-auto min-h-[600px]">
-           {/* Mock Website Background */}
+           {/* Website Background */}
            <div className="bg-gray-100 h-12 flex items-center px-4 gap-2 border-b border-gray-200">
              <div className="w-3 h-3 rounded-full bg-red-400"></div>
              <div className="w-3 h-3 rounded-full bg-yellow-400"></div>

@@ -48,7 +48,9 @@ pub trait Department: Send + Sync {
     async fn query_memory(&self, query: &str) -> Result<Vec<String>, String>;
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String>;
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig>;
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {}
+    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
+        // Default no-op for departments that don't need config overrides
+    }
 }
 
 pub struct DummyDepartment {
@@ -1119,6 +1121,72 @@ pub async fn execute_action(
                                 .bind(&stripe_link)
                                 .execute(&self.db.pool)
                                 .await;
+                        }
+                    }
+
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_draft") {
+                        let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let now = Utc::now();
+
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let mut customer_id_to_use = customer_id.clone();
+                        if customer_id_to_use.is_empty() {
+                            customer_id_to_use = uuid::Uuid::new_v4().to_string();
+                        }
+
+                        let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
+                        let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
+                        let project_name = payload.get("project_name").and_then(|v| v.as_str()).unwrap_or("Project");
+                        let milestone_name = payload.get("milestone_name").and_then(|v| v.as_str()).unwrap_or("Milestone");
+                        let description = format!("Invoice for {} - {}", project_name, milestone_name);
+
+                        match stripe.create_draft_invoice(&customer_id_to_use, amount_cents, &description).await {
+                            Ok(draft_invoice) => {
+                                tracing::info!("Created draft invoice in Stripe: {}", draft_invoice.id);
+                                match stripe.finalize_and_send_invoice(&draft_invoice.id).await {
+                                    Ok(sent_invoice) => {
+                                        tracing::info!("Finalized and sent invoice via Stripe: {}", sent_invoice.id);
+
+                                        // Record the sent invoice in the database
+                                        match &self.db.store {
+                                            DbStore::Postgres => {
+                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, 'Client', 'sent', $4, 'USD', $5, $6, 'unpaid', 0, 0)")
+                                                    .bind(&sent_invoice.id)
+                                                    .bind(tenant_id)
+                                                    .bind(&customer_id_to_use)
+                                                    .bind(now + chrono::Duration::days(30))
+                                                    .bind(amount_cents as f64 / 100.0)
+                                                    .bind(amount_cents)
+                                                    .execute(&self.db.pool)
+                                                    .await
+                                                {
+                                                    tracing::error!("Failed to insert invoice for invoice_draft: {}", e);
+                                                }
+                                            }
+                                            DbStore::Sqlite(_) => {
+                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'sent', ?, 'USD', ?, ?, 'unpaid', 0, 0)")
+                                                    .bind(&sent_invoice.id)
+                                                    .bind(tenant_id)
+                                                    .bind(&customer_id_to_use)
+                                                    .bind(now + chrono::Duration::days(30))
+                                                    .bind(amount_cents as f64 / 100.0)
+                                                    .bind(amount_cents)
+                                                    .execute(&self.db.pool)
+                                                    .await
+                                                {
+                                                    tracing::error!("Failed to insert invoice for invoice_draft: {}", e);
+                                                }
+                                            }
+                                        }
+                                    },
+                                    Err(e) => {
+                                        tracing::error!("Failed to finalize and send invoice via Stripe: {}", e);
+                                    }
+                                }
+                            },
+                            Err(e) => {
+                                tracing::error!("Failed to create draft invoice in Stripe: {}", e);
+                            }
                         }
                     }
 

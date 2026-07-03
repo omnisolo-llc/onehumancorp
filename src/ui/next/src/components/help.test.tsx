@@ -19,13 +19,13 @@ describe('HelpWidget', () => {
       if (url.includes('/api/walkthrough/store-setup')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve([{ targetId: 'test-target', title: 'Test', content: 'Test Content' }])
+          json: () => Promise.resolve([{ targetId: 'bio-input-tooltip', title: 'Test', content: 'Test Content' }])
         });
       }
       if (url.includes('/api/walkthrough/pos')) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve([{ targetId: 'test-target-pos', title: 'Mock Walkthrough', content: 'Mock Content' }])
+          json: () => Promise.resolve([{ targetId: 'pos-keypad', title: 'Mock Walkthrough', content: 'Mock Content' }])
         });
       }
       if (url.includes('/api/walkthrough/assistant')) {
@@ -95,7 +95,21 @@ describe('HelpWidget', () => {
 
   it('fetches dynamic walkthroughs when clicked and handles fallback data', async () => {
     const user = userEvent.setup();
-    render(<div><div id="test-target">Mock Target</div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
+    render(
+      <div>
+        <div id="bio-input-tooltip">Mock Target 1</div>
+        <div id="pos-keypad">Mock Target 1.5</div>
+        <div id="generate-btn-tooltip">Mock Target 2</div>
+        <div id="ai-chat-trigger">Mock Target 3</div>
+        <div id="ohc-help-input-area">Mock Target 4</div>
+        <div id="help-widget-container">Mock Target 5</div>
+        <TooltipProvider>
+          <WalkthroughProvider>
+            <HelpWidget />
+          </WalkthroughProvider>
+        </TooltipProvider>
+      </div>
+    );
 
     const helpBtn = screen.getByRole('button', { name: 'Help' });
     await user.click(helpBtn);

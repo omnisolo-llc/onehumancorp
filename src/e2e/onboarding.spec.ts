@@ -55,7 +55,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     // Step Categories
     await expect(page.locator('#step-categories')).toBeVisible();
-    await page.locator('#business-categories').selectOption('Bakery');
+    await page.locator('#business-categories').selectOption('Home Baker');
     await page.locator('#step-categories .next-step-btn').click();
 
     // Step Name
@@ -255,6 +255,8 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     // Verify error is shown with correct styling
     const errorBlock = page.locator('#instant-error');
     await expect(errorBlock).toBeVisible();
+
+    await expect(generateButton).toHaveText('Generate My Workspace');
 
     // Typing clears the error
     await bioInput.fill("New text");

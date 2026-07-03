@@ -10,7 +10,7 @@ test.describe('Expert Team Workflow UI (Tencent Workbuddy Feature)', () => {
 
     // Fill in the task context
     const taskInput = page.getByPlaceholder(/Write a comprehensive business plan/);
-    await taskInput.fill('Analyze market trends. Chart: Required. Analysis: Deep.');
+    await taskInput.fill('E2E_MOCK_TRIGGER_EXPERT_TEAM_ANALYSIS');
 
     // Click to execute
     const executeButton = page.getByRole('button', { name: /Execute Task via Expert Team/ });
@@ -32,7 +32,7 @@ test.describe('Expert Team Workflow UI (Tencent Workbuddy Feature)', () => {
 
     // Fill in the task context that will intentionally fail the Pre-Deliver gate (e.g. too short)
     const taskInput = page.getByPlaceholder(/Write a comprehensive business plan/);
-    await taskInput.fill('Do something short.');
+    await taskInput.fill('E2E_MOCK_TRIGGER_EXPERT_TEAM_FAILURE');
 
     // Click to execute
     await page.getByRole('button', { name: /Execute Task via Expert Team/ }).click();

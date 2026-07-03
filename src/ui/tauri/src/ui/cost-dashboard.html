@@ -3,6 +3,7 @@
   <head>
     <style>
       .glassmorphism {
+        border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -12,6 +13,7 @@
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
+        border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -283,7 +285,7 @@
               <div class="stat-value" id="my-plan-next-bill" style="color: #34C759;">-</div>
             </div>
 
-            <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade</button>
+            <button class="btn-primary" onclick="window.location.href='/pricing'">Upgrade</button>
             <button id="manage-billing-btn" class="btn-outline" style="margin-top: 12px;">Manage Billing</button>
             <button id="view-detailed-costs" class="btn-outline" style="margin-top: 12px;">View Detailed Costs</button>
             <button class="btn-outline" id="download-invoice-btn" style="margin-top: 12px;">Download Invoice</button>

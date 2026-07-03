@@ -227,7 +227,7 @@ test.describe('Tauri Setup UI Cross Device State', () => {
     await expect(page.locator('input[name="work_context"]:checked')).toHaveValue('Storefront');
 
     await page.getByRole('button', { name: 'Next' }).click();
-    await expect(page.locator('#business-categories')).toHaveValue('Bakery');
+    await expect(page.locator('#business-categories')).toHaveValue('Home Baker');
 
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.locator('#business-name')).toHaveValue("Maya's Bakery");

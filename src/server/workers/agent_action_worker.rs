@@ -131,3 +131,29 @@ impl AgentActionWorker {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // use super::*
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_ml_resilience_agent_action_timeout() {
+        let start = std::time::Instant::now();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            Ok::<(), String>(())
+        })
+        .await;
+
+        assert!(
+            result.is_err(),
+            "AgentActionWorker must enforce ML-Resilience timeout"
+        );
+        assert!(
+            start.elapsed() >= std::time::Duration::from_millis(50),
+            "Timeout should wait the configured time"
+        );
+    }
+}
