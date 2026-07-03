@@ -390,7 +390,33 @@ pub async fn twilio_voice_webhook_handler(
             let _ = orchestrator_clone.dispatch_event(event).await;
         });
 
-        state.voice_router.process_user_input(&session_id, &user_text, &to_number).await
+        let tenant_lang = match &state.db.store {
+            crate::db::DbStore::Postgres => {
+                match sqlx::query_scalar::<_, String>(
+                    "SELECT settings->>'primary_language' FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 LIMIT 1"
+                )
+                .bind(&to_number)
+                .fetch_optional(&state.db.pool)
+                .await {
+                    Ok(Some(lang)) => lang,
+                    _ => "English".to_string(),
+                }
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                match sqlx::query_scalar::<_, String>(
+                    "SELECT json_extract(settings, '$.primary_language') FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
+                )
+                .bind(&to_number)
+                .bind(&to_number)
+                .fetch_optional(sqlite_pool)
+                .await {
+                    Ok(Some(lang)) => lang,
+                    _ => "English".to_string(),
+                }
+            }
+        };
+
+        state.voice_router.process_user_input(&session_id, &user_text, &to_number, &tenant_lang).await
     } else {
         // New call
         let session_id = state.voice_engine.handle_incoming_call(&tenant_id, &sender_id).await;

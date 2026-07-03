@@ -109,8 +109,33 @@ pub async fn twilio_voice_gather_handler(
         return ([(axum::http::header::CONTENT_TYPE, "application/xml")], twiml.to_string()).into_response();
     }
 
+    let tenant_lang = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query_scalar::<_, String>(
+                "SELECT settings->>'primary_language' FROM settings WHERE voice_receptionist_number = $1 LIMIT 1"
+            )
+            .bind(&to_number)
+            .fetch_optional(&state.db.pool)
+            .await {
+                Ok(Some(lang)) => lang,
+                _ => "English".to_string(),
+            }
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            match sqlx::query_scalar::<_, String>(
+                "SELECT json_extract(settings, '$.primary_language') FROM settings WHERE voice_receptionist_number = ? LIMIT 1"
+            )
+            .bind(&to_number)
+            .fetch_optional(sqlite_pool)
+            .await {
+                Ok(Some(lang)) => lang,
+                _ => "English".to_string(),
+            }
+        }
+    };
+
     let voice_router = VoiceContextRouter::new(state.voice_engine.clone(), state.twilio.clone());
-    let ai_response = voice_router.process_user_input(&call_sid, &speech_result, &to_number).await;
+    let ai_response = voice_router.process_user_input(&call_sid, &speech_result, &to_number, &tenant_lang).await;
 
     let twiml = format!(r#"<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -152,6 +177,10 @@ pub async fn twilio_voice_status_handler(
             .and_then(|a| a.details.get("order_link").and_then(|v| v.as_str()))
             .unwrap_or("https://pay.ohc.com/store/voice")
             .to_string();
+
+        let structured_order = session_actions.iter()
+            .find(|a| a.intent_type == "ORDER_FOOD")
+            .and_then(|a| a.details.get("structured_order").cloned());
         drop(actions);
 
         let transcripts = state.voice_engine.transcripts.lock().await;
@@ -262,10 +291,11 @@ pub async fn twilio_voice_status_handler(
                     task.approval_status = Some("PENDING".to_string());
 
                     let proposed_content = serde_json::json!({
-                        "feature_type": "order_draft",
+                        "feature_type": "kds_order",
                         "summary": summary,
                         "caller_phone": clean_caller,
                         "order_link": order_link,
+                        "structured_order": structured_order,
                     });
                     task.proposed_content = Some(proposed_content.to_string());
 

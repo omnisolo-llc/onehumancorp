@@ -141,6 +141,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ||
           (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "kds_order" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "incident_resolution" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ||
@@ -247,6 +249,40 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     <span className="text-[16px] font-bold text-gray-900 dark:text-white">${((approval.proposed_action || approval.context_payload)?.amount_cents / 100).toFixed(2)}</span>
                   </div>
                 </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "kds_order" && (
+              <div className="flex flex-col gap-2 mt-2" data-testid="kds-order-card">
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <span className="text-gray-500 dark:text-gray-400">Caller:</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {(approval.proposed_action || approval.context_payload).caller_phone || "Incoming Call"}
+                  </span>
+                </div>
+                {(approval.proposed_action || approval.context_payload)?.structured_order ? (
+                  <div className="p-3 bg-white dark:bg-gray-800 rounded-[8px] border border-gray-200 dark:border-gray-700">
+                     <ul className="list-disc list-inside text-[#1D1D1F] dark:text-[#F5F5F7]">
+                       {Array.isArray((approval.proposed_action || approval.context_payload).structured_order.items)
+                         ? (approval.proposed_action || approval.context_payload).structured_order.items.map((item: string, i: number) => (
+                             <li key={i}>{item}</li>
+                           ))
+                         : <li>No items found</li>
+                       }
+                     </ul>
+                     {((approval.proposed_action || approval.context_payload).structured_order.pickup_time) && (
+                       <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                         <strong>Pickup Time:</strong> {(approval.proposed_action || approval.context_payload).structured_order.pickup_time}
+                       </div>
+                     )}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-white dark:bg-gray-800 rounded-[8px] border border-gray-200 dark:border-gray-700">
+                    <p className="text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-pre-wrap">
+                      {(approval.proposed_action || approval.context_payload)?.summary || "No summary available"}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
@@ -1752,6 +1788,41 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "task" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "proactive_ops" ? null : (
+            approval.proposed_action || approval.context_payload
+          )?.feature_type === "kds_order" ? (
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={() =>
+                  wrapDecision(
+                    approval.id,
+                    true,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                aria-label="Mark Ready"
+                data-testid="approve-kds-order"
+              >
+                Mark Ready
+              </button>
+              <button
+                onClick={() =>
+                  wrapDecision(
+                    approval.id,
+                    false,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                aria-label="Out of Stock / Cancel"
+                data-testid="dismiss-kds-order"
+              >
+                Out of Stock/Cancel
+              </button>
+            </div>
+          ) : (
             approval.proposed_action || approval.context_payload
           )?.feature_type === "ambassador_reply" ? (
           editingId === approval.id ? (

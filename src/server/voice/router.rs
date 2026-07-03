@@ -18,20 +18,21 @@ pub struct VoiceTurnPlan {
     pub intent_type: Option<String>,
     pub ai_response: String,
     pub sms_body: Option<String>,
+    pub structured_order: Option<serde_json::Value>,
 }
 
 #[async_trait::async_trait]
 pub trait VoiceTurnPlanner: Send + Sync {
-    async fn plan_turn(&self, session_id: &str, user_text: &str) -> Result<VoiceTurnPlan, String>;
+    async fn plan_turn(&self, session_id: &str, user_text: &str, tenant_lang: &str) -> Result<VoiceTurnPlan, String>;
 }
 
 pub struct LlmVoiceTurnPlanner;
 
 #[async_trait::async_trait]
 impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
-    async fn plan_turn(&self, session_id: &str, user_text: &str) -> Result<VoiceTurnPlan, String> {
+    async fn plan_turn(&self, session_id: &str, user_text: &str, tenant_lang: &str) -> Result<VoiceTurnPlan, String> {
         let prompt = format!(
-            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, GENERAL_HELP, ORDER_FOOD, or GENERAL_INQUIRY. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent, or if the caller wants to place an order (ORDER_FOOD), immediately offer to send them a secure ordering link via SMS and include the link (e.g., https://pay.ohc.com/store/voice) in the sms_body. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
+            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, sms_body, and structured_order. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, GENERAL_HELP, ORDER_FOOD, or GENERAL_INQUIRY. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent, or if the caller wants to place an order (ORDER_FOOD), immediately offer to send them a secure ordering link via SMS and include the link (e.g., https://pay.ohc.com/store/voice) in the sms_body. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. If intent_type is ORDER_FOOD and the caller has provided enough details, generate a structured JSON object in structured_order containing 'items' (array of strings) and 'pickup_time' (string) representing the finalized order. VERY IMPORTANT: The structured_order must be translated into the tenant's preferred language: {tenant_lang}. Session: {session_id}. Caller said: {user_text}"
         );
 
         let provider = std::env::var("OHC_VOICE_LLM_PROVIDER")
@@ -63,10 +64,10 @@ impl VoiceContextRouter {
         Self { engine, twilio, planner }
     }
 
-    pub async fn process_user_input(&self, session_id: &str, user_text: &str, merchant_phone: &str) -> String {
+    pub async fn process_user_input(&self, session_id: &str, user_text: &str, merchant_phone: &str, tenant_lang: &str) -> String {
         self.engine.log_transcript(session_id, "USER", user_text).await;
 
-        let plan = match self.planner.plan_turn(session_id, user_text).await {
+        let plan = match self.planner.plan_turn(session_id, user_text, tenant_lang).await {
             Ok(plan) => plan,
             Err(err) => {
                 ::server_telemetry::record_error_signal("[bug] VoiceContextRouter LLM planning failed");
@@ -80,11 +81,18 @@ impl VoiceContextRouter {
         };
 
         if let Some(intent_type) = plan.intent_type.as_deref() {
+            let mut details = serde_json::json!({"source": "voice_llm_planner"});
+            if let Some(structured_order) = &plan.structured_order {
+                if let Some(obj) = details.as_object_mut() {
+                    obj.insert("structured_order".to_string(), structured_order.clone());
+                }
+            }
+
             self.engine
                 .log_intent_action(
                     session_id,
                     intent_type,
-                    serde_json::json!({"source": "voice_llm_planner"}),
+                    details,
                 )
                 .await;
         }
@@ -138,10 +146,15 @@ fn parse_voice_turn_plan(raw: &str) -> Result<VoiceTurnPlan, String> {
         .filter(|v| !v.is_empty())
         .map(ToString::to_string);
 
+    let structured_order = value
+        .get("structured_order")
+        .cloned();
+
     Ok(VoiceTurnPlan {
         intent_type,
         ai_response,
         sms_body,
+        structured_order,
     })
 }
 
@@ -181,7 +194,7 @@ mod tests {
 
     #[async_trait]
     impl VoiceTurnPlanner for ScriptedVoiceTurnPlanner {
-        async fn plan_turn(&self, _session_id: &str, _user_text: &str) -> Result<VoiceTurnPlan, String> {
+        async fn plan_turn(&self, _session_id: &str, _user_text: &str, _tenant_lang: &str) -> Result<VoiceTurnPlan, String> {
             Ok(self.plans.lock().await.remove(0))
         }
     }
@@ -230,10 +243,10 @@ mod tests {
 
         let session_id = engine.handle_incoming_call("merchant_123", "+1234567890").await;
 
-        let response1 = router.process_user_input(&session_id, "Do you have an opening tomorrow?", "+0987654321").await;
+        let response1 = router.process_user_input(&session_id, "Do you have an opening tomorrow?", "+0987654321", "English").await;
         assert!(response1.contains("check availability"));
 
-        let response2 = router.process_user_input(&session_id, "Yes, please.", "+0987654321").await;
+        let response2 = router.process_user_input(&session_id, "Yes, please.", "+0987654321", "English").await;
         assert!(response2.contains("secure confirmation"));
 
         // Ensure SMS was sent
@@ -264,7 +277,7 @@ mod tests {
         let router = VoiceContextRouter::with_planner(engine.clone(), mock_twilio, planner);
         let session_id = engine.handle_incoming_call("merchant_456", "+1122334455").await;
 
-        let response = router.process_user_input(&session_id, "I want to place an order for pickup", "+0987654321").await;
+        let response = router.process_user_input(&session_id, "I want to place an order for pickup", "+0987654321", "English").await;
         assert!(response.contains("texting you a link"));
 
         // Ensure SMS was sent
