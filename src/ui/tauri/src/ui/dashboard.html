@@ -3390,7 +3390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(tab.getAttribute('data-target')).classList.add('active');
             if (tab.getAttribute("data-target") === "tab-videos") {
                 fetch("/api/videos").then(r => r.json()).then(data => {
-                    const list = document.getElementById("video-list");
+                    const list = widget.querySelector("#video-list") || document.getElementById("video-list");
                     let html = "";
                     data.forEach(v => {
                         const safeTitle = v.title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -3406,7 +3406,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>`;
                     });
                     list.innerHTML = html;
-                }).catch(e => { document.getElementById("video-list").innerHTML = "Error loading videos."; });
+                }).catch(e => {
+                    const errVl = widget.querySelector("#video-list") || document.getElementById("video-list");
+                    if (errVl) errVl.innerHTML = "Error loading videos.";
+                });
             }
         });
     });
