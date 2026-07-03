@@ -243,7 +243,7 @@ export default function FeedPage() {
 
   return (
     <AppShell title="Daily Work" subtitle="Your daily priorities, coordinated by your team.">
-      <div className="w-full max-w-full overflow-hidden px-4 mx-auto space-y-4" data-testid="agent-feed">
+      <div className="w-full max-w-[375px] md:max-w-2xl overflow-hidden px-4 mx-auto space-y-4" data-testid="agent-feed">
 
         {loading && (
           <div className="flex justify-center items-center py-12">

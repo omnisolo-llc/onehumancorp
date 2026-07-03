@@ -700,7 +700,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   return (
     <section
       id="unified-agent-feed-section"
-      className="app-panel mb-6 w-full max-w-full md:max-w-2xl mx-auto overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
+      className="app-panel mb-6 w-full max-w-[375px] md:max-w-2xl mx-auto overflow-hidden bg-white dark:bg-slate-950 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800"
       aria-label="Unified Agent Feed"
     >
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 ">
