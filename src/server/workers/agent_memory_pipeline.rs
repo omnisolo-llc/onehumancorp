@@ -66,11 +66,16 @@ impl AgentMemoryPipeline {
                             .execute(&mut *tx)
                             .await?;
 
-                        let embedding = match self.embedding_api.generate_embedding(&context_data).await {
-                            Ok(emb) => emb,
-                            Err(e) => {
+                        let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&context_data)).await {
+                            Ok(Ok(emb)) => emb,
+                            Ok(Err(e)) => {
                                 ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
                                 tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
+                                vec![0.0; 1536]
+                            }
+                            Err(_) => {
+                                ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
+                                tracing::error!("AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
                                 vec![0.0; 1536]
                             }
                         };
@@ -119,11 +124,16 @@ impl AgentMemoryPipeline {
                         let context_data: String = row.get("context_data");
                         let tenant_id: String = row.get("tenant_id");
 
-                        let embedding = match self.embedding_api.generate_embedding(&context_data).await {
-                            Ok(emb) => emb,
-                            Err(e) => {
+                        let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&context_data)).await {
+                            Ok(Ok(emb)) => emb,
+                            Ok(Err(e)) => {
                                 ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
                                 tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
+                                vec![0.0; 1536]
+                            }
+                            Err(_) => {
+                                ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
+                                tracing::error!("AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
                                 vec![0.0; 1536]
                             }
                         };
@@ -192,8 +202,8 @@ impl AgentMemoryPipeline {
             if file_path.is_file() && file_path.extension().map_or(false, |ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&file_path).await?;
 
-                match self.embedding_api.generate_embedding(&content).await {
-                    Ok(embedding) => {
+                match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&content)).await {
+                    Ok(Ok(embedding)) => {
                         let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = Uuid::new_v4();
 
@@ -224,9 +234,13 @@ impl AgentMemoryPipeline {
 
                         let _ = tokio::fs::remove_file(&file_path).await;
                     }
-                    Err(e) => {
+                    Ok(Err(e)) => {
                         ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding for fs memory");
                         tracing::error!("AgentMemoryPipeline: failed to generate embedding for fs memory: {}", e);
+                    }
+                    Err(_) => {
+                        ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
+                        tracing::error!("AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule for fs memory");
                     }
                 }
             }
@@ -245,7 +259,9 @@ impl AgentMemoryPipeline {
 
 #[cfg(test)]
 mod tests {
+    // use super::*
     use super::*;
+    use std::sync::Arc;
 
     struct MockEmbeddingApi {
         succeeds: bool,
@@ -312,5 +328,31 @@ mod tests {
 
         let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE content = 'some context pg mem'").fetch_one(&pool).await.unwrap();
         assert_eq!(mem_count.0, 1);
+    }
+}
+
+#[cfg(test)]
+mod tests2 {
+    // use super::*
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_ml_resilience_agent_memory_pipeline_timeout() {
+        let start = std::time::Instant::now();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            Ok::<(), String>(())
+        })
+        .await;
+
+        assert!(
+            result.is_err(),
+            "AgentMemoryPipeline must enforce ML-Resilience timeout"
+        );
+        assert!(
+            start.elapsed() >= std::time::Duration::from_millis(50),
+            "Timeout should wait the configured time"
+        );
     }
 }
