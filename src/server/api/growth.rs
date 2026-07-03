@@ -386,11 +386,12 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/seasonal-promo/generate", post(handle_promo_generate))
+        .route("/referrals/milestones/status", get(handle_get_referral_milestones))
 
         .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
         .route("/reputation/simulate-referral-checkout", post(handle_simulate_referral_checkout))
-.route("/milestone/card", get(handle_get_milestone_card))
+        .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
         .route("/link-in-bio", post(handle_post_link_in_bio))
@@ -2437,17 +2438,73 @@ async fn handle_get_milestone(
     })
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
+pub struct ReferralsStatusQuery {
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct MilestoneCardQuery {
     pub tenant: Option<String>,
     pub milestone_id: Option<String>,
     pub mobile: Option<bool>,
 }
 
-async fn handle_get_milestone_card(
+pub async fn handle_get_referral_milestones(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<ReferralsStatusQuery>,
+) -> impl axum::response::IntoResponse {
+    let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
+
+    // Fallback: mock tracking for growth milestones
+    let total_referrals: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM growth_team_invites WHERE inviter_id = $1 AND status = 'accepted'",
+    )
+    .bind(tenant_id.clone())
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or(Some(0))
+    .unwrap_or(0);
+
+    // Milestones definition
+    let milestones = vec![
+        serde_json::json!({
+            "target": 1,
+            "title": "First Referral",
+            "reward": "$10 Credit",
+            "reached": total_referrals >= 1
+        }),
+        serde_json::json!({
+            "target": 5,
+            "title": "Team Builder",
+            "reward": "1 Month Free Pro",
+            "reached": total_referrals >= 5
+        }),
+        serde_json::json!({
+            "target": 10,
+            "title": "Community Leader",
+            "reward": "Lifetime Pro Features",
+            "reached": total_referrals >= 10
+        }),
+        serde_json::json!({
+            "target": 25,
+            "title": "OHC Ambassador",
+            "reward": "$500 Cash Bonus",
+            "reached": total_referrals >= 25
+        }),
+    ];
+
+    axum::Json(serde_json::json!({
+        "tenant_id": tenant_id,
+        "total_referrals": total_referrals,
+        "milestones": milestones
+    }))
+}
+
+pub async fn handle_get_milestone_card(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<MilestoneCardQuery>,
-) -> impl IntoResponse {
+) -> impl axum::response::IntoResponse {
     let tenant_id = query.tenant.as_deref().unwrap_or("DEFAULT");
     let milestone_id = query.milestone_id.as_deref().unwrap_or("first_sale");
 
