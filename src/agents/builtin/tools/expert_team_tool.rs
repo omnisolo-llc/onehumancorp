@@ -101,3 +101,115 @@ pub fn expert_team_tool(client: Arc<dyn LlmClient>, model: String) -> crate::Too
         execute: Arc::new(PydanticAdapter::new(ExpertTeamExecutor { client, model })),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ohc_builtin_agent_core::types::{Message, Role, Usage};
+    use tokio::sync::Mutex;
+
+    struct MockExpertTeamLlm {
+        responses: Mutex<Vec<ChatResponse>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for MockExpertTeamLlm {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "Default expert response with more than 20000 words. ".repeat(4000), // Simulate a long enough report to pass the 20000 words quality gate
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_expert_team_tool_success_default_args() {
+        let client = Arc::new(MockExpertTeamLlm {
+            responses: Mutex::new(vec![]),
+        });
+        let executor = ExpertTeamExecutor {
+            client,
+            model: "test-model".to_string(),
+        };
+
+        let args = json!({
+            "task": "Test expert team"
+        });
+
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
+        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert!(output.contains("Default expert response with more than 20000 words"));
+    }
+
+    #[tokio::test]
+    async fn test_expert_team_tool_success_custom_roles() {
+        let client = Arc::new(MockExpertTeamLlm {
+            responses: Mutex::new(vec![]),
+        });
+        let executor = ExpertTeamExecutor {
+            client,
+            model: "test-model".to_string(),
+        };
+
+        let args = json!({
+            "task": "Test expert team custom",
+            "lead_name": "Chief Director",
+            "expert_roles": ["Specialist A", "Specialist B"]
+        });
+
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_expert_team_tool_quality_gate_failure() {
+        struct FailMockExpertTeamLlm;
+
+        #[async_trait::async_trait]
+        impl LlmClient for FailMockExpertTeamLlm {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                // Return a very short response to intentionally fail the ">=20k words" or similar quality gate
+                Ok(ChatResponse {
+                    message: Message::assistant("Too short"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+
+        let client = Arc::new(FailMockExpertTeamLlm);
+        let executor = ExpertTeamExecutor {
+            client,
+            model: "test-model".to_string(),
+        };
+
+        let args = json!({
+            "task": "Test expert team failing gate"
+        });
+
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
+        assert!(result.is_err());
+        match result {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Expert Team Workflow failed at quality gate"));
+            },
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
+}
