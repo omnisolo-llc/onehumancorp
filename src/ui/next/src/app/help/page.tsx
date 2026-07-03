@@ -55,7 +55,9 @@ export default function HelpCenterPage() {
   }, [debouncedSearchQuery]);
 
   useEffect(() => {
-    fetch('/api/videos')
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const fetchUrl = isMobile ? '/api/videos?mobile_optimized=true' : '/api/videos';
+    fetch(fetchUrl)
       .then(res => res.json())
       .then(data => setVideos(Array.isArray(data) ? data : []))
       .catch((err) => {

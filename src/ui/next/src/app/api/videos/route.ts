@@ -4,7 +4,15 @@ export async function GET(request: NextRequest) {
   const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
 
   try {
-    const res = await fetch(`${backendUrl}/api/videos`).catch(() => null);
+    const { searchParams } = new URL(request.url);
+    const mobileOptimized = searchParams.get("mobile_optimized");
+
+    let fetchUrl = `${backendUrl}/api/videos`;
+    if (mobileOptimized) {
+      fetchUrl += `?mobile_optimized=${mobileOptimized}`;
+    }
+
+    const res = await fetch(fetchUrl).catch(() => null);
 
     if (res && res.ok) {
       const data = await res.json();
