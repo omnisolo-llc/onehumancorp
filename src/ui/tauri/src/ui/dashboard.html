@@ -646,7 +646,7 @@
          <button id="sold-out-toggle-falafel">Sold Out</button>
       </div>
       <div style="position: relative; display: flex; justify-content: center; align-items: center; width: 100%;">
-        <h1 id="dashboard-title" style="margin: 0;">Dashboard</h1>
+        <h1 id="dashboard-title" style="margin: 0;" data-tooltip-id="dashboard-tooltip">Dashboard</h1>
         <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" onclick="window.location.href='help.html'" style="position: absolute; right: 0; background: none; border: none; font-size: 18px; font-weight: 600; cursor: pointer; color: #1d1d1f;">?</button>
       </div>
       <div class="subtitle" style="margin-top: 5px;" id="welcome-message">Welcome back.</div>
@@ -654,8 +654,8 @@
       <div class="subtitle" style="margin-top: 5px;">Your agents are working on your behalf.</div>
 
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;">
-        <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
-        <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
+        <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;" data-tooltip-id="inbox-activity-tooltip">Open WorkBuddy Assistant</a>
+        <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;" data-tooltip-id="inventory-tooltip">Quick Charge POS</a>
         <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
         <a href="agent-audit-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Agent Audit Dashboard</a>
         <a href="booking-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">Booking Dashboard</a>
@@ -692,15 +692,15 @@
           <p id="wrapped-summary" style="font-size: 15px; margin-bottom: 16px; font-weight: 500;">You dominated this year!</p>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-            <div style="background: rgba(255, 255, 255, 0.65); border-radius: 8px; padding: 12px;">
+            <div style="background: rgba(255, 255, 255, 0.65); border-radius: 8px; padding: 12px;" data-tooltip-id="total-sales-tooltip">
               <p style="margin: 0; font-size: 12px; color: #6b7280;">Total Sales</p>
               <p id="wrapped-sales" style="margin: 0; font-size: 18px; font-weight: 700;">-</p>
             </div>
-            <div style="background: rgba(255, 255, 255, 0.65); border-radius: 8px; padding: 12px;">
+            <div style="background: rgba(255, 255, 255, 0.65); border-radius: 8px; padding: 12px;" data-tooltip-id="recent-orders-tooltip">
               <p style="margin: 0; font-size: 12px; color: #6b7280;">Orders</p>
               <p id="wrapped-orders" style="margin: 0; font-size: 18px; font-weight: 700;">-</p>
             </div>
-            <div style="background: rgba(255, 255, 255, 0.65); border-radius: 8px; padding: 12px;">
+            <div style="background: rgba(255, 255, 255, 0.65); border-radius: 8px; padding: 12px;" data-tooltip-id="orders-tooltip">
               <p style="margin: 0; font-size: 12px; color: #6b7280;">Customers</p>
               <p id="wrapped-customers" style="margin: 0; font-size: 18px; font-weight: 700;">-</p>
             </div>
@@ -3003,8 +3003,8 @@ function initWalkthrough() {
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
+                    <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                 </div>
             `;
 
@@ -3585,8 +3585,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                        ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
+                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                     </div>
                 `;
 

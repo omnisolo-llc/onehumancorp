@@ -49,21 +49,17 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
-        border-radius: 16px;
+          border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-      }
-      @media (prefers-color-scheme: dark) {
       }
 
       h1 {
@@ -4003,7 +3999,7 @@
                 clearInterval(window.generateStorefrontLoadingInterval);
                 delete window.generateStorefrontLoadingInterval;
             }
-            generateStorefrontBtn.innerHTML = "Next";
+            generateStorefrontBtn.innerHTML = "Generate My Workspace";
           }
         });
       }
@@ -4784,8 +4780,8 @@
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
+                    ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ""}
+                    <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? "Finish" : "Next"}</button>
                 </div>
             `;
 
