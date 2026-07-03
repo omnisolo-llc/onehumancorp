@@ -4,7 +4,7 @@ import { test, adminPage } from './fixtures';
 test.describe('Success Milestones UI', () => {
     test('renders the success milestones page and loads a preview card', async ({ page }) => {
         // We know we are logged in from adminPage fixture.
-        await adminPage(page);
+        page = await adminPage(page);
         await page.goto('/milestones.html');
 
         // Check for the main title

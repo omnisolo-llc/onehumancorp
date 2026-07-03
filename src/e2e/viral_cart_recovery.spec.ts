@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
+
 
 test.describe('Cart Recovery Feature', () => {
   test('should verify abandoned cart recovery flow without mock data', async ({ page, context }) => {
-    await adminPage(page, context);
+    page = await adminPage(page, context);
 
     // Navigate to cart recovery
     await page.goto('/cart-recovery.html');

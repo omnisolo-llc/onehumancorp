@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
+
 
 test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
 
   test('Receiving a quote request DM triggers message triage and creates a draft quote', async ({ browser }) => {
     const context = await browser.newContext();
-    const page = await adminPage(context);
+    const page = page = await adminPage(context);
 
     await page.goto('/dashboard');
 
@@ -36,7 +36,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
 
   test('Editing a draft quote navigates to the quote editor', async ({ browser }) => {
     const context = await browser.newContext();
-    const page = await adminPage(context);
+    const page = page = await adminPage(context);
 
     await page.goto('/dashboard');
 
@@ -52,7 +52,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
 
   test('Approving a draft quote triggers the quote API and Stripe link generation', async ({ browser }) => {
     const context = await browser.newContext();
-    const page = await adminPage(context);
+    const page = page = await adminPage(context);
 
     await page.goto('/dashboard');
 
@@ -68,7 +68,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
 
   test('Generated quote is accessible via the API with valid Stripe link', async ({ browser }) => {
     const context = await browser.newContext();
-    const page = await adminPage(context);
+    const page = page = await adminPage(context);
 
     // We fetch the inbox messages to see the replied quote
     const res = await page.request.get('/api/v1/omnichannel/webhook');
@@ -98,7 +98,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
 
   test('Accepting a quote transitions the status to ACCEPTED', async ({ browser }) => {
     const context = await browser.newContext();
-    const page = await adminPage(context);
+    const page = page = await adminPage(context);
 
     const createRes = await page.request.post('/api/v1/quotes', {
         data: {
