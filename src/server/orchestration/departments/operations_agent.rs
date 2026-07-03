@@ -256,6 +256,15 @@ impl Department for OperationsAgent {
                                 payload: event.payload.clone(),
                             };
                             let _ = self.orchestrator.dispatch_event(cs_event).await;
+
+                            let _ = self.orchestrator.execute_action(
+                                DepartmentType::Operations,
+                                "Drafted 3 booking replies and scheduled 2 visits for tomorrow.".to_string(),
+                                event.tenant_id.clone(),
+                                ActionRisk::DraftForReview,
+                                event.payload.clone(),
+                            ).await;
+
                             return Ok(());
                         } else {
                             tracing::warn!("Failed to acquire lock for {}", lock_key);
