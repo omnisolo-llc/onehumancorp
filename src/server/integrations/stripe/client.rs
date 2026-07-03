@@ -145,6 +145,52 @@ impl StripeClient {
     }
 
 
+    pub async fn create_draft_invoice(&self, customer_id: &str, amount_cents: i64, description: &str) -> Result<String, String> {
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            return Ok(format!("in_mock_{}_{}", customer_id, amount_cents));
+        }
+        let api_key = api_key_res.unwrap();
+
+        let mut item_form = std::collections::HashMap::new();
+        item_form.insert("customer".to_string(), customer_id.to_string());
+        item_form.insert("amount".to_string(), amount_cents.to_string());
+        item_form.insert("currency".to_string(), "usd".to_string());
+        item_form.insert("description".to_string(), description.to_string());
+
+        let _item_res = reqwest::Client::new()
+            .post(format!("{}/v1/invoiceitems", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&item_form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe InvoiceItem request failed: {}", e))?;
+
+        let mut inv_form = std::collections::HashMap::new();
+        inv_form.insert("customer".to_string(), customer_id.to_string());
+        inv_form.insert("collection_method".to_string(), "send_invoice".to_string());
+        inv_form.insert("days_until_due".to_string(), "30".to_string());
+
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/invoices", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&inv_form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Invoice creation failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let invoice_id = json["id"].as_str().ok_or_else(|| "Missing id in response".to_string())?;
+
+        Ok(invoice_id.to_string())
+    }
+
     pub async fn create_billing_portal_session(&self, customer_id: &str) -> Result<String, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {

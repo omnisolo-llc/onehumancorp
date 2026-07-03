@@ -745,6 +745,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     "Based on this customer's order history and the estimated consumption rate, they are due for a replenishment. Would you like me to generate a personalized checkout link and draft an email suggesting they refill?"}
                 </div>
               </div>
+            ) : (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_draft" ? (
+              <div className="flex items-center text-xs font-semibold text-white tracking-wide uppercase px-2 py-1 rounded-md shadow-sm" style={{
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(4px)'
+              }}>
+                <FileText className="h-4 w-4 mr-1.5" />
+                Drafting Invoice
+              </div>
             ) : (approval.proposed_action || approval.context_payload)
                 ?.feature_type === "supply_order" ? (
               <>
@@ -1422,6 +1431,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               <span className="font-medium">1-Click Repurchase Link</span>
             </div>
           </div>
+        ) : (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_draft" ? (
+          <div className="flex items-center px-4 py-2.5 rounded-xl mb-3 shadow-inner" style={{
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            backdropFilter: 'blur(8px)'
+          }}>
+            <FileText className="h-4 w-4 text-emerald-400 mr-2" />
+            <span className="font-semibold text-white text-sm">Draft Invoice ready for {(approval.context_payload || approval.proposed_action)?.milestone_name || 'Project'}</span>
+          </div>
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "supply_order" ? (
           <>
@@ -1556,6 +1574,22 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               ) : (
                 "Dismiss"
               )}
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_draft" ? (
+          <div className="px-5 py-4 bg-white/[0.03] border-t border-white/[0.05]">
+            <button
+              onClick={handleApprove}
+              disabled={isApproving}
+              className="w-full flex items-center justify-center py-3.5 px-4 rounded-[8px] text-sm font-semibold text-white shadow-lg transition-all duration-200"
+              style={{
+                background: isApproving ? 'rgba(16, 185, 129, 0.5)' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }}
+              aria-label="Approve & Send"
+            >
+              {isApproving ? "Sending..." : "Approve & Send"}
+              {!isApproving && <ArrowRight className="ml-2 h-4 w-4" />}
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)

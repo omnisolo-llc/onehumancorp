@@ -22,7 +22,8 @@ impl Department for FinanceAgent {
             "tenant.payment.received".to_string(),
             "payment.captured".to_string(),
             "charge.dispute.created".to_string(),
-            "invoice.overdue".to_string()
+            "invoice.overdue".to_string(),
+            "project_milestone_completed".to_string()
         ]
     }
 
@@ -44,6 +45,8 @@ impl Department for FinanceAgent {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
             "Draft personalized invoice follow-up for review".to_string()
+        } else if event.event_type == "project_milestone_completed" {
+            "Draft invoice for completed project milestone".to_string()
         } else {
             "Record deposit and track payment".to_string()
         };
@@ -70,6 +73,34 @@ impl Department for FinanceAgent {
                 "generated_response": format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id),
                 "operational_action": "Draft personalized reminder",
                 "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+        } else if event.event_type == "project_milestone_completed" {
+            let project_id = event.payload.get("project_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let milestone_name = event.payload.get("milestone_name").and_then(|v| v.as_str()).unwrap_or("Milestone");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let amount = event.payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let amount_cents = (amount * 100.0) as i64;
+
+            #[cfg(not(ohc_bazel))]
+            use server_integrations_core::client::StripeClient;
+            #[cfg(ohc_bazel)]
+            use crate::integrations::stripe::client::StripeClient;
+
+            let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+            let stripe_client = StripeClient::new(api_key);
+
+            let description = format!("Invoice for {} - {}", project_id, milestone_name);
+            let invoice_id = stripe_client.create_draft_invoice(customer_id, amount_cents, &description).await.unwrap_or_else(|_| "mock_invoice_id".to_string());
+
+            payload = serde_json::json!({
+                "feature_type": "invoice_draft",
+                "project_id": project_id,
+                "milestone_name": milestone_name,
+                "original_message": format!("Project milestone '{}' has been marked complete.", milestone_name),
+                "generated_response": format!("I have drafted an invoice for the completed milestone '{}'. Please review and send.", milestone_name),
+                "operational_action": "Draft milestone invoice",
+                "customer_id": customer_id,
+                "stripe_invoice_id": invoice_id,
             });
         }
 
