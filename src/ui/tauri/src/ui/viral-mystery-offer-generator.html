@@ -406,29 +406,30 @@
     });
 
     document.getElementById('share-to-unlock-btn').addEventListener('click', async () => {
-      // Mock unlocking process
       const originalText = document.getElementById('share-to-unlock-btn').textContent;
       document.getElementById('share-to-unlock-btn').textContent = 'Unlocking...';
 
       try {
-        // In real app, this might call an API
-        localStorage.setItem('has_pro', 'true');
-        hasPro = true;
-
-        setTimeout(() => {
-          paywallModal.classList.remove('active');
-          brandingCheckbox.checked = true;
-          previewBranding.style.display = 'none';
-          document.getElementById('share-to-unlock-btn').textContent = originalText;
-
-          alert('7-Day Pro Trial Unlocked! You can now remove branding.');
-        }, 1000);
-      } catch(e) {
-        // Test fallback
-        hasPro = true;
-        paywallModal.classList.remove('active');
-        brandingCheckbox.checked = true;
-        previewBranding.style.display = 'none';
+        const tenant = localStorage.getItem('tenant') || 'my-store';
+        const response = await fetch('/api/v1/growth/trial/extend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenant_id: tenant })
+        });
+        if (response.ok) {
+            alert("7-Day Pro Trial Unlocked! You can now remove branding.");
+            hasPro = true;
+            localStorage.setItem('has_pro', 'true');
+            paywallModal.classList.remove('active');
+            brandingCheckbox.checked = true;
+            previewBranding.style.display = 'none';
+        } else {
+            alert("Failed to activate trial.");
+        }
+      } catch (e) {
+        alert("Failed to activate trial due to a network error.");
+      } finally {
+        document.getElementById('share-to-unlock-btn').textContent = originalText;
       }
     });
 
