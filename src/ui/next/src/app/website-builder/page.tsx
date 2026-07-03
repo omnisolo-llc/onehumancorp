@@ -792,7 +792,7 @@ export default function WebsiteBuilderPage() {
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Your automated storefront is successfully published.</p>
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">You're set up! Here's what to do next:</p>
 
-          <div className="w-full glassmorphism p-3 rounded-[8px] mb-6 flex items-center justify-between">
+          <div className="w-full glassmorphism p-3 rounded-[16px] mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
