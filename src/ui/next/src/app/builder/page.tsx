@@ -507,7 +507,7 @@ export default function BuilderPage() {
           <div className="w-full glassmorphism backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
             <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Sell Anywhere 💻</h2>
             <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
-            <div className="app-card dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/10 rounded-[8px] p-3 relative">
+            <div className="app-card dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/10 rounded-[16px] p-3 relative">
                 <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
 <script src="/embed.js" data-store="${tenantId}"></script>
@@ -529,7 +529,7 @@ export default function BuilderPage() {
             {saveMessage && <p role="status" className="mt-2 text-xs font-semibold text-green-600">{saveMessage}</p>}
           </div>
 
-          <div className="w-full bg-gray-50 p-3 rounded-[8px] border border-gray-100 mb-6 flex items-center justify-between">
+          <div className="w-full bg-gray-50 p-3 rounded-[16px] border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
             <button
               onClick={() => {
@@ -571,7 +571,7 @@ export default function BuilderPage() {
 
 
           {/* Generative Visibility Score */}
-          <div className="w-full bg-blue-50/50 dark:bg-blue-900/20 backdrop-blur-[30px] saturate-[210%] border border-[#0066FF]/30 dark:border-[#0066FF]/20 shadow-sm p-5 mb-6 text-left rounded-[8px]">
+          <div className="w-full bg-blue-50/50 dark:bg-blue-900/20 backdrop-blur-[30px] saturate-[210%] border border-[#0066FF]/30 dark:border-[#0066FF]/20 shadow-sm p-5 mb-6 text-left rounded-[16px]">
             <h2 className="text-lg font-bold font-outfit text-[#0066FF] dark:text-blue-300 mb-1">Generative Visibility Score (GEO)</h2>
             <p className="text-xs text-blue-700 dark:text-blue-200 mb-4">Improve how LLM crawlers like ChatGPT or Gemini see your business.</p>
 
