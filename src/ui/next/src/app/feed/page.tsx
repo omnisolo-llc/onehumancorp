@@ -182,6 +182,20 @@ export default function FeedPage() {
     }
   };
 
+  const simulateBookingSubscriptionDraft = async () => {
+    try {
+      setLoading(true);
+      await fetch('/api/agents/approvals/simulate-booking-subscription-draft', { method: 'POST' });
+      const res = await fetch('/api/agent-feed');
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const simulateBookingDraft = async () => {
     try {
       setLoading(true);
@@ -281,6 +295,8 @@ export default function FeedPage() {
             const ambassadorPayload = isAmbassador ? (item.proposed_action || item.context_payload) : null;
             const isDisputeResolution = item.proposed_action?.feature_type === 'dispute_resolution' || item.context_payload?.feature_type === 'dispute_resolution';
             const disputePayload = isDisputeResolution ? (item.proposed_action || item.context_payload) : null;
+            const isBookingSubscription = item.proposed_action?.feature_type === 'booking_subscription' || item.context_payload?.feature_type === 'booking_subscription';
+            const bookingSubPayload = isBookingSubscription ? (item.proposed_action || item.context_payload) : null;
 
             return (
               <div
@@ -291,7 +307,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
                     <span className={`w-2 h-2 rounded-full ${isDisputeResolution ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                    {isBookingSubscription ? 'DRAFT REPLY & BOOKING LINK' : isDisputeResolution ? 'DISPUTE RESOLUTION' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -299,7 +315,9 @@ export default function FeedPage() {
                 </div>
 
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
-                  {isDisputeResolution
+                  {isBookingSubscription
+                    ? `Booking & Subscription from ${bookingSubPayload?.customer_name || 'Customer'}`
+                    : isDisputeResolution
                     ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
                     : isAmbassador
                     ? `New Message from ${ambassadorPayload.sender_id || 'Customer'}`
@@ -381,7 +399,103 @@ export default function FeedPage() {
                         </div>
                       </div>
 
+                                        ) : isBookingSubscription ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                          <p className="text-[13px] text-gray-700 dark:text-gray-300 italic mb-2">"{bookingSubPayload.customer_inquiry}"</p>
+                        </div>
+                        <div className="bg-white dark:bg-[#1E1E1E] p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden">
+                           <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                           <p className="text-[11px] font-bold text-gray-500 uppercase mb-2 ml-2 flex items-center gap-2">
+                             <svg className="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                             AI Drafted Reply
+                           </p>
+                           <div className="ml-2">
+                             <p className="text-[13px] text-gray-900 dark:text-gray-100 whitespace-pre-wrap font-serif mb-4">
+                               {bookingSubPayload.draft_email}
+                             </p>
+
+                             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-md mb-4">
+                                <p className="text-[12px] font-bold text-indigo-900 dark:text-indigo-200 mb-2">Suggested Times:</p>
+                                <ul className="space-y-1">
+                                  {bookingSubPayload.suggested_times?.map((time: string, i: number) => (
+                                    <li key={i} className="text-[13px] text-indigo-800 dark:text-indigo-300 flex items-center gap-2">
+                                      <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></span> {time}
+                                    </li>
+                                  ))}
+                                </ul>
+                             </div>
+
+                             <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-md border border-green-100 dark:border-green-800/30">
+                               <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                               <span className="text-[13px] font-medium text-green-800 dark:text-green-300">
+                                 Start ${bookingSubPayload.subscription_amount}/mo Subscription
+                               </span>
+                             </div>
+                           </div>
+                        </div>
+                      </div>
                     ) : isPromoter ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Schedule"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Approve & Schedule'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : isBookingSubscription ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleAction(item.id, 'APPROVED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send"
+                        data-testid="feed-approve-btn"
+                      >
+                        {isProcessing ? 'Processing...' : 'Approve & Send'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(item)}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="feed-edit-btn"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'DISMISSED')}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="feed-dismiss-btn"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : isAmbassador ? (
                       <div className="flex flex-col gap-3">
                         <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
                           <p className="text-[13px] text-indigo-700 dark:text-indigo-300 font-medium mb-1">Generated Marketing Posts</p>
@@ -627,6 +741,14 @@ export default function FeedPage() {
              className="text-xs bg-[#FFF5E5] text-[#FF9500] border border-[#FFD699] px-3 py-1 rounded min-h-[44px] min-w-[44px]"
           >
             Simulate Dispute
+          </button>
+
+<button
+             onClick={simulateBookingSubscriptionDraft}
+             data-testid="simulate-booking-sub-btn"
+             className="text-xs bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Propose Times & Pricing
           </button>
 
           <button

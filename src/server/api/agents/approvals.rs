@@ -128,6 +128,7 @@ where
         .route("/simulate-dispute-resolution", post(simulate_dispute_resolution))
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/simulate-autonomous-booking-quote", post(simulate_autonomous_booking_quote))
+        .route("/simulate-booking-subscription-draft", post(simulate_booking_subscription_draft))
         .route("/stream", get(stream_agent_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
@@ -356,6 +357,84 @@ async fn simulate_ambassador_draft(
     }
 }
 
+
+async fn simulate_booking_subscription_draft(
+
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+
+    Extension(claims): Extension<Claims>,
+
+) -> impl IntoResponse {
+
+    let tenant_id = match claims.organization_id.as_deref() {
+
+        Some(org_id) => org_id.to_string(),
+
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+
+    };
+
+
+
+    let payload = serde_json::json!({
+
+        "feature_type": "booking_subscription",
+
+        "action_type": "Draft Reply & Booking Link",
+
+        "customer_inquiry": "I want weekly lessons",
+
+        "draft_email": "Hi Sarah,\n\nI would love to set up weekly piano lessons for you. Here are 3 available times:\n\n- Tomorrow at 10:00 AM\n- Tomorrow at 2:00 PM\n- Wednesday at 11:00 AM\n\nYou can confirm a time and set up your $100/mo subscription using the link below.\n\nBest,\nLeo",
+
+        "suggested_times": [
+
+            "Tomorrow at 10:00 AM",
+
+            "Tomorrow at 2:00 PM",
+
+            "Wednesday at 11:00 AM"
+
+        ],
+
+        "subscription_amount": 100,
+
+        "subscription_cycle": "mo",
+
+        "customer_name": "Sarah",
+
+        "inbox_message_id": "msg_simulated_booking_sub_123"
+
+    });
+
+
+
+    match orchestrator.execute_action(
+
+        crate::orchestration::departments::types::DepartmentType::Sales,
+
+        "Draft Reply & Booking Link".to_string(),
+
+        tenant_id,
+
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+
+        payload,
+
+    ).await {
+
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+
+        Err(e) => {
+
+            tracing::error!("Failed to simulate booking subscription draft: {}", e);
+
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+
+        }
+
+    }
+
+}
 
 async fn list_approvals(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
