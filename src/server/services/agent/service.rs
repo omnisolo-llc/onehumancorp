@@ -61,6 +61,13 @@ impl MyAgentManagerService {
         let task_queue = tasks_res.unwrap();
         let queue_length = task_queue.len() as i32;
         let proto_task_queue = task_queue.into_iter().map(|t| t.into_proto()).collect();
+        let mut proto_task_queue_mut: Vec<::server_ohc::orchestration::SharedTask> = proto_task_queue;
+        if mobile_optimized {
+            for task in proto_task_queue_mut.iter_mut() {
+                task.description.clear();
+                task.payload.clear();
+            }
+        }
 
         let mut agent_costs = Vec::new();
         for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
@@ -104,7 +111,7 @@ impl MyAgentManagerService {
             costs: Some(costs),
             agents: agents_list,
             statuses,
-            task_queue: proto_task_queue,
+            task_queue: proto_task_queue_mut,
             queue_length,
             updated_at_unix: Utc::now().timestamp(),
         };
