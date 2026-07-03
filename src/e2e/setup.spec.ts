@@ -163,7 +163,7 @@ test.describe('OHC Setup Wizard Flow', () => {
         localStorage.setItem('onboardingState', JSON.stringify({
             step: 7, // step-template
             businessName: 'Error Bakery',
-            categories: 'Bakery',
+            categories: 'Home Baker',
             templateSelection: 'Modern'
         }));
       });

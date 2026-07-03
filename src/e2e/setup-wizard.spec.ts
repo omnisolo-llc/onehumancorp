@@ -56,7 +56,7 @@ test.describe('Setup Wizard 375px Flow', () => {
         await page.locator('#step-context .next-step-btn').click();
 
         // Categories
-        await page.locator('#business-categories').selectOption('Bakery');
+        await page.locator('#business-categories').selectOption('Home Baker');
         await page.locator('#step-categories .next-step-btn').click();
 
         // Business Name
