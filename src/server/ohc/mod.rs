@@ -38,6 +38,9 @@ pub mod ohc {
     pub mod invoice {
         tonic::include_proto!("ohc.invoice");
     }
+    pub mod inbox {
+        tonic::include_proto!("ohc.inbox");
+    }
     pub mod inventory {
         tonic::include_proto!("ohc.inventory");
     }
@@ -83,6 +86,9 @@ pub mod ohc {
     pub mod invoice {
         pub use invoice_proto::ohc::invoice::*;
     }
+    pub mod inbox {
+        pub use inbox_proto::ohc::inbox::*;
+    }
     pub mod inventory {
         pub use inventory_proto::ohc::inventory::*;
     }
@@ -125,6 +131,9 @@ pub mod invoice {
     pub use crate::ohc::invoice::*;
 }
 
+pub mod inbox {
+    pub use crate::ohc::inbox::*;
+}
 pub mod inventory {
     pub use crate::ohc::inventory::*;
 }

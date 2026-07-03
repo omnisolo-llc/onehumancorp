@@ -3,6 +3,8 @@ filegroup(
     srcs = [
         "identity.rs",
         "mod.rs",
+        "triage.rs",
+        "intent_router.rs",
         "webhook.rs",
         "customer_memory.rs",
     ],

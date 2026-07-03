@@ -551,6 +551,9 @@ pub mod proto {
     pub mod common {
         pub use ::server_ohc::common::*;
     }
+    pub mod inbox {
+        pub use ::server_ohc::inbox::*;
+    }
     pub mod inventory {
         pub use ::server_ohc::inventory::*;
     }
