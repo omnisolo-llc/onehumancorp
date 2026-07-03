@@ -182,6 +182,37 @@ export default function FeedPage() {
     }
   };
 
+    const simulateShiftCoverageDraft = async () => {
+    try {
+      const tenantId = localStorage.getItem('tenant_id') || 'default_tenant';
+      const response = await fetch('/api/feed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          type: 'SHIFT_COVERAGE',
+          status: 'PENDING',
+          title: 'Shift Coverage Request',
+          proposed_action: {
+            action_type: 'Reassign Shift',
+            description: 'Reassign tomorrow\'s shift from Sam (sick) to Alex.',
+            endpoint: '/api/shifts/reassign',
+            payload: { shift_id: 'shift_123', new_staff_id: 'staff_alex' }
+          },
+          context_payload: {
+            context: 'Sam called out sick for tomorrow. Alex is available and has the required skills. Should I reassign the shift to Alex?',
+            summary: 'Shift coverage needed due to sickness.'
+          }
+        })
+      });
+      if (response.ok) {
+        fetchFeedItems();
+      }
+    } catch (error) {
+      console.error('Error simulating shift coverage draft:', error);
+    }
+  };
+
   const simulateBookingDraft = async () => {
     try {
       setLoading(true);
@@ -674,6 +705,13 @@ export default function FeedPage() {
             Simulate Dispute
           </button>
 
+                    <button
+             onClick={simulateShiftCoverageDraft}
+             data-testid="simulate-shift-coverage-btn"
+             className="text-xs bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1 rounded min-h-[44px] min-w-[44px]"
+          >
+            Simulate Shift Coverage
+          </button>
           <button
              onClick={simulateBookingDraft}
              data-testid="simulate-booking-btn"
