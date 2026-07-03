@@ -89,14 +89,19 @@ export class SyncManager {
     try {
       // Separate POS transactions from general offline sync
       const posTransactions = queue.filter(m => m.type === 'tap_to_pay' || m.type === 'cash_sale').map(m => {
+        let storedDeviceId = 'terminal_client';
+        if (typeof window !== 'undefined') {
+            storedDeviceId = localStorage.getItem('ohc_pos_device_id') || 'terminal_client';
+        }
+
         return {
           id: m.id,
-          client_id: 'terminal_client', // Default fallback
+          client_id: storedDeviceId, // Default fallback
           amount_cents: Math.round(m.amount),
           currency: m.currency || 'usd',
           payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload || [{ product_id: m.product_id, quantity: m.quantity || 1 }]),
           timestamp: new Date(m.timestamp || Date.now()).toISOString(),
-          device_signature: `sig_offline_mock_${m.id}`,
+          device_signature: m.device_signature || `sig_offline_${storedDeviceId}_${m.id}`,
           mutation_type: m.type
         };
       });
