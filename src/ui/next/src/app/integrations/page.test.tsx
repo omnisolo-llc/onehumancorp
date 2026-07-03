@@ -30,15 +30,37 @@ describe("Integrations", () => {
       configurable: true,
       value: { assign },
     });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        authorization_url: "https://oauth.example/shippo",
-      }),
+    (global.fetch as any).mockImplementation((url: string) => {
+        if (url === '/api/integrations') {
+            return Promise.resolve({
+                ok: true,
+                json: async () => ({
+                    success: true,
+                    integrations: []
+                })
+            });
+        }
+        if (url === '/api/integrations/shippo/connect') {
+            return Promise.resolve({
+                ok: true,
+                json: async () => ({
+                    authorization_url: "https://oauth.example/shippo",
+                })
+            });
+        }
+        return Promise.resolve({ ok: false });
     });
 
     render(<Integrations />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Connect" })[4]);
+
+    // Wait for initial load fetch to complete
+    await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith("/api/integrations");
+    });
+
+    const connectButtons = screen.getAllByRole("button", { name: "Connect" });
+    // Ayrshare is index 0, Cal is index 1, MailerLite is index 2, Mercado is 3, Shippo is 4
+    fireEvent.click(connectButtons[4]);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith("/api/integrations/shippo/connect", {

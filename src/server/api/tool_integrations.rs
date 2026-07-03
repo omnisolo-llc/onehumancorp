@@ -1,7 +1,7 @@
 use axum::{
     extract::{State, Path},
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
     Json, Router,
 };
 use std::sync::Arc;
@@ -127,9 +127,58 @@ pub async fn connect_integration_handler(
     }).into_response()
 }
 
+#[derive(Serialize)]
+pub struct IntegrationInfo {
+    pub id: String,
+    pub status: String,
+}
+
+#[derive(Serialize)]
+pub struct GetIntegrationsResponse {
+    pub success: bool,
+    pub integrations: Vec<IntegrationInfo>,
+    pub message: Option<String>,
+}
+
+pub async fn get_integrations_handler(
+    State(state): State<ToolIntegrationsApiState>,
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = user.organization_id.unwrap_or_else(|| "default".to_string());
+
+    let query = match &state.db.store {
+        crate::db::DbStore::Postgres => "SELECT id, status FROM tool_integrations WHERE tenant_id = $1",
+        crate::db::DbStore::Sqlite(_) => "SELECT id, status FROM tool_integrations WHERE tenant_id = ?",
+    };
+
+    let rows = match sqlx::query_as::<_, (String, String)>(query)
+        .bind(&tenant_id)
+        .fetch_all(&state.db.pool)
+        .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(GetIntegrationsResponse {
+                success: false,
+                integrations: vec![],
+                message: Some(format!("Database error: {}", e)),
+            })).into_response();
+        }
+    };
+
+    let integrations = rows.into_iter().map(|(id, status)| IntegrationInfo { id, status }).collect();
+
+    Json(GetIntegrationsResponse {
+        success: true,
+        integrations,
+        message: None,
+    }).into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
     let state = ToolIntegrationsApiState { db };
     Router::new()
+        .route("/", get(get_integrations_handler))
         .route("/{id}/connect", post(connect_integration_handler))
         .with_state(state)
 }
