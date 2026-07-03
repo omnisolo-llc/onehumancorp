@@ -134,6 +134,7 @@ rust_library(
         "//src/server/api/booking:available_slots.rs",
         "//src/server/api/booking:create_service.rs",
         "//src/server/api/booking:proposed.rs",
+        "//src/server/api/booking:list.rs",
     ],
     compile_data = [
         "//:CHANGELOG.md",

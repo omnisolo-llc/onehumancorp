@@ -91,6 +91,7 @@ SERVER_RS_SRCS = [
     "//src/server/api/booking:reserve.rs",
     "//src/server/api/booking:create_service.rs",
     "//src/server/api/booking:proposed.rs",
+    "//src/server/api/booking:list.rs",
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
     "//src/server/api/agents:hire.rs",
