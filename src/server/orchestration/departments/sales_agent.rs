@@ -95,6 +95,7 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
         let mut attempts = 0;
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
+        #[allow(unused_assignments)]
         let mut raw_opt = None;
 
         loop {
@@ -137,6 +138,7 @@ impl SalesAgent {
         let mut attempts = 0;
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
+        #[allow(unused_assignments)]
         let mut vec_opt = None;
 
         loop {

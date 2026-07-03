@@ -6935,6 +6935,7 @@ async fn create_ui_bom_item_handler(
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
         .nest("/api/memory", api::inbox::customer_memory::router(db.clone()))
+        .nest("/api/inbox/action_required", api::inbox::action_required::router(db.clone()))
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(api::unified_inbox_webhook::router(db.clone()))
