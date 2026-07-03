@@ -10,7 +10,9 @@ pub use crate::proto::hub::TeammateMeshEvent as Message;
 #[async_trait]
 pub trait MeshTransport: Send + Sync {
     /// Adds a known peer to this transport instance (used primarily for overlay/hybrid setups).
-    fn add_peer(&self, _peer: Peer) {}
+    fn add_peer(&self, _peer: Peer) {
+        // Default no-op for transports that do not require explicit peer management
+    }
 
     /// Publishes a TeammateMeshEvent to the specified topic/channel.
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
