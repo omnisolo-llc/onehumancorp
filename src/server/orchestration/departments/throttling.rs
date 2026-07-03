@@ -63,13 +63,11 @@ impl ThrottlingManager {
                      ON CONFLICT (tenant_id, year_month) DO UPDATE
                      SET actions_used = tenant_ai_budgets.actions_used + $3,
                          updated_at = CURRENT_TIMESTAMP
-                     WHERE tenant_ai_budgets.actions_used + $3 <= $4
                      RETURNING actions_used"
                 )
                 .bind(tenant_id)
                 .bind(&year_month)
                 .bind(points)
-                .bind(limit)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -90,15 +88,12 @@ impl ThrottlingManager {
                      ON CONFLICT (tenant_id, year_month) DO UPDATE
                      SET actions_used = tenant_ai_budgets.actions_used + ?,
                          updated_at = CURRENT_TIMESTAMP
-                     WHERE tenant_ai_budgets.actions_used + ? <= ?
                      RETURNING actions_used"
                 )
                 .bind(tenant_id)
                 .bind(&year_month)
                 .bind(points)
                 .bind(points)
-                .bind(points)
-                .bind(limit)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
