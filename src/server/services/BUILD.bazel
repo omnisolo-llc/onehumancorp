@@ -23,6 +23,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "booking.rs",
+        "omnichannel_service.rs",
         "mod.rs",
         "cache_invalidator.rs",
         "wizard.rs",
