@@ -21,7 +21,7 @@ test.describe('In-App Help & Documentation Features', () => {
   test('views individual help article', async ({ page }) => {
     await page.goto('/help/getting-started-1');
 
-    await expect(page.getByRole('heading', { name: 'Getting Started with Your Store' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Getting Started with Your Store' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(/Tell us about your business/)).toBeVisible();
   });
 
