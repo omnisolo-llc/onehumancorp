@@ -1124,6 +1124,34 @@ pub async fn execute_action(
                         }
                     }
 
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") {
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let mut customer_id_to_use = customer_id.clone();
+                        if customer_id_to_use.is_empty() {
+                            customer_id_to_use = uuid::Uuid::new_v4().to_string();
+                        }
+
+                        let message = edited_payload.clone()
+                            .and_then(|e| e.as_str().map(|s| s.to_string()))
+                            .or_else(|| payload.get("generated_response").and_then(|v| v.as_str().map(|s| s.to_string())))
+                            .unwrap_or_else(|| "Just sending a gentle reminder about your invoice.".to_string());
+
+                        // Record the action in the agent feed
+                        if let Err(e) = self.record_agent_activity(
+                            "Finance".to_string(),
+                            "Followup Sent".to_string(),
+                            serde_json::json!({
+                                "action": {
+                                    "proposed_content": message,
+                                    "status": "APPROVED"
+                                }
+                            }),
+                            tenant_id,
+                        ).await {
+                            tracing::error!("Failed to record agent activity for invoice followup: {}", e);
+                        }
+                    }
+
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_draft") {
                         let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
                         let now = Utc::now();

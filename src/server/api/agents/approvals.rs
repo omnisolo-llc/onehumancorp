@@ -129,6 +129,7 @@ where
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/simulate-autonomous-booking-quote", post(simulate_autonomous_booking_quote))
         .route("/simulate-invoice-draft", post(simulate_invoice_draft))
+        .route("/simulate-invoice-followup", post(simulate_invoice_followup))
         .route("/stream", get(stream_agent_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
@@ -528,6 +529,43 @@ mod tests {
 
         let cached_val = cache.get(&cache_key).await;
         assert!(cached_val.is_some(), "Cache should hit after set");
+    }
+}
+
+async fn simulate_invoice_followup(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "invoice_followup",
+        "invoice_id": "inv_simulated_followup_123",
+        "original_message": "Invoice inv_simulated_followup_123 is overdue.",
+        "generated_response": "Hi Sarah, I hope the new branding assets are working out well for you! Just sending a gentle reminder regarding invoice #104. Let me know if you need another copy of the payment link.",
+        "operational_action": "Draft personalized reminder",
+        "customer_id": "cust_simulated_123",
+        "customer_name": "Acme Corp",
+        "amount_cents": 100000,
+        "days_overdue": 3,
+        "last_contact": "Last contact 10 days ago via email"
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::Finance,
+        "Draft personalized invoice follow-up for review".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate invoice followup: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
     }
 }
 
