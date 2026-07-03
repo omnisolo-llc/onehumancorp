@@ -38,6 +38,7 @@ rust_library(
         "federation.rs",
         "inbox.rs",
         "incidents.rs",
+        "invoice.rs",
         "mod.rs",
         "model.rs",
         "organization.rs",
