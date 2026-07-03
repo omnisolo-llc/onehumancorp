@@ -1,9 +1,13 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { adminPage } from './fixtures';
 
 test.describe('Autonomous Booking System', () => {
-    test('end-to-end booking flow: dashboard view, availability fetch, and submission', async ({ page }) => {
+    test('end-to-end booking flow: dashboard view, availability fetch, and submission', async ({ page, adminUser, loginAs }) => {
         const tenant = 'e2e-tenant';
         const serviceId = 'e2e-product-class';
+
+        await loginAs(page, adminUser);
+
 
         // 1. Visit Dashboard and navigate to Bookings Dashboard
         await page.goto('/ui/dashboard.html');
@@ -17,32 +21,23 @@ test.describe('Autonomous Booking System', () => {
         await expect(page.locator('text=Bookings Dashboard')).toBeVisible();
 
         // 2. Customer navigates to booking page
-        await page.goto(`/booking?tenant=${tenant}&service_id=${serviceId}`);
-        await expect(page.locator('text=Book an Appointment')).toBeVisible();
+        await page.goto(`/ui/booking.html?tenant=${tenant}&service_id=${serviceId}`);
+        await expect(page.locator('text=Request a Service')).toBeVisible();
 
-        // Fill form
-        await page.fill('input[placeholder="Jane Doe"]', 'John Test');
-        await page.fill('input[placeholder="jane@example.com"]', 'john@example.com');
+        // Verify we can interact with the service select
+        const serviceSelect = page.locator('select#service-select');
+        await expect(serviceSelect).toBeVisible();
 
-        // Select tomorrow's date
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const dateStr = tomorrow.toISOString().split('T')[0];
-
-        await page.fill('input[type="date"]', dateStr);
-
-        // We won't assert exact slots here as it depends on DB state, but we should see "Loading slots..." then buttons or empty state.
-        // If it's a completely empty database, it might say "No slots available".
-        // We will just try to submit. If no slots, the UI prevents it (handled in Next.js).
-        // Since this is an E2E test without mocked API, we rely on the backend behavior.
-
-        // Check for slots - assuming the DB provides some slots or handles empty gracefully.
-        // For a true E2E, we'd need seeds, but this confirms the UI logic wires up correctly.
-        const dateInput = page.locator('input[type="date"]');
-        await expect(dateInput).toHaveValue(dateStr);
+        // Verify we can interact with the slot select
+        const slotSelect = page.locator('select#slot-select');
+        await expect(slotSelect).toBeVisible();
 
         // Just verify the component doesn't crash
-        const descriptionInput = page.locator('textarea[placeholder="What do you need help with?"]');
+        const descriptionInput = page.locator('textarea#description');
         await expect(descriptionInput).toBeVisible();
+        await descriptionInput.fill('Test description for booking');
+
+        const submitBtn = page.locator('button#btn-submit');
+        await expect(submitBtn).toBeVisible();
     });
 });

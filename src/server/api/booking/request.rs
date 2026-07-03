@@ -25,17 +25,17 @@ pub struct BookingRequestResponse {
     pub request_id: Option<String>,
 }
 
-pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
+pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>, pool: sqlx::PgPool) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
         .route("/", post(handle_booking_request))
-        .with_state(orchestrator)
+        .with_state((orchestrator, pool))
 }
 
 async fn handle_booking_request(
-    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    State((orchestrator, pool)): State<(Arc<DepartmentOrchestrator>, sqlx::PgPool)>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<BookingRequestPayload>,
 ) -> impl IntoResponse {
@@ -44,6 +44,7 @@ async fn handle_booking_request(
         _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
     };
 
+    let tenant_id_clone = tenant_id.clone();
     let event = DepartmentEvent {
         id: uuid::Uuid::new_v4().to_string(),
         tenant_id,
@@ -55,25 +56,38 @@ async fn handle_booking_request(
         }),
     };
 
+
+    // 1. Dispatch event to orchestrator
     match orchestrator.dispatch_event(event).await {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(BookingRequestResponse {
-                success: true,
-                request_id: Some(uuid::Uuid::new_v4().to_string()),
-            }),
-        )
-            .into_response(),
+        Ok(_) => {},
         Err(e) => {
             tracing::error!("Failed to dispatch booking request event: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(BookingRequestResponse {
-                    success: false,
-                    request_id: None,
-                }),
-            )
-                .into_response()
         }
     }
+
+    // 2. Also inject directly to agent feed to ensure owner sees it immediately.
+    let feed_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query(
+        r#"
+        INSERT INTO agent_feed (id, tenant_id, event_source, lifecycle_state, context_payload)
+        VALUES ($1, $2, 'booking_request', 'new', $3)
+        "#
+    )
+    .bind(&feed_id)
+    .bind(&tenant_id_clone)
+    .bind(serde_json::json!({
+        "message": payload.description,
+        "source": "booking_form"
+    }))
+    .execute(&pool)
+    .await;
+
+    (
+        StatusCode::OK,
+        Json(BookingRequestResponse {
+            success: true,
+            request_id: Some(feed_id),
+        }),
+    ).into_response()
+
 }

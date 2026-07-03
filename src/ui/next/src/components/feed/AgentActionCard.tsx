@@ -145,6 +145,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ||
           (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "booking_reengagement" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "instagram_dm" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "subscription_replenishment") && (
@@ -1245,6 +1247,117 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "booking_reengagement" ? (
+          editingId === approval.id ? (
+            <div className="flex flex-col gap-3 w-full">
+              <textarea
+                className="w-full min-h-[44px] p-3 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] text-sm focus:ring-2 focus:ring-[#0066FF] outline-none transition-all resize-none"
+                rows={4}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                data-testid="edit-booking-reengagement-textarea"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    handleDecision(
+                      approval.id,
+                      true,
+                      editContent,
+                      approval.event_source,
+                    );
+                    setEditingId(null);
+                  }}
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+                  data-testid="save-booking-reengagement"
+                  disabled={loadingAction !== null}
+                >
+                  {isActionLoading("approve") ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    "Save & Approve"
+                  )}
+                </button>
+                <button
+                  onClick={() => setEditingId(null)}
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center justify-center"
+                  data-testid="cancel-edit-booking-reengagement"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg mb-3 border border-gray-200 dark:border-gray-700 backdrop-blur-[10px]">
+                <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  Drafted Re-engagement Message
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {approval.proposed_action?.draft_action || approval.proposed_action?.message}
+                </p>
+              </div>
+              <button
+                onClick={() =>
+                  handleDecision(
+                    approval.id,
+                    true,
+                    undefined,
+                    approval.event_source,
+                  )
+                }
+                className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+                aria-label={`Approve Re-engagement for ${(approval.context_payload)?.customer_name || 'Customer'}`}
+                data-testid="approve-booking-reengagement"
+                disabled={loadingAction !== null}
+              >
+                {isActionLoading("approve") ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : (
+                  `Approve Re-engagement for ${(approval.context_payload)?.customer_name || 'Customer'}`
+                )}
+              </button>
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <button
+                  onClick={() => {
+                    setEditingId(approval.id);
+                    setEditContent(
+                      approval.proposed_action?.draft_action ||
+                      approval.proposed_action?.message ||
+                      "",
+                    );
+                  }}
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                  aria-label="Edit booking re-engagement"
+                  data-testid="edit-booking-reengagement"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() =>
+                    handleDecision(
+                      approval.id,
+                      false,
+                      undefined,
+                      approval.event_source,
+                    )
+                  }
+                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                  aria-label="Reject booking re-engagement"
+                  data-testid="reject-booking-reengagement"
+                  disabled={loadingAction !== null}
+                >
+                  {isActionLoading("dismiss") ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    "Deny"
+                  )}
+                </button>
+              </div>
+            </>
+          )
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ? (
           editingId === approval.id ? (

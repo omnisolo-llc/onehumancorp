@@ -919,6 +919,7 @@
         <a href="tip-jar-generator.html" id="tip-jar-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Tip Jar Generator ☕</a>
         <a href="share-and-save-widget.html" id="share-and-save-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Share & Save Widget 💸</a>
         <a href="order-tracking-viral.html" id="order-tracking-viral-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Order Tracking 📦</a>
+        <a href="digital-business-card.html" id="digital-business-card-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Digital Business Card Generator 📇</a>
         <a href="conversational-manager.html" id="conversational-manager-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Conversational AI Store Manager 🤖</a>
         <a href="/invoice-generator" id="invoice-generator-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Invoice Generator</a>
         <a href="flash-sale-generator.html" id="flash-sale-generator-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-top: 10px;">Flash Sale Generator ⚡</a>
@@ -926,7 +927,7 @@
 
 
 
-      <section aria-label="Unified Agent Feed" id="unified-agent-feed-section" style="order: -1; width: 100%; box-sizing: border-box;">
+      <section aria-label="Unified Agent Feed" id="unified-agent-feed-section" style="display: flex; flex-direction: column; order: -1; width: 100%; box-sizing: border-box;">
         <div class="ohc-growth-card app-panel" id="triage-section" style="display: block; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); width: 100%; box-sizing: border-box;">
           <h2 style="font-size: 24px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.5px;">Command Center</h2>
           <p style="color: #555; margin-bottom: 20px; font-size: 14px; font-weight: 500;">AI-prepared actions and drafts that need your approval.</p>
@@ -935,7 +936,7 @@
             <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Activity</button>
             <button class="triage-tab" id="tab-financials" onclick="switchTriageTab('financials')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Financials</button>
           </div>
-          <div id="unified-agent-feed-section" style="display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box;">
+          <div id="triage-queue" style="display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box;">
             <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1); width: 100%; box-sizing: border-box;">
                 <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                     <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
@@ -1936,7 +1937,7 @@
                 <div style="background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #1D1D1F; border: 1px solid rgba(0, 102, 255, 0.1);">
                   <strong>Draft Reply:</strong><br/>${payloadObj.draft_reply || action.action_type}
                 </div>
-                <div class="triage-controls" style="display: flex; gap: 8px;">
+                <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px;">
                   <button class="triage-btn-approve" data-testid="triage-approve-${action.id}" onclick="handleTriageAction('${action.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Send Draft</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${action.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Review Estimate</button>
                 </div>
@@ -1952,7 +1953,7 @@
                     <div class="triage-priority" style="font-size: 12px; font-weight: 700; color: #0066FF;">Action Required</div>
                   </div>
                   <div class="triage-context" style="font-size: 15px; font-weight: 600; margin-top: 8px; color: #1D1D1F; line-height: 1.4;">${description}</div>
-                  <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 16px;">
+                  <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px;">
                     <button class="triage-btn-approve" onclick="window.location.href='storefront.html?tenant=' + encodeURIComponent(localStorage.getItem('tenant_id') || 'e2e-tenant'); return false;" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 700; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Review Storefront</button>
                     <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(0,0,0,0.05); border-radius: 8px; color: #555; padding: 12px; font-weight: 600; cursor: pointer; border: none;">Dismiss</button>
                   </div>
@@ -2060,7 +2061,7 @@
                 <div style="background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #1D1D1F; border: 1px solid rgba(0, 102, 255, 0.1);">
                   Your daily operations tasks are ready.
                 </div>
-                <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; @media (min-width: 640px) { flex-direction: row; }">
+                <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px;">
                   <button class="triage-btn-approve" data-testid="feed-approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; min-height: 44px; min-width: 44px; background: #4f46e5; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(79,70,229,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center;">Mark Complete</button>
                   <button class="triage-btn-approve" data-testid="feed-assign-btn" onclick="handleTriageAction('${item.id}', true, 'Assign to Staff')" style="min-height: 44px; min-width: 44px; flex: 1; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center;">Assign to Staff</button>
                   <button class="triage-btn-dismiss" data-testid="feed-dismiss-btn" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center;">Dismiss</button>
@@ -2169,7 +2170,7 @@
                   <span style="font-weight: 600; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; display: block;">AI Draft</span>
                   ${draftMessage}
                 </div>
-                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px;">
                   <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Send Draft</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
@@ -2256,7 +2257,7 @@
                   <strong>Instagram:</strong> ${parsedPayload.instagram || ''}<br/>
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
-                <div class="triage-controls" style="display: flex; gap: 8px;">
+                <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px;">
                   <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve & Schedule</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Edit Draft</button>
                 </div>
@@ -2272,7 +2273,7 @@
                   <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #6b7280;">Action Needed</div>
                 </div>
                 <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px; margin-bottom: 16px; color: #1D1D1F;">${description}</div>
-                <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px;">
+                <div class="triage-controls" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
                   <button class="triage-btn-approve" onclick="handleTriageAction('${item.id}', true)" style="min-height: 44px; min-width: 44px; flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 8px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer;">Approve</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Review Estimate</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="min-height: 44px; min-width: 44px; flex: 1; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 8px; color: #1d1d1f; padding: 12px; font-weight: 600; cursor: pointer;">Deny</button>
