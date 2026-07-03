@@ -445,7 +445,8 @@
         <div class="tap-subtitle" id="tap-amount-subtitle">-</div>
 
         <!-- Hidden button to simulate the tap for E2E tests and web mode -->
-        <button class="simulate-tap-btn" id="simulate-tap-btn">Simulate Customer Tap (Test)</button>
+        <button class="simulate-tap-btn" id="simulate-tap-btn" style="display: none;">Simulate Customer Tap (Test)</button>
+        <button class="simulate-tap-btn" id="record-cash-sale-btn" style="margin-top: 10px; background: rgba(0,0,0,0.05); color: #000; border: 1px solid rgba(0,0,0,0.1);" onclick="simulateTapBtn.click()">Record Cash Sale</button>
         <button class="back-btn" onclick="cancelCharge()" style="border: 1px solid rgba(0,0,0,0.1);">Cancel</button>
       </div>
 
@@ -1062,6 +1063,13 @@
                       btn.style.opacity = "0.5";
                   }
 
+                  let variantHtml = '';
+                  if (p.variants && p.variants.length > 0) {
+                      variantHtml = `<select style="margin-top: 8px; width: 100%; border: 1px solid rgba(0,0,0,0.1); border-radius: 4px; font-size: 12px; padding: 4px; background: rgba(255,255,255,0.5);" onclick="event.stopPropagation()">
+                                       ${p.variants.map(v => `<option value="${v.id}">${v.name}</option>`).join('')}
+                                     </select>`;
+                  }
+
                   const infoDiv = document.createElement('div');
                   infoDiv.onclick = (e) => {
                       if (!isSoldOut) {
@@ -1074,6 +1082,7 @@
                       <span class="product-btn-name">${title}</span>
                       <span class="product-btn-price">${displayPrice}</span>
                       ${inventoryHtml}
+                      ${variantHtml}
                   `;
 
                   const toggleBtn = document.createElement('button');
