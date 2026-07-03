@@ -1542,9 +1542,22 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         customer_id TEXT NOT NULL,
                         points_balance INTEGER DEFAULT 0,
                         tier_name TEXT,
+                        lifetime_points INTEGER DEFAULT 0,
+                        lifetime_points INTEGER DEFAULT 0,
                         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(tenant_id, customer_id)
                     );
+
+                    CREATE TABLE IF NOT EXISTS reward_claims (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        discount_code TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'active',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_reward_claims_tenant_customer ON reward_claims(tenant_id, customer_id);
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
 
                     CREATE TABLE IF NOT EXISTS ohc_job_queue (

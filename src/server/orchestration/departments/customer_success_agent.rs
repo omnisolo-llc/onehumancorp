@@ -38,6 +38,8 @@ impl Department for CustomerSuccessAgent {
             "agent:customer_success:approved".to_string(),
             "tenant.subscription.check_predictive_restock".to_string(),
             "tenant.subscription.action.requested".to_string(),
+            "tenant.order.created".to_string(),
+            "POS_SALE_COMPLETED".to_string(),
         ]
     }
 
@@ -52,6 +54,40 @@ impl Department for CustomerSuccessAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+
+
+        if event.event_type == "tenant.order.created" || event.event_type == "POS_SALE_COMPLETED" {
+            let payload = &event.payload;
+            let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let amount = payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+
+            if !customer_id.is_empty() && amount > 0.0 {
+                // Earn 1 point per dollar
+                let points_to_add = amount.floor() as i32;
+                if points_to_add > 0 {
+                    let pool = crate::db::get_pool();
+                    tracing::info!("Ambassador Agent awarding {} points to customer {} for {}", points_to_add, customer_id, event.event_type);
+                    if let Err(e) = crate::services::loyalty::engine::accrue_points(&pool, &event.tenant_id, customer_id, points_to_add).await {
+                        tracing::error!("Failed to accrue points: {}", e);
+                    } else {
+                        // Check if they crossed a threshold (e.g. 100 points) to autonomously draft a win-back campaign reward
+                        use sqlx::Row;
+                        if let Ok(Some(record)) = sqlx::query("SELECT points_balance FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2").bind(&event.tenant_id).bind(customer_id).fetch_optional(&pool).await {
+                            if record.get::<i32, _>("points_balance") >= 100 {
+                                // Auto-draft a reward
+                                let discount_code = format!("LOYALTY15-{}", uuid::Uuid::new_v4().to_string().chars().take(8).collect::<String>().to_uppercase());
+                                tracing::info!("Customer {} reached 100 points. Agent drafting win-back reward: {}", customer_id, discount_code);
+                                // The point redemption and reward creation
+                                if let Err(e) = crate::services::loyalty::engine::redeem_points(&pool, &event.tenant_id, customer_id, 100, &discount_code).await {
+                                    tracing::error!("Failed to redeem points for reward: {}", e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         if event.event_type == "agent:customer_success:approved" {
             let payload = &event.payload;
