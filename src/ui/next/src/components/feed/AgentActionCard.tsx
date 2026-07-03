@@ -120,6 +120,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "invoice_draft"
             ? `Draft Invoice ready for ${(approval.proposed_action || approval.context_payload)?.milestone_name || 'Phase 1'}`
             : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup"
+            ? "Action Required: Approve Invoice Reminder"
+            : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply"
             ? "Action Required: Approve Reply"
             : (approval as any).description ||
@@ -138,6 +141,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "social_post_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_draft" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ||
           (approval.proposed_action || approval.context_payload)
@@ -245,6 +250,31 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
                     <span className="text-[12px] font-medium text-gray-600 dark:text-gray-400">Total Amount Due</span>
                     <span className="text-[16px] font-bold text-gray-900 dark:text-white">${((approval.proposed_action || approval.context_payload)?.amount_cents / 100).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "invoice_followup" && (
+              <div className="flex flex-col gap-3">
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-[8px] border border-blue-100 dark:border-blue-800/50">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[13px] font-medium text-blue-800 dark:text-blue-200">Invoice Amount</span>
+                    <span className="text-[14px] font-bold text-blue-900 dark:text-white">${(((approval.proposed_action || approval.context_payload)?.amount || 0) / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[13px] font-medium text-blue-800 dark:text-blue-200">Status</span>
+                    <span className="text-[13px] font-bold text-red-600 dark:text-red-400">{(approval.proposed_action || approval.context_payload)?.days_overdue} Days Overdue</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] font-medium text-blue-800 dark:text-blue-200">History</span>
+                    <span className="text-[12px] text-gray-600 dark:text-gray-400">{(approval.proposed_action || approval.context_payload)?.last_contact_summary}</span>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <p className="text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-2">Drafted Message</p>
+                  <div className="p-3 bg-white dark:bg-gray-800 rounded-[8px] border border-gray-200 dark:border-gray-700 text-[14px] text-gray-800 dark:text-gray-200">
+                    {(approval.proposed_action || approval.context_payload)?.generated_response}
                   </div>
                 </div>
               </div>
@@ -1702,7 +1732,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "invoice_draft" ? (
+            ?.feature_type === "invoice_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_followup" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
               onClick={() =>

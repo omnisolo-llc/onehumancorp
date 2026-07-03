@@ -108,6 +108,9 @@ impl Department for FinanceAgent {
             payload = serde_json::json!({
                 "feature_type": "invoice_followup",
                 "invoice_id": invoice_id,
+                "amount": event.payload.get("amount").and_then(|v| v.as_i64()).unwrap_or(100000), // Default to $1,000 for test context if missing
+                "days_overdue": event.payload.get("days_overdue").and_then(|v| v.as_i64()).unwrap_or(3),
+                "last_contact_summary": event.payload.get("last_contact_summary").and_then(|v| v.as_str()).unwrap_or("Last contact 10 days ago via email"),
                 "original_message": format!("Invoice {} is overdue.", invoice_id),
                 "generated_response": format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id),
                 "operational_action": "Draft personalized reminder",
