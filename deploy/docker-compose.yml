@@ -65,7 +65,7 @@ services:
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       CHATWOOT_URL: http://chatwoot:3000
       CHATWOOT_ADMIN_EMAIL: admin@ohc.local
-      CHATWOOT_ADMIN_PASSWORD: changeme
+      CHATWOOT_ADMIN_PASSWORD: ${CHATWOOT_ADMIN_PASSWORD:-changeme_but_please_set_in_production}
       CHATWOOT_ENABLED: ${CHATWOOT_ENABLED:-false}
       MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
       OHC_LLM_PROVIDER: ${OHC_LLM_PROVIDER:-minimax}
@@ -207,7 +207,7 @@ services:
     command: bundle exec rails db:chatwoot_prepare
     environment:
       LOG_LEVEL: "info"
-      SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
+      SECRET_KEY_BASE: ${CHATWOOT_SECRET_KEY_BASE:-changeme_secret_key_base_at_least_64_chars_long_for_production}
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
       REDIS_URL: redis://valkey:6379
       RAILS_ENV: production
@@ -231,7 +231,7 @@ services:
     command: bundle exec rails s -p 3000 -b 0.0.0.0
     environment:
       LOG_LEVEL: "info"
-      SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
+      SECRET_KEY_BASE: ${CHATWOOT_SECRET_KEY_BASE:-changeme_secret_key_base_at_least_64_chars_long_for_production}
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
       REDIS_URL: redis://valkey:6379
       RAILS_ENV: production
@@ -259,7 +259,7 @@ services:
     command: bundle exec sidekiq -C config/sidekiq.yml
     environment:
       LOG_LEVEL: "info"
-      SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
+      SECRET_KEY_BASE: ${CHATWOOT_SECRET_KEY_BASE:-changeme_secret_key_base_at_least_64_chars_long_for_production}
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
       REDIS_URL: redis://valkey:6379
       RAILS_ENV: production

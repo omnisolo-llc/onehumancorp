@@ -124,7 +124,7 @@ site/
 playwright-report/
 debian-binary
 /*.diff
-/srcs/
+/src/
 /scratch/
 *.db
 
