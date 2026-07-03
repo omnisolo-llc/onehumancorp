@@ -5,7 +5,7 @@ pub use ::server_harness as harness;
 pub mod api;
 pub mod agents;
 
-use std::collections::HashMap;
+
 use std::sync::RwLock;
 
 #[derive(serde::Deserialize)]
