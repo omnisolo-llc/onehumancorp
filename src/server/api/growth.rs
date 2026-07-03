@@ -369,6 +369,7 @@ where
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
+        .route("/unboxing-share/generate", post(handle_unboxing_share_generate))
         .route("/waitlist/embed", get(handle_waitlist_embed))
         .route("/birthday-club/embed", get(handle_birthday_club_embed))
         .route("/birthday-club/capture", post(handle_birthday_club_capture))
@@ -385,11 +386,12 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/seasonal-promo/generate", post(handle_promo_generate))
+        .route("/referrals/milestones/status", get(handle_get_referral_milestones))
 
         .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
         .route("/reputation/simulate-referral-checkout", post(handle_simulate_referral_checkout))
-.route("/milestone/card", get(handle_get_milestone_card))
+        .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
         .route("/link-in-bio", post(handle_post_link_in_bio))
@@ -569,7 +571,7 @@ async fn handle_trial_extension_claim(
     };
 
     // First check if already claimed
-    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1 OR tenant_id = $1")
+    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1 OR tenant_id = $1")
         .bind(parsed_uuid)
         .fetch_optional(&state.pool)
         .await
@@ -2436,17 +2438,73 @@ async fn handle_get_milestone(
     })
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
+pub struct ReferralsStatusQuery {
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct MilestoneCardQuery {
     pub tenant: Option<String>,
     pub milestone_id: Option<String>,
     pub mobile: Option<bool>,
 }
 
-async fn handle_get_milestone_card(
+pub async fn handle_get_referral_milestones(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<ReferralsStatusQuery>,
+) -> impl axum::response::IntoResponse {
+    let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
+
+    // Fallback: mock tracking for growth milestones
+    let total_referrals: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM growth_team_invites WHERE inviter_id = $1 AND status = 'accepted'",
+    )
+    .bind(tenant_id.clone())
+    .fetch_optional(&state.pool)
+    .await
+    .unwrap_or(Some(0))
+    .unwrap_or(0);
+
+    // Milestones definition
+    let milestones = vec![
+        serde_json::json!({
+            "target": 1,
+            "title": "First Referral",
+            "reward": "$10 Credit",
+            "reached": total_referrals >= 1
+        }),
+        serde_json::json!({
+            "target": 5,
+            "title": "Team Builder",
+            "reward": "1 Month Free Pro",
+            "reached": total_referrals >= 5
+        }),
+        serde_json::json!({
+            "target": 10,
+            "title": "Community Leader",
+            "reward": "Lifetime Pro Features",
+            "reached": total_referrals >= 10
+        }),
+        serde_json::json!({
+            "target": 25,
+            "title": "OHC Ambassador",
+            "reward": "$500 Cash Bonus",
+            "reached": total_referrals >= 25
+        }),
+    ];
+
+    axum::Json(serde_json::json!({
+        "tenant_id": tenant_id,
+        "total_referrals": total_referrals,
+        "milestones": milestones
+    }))
+}
+
+pub async fn handle_get_milestone_card(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<MilestoneCardQuery>,
-) -> impl IntoResponse {
+) -> impl axum::response::IntoResponse {
     let tenant_id = query.tenant.as_deref().unwrap_or("DEFAULT");
     let milestone_id = query.milestone_id.as_deref().unwrap_or("first_sale");
 
@@ -2953,6 +3011,37 @@ async fn handle_viral_loop_metrics(
     }))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UnboxingShareGenerateRequest {
+    pub product_name: String,
+    pub hashtag: String,
+    pub reward: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UnboxingShareGenerateResponse {
+    pub success: bool,
+}
+
+pub async fn handle_unboxing_share_generate(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<UnboxingShareGenerateRequest>,
+) -> Result<Json<UnboxingShareGenerateResponse>, StatusCode> {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.unboxing_share_generated",
+        "tenant_id": auth_info.org_id,
+        "product_name": req.product_name,
+        "hashtag": req.hashtag,
+        "reward": req.reward
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(UnboxingShareGenerateResponse {
+        success: true,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2972,7 +3061,47 @@ mod tests {
         pool
     }
 
+
     #[tokio::test]
+    async fn test_unboxing_share_generator() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState {
+            pool: pool.clone(),
+            hub,
+            viral_loop_tracker: tracker,
+        };
+
+        let req = UnboxingShareGenerateRequest {
+            product_name: "Awesome Widget".to_string(),
+            hashtag: "#UnboxAwesome".to_string(),
+            reward: "10% off next purchase".to_string(),
+        };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: "test-org".to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        let res = super::handle_unboxing_share_generate(
+            Extension(state),
+            axum::extract::Extension(auth_info),
+            Json(req),
+        )
+        .await;
+
+        assert!(res.is_ok());
+        let json = res.unwrap().0;
+        assert_eq!(json.success, true);
+    }
+#[tokio::test]
     async fn test_handle_one_tap_referral_embed() {
         let query = OneTapReferralEmbedQuery {
             tenant: Some("test_tenant".to_string()),
@@ -3398,7 +3527,7 @@ mod tests {
 
         assert_eq!(plan_tier, "pro");
 
-        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1::uuid")
+        let has_claimed: bool = sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1::uuid")
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
 

@@ -209,7 +209,7 @@ async fn list_feed_items(
                             id: item.id,
                             event_source: item.event_source,
                             context_payload: None,
-                            proposed_action: None,
+                            proposed_action: item.proposed_action,
                             lifecycle_state: item.lifecycle_state,
                             created_at: item.created_at,
                         }).collect();

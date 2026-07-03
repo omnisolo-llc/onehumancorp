@@ -173,7 +173,7 @@ impl PydanticToolExecutor<BookingListAppointmentsArgs> for BookingListAppointmen
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
-        let rows = sqlx::query("SELECT id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC")
+        let rows = sqlx::query("SELECT id, customer_id, service_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC")
             .bind(&tenant_id)
             .fetch_all(&mut *tx)
             .await
@@ -184,7 +184,7 @@ impl PydanticToolExecutor<BookingListAppointmentsArgs> for BookingListAppointmen
             use sqlx::Row;
             let id: String = row.get("id");
             let customer_id: String = row.get("customer_id");
-            let product_id: Option<String> = row.try_get("product_id").ok();
+            let service_id: Option<String> = row.try_get("service_id").ok();
             let start_time: chrono::DateTime<chrono::Utc> = row.get("start_time");
             let end_time: Option<chrono::DateTime<chrono::Utc>> = row.try_get("end_time").ok();
             let status: Option<String> = row.try_get("status").ok();
@@ -193,7 +193,7 @@ impl PydanticToolExecutor<BookingListAppointmentsArgs> for BookingListAppointmen
                 "id": id,
                 "tenant_id": tenant_id,
                 "customer_id": customer_id,
-                "product_id": product_id,
+                "service_id": service_id,
                 "start_time": start_time,
                 "end_time": end_time,
                 "status": status.unwrap_or_else(|| "scheduled".to_string())
@@ -250,7 +250,7 @@ impl PydanticToolExecutor<BookingCreateAppointmentArgs> for BookingCreateAppoint
 
         let id = uuid::Uuid::new_v4().to_string();
 
-        sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')")
+        sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')")
             .bind(&id)
             .bind(&args.tenant_id)
             .bind(&args.customer_id)
@@ -317,7 +317,7 @@ impl PydanticToolExecutor<BookingNegotiateTimeArgs> for BookingNegotiateTimeExec
         // Assuming there is an external process or Redis lock logic that holds it, we simulate inserting a tentative state in ledger
         let id = uuid::Uuid::new_v4().to_string();
 
-        sqlx::query("INSERT INTO availability_ledger (id, tenant_id, product_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'TENTATIVE')")
+        sqlx::query("INSERT INTO bookings (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'pending')")
             .bind(&id)
             .bind(&args.tenant_id)
             .bind(&args.service_id)
@@ -379,7 +379,7 @@ impl PydanticToolExecutor<BookingRescheduleArgs> for BookingRescheduleExecutor {
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         // Get original booking details
-        let original: (String, String, String) = sqlx::query_as("SELECT customer_id, product_id, status FROM bookings WHERE id = $1")
+        let original: (String, String, String) = sqlx::query_as("SELECT customer_id::text, service_id, status FROM bookings WHERE id = $1")
             .bind(&args.booking_id)
             .fetch_one(&mut *tx)
             .await
@@ -395,7 +395,7 @@ impl PydanticToolExecutor<BookingRescheduleArgs> for BookingRescheduleExecutor {
         let new_id = uuid::Uuid::new_v4().to_string();
         let notes = args.reason.map(|r| format!("Rescheduled from {}. Reason: {}", args.booking_id, r));
 
-        sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status, rescheduled_from_id, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
+        sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(&new_id)
             .bind(&args.tenant_id)
             .bind(&original.0)
@@ -403,8 +403,6 @@ impl PydanticToolExecutor<BookingRescheduleArgs> for BookingRescheduleExecutor {
             .bind(args.new_start_time)
             .bind(args.new_end_time)
             .bind(&original.2)
-            .bind(&args.booking_id)
-            .bind(&notes)
             .execute(&mut *tx)
             .await
             .map_err(|e| ToolError::Transient(e.to_string()))?;

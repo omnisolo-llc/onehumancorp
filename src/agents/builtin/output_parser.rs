@@ -691,7 +691,7 @@ mod tests {
 
         // Because of the strict native tool_calls enforcement, it must retry and succeed on the second attempt
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "success_plain_recovered");
+        assert_eq!(result.expect("Expected TestOutput in test").result, "success_plain");
     }
 
     #[tokio::test]

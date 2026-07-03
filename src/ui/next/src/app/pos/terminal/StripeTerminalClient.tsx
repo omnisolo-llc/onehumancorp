@@ -157,18 +157,23 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
     if (!navigator.onLine) {
        setTimeout(async () => {
+          let storedDeviceId = 'terminal_1';
+          if (typeof window !== 'undefined') {
+              storedDeviceId = localStorage.getItem('ohc_pos_device_id') || 'terminal_1';
+          }
           const transactionId = `tx_offline_cash_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
           const tx = {
              id: transactionId,
              type: 'cash_sale',
-             client_id: 'terminal_1',
+             client_id: storedDeviceId,
              amount_cents: amount,
              amount: amount,
              currency: 'usd',
              product_id: cart ? cart[0].product.id : productId,
              quantity: cart ? cart[0].quantity : 1,
              payload: JSON.stringify((cart || [{product: {id: productId}, quantity: 1}]).map(c => ({ product_id: c.product.id, quantity: c.quantity }))),
-             timestamp: new Date().toISOString()
+             timestamp: new Date().toISOString(),
+             device_signature: `sig_offline_${storedDeviceId}_${transactionId}`
           };
 
           await SyncManager.getInstance().enqueue(tx);
@@ -256,15 +261,38 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const processPayment = async () => {
     if (!terminal || !connectedReader) return;
 
-    if (!navigator.onLine) {
-       setStatus('Tap-to-Pay requires an active internet connection. Please use Cash Sale instead.');
-       return;
-    }
-
     setReserving(true);
 
     setStatus('Reserving inventory...');
     onOptimisticReserve?.();
+
+    if (!navigator.onLine) {
+       setTimeout(async () => {
+          const transactionId = `tx_offline_tap_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          const tx = {
+             id: transactionId,
+             type: 'tap_to_pay',
+             client_id: 'terminal_1',
+             amount_cents: amount,
+             amount: amount,
+             currency: 'usd',
+             product_id: cart ? cart[0].product.id : productId,
+             quantity: cart ? cart[0].quantity : 1,
+             payload: JSON.stringify((cart || [{product: {id: productId}, quantity: 1}]).map(c => ({ product_id: c.product.id, quantity: c.quantity }))),
+             timestamp: new Date().toISOString()
+          };
+
+          await SyncManager.getInstance().enqueue(tx);
+
+          setStatus('Tap-to-Pay saved offline. Will sync when network is restored.');
+          setTimeout(() => {
+             setStatus('Terminal ready.');
+             if (onSuccess) onSuccess();
+          }, 1500);
+          setReserving(false);
+       }, 500);
+       return;
+    }
 
     let lockIds: string[] = [];
     let lockId = '';
@@ -590,8 +618,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         </div>
       ) : (
         <div className="flex gap-2 mt-4">
-           <button id="cash-btn-offline" onClick={processCashSale} disabled={reserving} className={`w-full bg-gradient-to-b from-[#34C759] to-[#28A745] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-green-500/30 transition-all cash-btn ${reserving ? 'opacity-50' : 'hover:shadow-green-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-             {reserving ? 'Processing...' : `Record Cash Sale $${(amount / 100).toFixed(2)}`}
+           <button id="cash-btn-offline" onClick={processCashSale} disabled={reserving} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all cash-btn backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+             {reserving ? 'Processing...' : `Record Offline Cash Sale $${(amount / 100).toFixed(2)}`}
            </button>
         </div>
       )}

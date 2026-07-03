@@ -33,6 +33,7 @@ import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
 import { WrappedWidget } from "./WrappedWidget";
+import ReferralMilestonesWidget from "../components/ReferralMilestonesWidget";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -369,7 +370,6 @@ export default function Dashboard() {
       </div>
 
       <AIUsageLimitWidget />
-      <DashboardViralInviteWidget />
 
       <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />
@@ -720,7 +720,10 @@ export default function Dashboard() {
         </section>
 
         <section className="mt-4">
-          <DashboardViralInviteWidget />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <ReferralMilestonesWidget />
+            <DashboardViralInviteWidget />
+          </div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Growth & Virality</h2>

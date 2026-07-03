@@ -195,8 +195,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         let unifiedData = initialData;
 
         if (!unifiedData) {
+          const isMobile = window.innerWidth < 768;
           const unifiedRes = await fetch(
-            `/api/agent-feed?tenant_id=${tenant}`,
+            `/api/agent-feed?tenant_id=${tenant}&mobile_optimized=${isMobile}`,
             {
               headers: {
                 "x-tenant-id": tenant,

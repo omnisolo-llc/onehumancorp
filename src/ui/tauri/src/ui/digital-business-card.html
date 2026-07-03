@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Business Card Generator</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f3f4f6; margin: 0; padding: 40px; }
+    h1 { font-size: 24px; margin-bottom: 20px; }
+    .panel { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 500px; margin-bottom: 20px; }
+    label { display: block; font-weight: 500; margin-bottom: 8px; color: #374151; }
+    input[type="text"] { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; margin-bottom: 16px; box-sizing: border-box; }
+    button { background: #0066FF; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 500; cursor: pointer; }
+    button:hover { background: #0052cc; }
+    .generated-section { margin-top: 20px; display: none; }
+    .generated-section input { margin-bottom: 10px; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 24px; border-radius: 12px; max-width: 400px; text-align: center; }
+    .modal-content h2 { margin-top: 0; }
+    .modal-content button { margin: 10px 5px; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+  </style>
+</head>
+<body>
+  <h1>Digital Business Card Generator</h1>
+  <div class="panel">
+    <label>Name</label>
+    <input type="text" id="input-name" placeholder="e.g. Jane Doe">
+    <label>Title</label>
+    <input type="text" id="input-title" placeholder="e.g. Founder & CEO">
+    <label>Company</label>
+    <input type="text" id="input-company" placeholder="e.g. Acme Corp">
+    <label>Phone</label>
+    <input type="text" id="input-phone" placeholder="e.g. +1 (555) 123-4567">
+
+    <label style="display: flex; align-items: center; margin-bottom: 20px;">
+      <input type="checkbox" id="input-remove-branding" style="margin-right: 10px;">
+      Remove Powered by OHC branding
+    </label>
+
+    <button id="btn-generate">Generate Shareable Link</button>
+
+    <div class="generated-section" id="generated-section">
+      <label>Your Link:</label>
+      <input type="text" id="generated-url" readonly>
+      <button id="btn-copy">Copy</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="paywall-modal">
+    <div class="modal-content">
+      <h2>Upgrade to Pro</h2>
+      <p>Make the Digital Business Card 100% white-labeled by upgrading to Pro.</p>
+      <button id="btn-upgrade">Upgrade to Pro</button>
+      <button class="btn-secondary" id="btn-keep-watermark">Keep Watermark</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('input-remove-branding').addEventListener('change', (e) => {
+      if (e.target.checked) {
+        document.getElementById('paywall-modal').style.display = 'flex';
+        e.target.checked = false; // Revert immediately, require pro
+      }
+    });
+
+    document.getElementById('btn-keep-watermark').addEventListener('click', () => {
+      document.getElementById('paywall-modal').style.display = 'none';
+      document.getElementById('input-remove-branding').checked = false;
+    });
+
+    document.getElementById('btn-upgrade').addEventListener('click', () => {
+      window.location.href = '/pricing.html';
+    });
+
+    document.getElementById('btn-generate').addEventListener('click', () => {
+      const name = encodeURIComponent(document.getElementById('input-name').value || 'Jane Doe');
+      const title = encodeURIComponent(document.getElementById('input-title').value || 'Founder & CEO');
+      const company = encodeURIComponent(document.getElementById('input-company').value || 'Acme Corp');
+      const phone = encodeURIComponent(document.getElementById('input-phone').value || '+1 (555) 123-4567');
+      const hideBranding = document.getElementById('input-remove-branding').checked ? '1' : '0';
+
+      const baseUrl = window.location.origin.includes("localhost") || window.location.origin.includes("tauri://") ? "https://app.onehumancorp.com" : window.location.origin;
+      const url = `${baseUrl}/digital-business-card/card.html?n=${name}&t=${title}&c=${company}&p=${phone}&h=${hideBranding}`;
+
+      document.getElementById('generated-url').value = url;
+      document.getElementById('generated-section').style.display = 'block';
+    });
+
+    document.getElementById('btn-copy').addEventListener('click', () => {
+      const input = document.getElementById('generated-url');
+      input.select();
+      navigator.clipboard.writeText(input.value);
+      const btn = document.getElementById('btn-copy');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+  </script>
+</body>
+</html>
