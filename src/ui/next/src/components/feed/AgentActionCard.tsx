@@ -119,6 +119,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           {(approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_draft"
             ? `Draft Invoice ready for ${(approval.proposed_action || approval.context_payload)?.milestone_name || 'Phase 1'}`
+            : (approval.proposed_action || approval.context_payload)?.feature_type === "invoice_followup"
+            ? `Action Required: Approve Invoice Reminder for ${(approval.proposed_action || approval.context_payload)?.customer_id || 'Client'}`
             : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply"
             ? "Action Required: Approve Reply"
@@ -139,6 +141,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_draft" ||
           (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "ambassador_reply" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "incident_resolution" ||
@@ -149,6 +153,38 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "subscription_replenishment") && (
           <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
+            {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "invoice_followup" && (
+              <div className="flex flex-col gap-3">
+                {(approval.proposed_action || approval.context_payload)?.paused ? (
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-100 dark:border-yellow-800/50">
+                    <p className="text-[13px] text-yellow-700 dark:text-yellow-300 font-medium mb-1">Reminder Paused</p>
+                    <p className="text-[11px] text-yellow-600/70 dark:text-yellow-400/70">
+                      We detected a recent conversation promising payment. Action paused.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/50">
+                      <p className="text-[13px] text-blue-700 dark:text-blue-300 font-medium mb-1">Context-Aware Reminder</p>
+                      <p className="text-[11px] text-blue-600/70 dark:text-blue-400/70">
+                        {(approval.proposed_action || approval.context_payload)?.recent_context_snippet
+                          ? `Last contact: "${(approval.proposed_action || approval.context_payload)?.recent_context_snippet}"`
+                          : "No recent contact found."}
+                      </p>
+                    </div>
+                    <div className="space-y-3 mt-2">
+                      <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">Drafted Message</p>
+                        <p className="text-[13px] text-gray-800 dark:text-gray-200">
+                          {(approval.proposed_action || approval.context_payload)?.generated_response}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "incident_resolution" && (
               <div
@@ -1699,6 +1735,45 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               ) : (
                 "Dismiss"
               )}
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "invoice_followup" ? (
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              disabled={isActionLoading(approval.id) || (approval.proposed_action || approval.context_payload)?.paused}
+              className={`flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] ${
+                (approval.proposed_action || approval.context_payload)?.paused
+                  ? "bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+                  : "bg-[#0066FF] text-white hover:bg-[#0052CC]"
+              } font-medium transition-all shadow-md flex items-center justify-center opacity-100`}
+              data-testid="feed-approve-btn"
+            >
+              {isActionLoading(approval.id) ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Processing...
+                </span>
+              ) : (
+                "Approve & Send"
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setEditingId(approval.id);
+                setEditContent((approval.proposed_action || approval.context_payload)?.generated_response || "");
+              }}
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 py-3 rounded-[8px] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm flex items-center justify-center"
+            >
+              Edit
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
