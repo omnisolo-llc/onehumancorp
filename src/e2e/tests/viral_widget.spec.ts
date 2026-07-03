@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Viral Widget Builder E2E', () => {
   test('should allow interacting with widget builder and updating preview', async ({ page }) => {
+    // Set viewport size for mobile testing
+    await page.setViewportSize({ width: 375, height: 812 });
+
     // Navigate to the viral widget builder page
     await page.goto('/viral-powered-by-ohc-widget');
 
@@ -16,6 +19,12 @@ test.describe('Viral Widget Builder E2E', () => {
     // The iframe src should update to contain the URI encoded title.
     const iframe = page.locator('iframe').last();
     await expect(iframe).toHaveAttribute('src', /title=My%20Awesome%20Viral%20Tool/);
+
+    // Verify iframe layout responsive properties
+    const iframeBox = await iframe.boundingBox();
+    expect(iframeBox).toBeDefined();
+    // width shouldn't exceed the viewport size minus padding
+    expect(iframeBox!.width).toBeLessThanOrEqual(375);
 
     // 2. Test theme selection
     const themeSelect = page.getByRole('combobox');
