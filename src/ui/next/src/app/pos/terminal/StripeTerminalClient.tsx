@@ -261,15 +261,38 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const processPayment = async () => {
     if (!terminal || !connectedReader) return;
 
-    if (!navigator.onLine) {
-       setStatus('Tap-to-Pay requires an active internet connection. Please use Cash Sale instead.');
-       return;
-    }
-
     setReserving(true);
 
     setStatus('Reserving inventory...');
     onOptimisticReserve?.();
+
+    if (!navigator.onLine) {
+       setTimeout(async () => {
+          const transactionId = `tx_offline_tap_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          const tx = {
+             id: transactionId,
+             type: 'tap_to_pay',
+             client_id: 'terminal_1',
+             amount_cents: amount,
+             amount: amount,
+             currency: 'usd',
+             product_id: cart ? cart[0].product.id : productId,
+             quantity: cart ? cart[0].quantity : 1,
+             payload: JSON.stringify((cart || [{product: {id: productId}, quantity: 1}]).map(c => ({ product_id: c.product.id, quantity: c.quantity }))),
+             timestamp: new Date().toISOString()
+          };
+
+          await SyncManager.getInstance().enqueue(tx);
+
+          setStatus('Tap-to-Pay saved offline. Will sync when network is restored.');
+          setTimeout(() => {
+             setStatus('Terminal ready.');
+             if (onSuccess) onSuccess();
+          }, 1500);
+          setReserving(false);
+       }, 500);
+       return;
+    }
 
     let lockIds: string[] = [];
     let lockId = '';

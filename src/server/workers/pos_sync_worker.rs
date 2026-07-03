@@ -382,6 +382,27 @@ impl PosSyncWorker {
                                 .await;
 
                             let new_stock = std::cmp::max(0, stock - qty as i32);
+
+                            // Emit an inventory depletion event for AI Operations Agent
+                            let depletion_event_id = uuid::Uuid::new_v4().to_string();
+                            let depletion_payload = serde_json::json!({
+                                "event": "inventory_depleted",
+                                "transaction_id": transaction_id,
+                                "product_id": product_id,
+                                "quantity_deducted": qty,
+                                "remaining_stock": new_stock
+                            }).to_string();
+
+                            let _ = sqlx::query(
+                                "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
+                                 VALUES ($1, $2, 'terminal', 'operations', 'record_pos_transaction', 'Pending', 0.99, $3::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(&depletion_event_id)
+                            .bind(&job.tenant_id)
+                            .bind(&depletion_payload)
+                            .execute(&mut *tx)
+                            .await;
+
                             if new_stock <= 5 && !is_conflict {
                                 let action_request_id = uuid::Uuid::new_v4().to_string();
                                 let payload = serde_json::json!({

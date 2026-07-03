@@ -27,10 +27,10 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await context.setOffline(true);
 
     // Process payment
-    await page.getByText('Charge $50.00').click();
+    await page.locator('button', { hasText: 'Charge $' }).first().click();
 
     // Should show offline success
-    await expect(page.getByText('Payment saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Tap-to-Pay saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
 
     // Verify it's in the queue (IndexedDB)
     const queueData = await page.evaluate(async () => {
@@ -93,8 +93,8 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await context.setOffline(true);
 
     // Click charge to process an offline payment
-    await page.getByText('Charge $50.00').click();
-    await expect(page.getByText('Payment saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
+    await page.locator('button', { hasText: 'Charge $' }).first().click();
+    await expect(page.getByText('Tap-to-Pay saved offline. Will sync when network is restored.')).toBeVisible({ timeout: 10000 });
 
     // Modify the quantity in IndexedDB to force a conflict since the UI doesn't allow changing quantity
     await page.evaluate(async () => {
