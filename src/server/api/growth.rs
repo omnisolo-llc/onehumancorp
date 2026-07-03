@@ -379,6 +379,7 @@ where
         .route("/one-tap-referral/embed", get(handle_one_tap_referral_embed))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/quiz/generate", post(handle_generate_viral_quiz))
+        .route("/job-board/generate", post(handle_job_board_generate))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
@@ -700,6 +701,36 @@ pub struct InviteIdRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralGenerateResponse {
     pub referral_link: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JobBoardGenerateRequest {
+    pub title: String,
+    pub description: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct JobBoardGenerateResponse {
+    pub job_board_link: String,
+}
+
+async fn handle_job_board_generate(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<JobBoardGenerateRequest>,
+) -> Result<Json<JobBoardGenerateResponse>, StatusCode> {
+    let board_id = uuid::Uuid::new_v4().to_string();
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.job_board_generated",
+        "tenant_id": auth_info.org_id,
+        "board_id": board_id,
+        "title": req.title
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(JobBoardGenerateResponse {
+        job_board_link: format!("https://ohc.app/jobs/{}", board_id),
+    }))
 }
 
 
