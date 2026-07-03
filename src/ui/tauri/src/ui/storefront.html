@@ -116,12 +116,23 @@
             <div class="loading" id="loading-state">Loading your catalog...</div>
             <iframe id="storefront-iframe" style="display: none;" title="Live Storefront Preview"></iframe>
         </div>
+
+        <footer style="margin-top: 24px; text-align: center; padding: 16px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); border-radius: 12px; width: 100%; box-sizing: border-box;">
+            <a href="/setup.html" id="storefront-footer-viral-link" data-testid="storefront-footer-viral-link" style="color: #6b7280; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
+                ⚡ Powered by OHC
+            </a>
+        </footer>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const tenantId = localStorage.getItem('tenant_id') || 'default';
             const copyBtn = document.getElementById('copy-link-btn');
+            const footerLink = document.getElementById('storefront-footer-viral-link');
+            if (footerLink) {
+                footerLink.href = `/setup.html?ref=${encodeURIComponent(tenantId)}&source=storefront_footer`;
+            }
             const iframe = document.getElementById('storefront-iframe');
             const loading = document.getElementById('loading-state');
 
