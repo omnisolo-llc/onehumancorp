@@ -15,8 +15,8 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible();
 
     // Verify key metrics are rendered (we match the text labels)
-    await expect(page.locator('text=Total Costs')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=Projected Monthly Cost').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Total Costs')).toBeVisible();
+    await expect(page.locator('text=Projected Monthly Cost').first()).toBeVisible();
 
     const backToMyPlanBtn = page.locator('button', { hasText: 'Back to My Plan' });
     await expect(backToMyPlanBtn).toBeVisible();

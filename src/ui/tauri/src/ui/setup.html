@@ -1032,13 +1032,6 @@
           border-radius: 8px;
           min-height: 44px !important;
         }
-        .persona-row {
-          flex-direction: column;
-        }
-        .work-context-cards {
-          display: flex;
-          flex-direction: column;
-        }
       }
 
       @media (max-width: 414px) {
@@ -2588,7 +2581,7 @@
 
         if (persona === "Baker") {
           state.work_context = "Storefront";
-          state.categories = "Home Baker";
+          state.categories = "Bakery";
           state.business_name = "Maya's Bakery";
           state.assistant_name = "Cookie";
           state.assistant_tone = "Friendly";
@@ -3354,7 +3347,7 @@
           "Other",
         ],
         Storefront: [
-          "Home Baker",
+          "Bakery",
           "Cafe",
           "Restaurant",
           "Retail",
@@ -3444,8 +3437,8 @@
 
       window.goToStep = goToStep;
 
-      // Enter key support for inputs
-      document.querySelectorAll("select, input").forEach((input) => {
+      // Enter key support for select inputs
+      document.querySelectorAll("select").forEach((input) => {
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             e.preventDefault();

@@ -55,20 +55,11 @@ pub struct BalanceResponse {
     pub total_revenue: f64,
 }
 
-#[derive(Serialize)]
-pub struct SafeToSpendResponse {
-    pub current_balance: f64,
-    pub tax_reserve: f64,
-    pub upcoming_liabilities: f64,
-    pub safe_to_spend: f64,
-}
-
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/api/payments/intent", post(create_payment_intent))
         .route("/api/payments/webhook", post(stripe_webhook))
         .route("/api/ledger/balance", get(get_balance))
-        .route("/api/finance/safe-to-spend", get(get_safe_to_spend))
 }
 
 async fn create_payment_intent(
@@ -175,9 +166,6 @@ async fn stripe_webhook(
         .execute(&mut *tx)
         .await;
 
-    let tax_rate = 0.15;
-    let tax_amount = payment_info.0 * tax_rate;
-
     // ensure account exists for tenant
     let account_id = "default_revenue";
     let _ = sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
@@ -205,23 +193,6 @@ async fn stripe_webhook(
         .execute(&mut *tx)
         .await;
 
-    // ensure tax reserve exists for tenant
-    let tax_envelope_id = "default_tax";
-    let _ = sqlx::query("INSERT INTO ledger_reserves (tenant_id, envelope_id, envelope_type, balance) VALUES ($1, $2, 'tax', $3) ON CONFLICT DO NOTHING")
-        .bind(&tenant_id)
-        .bind(tax_envelope_id)
-        .bind(0.0)
-        .execute(&mut *tx)
-        .await;
-
-    let _ = sqlx::query("UPDATE ledger_reserves SET balance = balance + $1 WHERE tenant_id = $2 AND envelope_id = $3")
-        .bind(tax_amount)
-        .bind(&tenant_id)
-        .bind(tax_envelope_id)
-        .execute(&mut *tx)
-        .await;
-
-
     // Notify Finance Agent
     let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'payment_ledger', 'finance', 'payment_succeeded', $3, 'pending')")
         .bind(Uuid::new_v4().to_string())
@@ -230,8 +201,7 @@ async fn stripe_webhook(
             "event": "payment_succeeded",
             "amount": payment_info.0,
             "currency": payment_info.1,
-            "idempotency_key": idempotency_key,
-            "tax_reserve_deducted": tax_amount
+            "idempotency_key": idempotency_key
         }))
         .execute(&mut *tx)
         .await;
@@ -265,68 +235,4 @@ async fn get_balance(
         tenant_id,
         total_revenue,
     })).into_response()
-}
-
-async fn get_safe_to_spend(
-    State(_state): State<AppState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-) -> impl IntoResponse {
-    let tenant_id = auth_info.org_id;
-    if tenant_id.is_empty() {
-        return (StatusCode::UNAUTHORIZED, "Missing tenant ID").into_response();
-    }
-
-    let pool = crate::db::get_pool();
-    let balance: Option<(f64,)> = sqlx::query_as("SELECT balance FROM ledger_accounts WHERE tenant_id = $1 AND account_id = 'default_revenue'")
-        .bind(&tenant_id)
-        .fetch_optional(&pool)
-        .await.unwrap_or(None);
-
-    let current_balance = match balance {
-        Some((b,)) => b,
-        None => 0.0
-    };
-
-    let tax_balance: Option<(f64,)> = sqlx::query_as("SELECT SUM(balance) FROM ledger_reserves WHERE tenant_id = $1 AND envelope_type = 'tax'")
-        .bind(&tenant_id)
-        .fetch_optional(&pool)
-        .await.unwrap_or(None);
-
-    let tax_reserve = match tax_balance {
-        Some((b,)) => b,
-        None => 0.0
-    };
-
-    let liability_balance: Option<(f64,)> = sqlx::query_as("SELECT SUM(balance) FROM ledger_reserves WHERE tenant_id = $1 AND envelope_type = 'liability'")
-        .bind(&tenant_id)
-        .fetch_optional(&pool)
-        .await.unwrap_or(None);
-
-    let upcoming_liabilities = match liability_balance {
-        Some((b,)) => b,
-        None => 0.0
-    };
-
-    let safe_to_spend = current_balance - tax_reserve - upcoming_liabilities;
-
-    (StatusCode::OK, Json(SafeToSpendResponse {
-        current_balance,
-        tax_reserve,
-        upcoming_liabilities,
-        safe_to_spend,
-    })).into_response()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_tax_calculation() {
-        let payment_amount = 100.0;
-        let tax_rate = 0.15;
-        let tax_amount = payment_amount * tax_rate;
-
-        assert_eq!(tax_amount, 15.0);
-    }
 }

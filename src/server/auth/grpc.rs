@@ -4,6 +4,7 @@ use sha2::Sha256;
 
 #[derive(Debug, Clone)]
 enum AuthMode {
+    Token(Vec<u8>), // HMAC-SHA256 of expected token
     SPIFFE { allowed_id: Option<String> },
 }
 
@@ -14,7 +15,11 @@ pub struct AuthConfig {
 
 impl AuthConfig {
     pub fn from_env() -> Self {
-        // Enforce SPIFFE mode (Zero Secrets)
+        if let Ok(tok) = std::env::var("OHC_AGENT_TOKEN") {
+            let h = hmac_token(&tok);
+            return AuthConfig { mode: AuthMode::Token(h) };
+        }
+        // Default: SPIFFE mode
         AuthConfig {
             mode: AuthMode::SPIFFE {
                 allowed_id: std::env::var("OHC_AGENT_SPIFFE_ID").ok(),
@@ -24,7 +29,56 @@ impl AuthConfig {
 
     pub fn authenticate(&self, req: &Request<()>) -> Result<(), Status> {
         match &self.mode {
+            AuthMode::Token(expected_hash) => self.check_token(req, expected_hash),
             AuthMode::SPIFFE { allowed_id } => self.check_spiffe(req, allowed_id.as_deref()),
+        }
+    }
+
+    fn check_token(&self, req: &Request<()>, expected_hash: &[u8]) -> Result<(), Status> {
+        let md = req.metadata();
+        let auth_header = md.get("authorization")
+            .ok_or_else(|| Status::unauthenticated("missing authorization header"))?;
+
+        let auth_str = auth_header.to_str()
+            .map_err(|_| Status::unauthenticated("invalid authorization header"))?;
+
+        if !auth_str.starts_with("Bearer ") {
+            return Err(Status::unauthenticated("authorization must be Bearer token"));
+        }
+
+        let token = &auth_str["Bearer ".len()..];
+        if token.is_empty() { return Err(Status::unauthenticated("empty token")); }
+
+        let app_key = std::env::var("JWT_SECRET")
+            .map(|s| s.into_bytes())
+            .unwrap_or_else(|_| {
+                let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
+                if secret_path.exists() {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(metadata) = std::fs::metadata(&secret_path) {
+                            let perms = metadata.permissions();
+                            if perms.mode() & 0o777 != 0o600 {
+                                panic!("CRITICAL SECURITY ERROR: .ohc_jwt_secret has insecure permissions. Must be exactly 0600.");
+                            }
+                        }
+                    }
+                    if let Ok(bytes) = std::fs::read(&secret_path) {
+                        if bytes.len() >= 32 {
+                            return bytes;
+                        }
+                    }
+                }
+                panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
+            });
+        let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
+        mac.update(token.as_bytes());
+
+        if mac.verify(expected_hash.into()).is_ok() {
+             Ok(())
+        } else {
+             Err(Status::unauthenticated("invalid token"))
         }
     }
 
@@ -48,6 +102,35 @@ impl AuthConfig {
 
         Ok(())
     }
+}
+
+fn hmac_token(tok: &str) -> Vec<u8> {
+    let app_key = std::env::var("JWT_SECRET")
+        .map(|s| s.into_bytes())
+        .unwrap_or_else(|_| {
+            let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
+            if secret_path.exists() {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Ok(metadata) = std::fs::metadata(&secret_path) {
+                        let perms = metadata.permissions();
+                        if perms.mode() & 0o777 != 0o600 {
+                            panic!("CRITICAL SECURITY ERROR: .ohc_jwt_secret has insecure permissions. Must be exactly 0600.");
+                        }
+                    }
+                }
+                if let Ok(bytes) = std::fs::read(&secret_path) {
+                    if bytes.len() >= 32 {
+                        return bytes;
+                    }
+                }
+            }
+            panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
+        });
+    let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
+    mac.update(tok.as_bytes());
+    mac.finalize().into_bytes().to_vec()
 }
 
 pub fn validate_spiffe_id(id: &str) -> Result<(), Status> {
@@ -118,4 +201,24 @@ mod tests {
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/").is_err()); // Empty agent_id
     }
 
+    #[test]
+    fn test_check_token() {
+        // Try to read secret, otherwise set it via env
+        if std::env::var("JWT_SECRET").is_err() {
+            unsafe { std::env::set_var("JWT_SECRET", "test_secret"); }
+        }
+
+        let token = "test_token";
+        let hash = hmac_token(token);
+        let cfg = AuthConfig { mode: AuthMode::Token(hash) };
+
+        let mut req = Request::new(());
+        req.metadata_mut().insert("authorization", MetadataValue::from_str(&format!("Bearer {}", token)).unwrap());
+
+        assert!(cfg.authenticate(&req).is_ok());
+
+        let mut req2 = Request::new(());
+        req2.metadata_mut().insert("authorization", MetadataValue::from_str("Bearer wrong_token").unwrap());
+        assert!(cfg.authenticate(&req2).is_err());
+    }
 }

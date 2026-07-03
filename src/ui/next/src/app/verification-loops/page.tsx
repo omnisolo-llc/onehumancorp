@@ -40,19 +40,19 @@ export default function VerificationLoopsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-8 font-sans">
+    <div className="p-8 max-w-4xl mx-auto font-sans">
       <h1 className="text-3xl font-bold mb-4 text-gray-900">Verification Loops</h1>
       <p className="text-gray-600 mb-8">
         Test agent output against distinct verification loops: Computational Guides (bash/linters), Visual Verifiers (Playwright), or Inferential Sensors (LLM Judge).
       </p>
 
-      <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl space-y-6">
+      <div className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Task Context
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors bg-white/80 backdrop-blur-[30px] saturate-[210%]"
+            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors bg-white/50 backdrop-blur-[30px] saturate-[210%]"
             rows={4}
             value={taskContext}
             onChange={(e) => setTaskContext(e.target.value)}
@@ -65,7 +65,7 @@ export default function VerificationLoopsPage() {
             Agent Output / Command / Path
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors bg-white/80 backdrop-blur-[30px] saturate-[210%] font-mono text-sm"
+            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors bg-white/50 backdrop-blur-[30px] saturate-[210%] font-mono text-sm"
             rows={4}
             value={outputText}
             onChange={(e) => setOutputText(e.target.value)}
@@ -101,7 +101,7 @@ export default function VerificationLoopsPage() {
       </div>
 
       {error && (
-        <div className="mt-8 p-4 bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-xl border border-red-200 shadow-sm">
+        <div className="mt-8 p-4 bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-700 rounded-lg border border-red-200">
           <h3 className="font-bold mb-2 flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             Verification Failed
@@ -111,7 +111,7 @@ export default function VerificationLoopsPage() {
       )}
 
       {result && (
-        <div className="mt-8 p-6 bg-green-50/80 backdrop-blur-[30px] saturate-[210%] text-green-800 border border-green-200 rounded-xl shadow-sm">
+        <div className="mt-8 p-6 bg-green-50/80 backdrop-blur-[30px] saturate-[210%] text-green-800 border border-green-200 rounded-lg shadow-sm">
           <h3 className="font-bold mb-2 flex items-center text-green-900">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
             Verification Passed

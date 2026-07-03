@@ -59,6 +59,8 @@ type HmacSha256 = Hmac<Sha256>;
 pub enum AuthMode {
     /// No authentication (dev/test only).
     Disabled,
+    /// Pre-shared HMAC-SHA256 token.
+    Token { token_hash: Vec<u8> },
     /// SPIFFE/mTLS peer certificate.
     Spiffe { allowed_id: String },
 }
@@ -66,11 +68,27 @@ pub enum AuthMode {
 /// Build an AuthMode from environment variables.
 ///
 ///   OHC_AGENT_AUTH_DISABLED=true   – skip auth (dev only)
+///   OHC_AGENT_TOKEN                – enables token mode
 ///   OHC_AGENT_SPIFFE_ID            – restricts SPIFFE ID (enables SPIFFE mode)
 pub fn auth_mode_from_env() -> AuthMode {
+    if let Ok(tok) = env::var("OHC_AGENT_TOKEN") {
+        if !tok.is_empty() {
+            let hash = hmac_token(&tok);
+            return AuthMode::Token { token_hash: hash };
+        }
+    }
     AuthMode::Spiffe {
         allowed_id: env::var("OHC_AGENT_SPIFFE_ID").unwrap_or_default(),
     }
+}
+
+/// Compute HMAC-SHA256 of the token using the application key.
+fn hmac_token(token: &str) -> Vec<u8> {
+    let key = std::env::var("OHC_AGENT_AUTH_KEY")
+        .unwrap_or_else(|_| "default_auth_key_change_me".to_string());
+    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC can take key of any size");
+    mac.update(token.as_bytes());
+    mac.finalize().into_bytes().to_vec()
 }
 
 pub const ROLE_ADMIN: &str = "ADMIN";
@@ -646,7 +664,7 @@ impl Store {
                 session_id: None,
                 iat: now.timestamp(),
                 exp: (now + chrono::Duration::hours(24)).timestamp(),
-                jti: hex::encode(random_bytes(16)), // Use 16 bytes for better entropy
+                jti: hex::encode(random_bytes(8)),
             };
 
             let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
@@ -811,17 +829,7 @@ impl AuthService for AuthServiceServerImpl {
         let (final_org_id, final_role) = if ::server_config::get().multitenant {
             (sqlx::types::Uuid::new_v4().to_string(), ROLE_ADMIN.to_string())
         } else {
-            // Prevent users from registering into the 'system' tenant ID even in standalone mode
-            // unless we have specific logic. Here we just fallback to a safe ID or what they provided
-            // as long as it's not 'system'. Actually, in standalone, they own everything.
-            let req_org = if req.organization_id.eq_ignore_ascii_case("system") {
-                sqlx::types::Uuid::new_v4().to_string()
-            } else if req.organization_id.is_empty() {
-                sqlx::types::Uuid::new_v4().to_string()
-            } else {
-                req.organization_id.clone()
-            };
-            (req_org, ROLE_VIEWER.to_string())
+            (req.organization_id.clone(), ROLE_VIEWER.to_string())
         };
 
         let user = self.store.create_user(

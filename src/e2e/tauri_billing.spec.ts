@@ -40,7 +40,7 @@ test.describe('Tauri Billing & Pricing UI', () => {
       localStorage.setItem('token', 'e2e-dummy-token');
     });
 
-    await page.goto(`/pricing`);
+    await page.goto(`/ui/pricing.html`);
 
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
@@ -74,7 +74,7 @@ test.describe('Tauri Billing & Pricing UI', () => {
       localStorage.setItem('token', 'e2e-dummy-token');
     });
 
-    await page.goto(`/pricing`);
+    await page.goto(`/ui/pricing.html`);
 
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 
@@ -98,7 +98,7 @@ test.describe('Tauri Billing & Pricing UI', () => {
       localStorage.setItem('token', 'e2e-dummy-token');
     });
 
-    await page.goto(`/pricing`);
+    await page.goto(`/ui/pricing.html`);
 
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible();
 

@@ -55,10 +55,10 @@ export default function GooseMcpPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-8 font-sans">
-      <h1 className="text-3xl font-bold mb-4">Goose MCP Extensions UI</h1>
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Goose MCP Extensions UI</h1>
       {error && (
-        <div className="border border-red-200 p-4 mb-4 rounded-xl shadow-sm bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-700" id="goose-error">
+        <div className="border border-[#FF3B30] p-2 mb-4" id="goose-error">
           <p className="font-bold">Error:</p>
           <p>{error}</p>
         </div>
@@ -71,11 +71,11 @@ export default function GooseMcpPage() {
       ) : (
         <ul className="mb-4">
           {extensions.map((ext, idx) => (
-            <li key={idx} className="p-6 border border-white/40 rounded-2xl shadow-sm bg-white/65 backdrop-blur-[30px] saturate-[210%] glassmorphism mb-4">
+            <li key={idx} className="mb-2 p-4 border rounded">
               <h3 className="font-bold" id={`extension-${ext.id}`}>{ext.name}</h3>
               <p>{ext.description}</p>
               <button
-                className="mt-4 px-4 py-2 bg-[#0071E3] text-white rounded-lg shadow-sm font-medium hover:bg-[#0071E3] transition-colors"
+                className="mt-2 px-4 py-2 bg-[#0066FF] text-white rounded hover:bg-[#0071E3]"
                 onClick={() => handleExecute(ext.id)}
                 id={`execute-${ext.id}`}
               >
@@ -86,14 +86,14 @@ export default function GooseMcpPage() {
         </ul>
       )}
       <button
-        className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors font-medium mb-8 bg-white/80 backdrop-blur-[30px] saturate-[210%]"
+        className="px-4 py-2 border rounded border-black hover:bg-gray-100 mb-8"
         onClick={fetchExtensions}
       >
         Refresh List
       </button>
 
       <h2 className="text-xl font-semibold mb-2">Execute Extension</h2>
-      <div className="p-6 border border-gray-300 rounded-2xl min-h-[100px] shadow-sm bg-white/65 backdrop-blur-[30px] saturate-[210%] glassmorphism" id="exec-result">
+      <div className="p-4 border border-dashed border-gray-400 min-h-[100px]" id="exec-result">
         {execResult ? (
           <pre>{execResult}</pre>
         ) : (

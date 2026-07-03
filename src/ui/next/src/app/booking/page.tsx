@@ -70,7 +70,7 @@ function BookingForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tenant_id: tenant,
-          customer_id: customerEmail || "guest", // Use guest fallback for e2e
+          customer_id: customerEmail || "anon-customer", // Mock ID mapping
           product_id: serviceId,
           start_time: slot.start_time,
           end_time: slot.end_time,

@@ -35,10 +35,9 @@ where
             .execute(executor)
             .await?;
     } else {
-        // We MUST use transaction scope (true) to prevent tenant leakage across queries on the same connection.
-        // Pool hooks handle global resets, but transaction-level scope ensures that if a transaction commits/rolls back,
-        // the tenant context is safely dropped, preventing IDOR and connection pooling leaks inside sequential flows.
-        query("SELECT set_config('role', 'none', true), set_config('app.current_tenant', $1, true);")
+        // We use session scope (false) because set_org_context might be called on a raw connection outside a transaction.
+        // Pool hooks (before_acquire / after_release) safely wipe session states using DISCARD ALL and SET app.current_tenant = ''.
+        query("SELECT set_config('role', 'none', false), set_config('app.current_tenant', $1, false);")
             .bind(org_id)
             .execute(executor)
             .await?;
