@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Unboxing Share Generator - OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0066FF;
+      --primary-hover: #0052cc;
+      --bg: #F5F5F7;
+      --text: #1d1d1f;
+      --text-secondary: #86868b;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --border: rgba(255, 255, 255, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    .glassmorphism {
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --text: #f5f5f7;
+        --text-secondary: #a1a1aa;
+        --card-bg: rgba(22, 22, 26, 0.7);
+        --border: rgba(255, 255, 255, 0.1);
+      }
+      .glassmorphism {
+        background: rgba(22, 22, 26, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    .font-outfit {
+      font-family: "Outfit", sans-serif;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      width: 100%;
+    }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      margin-bottom: 32px;
+      gap: 16px;
+    }
+
+    .back-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 22px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text);
+      backdrop-filter: blur(30px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.5;
+      margin-bottom: 32px;
+    }
+
+    .split-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    @media (min-width: 768px) {
+      .split-layout {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .card {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      min-height: 44px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.5);
+      color: var(--text);
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      input[type="text"], input[type="number"], select, textarea {
+        background: rgba(0,0,0,0.3);
+      }
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.15);
+    }
+
+    .btn-primary {
+      width: 100%;
+      min-height: 44px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.1s, background 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    /* Preview Card Styles */
+    .preview-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .insert-card {
+      background: white;
+      color: #1d1d1f;
+      border-radius: 12px;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+      border: 2px dashed #e5e7eb;
+      font-family: "Outfit", sans-serif;
+    }
+
+    .insert-card.dark-theme {
+      background: #1d1d1f;
+      color: #f5f5f7;
+      border-color: #3f3f46;
+    }
+
+    .insert-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .insert-title {
+      font-size: 24px;
+      font-weight: 800;
+      margin: 0 0 8px 0;
+    }
+
+    .insert-desc {
+      font-size: 15px;
+      color: #6b7280;
+      line-height: 1.5;
+      margin: 0 0 24px 0;
+    }
+
+    .insert-card.dark-theme .insert-desc {
+      color: #a1a1aa;
+    }
+
+    .reward-box {
+      background: #f3f4f6;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      font-weight: 700;
+      font-size: 18px;
+      color: #0066FF;
+    }
+
+    .insert-card.dark-theme .reward-box {
+      background: #2d2d30;
+    }
+
+    .hashtag {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1d1d1f;
+      margin: 0;
+    }
+
+    .insert-card.dark-theme .hashtag {
+      color: #f5f5f7;
+    }
+
+    .cut-line {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 12px;
+      color: #9ca3af;
+      font-family: monospace;
+    }
+
+    .print-btn {
+      background: rgba(0,0,0,0.05);
+      color: var(--text);
+      min-height: 44px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .print-btn {
+        background: rgba(255,255,255,0.1);
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-nav">
+      <a href="dashboard.html" class="back-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </a>
+      <div>
+        <h1 class="font-outfit">Unboxing Share Generator</h1>
+      </div>
+    </div>
+
+    <p class="subtitle">Turn every delivery into a viral growth loop. Generate printable inserts that encourage customers to share their unboxing experience on social media for a reward.</p>
+
+    <div class="split-layout">
+      <!-- Config Form -->
+      <div class="card glassmorphism">
+        <div class="form-group">
+          <label for="productName">Product / Brand Name</label>
+          <input type="text" id="productName" value="Awesome Brand" placeholder="e.g. OHC Bakery">
+        </div>
+
+        <div class="form-group">
+          <label for="hashtag">Campaign Hashtag</label>
+          <input type="text" id="hashtag" value="#AwesomeUnboxing" placeholder="e.g. #OHCStyle">
+        </div>
+
+        <div class="form-group">
+          <label for="reward">Reward Offer</label>
+          <input type="text" id="reward" value="15% Off Your Next Order" placeholder="e.g. Free shipping on next order">
+        </div>
+
+        <div class="form-group">
+          <label for="theme">Insert Theme</label>
+          <select id="theme">
+            <option value="light">Light (Saves Ink)</option>
+            <option value="dark">Dark (Premium)</option>
+          </select>
+        </div>
+
+        <button class="btn-primary" id="generateBtn" data-testid="generate-btn">
+          Generate Campaign
+        </button>
+
+        <p id="status-msg" style="color: #34C759; font-weight: 600; text-align: center; margin-top: 16px; display: none;">Campaign Activated!</p>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-container">
+        <h3 class="font-outfit" style="margin: 0; font-size: 18px;">Insert Preview</h3>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-top: -8px;">Print this card and put it in your shipping boxes.</p>
+
+        <div class="insert-card" id="preview-card" data-testid="insert-card-preview">
+          <div class="cut-line">✂ -- fold or cut here --</div>
+          <div class="insert-icon">📸</div>
+          <h2 class="insert-title">Snap & Share!</h2>
+          <p class="insert-desc">We hope you love your <span id="preview-brand">Awesome Brand</span> order. Show it off on Instagram or TikTok!</p>
+
+          <div class="reward-box">
+            Tag <span id="preview-hashtag" class="hashtag">#AwesomeUnboxing</span> to get <br><span id="preview-reward" style="color: #1d1d1f;">15% Off Your Next Order</span>
+          </div>
+
+          <p style="font-size: 12px; color: #9ca3af; margin: 0;">We'll DM you your promo code within 24 hours.</p>
+        </div>
+
+        <button class="print-btn" onclick="window.print()">🖨 Print Insert</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const productNameInput = document.getElementById('productName');
+      const hashtagInput = document.getElementById('hashtag');
+      const rewardInput = document.getElementById('reward');
+      const themeSelect = document.getElementById('theme');
+      const previewCard = document.getElementById('preview-card');
+      const generateBtn = document.getElementById('generateBtn');
+      const statusMsg = document.getElementById('status-msg');
+
+      function updatePreview() {
+        document.getElementById('preview-brand').textContent = productNameInput.value || 'Your Brand';
+        document.getElementById('preview-hashtag').textContent = hashtagInput.value || '#Share';
+        document.getElementById('preview-reward').textContent = rewardInput.value || 'a special reward';
+
+        if (themeSelect.value === 'dark') {
+          previewCard.classList.add('dark-theme');
+          document.getElementById('preview-reward').style.color = '#f5f5f7';
+        } else {
+          previewCard.classList.remove('dark-theme');
+          document.getElementById('preview-reward').style.color = '#1d1d1f';
+        }
+      }
+
+      productNameInput.addEventListener('input', updatePreview);
+      hashtagInput.addEventListener('input', updatePreview);
+      rewardInput.addEventListener('input', updatePreview);
+      themeSelect.addEventListener('change', updatePreview);
+
+      generateBtn.addEventListener('click', async () => {
+        const originalText = generateBtn.textContent;
+        generateBtn.textContent = 'Activating...';
+        generateBtn.disabled = true;
+
+        try {
+          const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+
+          const response = await fetch('/api/v1/growth/unboxing-share/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              product_name: productNameInput.value,
+              hashtag: hashtagInput.value,
+              reward: rewardInput.value
+            })
+          });
+
+          if (!response.ok) throw new Error('API failed');
+
+          statusMsg.style.display = 'block';
+          setTimeout(() => {
+            statusMsg.style.display = 'none';
+          }, 3000);
+
+        } catch (e) {
+          console.error(e);
+          alert('Failed to activate campaign. Please try again.');
+        } finally {
+          generateBtn.textContent = originalText;
+          generateBtn.disabled = false;
+        }
+      });
+
+      updatePreview();
+    });
+  </script>
+</body>
+</html>
