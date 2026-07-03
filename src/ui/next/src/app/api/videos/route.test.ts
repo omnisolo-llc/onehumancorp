@@ -31,6 +31,22 @@ describe('Videos API Route', () => {
     expect(data).toEqual(mockData);
   });
 
+  it('passes mobile_optimized param to backend', async () => {
+    const mockData = [{ id: 1, title: 'Test Video' }];
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockData
+    });
+
+    const request = new NextRequest('http://localhost/api/videos?mobile_optimized=true');
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(mockFetch).toHaveBeenCalledWith('http://test-backend/api/videos?mobile_optimized=true');
+    expect(response.status).toBe(200);
+    expect(data).toEqual(mockData);
+  });
+
   it('returns empty array on backend error', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

@@ -24,7 +24,7 @@ test.describe("In-App Video Tutorials", () => {
 
     // Wait for the videos to be fetched and rendered
     const firstVideoTitle = page.locator("p", {
-      hasText: "How to set up your store in 5 minutes",
+      hasText: "How to set up your first store easily",
     });
     await expect(firstVideoTitle).toBeVisible();
 
@@ -50,7 +50,7 @@ test.describe("In-App Video Tutorials", () => {
     // Verify the video title is shown in the modal header
     await expect(
       modalContainer.locator("h3", {
-        hasText: "How to set up your store in 5 minutes",
+        hasText: "How to set up your first store easily",
       }),
     ).toBeVisible();
 

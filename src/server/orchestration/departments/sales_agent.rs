@@ -92,16 +92,41 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
             "You are the OneHumanCorp sales intent planner. Decide whether an inbound tenant message is asking for a service quote. Return strict JSON only with keys intent, service_name, confidence, original_message, preferred_start_time, and preferred_end_time. intent must be quote or no_quote. confidence is 0.0 to 1.0. service_name must be the concrete service the customer wants only when intent is quote. preferred_start_time and preferred_end_time are optional ISO8601 strings if the customer mentioned specific times. Do not use keyword rules; infer the customer's request from context. Tenant: {tenant_id}. Payload: {payload_json}"
         );
 
-        let raw = match &self.backend {
-            SalesIntentBackend::Minimax { api_key } => {
-                crate::minimax::MinimaxClient::new(api_key.clone())
-                    .reason(&crate::pricing::compression::reduce_tokens(&prompt))
-                    .await
+        let mut attempts = 0;
+        let max_attempts = 3;
+        let mut backoff = std::time::Duration::from_millis(50);
+        let mut raw_opt = None;
+
+        loop {
+            let ai_op = async {
+                match &self.backend {
+                    SalesIntentBackend::Minimax { api_key } => {
+                        crate::minimax::MinimaxClient::new(api_key.clone())
+                            .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                            .await
+                    }
+                    SalesIntentBackend::Local => crate::minimax::LocalLLMClient::new()
+                        .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                        .await,
+                }
+            };
+
+            match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                Ok(Ok(res)) => {
+                    raw_opt = Some(res);
+                    break;
+                },
+                _ => {
+                    attempts += 1;
+                    if attempts == max_attempts {
+                        return Err("AI service paused or unavailable".to_string());
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff *= 2;
+                }
             }
-            SalesIntentBackend::Local => crate::minimax::LocalLLMClient::new()
-                .reason(&crate::pricing::compression::reduce_tokens(&prompt))
-                .await,
-        }?;
+        }
+        let raw = raw_opt.ok_or_else(|| "AI service paused or unavailable".to_string())?;
 
         parse_quote_intent_plan(&raw, original_message)
     }
@@ -109,18 +134,43 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
 
 impl SalesAgent {
     async fn generate_embedding(&self, text: &str) -> Vec<f32> {
-        match std::env::var("OHC_SALES_LLM_PROVIDER")
-            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-            .as_deref()
-        {
-            Ok("minimax") => {
-                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                crate::minimax::MinimaxClient::new(api_key).generate_embedding(text).await.unwrap_or_else(|_| vec![0.0; 1536])
-            }
-            _ => {
-                crate::minimax::LocalLLMClient::new().generate_embedding(text).await.unwrap_or_else(|_| vec![0.0; 1536])
+        let mut attempts = 0;
+        let max_attempts = 3;
+        let mut backoff = std::time::Duration::from_millis(50);
+        let mut vec_opt = None;
+
+        loop {
+            let ai_op = async {
+                match std::env::var("OHC_SALES_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                    .as_deref()
+                {
+                    Ok("minimax") => {
+                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                        crate::minimax::MinimaxClient::new(api_key).generate_embedding(text).await
+                    }
+                    _ => {
+                        crate::minimax::LocalLLMClient::new().generate_embedding(text).await
+                    }
+                }
+            };
+
+            match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                Ok(Ok(res)) => {
+                    vec_opt = Some(res);
+                    break;
+                },
+                _ => {
+                    attempts += 1;
+                    if attempts == max_attempts {
+                        return vec![0.0; 1536];
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff *= 2;
+                }
             }
         }
+        vec_opt.unwrap_or_else(|| vec![0.0; 1536])
     }
     pub fn new(orchestrator: Arc<DepartmentOrchestrator>) -> Self {
         Self::with_quote_intent_planner(

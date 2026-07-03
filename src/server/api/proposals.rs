@@ -280,7 +280,7 @@ async fn approve_proposal(
     ).await {
         Ok(url) => url,
         Err(e) => {
-            tracing::error!("Failed to create Stripe checkout session: {}", e);
+            tracing::error!("Failed to create Stripe checkout session: {}", e); // pii-safe
             "".to_string()
         }
     };
