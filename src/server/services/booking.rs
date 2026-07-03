@@ -1179,7 +1179,7 @@ impl BookingEngineService for NativeBookingService {
 
         let rows = sqlx::query(
             "SELECT start_time, end_time FROM bookings \
-             WHERE tenant_id = $1 AND product_id = $2 AND start_time::date = $3::date \
+             WHERE tenant_id = $1 AND service_id = $2 AND start_time::date = $3::date \
              AND COALESCE(status, 'pending') <> 'cancelled'"
         )
         .bind(&tenant_id)
@@ -1212,6 +1212,25 @@ impl BookingEngineService for NativeBookingService {
             if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
         }).collect();
 
+        // Incorporate booking_slots into blocked slots
+        let slot_rows = sqlx::query(
+            "SELECT start_time, end_time FROM booking_slots WHERE tenant_id = $1 AND service_id = $2 AND start_time::date = $3::date AND status IN ('soft_locked', 'booked')"
+        )
+        .bind(&tenant_id)
+        .bind(&product_id)
+        .bind(&date_str)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        for row in slot_rows {
+            let st: Option<DateTime<Utc>> = row.get("start_time");
+            let et: Option<DateTime<Utc>> = row.get("end_time");
+            if let (Some(s), Some(e)) = (st, et) {
+                blocked_slots.push((s, e));
+            }
+        }
+
         // Fetch exceptions / business hours from availability_schedules (if any)
         let schedule_rows = sqlx::query(
             "SELECT business_hours, exceptions FROM availability_schedules WHERE tenant_id = $1"
@@ -1234,35 +1253,78 @@ impl BookingEngineService for NativeBookingService {
              }
         }
 
-        let _ = tx.commit().await;
-
         let soft_locks = self.soft_lock_store();
         let mut available_slots = vec![];
-        for hour in 9..17 {
-            let st_naive = date_parsed.and_hms_opt(hour, 0, 0).unwrap();
-            let et_naive = date_parsed.and_hms_opt(hour + 1, 0, 0).unwrap();
-            let st = DateTime::<Utc>::from_naive_utc_and_offset(st_naive, Utc);
-            let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
 
-            let mut overlap = false;
-            let all_busy = existing_slots.iter().chain(blocked_slots.iter());
-            for (est, eet) in all_busy {
-                if st < *eet && et > *est {
-                    overlap = true;
-                    break;
+        // Retrieve availability blocks
+        let block_rows = sqlx::query(
+            "SELECT start_time, end_time FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND start_time::date = $3::date AND is_available = true"
+        )
+        .bind(&tenant_id)
+        .bind(&product_id)
+        .bind(&date_str)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let _ = tx.commit().await;
+
+        if block_rows.is_empty() {
+            // Fallback to default 9..17 if no explicit blocks exist
+            for hour in 9..17 {
+                let st_naive = date_parsed.and_hms_opt(hour, 0, 0).unwrap();
+                let et_naive = date_parsed.and_hms_opt(hour + 1, 0, 0).unwrap();
+                let st = DateTime::<Utc>::from_naive_utc_and_offset(st_naive, Utc);
+                let et = DateTime::<Utc>::from_naive_utc_and_offset(et_naive, Utc);
+
+                let mut overlap = false;
+                let all_busy = existing_slots.iter().chain(blocked_slots.iter());
+                for (est, eet) in all_busy {
+                    if st < *eet && et > *est {
+                        overlap = true;
+                        break;
+                    }
+                }
+
+                let soft_locked = soft_locks
+                    .is_capacity_locked(&tenant_id, &product_id, st, et)
+                    .await
+                    .map_err(Status::internal)?;
+
+                if !overlap && !soft_locked {
+                    available_slots.push(TimeSlot {
+                        start_time: st.to_rfc3339(),
+                        end_time: et.to_rfc3339(),
+                    });
                 }
             }
+        } else {
+            // Process retrieved availability blocks
+            for row in block_rows {
+                let st: Option<DateTime<Utc>> = row.get("start_time");
+                let et: Option<DateTime<Utc>> = row.get("end_time");
+                if let (Some(st), Some(et)) = (st, et) {
+                    let mut overlap = false;
+                    let all_busy = existing_slots.iter().chain(blocked_slots.iter());
+                    for (est, eet) in all_busy {
+                        if st < *eet && et > *est {
+                            overlap = true;
+                            break;
+                        }
+                    }
 
-            let soft_locked = soft_locks
-                .is_capacity_locked(&tenant_id, &product_id, st, et)
-                .await
-                .map_err(Status::internal)?;
+                    let soft_locked = soft_locks
+                        .is_capacity_locked(&tenant_id, &product_id, st, et)
+                        .await
+                        .map_err(Status::internal)?;
 
-            if !overlap && !soft_locked {
-                available_slots.push(TimeSlot {
-                    start_time: st.to_rfc3339(),
-                    end_time: et.to_rfc3339(),
-                });
+                    if !overlap && !soft_locked {
+                        available_slots.push(TimeSlot {
+                            start_time: st.to_rfc3339(),
+                            end_time: et.to_rfc3339(),
+                        });
+                    }
+                }
             }
         }
 
