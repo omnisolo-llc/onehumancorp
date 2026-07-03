@@ -37,6 +37,25 @@ export default function PricingPage() {
     fetchPlanData();
   }, []);
 
+  const formatStorageLimit = (bytes: number | undefined | null) => {
+    if (!bytes) return '∞';
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1024) {
+      return `${(mb / 1024).toFixed(0)} GB`;
+    }
+    return `${mb.toFixed(0)} MB`;
+  };
+
+  const formatStorageUsage = (bytes: number | undefined | null) => {
+    if (!bytes) return '0 MB';
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1024) {
+      const gb = mb / 1024;
+      return `${Number.isInteger(gb) ? gb : gb.toFixed(1)} GB`;
+    }
+    return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
+  };
+
   const handleManageBilling = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -125,9 +144,9 @@ export default function PricingPage() {
                 <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Storage Used</p>
                     <p className="text-xl font-bold text-gray-900">
-                        {planDetails?.storage_used_bytes ? (planDetails.storage_used_bytes / (1024 * 1024)).toFixed(1) : 0} MB
+                        {formatStorageUsage(planDetails?.storage_used_bytes)}
                         <span className="text-sm font-normal text-gray-500 ml-1">
-                            / {planDetails?.storage_limit_bytes ? (planDetails.storage_limit_bytes / (1024 * 1024)).toFixed(0) + ' MB' : '∞'}
+                            / {formatStorageLimit(planDetails?.storage_limit_bytes)}
                         </span>
                     </p>
                 </div>

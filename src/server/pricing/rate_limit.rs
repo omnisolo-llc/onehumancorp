@@ -451,18 +451,23 @@ impl RedisRateLimiter {
                 if let Some(store) = &self.telemetry_store {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
+                let formatted_limit = if limit_mb >= 1024 {
+                    format!("{}GB", limit_mb / 1024)
+                } else {
+                    format!("{}MB", limit_mb)
+                };
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
                     soft_limit_reached: true,
                     user_message: Some(format!(
-                        "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
+                        "You've reached your {} tier limit of {} storage. Keep your business running smoothly with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
                             PlanTier::Starter => "Starter",
                             PlanTier::Pro => "Pro",
                             _ => "Current",
                         },
-                        limit_mb
+                        formatted_limit
                     )),
                 });
             }
