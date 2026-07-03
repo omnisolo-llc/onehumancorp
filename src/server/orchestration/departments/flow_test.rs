@@ -734,3 +734,84 @@ mod tests {
         assert_eq!(soft_locked_count, 1, "Exactly one request should successfully acquire the soft lock.");
         assert_eq!(failed_to_lock_count, 1, "The second request should fail to acquire the lock and have None for proposed_slot_id.");
     }
+
+#[cfg(test)]
+mod finance_tests {
+    use super::*;
+    use crate::orchestration::departments::finance_agent::FinanceAgent;
+    use crate::orchestration::departments::types::{DepartmentType, ApprovalStatus};
+
+    #[tokio::test]
+    async fn test_finance_agent_project_milestone_invoice_draft() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        use std::sync::Arc;
+        use crate::db::{DB, DbStore};
+        use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator, Department};
+        use crate::orchestration::departments::types::{DepartmentEvent};
+        use crate::orchestration::mesh::CentrifugeNode;
+        use ohc_builtin_agent::mesh::transport::InProcessTransport;
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh.clone()));
+
+        let tenant_id = "test-tenant-finance-invoice".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO NOTHING")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO NOTHING")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = DepartmentEvent {
+            id: "evt-proj-1".to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "project_milestone_completed".to_string(),
+            payload: serde_json::json!({
+                "project_id": "proj-1",
+                "project_title": "Redesign Phase 1",
+                "customer_id": "cust-1",
+                "customer_name": "Nora Client",
+                "amount": 1000.0
+            }),
+        };
+
+        let finance_agent = FinanceAgent::new(orchestrator.clone());
+        finance_agent.handle_event(&event).await.unwrap();
+
+        let approvals = orchestrator.get_activity_feed(&tenant_id, None, 10).await;
+
+        let mut has_draft = false;
+        let mut req_id = String::new();
+        for approval in approvals {
+            if approval.department == DepartmentType::Finance && approval.status == ApprovalStatus::PendingApproval {
+                if let Some(payload) = approval.payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("draft_invoice") {
+                        has_draft = true;
+                        req_id = approval.id.clone();
+                        break;
+                    }
+                }
+            }
+        }
+
+        assert!(has_draft, "Finance Agent should create a draft invoice approval");
+
+        // Approve it
+        let decide_res = orchestrator.decide_approval(&req_id, &tenant_id, true, None).await;
+        assert!(decide_res.is_ok(), "Should approve invoice successfully");
+    }
+}

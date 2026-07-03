@@ -22,7 +22,8 @@ impl Department for FinanceAgent {
             "tenant.payment.received".to_string(),
             "payment.captured".to_string(),
             "charge.dispute.created".to_string(),
-            "invoice.overdue".to_string()
+            "invoice.overdue".to_string(),
+            "project_milestone_completed".to_string()
         ]
     }
 
@@ -44,12 +45,33 @@ impl Department for FinanceAgent {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
             "Draft personalized invoice follow-up for review".to_string()
+        } else if event.event_type == "project_milestone_completed" {
+            let project_title = event.payload.get("project_title").and_then(|v| v.as_str()).unwrap_or("Project");
+            format!("Draft invoice for completed milestone on {}", project_title)
         } else {
             "Record deposit and track payment".to_string()
         };
 
         let mut payload = event.payload.clone();
-        if event.event_type == "charge.dispute.created" {
+        if event.event_type == "project_milestone_completed" {
+            let project_id = event.payload.get("project_id").and_then(|v| v.as_str()).unwrap_or("");
+            let project_title = event.payload.get("project_title").and_then(|v| v.as_str()).unwrap_or("Project");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let amount = event.payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("Client");
+
+            payload = serde_json::json!({
+                "feature_type": "draft_invoice",
+                "project_id": project_id,
+                "project_title": project_title,
+                "customer_id": customer_id,
+                "customer_name": customer_name,
+                "amount": amount,
+                "original_message": format!("Milestone completed for {}.", project_title),
+                "generated_response": format!("Invoice drafted for {}.", project_title),
+                "operational_action": "Draft invoice",
+            });
+        } else if event.event_type == "charge.dispute.created" {
             // Reconstruct the simulated payload the UI expects for dispute resolution
             payload = serde_json::json!({
                 "feature_type": "dispute_resolution",

@@ -1430,6 +1430,18 @@ pub async fn execute_action(
                         if let Err(e) = self.dispatch_event(approved_event).await {
                             tracing::error!("Failed to dispatch agent:customer_success:approved event: {}", e);
                         }
+                    } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("draft_invoice") {
+                        let project_title = payload.get("project_title").and_then(|v| v.as_str()).unwrap_or("Project");
+                        let amount = payload.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                        tracing::info!("Executing approved draft invoice for project '{}', customer '{}', amount ${}", project_title, customer_id, amount);
+
+                        let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
+                        let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
+                        match stripe.create_checkout_session(project_title, customer_id, amount, None, None).await {
+                            Ok(url) => tracing::info!("Created invoice checkout link: {}", url),
+                            Err(e) => tracing::error!("Failed to create invoice checkout link via Stripe: {}", e),
+                        }
                     } else if payload.get("feature_type").and_then(|v| v.as_str()) == Some("invoice_followup") || payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let invoice_id = payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("");
                         let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");

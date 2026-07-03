@@ -140,6 +140,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ||
           (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "draft_invoice" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "instagram_dm" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "subscription_replenishment") && (
@@ -593,6 +595,60 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             )}
             {(approval.proposed_action || approval.context_payload)
+              ?.feature_type === "draft_invoice" && (
+              <div
+                className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
+                data-testid="draft-invoice-card"
+              >
+                <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Draft Invoice Ready
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Project:
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {(approval.proposed_action || approval.context_payload)
+                      .project_title || "Project"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Customer:
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    {(approval.proposed_action || approval.context_payload)
+                      .customer_name || "Client"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Total Amount:
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    ${(
+                      (approval.proposed_action || approval.context_payload)
+                        .amount || 0
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+            {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "quote_draft" && (
               <div
                 className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3"
@@ -1029,6 +1085,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     }
                   </span>
                 </div>
+              </div>
+            ) : (approval.proposed_action || approval.context_payload)
+                ?.feature_type === "draft_invoice" ? (
+              <div className="flex flex-col gap-2">
+                 <span className="text-sm text-gray-500">
+                    Milestone completed for {(approval.proposed_action || approval.context_payload).project_title}.
+                 </span>
               </div>
             ) : (approval.proposed_action || approval.context_payload)
                 ?.feature_type === "quote_draft" ? (
@@ -1779,6 +1842,46 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
             </div>
           )
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "draft_invoice" ? (
+          <div className="flex w-full space-x-2">
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  true,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-[2] bg-[#0066FF] hover:bg-[#005CE6] text-white py-3 px-4 rounded-[8px] font-semibold transition-colors flex items-center justify-center gap-2"
+              disabled={loadingAction !== null}
+            >
+              {isActionLoading("approve") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Approve & Send"
+              )}
+            </button>
+            <button
+              onClick={() =>
+                handleDecision(
+                  approval.id,
+                  false,
+                  undefined,
+                  approval.event_source,
+                )
+              }
+              className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] py-3 px-4 rounded-[8px] font-semibold transition-colors flex items-center justify-center gap-2"
+              disabled={loadingAction !== null}
+            >
+              {isActionLoading("dismiss") ? (
+                <span className="animate-pulse">Loading...</span>
+              ) : (
+                "Dismiss"
+              )}
+            </button>
+          </div>
         ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "quote_draft" ? (
           editingId === approval.id ? (
