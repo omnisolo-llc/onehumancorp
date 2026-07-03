@@ -16,10 +16,10 @@ test.describe('Help Center & Documentation Features', () => {
     await page.waitForTimeout(500); // Wait for debounce or search update
 
     // 4. Verify search results contain video tutorial
-    await expect(page.locator('text=How to set up your store in 5 minutes')).toBeVisible();
+    await expect(page.locator('text=How to set up your first store easily')).toBeVisible();
 
     // 5. Open video tutorial modal
-    await page.locator('text=How to set up your store in 5 minutes').click();
+    await page.locator('text=How to set up your first store easily').click();
 
     // 6. Verify video modal opens and can be closed
     const closeButton = page.locator('button[aria-label="Close video"]');
