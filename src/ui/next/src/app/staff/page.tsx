@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AppShell } from '@/components/AppShell';
+import { AppShell } from '../components/AppShell';
 
 export default function StaffPage() {
   const [shifts, setShifts] = useState([]);
