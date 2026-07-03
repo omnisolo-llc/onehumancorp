@@ -321,6 +321,73 @@ impl Department for MarketingAgent {
                 });
             }
 
+            let tenant_id_clone = event.tenant_id.clone();
+            if let Ok(orchestrator) = self.orchestrator() {
+                let db = orchestrator.db();
+                let pool = db.pool.clone();
+                let site_id_str = site_id.to_string();
+                let seo_client = self.seo_client.clone();
+
+                tokio::spawn(async move {
+                    if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_clone) {
+                        // Gather product info to generate SEO metadata
+                        let mut products_desc = String::new();
+                        let mut price = 0.0;
+                        if let Ok(products) = sqlx::query("SELECT name, description, price FROM products WHERE tenant_id = $1")
+                            .bind(tenant_id.to_string())
+                            .fetch_all(&pool)
+                            .await
+                        {
+                            use sqlx::Row;
+                            for p in products {
+                                let name: String = p.try_get("name").unwrap_or_default();
+                                let desc: Option<String> = p.try_get("description").ok();
+                                // Price could be i32, i64, f64. Often it's stored as numeric/decimal or integer cents.
+                                // In this DB, let's try i32 first, fallback to 0.
+                                let p_price: i32 = p.try_get("price").unwrap_or(0);
+                                products_desc.push_str(&format!("{} - {}. ", name, desc.unwrap_or_default()));
+                                if price == 0.0 {
+                                    price = p_price as f64;
+                                }
+                            }
+                        }
+
+                        let (_seo_title, _seo_desc, seo_schema) = match seo_client.generate_seo_metadata("Store", &products_desc, "Store", price).await {
+                            Ok(res) => res,
+                            Err(e) => {
+                                tracing::warn!("Failed to generate SEO metadata: {}", e);
+                                ("Store".to_string(), "A great store".to_string(), serde_json::json!({}))
+                            },
+                        };
+
+                        let sites = if let Ok(s_id) = uuid::Uuid::parse_str(&site_id_str) {
+                            vec![s_id]
+                        } else {
+                            crate::builder::db::list_sites(&pool, tenant_id).await.unwrap_or_default().into_iter().map(|s| s.id).collect()
+                        };
+
+                        for s_id in sites {
+                            // Update pages with SEO metadata
+                            if let Ok(pages) = crate::builder::db::list_pages(&pool, tenant_id, s_id).await {
+                                for page in pages {
+                                    if let Err(e) = crate::builder::db::update_page_seo_metadata(&pool, tenant_id, page.id, seo_schema.clone()).await {
+                                        tracing::error!("Failed to update page SEO metadata: {}", e);
+                                    }
+                                }
+                            }
+
+                            // Re-generate Edge cache
+                            let cache = crate::builder::edge::get_edge_cache();
+                            let locale = "en-US"; // Simple assumption, robust logic could query site locale
+                            let cache_key = format!("edge_site_{}_{}_{}", tenant_id, s_id, locale);
+                            if let Err(e) = crate::builder::edge::regenerate_cache(pool.clone(), tenant_id, s_id, cache_key, cache).await {
+                                tracing::error!("Failed to regenerate edge cache: {:?}", e);
+                            }
+                        }
+                    }
+                });
+            }
+
             return self.orchestrator()?.execute_action(
                 DepartmentType::Marketing,
                 "Trigger Agentic SEO Pre-rendering".to_string(),
