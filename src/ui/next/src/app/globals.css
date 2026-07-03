@@ -334,7 +334,7 @@ body {
 .app-dot {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #9aa4b2;
 }
 
@@ -419,7 +419,7 @@ body {
   align-items: center;
   height: 22px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #eef2f6;
   color: #526070;
   font-size: 11px;
@@ -785,7 +785,7 @@ button, .app-button, .charge-btn {
   min-width: 44px;
   padding: 6px 10px;
   border: 1px solid #d8e0ea;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #f7f9fb !important;
   color: #526070;
   box-shadow: none;
@@ -1074,7 +1074,7 @@ select {
 
 
 
-.rounded-full { border-radius: 9999px !important; }
+.rounded-full { border-radius: 8px !important; }
 
 .ohc-growth-card {
     background: rgba(255, 255, 255, 0.65);
