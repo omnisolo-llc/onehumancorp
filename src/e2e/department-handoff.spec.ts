@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
+
 import { db } from './db_utils';
 
 test.describe('Department Handoff Protocol', () => {
@@ -24,7 +24,7 @@ test.describe('Department Handoff Protocol', () => {
         `, [envelopeId, tenantId, initialPayload, routingHistory]);
 
         // 2. Act: Owner navigates to the Work Triage feed
-        await adminPage(page);
+        page = await adminPage(page);
         await page.goto('/ui/triage.html');
         await page.waitForLoadState('networkidle');
 

@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
+
 
 test.describe('Referral Viral Loop', () => {
   test('generates and displays referral link correctly', async ({ page, context }) => {
-    await adminPage(page, context);
+    page = await adminPage(page, context);
     await page.goto('/referrals.html');
     const linkInput = page.locator('#referral-link');
     await expect(linkInput).not.toHaveValue('', { timeout: 10000 });
@@ -12,7 +12,7 @@ test.describe('Referral Viral Loop', () => {
   });
 
   test('copies referral link to clipboard', async ({ page, context }) => {
-    await adminPage(page, context);
+    page = await adminPage(page, context);
     await page.goto('/referrals.html');
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
@@ -27,7 +27,7 @@ test.describe('Referral Viral Loop', () => {
   });
 
   test('displays performance metrics accurately', async ({ page, context }) => {
-    await adminPage(page, context);
+    page = await adminPage(page, context);
     await page.goto('/referrals.html');
 
     // Check that metrics load (either to 0 or valid number depending on DB seed)
@@ -38,7 +38,7 @@ test.describe('Referral Viral Loop', () => {
   });
 
   test('displays referral tier based on conversions', async ({ page, context }) => {
-    await adminPage(page, context);
+    page = await adminPage(page, context);
     await page.goto('/referrals.html');
 
     // Check that tier name is present
@@ -55,7 +55,7 @@ test.describe('Referral Viral Loop', () => {
   });
 
   test('allows sharing on whatsapp and x', async ({ page, context }) => {
-    await adminPage(page, context);
+    page = await adminPage(page, context);
     await page.goto('/referrals.html');
 
     // Check if the buttons exist and have proper text

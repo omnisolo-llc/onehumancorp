@@ -1,10 +1,10 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
+
 
 test.describe('Subscription Replenishment Feature', () => {
   test('should verify subscription replenishment flow', async ({ page, context }) => {
     // 1. Setup admin session
-    await adminPage(page, context);
+    page = await adminPage(page, context);
 
     // 2. Dashboard should have the Subscription Replenishment card
     const subscriptionCard = page.locator('#subscription-replenishment-section');
