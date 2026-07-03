@@ -1,4 +1,0 @@
-feat(ui): match owner feed cards to premium design standards
-
-Applies `rounded-[16px]` border radius to `PayoutSummaryCard` and `ReviewDraftQuoteCard` components in the owner feed, bringing them into alignment with the OHC Premium Design Standards (macOS-style Glass materials).
-Also adds Vitest unit tests for component rendering and interactions, achieving full coverage, and includes a fallback structural E2E test.
