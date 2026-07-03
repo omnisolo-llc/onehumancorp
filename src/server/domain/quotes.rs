@@ -26,7 +26,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
 
     // If it's not just a quote_id update, but an actual approval containing price info, create invoice
     if price > 0.0 {
-        tracing::info!("Generating invoice {} for tenant {} with amount {}", invoice_id, tenant_id, price);
+        tracing::info!("Generating invoice {} for tenant {} with amount {}", invoice_id, tenant_id, price); // pii-safe
 
         let due_date = chrono::Utc::now().timestamp() + (7 * 24 * 60 * 60); // Due in 7 days
 
@@ -41,7 +41,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
                  stripe_payment_link = link;
              }
              Err(err) => {
-                 tracing::error!("Failed to generate Stripe checkout session link: {}", err);
+                 tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
                  // Still proceed with saving the invoice but log heavily
                  // Without hard-failing since our e2e expects it to proceed.
              }

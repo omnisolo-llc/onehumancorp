@@ -742,3 +742,15 @@ fn test_categorize_stuck_error_signal() {
     assert_eq!(::server_telemetry::categorize_error_signal("stuck item found"), "cleanup");
     assert_eq!(::server_telemetry::categorize_error_signal("stagnant backlog item"), "cleanup");
 }
+#[test]
+fn test_record_harness_init_latency_respects_standalone() {
+    let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
+    temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true")), ("OHC_TELEMETRY_ENABLED", None::<&str>)], || {
+        // Without opt-in, telemetry is disabled in standalone mode.
+        // It shouldn't panic, and logic inside should early return.
+        ::server_telemetry::record_harness_init_latency(1.23);
+
+        let config = ::server_config::load().unwrap();
+        assert!(!config.telemetry_enabled, "telemetry should be disabled in standalone mode");
+    });
+}

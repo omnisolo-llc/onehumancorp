@@ -534,7 +534,7 @@ async fn accept_quote(
             payment_link = url.clone();
         },
         Err(e) => {
-            tracing::error!("Failed to create Stripe checkout session for invoice: {}", e);
+            tracing::error!("Failed to create Stripe checkout session for invoice: {}", e); // pii-safe
         }
     }
 
