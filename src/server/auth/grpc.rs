@@ -1,6 +1,6 @@
 use tonic::{Request, Status};
-use hmac::{Hmac, Mac};
-use sha2::Sha256;
+
+
 
 #[derive(Debug, Clone)]
 enum AuthMode {
@@ -100,8 +100,8 @@ pub fn interceptor(cfg: AuthConfig) -> impl Fn(Request<()>) -> Result<Request<()
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tonic::metadata::MetadataValue;
-    use std::str::FromStr;
+
+
 
     #[test]
     fn test_validate_spiffe_id() {
