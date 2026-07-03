@@ -215,11 +215,44 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             errorDiv.style.background = 'rgba(255,255,255,0.8)';
             errorDiv.style.backdropFilter = 'blur(30px)';
             errorDiv.style.zIndex = '1000';
-            errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
-                <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Item is currently being checked out.</h3>
-                <p style="color: #666;">This item was purchased online just now.</p>
-                <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
-            </div>`;
+            const innerDiv = document.createElement('div');
+          innerDiv.style.background = 'white';
+          innerDiv.style.padding = '2rem';
+          innerDiv.style.borderRadius = '1rem';
+          innerDiv.style.boxShadow = '0 10px 30px rgba(0,0,0,0.1)';
+          innerDiv.style.textAlign = 'center';
+          innerDiv.style.border = '1px solid rgba(255,59,48,0.4)';
+
+          const h3 = document.createElement('h3');
+          h3.style.color = '#FF3B30';
+          h3.style.fontFamily = 'Outfit';
+          h3.style.fontSize = '1.25rem';
+          h3.style.fontWeight = 'bold';
+          h3.style.marginBottom = '0.5rem';
+          h3.textContent = 'Item is currently being checked out.';
+
+          const p = document.createElement('p');
+          p.style.color = '#666';
+          p.textContent = 'This item was purchased online just now.';
+
+          const btn = document.createElement('button');
+          btn.style.marginTop = '1rem';
+          btn.style.padding = '0.5rem 1rem';
+          btn.style.background = '#0066FF';
+          btn.style.color = 'white';
+          btn.style.borderRadius = '0.5rem';
+          btn.style.fontWeight = 'bold';
+          btn.style.cursor = 'pointer';
+          btn.style.border = 'none';
+          btn.textContent = 'Got it';
+          btn.onclick = function() {
+              errorDiv.remove();
+          };
+
+          innerDiv.appendChild(h3);
+          innerDiv.appendChild(p);
+          innerDiv.appendChild(btn);
+          errorDiv.appendChild(innerDiv);
             document.body.appendChild(errorDiv);
             return;
           }
@@ -296,11 +329,44 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
           errorDiv.style.background = 'rgba(255,255,255,0.8)';
           errorDiv.style.backdropFilter = 'blur(30px)';
           errorDiv.style.zIndex = '1000';
-          errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
-              <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Item is currently being checked out.</h3>
-              <p style="color: #666;">This item was purchased online just now.</p>
-              <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
-          </div>`;
+          const innerDiv = document.createElement('div');
+          innerDiv.style.background = 'white';
+          innerDiv.style.padding = '2rem';
+          innerDiv.style.borderRadius = '1rem';
+          innerDiv.style.boxShadow = '0 10px 30px rgba(0,0,0,0.1)';
+          innerDiv.style.textAlign = 'center';
+          innerDiv.style.border = '1px solid rgba(255,59,48,0.4)';
+
+          const h3 = document.createElement('h3');
+          h3.style.color = '#FF3B30';
+          h3.style.fontFamily = 'Outfit';
+          h3.style.fontSize = '1.25rem';
+          h3.style.fontWeight = 'bold';
+          h3.style.marginBottom = '0.5rem';
+          h3.textContent = 'Item is currently being checked out.';
+
+          const p = document.createElement('p');
+          p.style.color = '#666';
+          p.textContent = 'This item was purchased online just now.';
+
+          const btn = document.createElement('button');
+          btn.style.marginTop = '1rem';
+          btn.style.padding = '0.5rem 1rem';
+          btn.style.background = '#0066FF';
+          btn.style.color = 'white';
+          btn.style.borderRadius = '0.5rem';
+          btn.style.fontWeight = 'bold';
+          btn.style.cursor = 'pointer';
+          btn.style.border = 'none';
+          btn.textContent = 'Got it';
+          btn.onclick = function() {
+              errorDiv.remove();
+          };
+
+          innerDiv.appendChild(h3);
+          innerDiv.appendChild(p);
+          innerDiv.appendChild(btn);
+          errorDiv.appendChild(innerDiv);
           document.body.appendChild(errorDiv);
           return;
         }
