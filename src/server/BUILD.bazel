@@ -141,6 +141,7 @@ SERVER_RS_SRCS = [
     "//src/server/domain/repository:task_repo.rs",
     "//src/server/domain/repository:agent_feed_repo.rs",
     "//src/server/domain/repository:omnichannel_repo.rs",
+    "//src/server/domain/repository:action_required_queue_repo.rs",
     "//src/server/integrations:catalog.rs",
     "//src/server/integrations:mcp/registry.rs",
     "//src/server/integrations:mcp_gateway.rs",
