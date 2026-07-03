@@ -120,130 +120,7 @@ pub async fn get_daily_work_handler(
         let cache_key_bg = cache_key.clone();
 
         tokio::spawn(async move {
-            let res = match &db_bg.store {
-                crate::db::DbStore::Postgres => {
-                    let pool1 = db_bg.pool.clone();
-                    let pool2 = db_bg.pool.clone();
-                    let t_bg1 = t_bg.clone();
-                    let t_bg2 = t_bg.clone();
-
-
-
-            let pool_env = db_bg.pool.clone();
-            let t_env = t_bg.clone();
-            let (work_res, orders_res, env_res) = tokio::join!(
-                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
-                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2),
-                sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC").bind(&t_env).fetch_all(&pool_env)
-            );
-
-            work_res.map(|rows| {
-use sqlx::Row;
-                        let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
-                            serde_json::json!({
-                                "id": r.get::<String, _>("id"),
-                                "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
-                                "intent": r.get::<String, _>("intent"),
-                                "customer_info": r.try_get::<Option<serde_json::Value>, _>("customer_info").ok().flatten(),
-                                "suggested_actions": r.try_get::<Option<serde_json::Value>, _>("suggested_actions").ok().flatten(),
-                                "status": r.get::<String, _>("status")
-                            })
-                        }).collect();
-                if let Ok(orders) = orders_res {
-                    for o in orders {
-                        items.push(serde_json::json!({
-                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
-                            "intent": "recent_order",
-                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
-                            "suggested_actions": null,
-                        }));
-                    }
-                }
-                if let Ok(envelopes) = env_res {
-                    for e in envelopes {
-                        let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
-                        let payload_val: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
-                        items.push(serde_json::json!({
-                            "id": e.try_get::<String, _>("id").unwrap_or_default(),
-                            "intent": "task_envelope",
-                            "status": e.try_get::<String, _>("status").unwrap_or_default(),
-                            "customer_info": { "department": e.try_get::<String, _>("current_department").unwrap_or_default() },
-                            "suggested_actions": payload_val,
-                        }));
-                    }
-                }
-                items
-            })
-
-                },
-                crate::db::DbStore::Sqlite(pool) => {
-                    let pool1 = pool.clone();
-                    let pool2 = pool.clone();
-                    let t_bg1 = t_bg.clone();
-                    let t_bg2 = t_bg.clone();
-
-
-
-            let pool_env = pool.clone();
-            let t_env = t_bg.clone();
-            let (work_res, orders_res, env_res) = tokio::join!(
-                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
-                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2),
-                sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = ? AND status != 'COMPLETED' ORDER BY created_at DESC").bind(&t_env).fetch_all(&pool_env)
-            );
-
-            work_res.map(|rows| {
-use sqlx::Row;
-                        let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
-                            let customer_info_str: Option<String> = r.try_get("customer_info").ok();
-                            let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
-
-                            let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
-                            let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s| serde_json::from_str(&s).ok());
-
-                            let id: String = r.get("id");
-                            let signal_id: Option<String> = r.try_get("signal_id").ok().flatten();
-                            let intent: String = r.get("intent");
-                            let status: String = r.get("status");
-
-                            serde_json::json!({
-                                "id": id,
-                                "signal_id": signal_id,
-                                "intent": intent,
-                                "customer_info": customer_info,
-                                "suggested_actions": suggested_actions,
-                                "status": status
-                            })
-                        }).collect();
-                if let Ok(orders) = orders_res {
-                    for o in orders {
-                        items.push(serde_json::json!({
-                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
-                            "intent": "recent_order",
-                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
-                            "suggested_actions": null,
-                        }));
-                    }
-                }
-                if let Ok(envelopes) = env_res {
-                    for e in envelopes {
-                        let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
-                        let payload_val: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
-                        items.push(serde_json::json!({
-                            "id": e.try_get::<String, _>("id").unwrap_or_default(),
-                            "intent": "task_envelope",
-                            "status": e.try_get::<String, _>("status").unwrap_or_default(),
-                            "customer_info": { "department": e.try_get::<String, _>("current_department").unwrap_or_default() },
-                            "suggested_actions": payload_val,
-                        }));
-                    }
-                }
-                items
-            })
-
-                }
-            };
-            if let Ok(items) = res {
+            if let Ok(items) = fetch_daily_work_items(&db_bg, &t_bg, mobile_optimized).await {
                 if let Some(c) = DAILY_WORK_CACHE.get() {
                     c.set(&cache_key_bg, items, std::time::Duration::from_secs(30)).await;
                 }
@@ -253,131 +130,7 @@ use sqlx::Row;
         return (axum::http::StatusCode::OK, Json(serde_json::json!({"items": cached}))).into_response();
     }
 
-    let res = match &db.store {
-        crate::db::DbStore::Postgres => {
-            let pool1 = db.pool.clone();
-            let pool2 = db.pool.clone();
-            let t_bg1 = tenant_id.clone();
-            let t_bg2 = tenant_id.clone();
-
-
-
-            let pool_env = db.pool.clone();
-            let t_env = tenant_id.clone();
-            let (work_res, orders_res, env_res) = tokio::join!(
-                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
-                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2),
-                sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC").bind(&t_env).fetch_all(&pool_env)
-            );
-
-            work_res.map(|rows| {
-use sqlx::Row;
-                let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
-                    serde_json::json!({
-                        "id": r.get::<String, _>("id"),
-                        "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
-                        "intent": r.get::<String, _>("intent"),
-                        "customer_info": r.try_get::<Option<serde_json::Value>, _>("customer_info").ok().flatten(),
-                        "suggested_actions": r.try_get::<Option<serde_json::Value>, _>("suggested_actions").ok().flatten(),
-                        "status": r.get::<String, _>("status")
-                    })
-                }).collect();
-                if let Ok(orders) = orders_res {
-                    for o in orders {
-                        items.push(serde_json::json!({
-                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
-                            "intent": "recent_order",
-                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
-                            "suggested_actions": null,
-                        }));
-                    }
-                }
-                if let Ok(envelopes) = env_res {
-                    for e in envelopes {
-                        let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
-                        let payload_val: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
-                        items.push(serde_json::json!({
-                            "id": e.try_get::<String, _>("id").unwrap_or_default(),
-                            "intent": "task_envelope",
-                            "status": e.try_get::<String, _>("status").unwrap_or_default(),
-                            "customer_info": { "department": e.try_get::<String, _>("current_department").unwrap_or_default() },
-                            "suggested_actions": payload_val,
-                        }));
-                    }
-                }
-                items
-            })
-
-        },
-        crate::db::DbStore::Sqlite(pool) => {
-            let pool1 = pool.clone();
-            let pool2 = pool.clone();
-            let t_bg1 = tenant_id.clone();
-            let t_bg2 = tenant_id.clone();
-
-
-
-            let pool_env = pool.clone();
-            let t_env = tenant_id.clone();
-            let (work_res, orders_res, env_res) = tokio::join!(
-                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1),
-                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" }).bind(&t_bg2).fetch_all(&pool2),
-                sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = ? AND status != 'COMPLETED' ORDER BY created_at DESC").bind(&t_env).fetch_all(&pool_env)
-            );
-
-            work_res.map(|rows| {
-use sqlx::Row;
-                let mut items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
-                    let customer_info_str: Option<String> = r.try_get("customer_info").ok();
-                    let customer_info: Option<serde_json::Value> = customer_info_str.and_then(|s| serde_json::from_str(&s).ok());
-
-                    let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
-                    let suggested_actions: Option<serde_json::Value> = suggested_actions_str.and_then(|s| serde_json::from_str(&s).ok());
-
-                    let id: String = r.get("id");
-                    let signal_id: Option<String> = r.try_get("signal_id").ok().flatten();
-                    let intent: String = r.get("intent");
-                    let status: String = r.get("status");
-
-                    serde_json::json!({
-                        "id": id,
-                        "signal_id": signal_id,
-                        "intent": intent,
-                        "customer_info": customer_info,
-                        "suggested_actions": suggested_actions,
-                        "status": status
-                    })
-                }).collect();
-                if let Ok(orders) = orders_res {
-                    for o in orders {
-                        items.push(serde_json::json!({
-                            "id": o.try_get::<String, _>("id").unwrap_or_default(),
-                            "intent": "recent_order",
-                            "status": o.try_get::<String, _>("status").unwrap_or_default(),
-                            "suggested_actions": null,
-                        }));
-                    }
-                }
-                if let Ok(envelopes) = env_res {
-                    for e in envelopes {
-                        let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
-                        let payload_val: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
-                        items.push(serde_json::json!({
-                            "id": e.try_get::<String, _>("id").unwrap_or_default(),
-                            "intent": "task_envelope",
-                            "status": e.try_get::<String, _>("status").unwrap_or_default(),
-                            "customer_info": { "department": e.try_get::<String, _>("current_department").unwrap_or_default() },
-                            "suggested_actions": payload_val,
-                        }));
-                    }
-                }
-                items
-            })
-
-        }
-    };
-
-    match res {
+    match fetch_daily_work_items(&db, &tenant_id, mobile_optimized).await {
         Ok(items) => {
             cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(30)).await;
             (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
@@ -386,6 +139,126 @@ use sqlx::Row;
             ::server_telemetry::record_error_signal("[bug] Failed to load daily work");
             tracing::error!("Failed to load daily work: {:?}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()}))).into_response()
+        }
+    }
+}
+
+async fn fetch_daily_work_items(db: &Arc<DB>, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, String> {
+    use sqlx::Row;
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let pool1 = db.pool.clone();
+            let pool2 = db.pool.clone();
+            let pool_env = db.pool.clone();
+            let t1 = tenant_id.to_string();
+            let t2 = tenant_id.to_string();
+            let t_env = tenant_id.to_string();
+
+            let (work_res, orders_res, env_res) = tokio::join!(
+                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, NULL as customer_info, NULL as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t1).fetch_all(&pool1),
+                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5" }).bind(&t2).fetch_all(&pool2),
+                sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC").bind(&t_env).fetch_all(&pool_env)
+            );
+
+            let mut items: Vec<serde_json::Value> = Vec::new();
+            if let Ok(rows) = work_res {
+                for r in rows {
+                    let mut item = serde_json::json!({
+                        "id": r.get::<String, _>("id"),
+                        "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
+                        "intent": r.get::<String, _>("intent"),
+                        "status": r.get::<String, _>("status")
+                    });
+                    if !mobile_optimized {
+                        item["customer_info"] = r.try_get::<Option<serde_json::Value>, _>("customer_info").ok().flatten().into();
+                        item["suggested_actions"] = r.try_get::<Option<serde_json::Value>, _>("suggested_actions").ok().flatten().into();
+                    }
+                    items.push(item);
+                }
+            }
+            if let Ok(orders) = orders_res {
+                for o in orders {
+                    items.push(serde_json::json!({
+                        "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                        "intent": "recent_order",
+                        "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                    }));
+                }
+            }
+            if let Ok(envelopes) = env_res {
+                for e in envelopes {
+                    let mut item = serde_json::json!({
+                        "id": e.try_get::<String, _>("id").unwrap_or_default(),
+                        "intent": "task_envelope",
+                        "status": e.try_get::<String, _>("status").unwrap_or_default(),
+                        "customer_info": { "department": e.try_get::<String, _>("current_department").unwrap_or_default() }
+                    });
+                    if !mobile_optimized {
+                        let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                        item["suggested_actions"] = serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+                    }
+                    items.push(item);
+                }
+            }
+            Ok(items)
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            let pool1 = pool.clone();
+            let pool2 = pool.clone();
+            let pool_env = pool.clone();
+            let t1 = tenant_id.to_string();
+            let t2 = tenant_id.to_string();
+            let t_env = tenant_id.to_string();
+
+            let (work_res, orders_res, env_res) = tokio::join!(
+                sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, NULL as customer_info, NULL as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t1).fetch_all(&pool1),
+                sqlx::query(if mobile_optimized { "SELECT id, status, 0.0 as total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" } else { "SELECT id, status, total_amount FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5" }).bind(&t2).fetch_all(&pool2),
+                sqlx::query("SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = ? AND status != 'COMPLETED' ORDER BY created_at DESC").bind(&t_env).fetch_all(&pool_env)
+            );
+
+            let mut items: Vec<serde_json::Value> = Vec::new();
+            if let Ok(rows) = work_res {
+                for r in rows {
+                    let mut item = serde_json::json!({
+                        "id": r.get::<String, _>("id"),
+                        "signal_id": r.try_get::<Option<String>, _>("signal_id").ok().flatten(),
+                        "intent": r.get::<String, _>("intent"),
+                        "status": r.get::<String, _>("status")
+                    });
+                    if !mobile_optimized {
+                        let customer_info_str: Option<String> = r.try_get("customer_info").ok();
+                        item["customer_info"] = customer_info_str.and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok()).into();
+                        let suggested_actions_str: Option<String> = r.try_get("suggested_actions").ok();
+                        item["suggested_actions"] = suggested_actions_str.and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok()).into();
+                    }
+                    items.push(item);
+                }
+            }
+            if let Ok(orders) = orders_res {
+                for o in orders {
+                    items.push(serde_json::json!({
+                        "id": o.try_get::<String, _>("id").unwrap_or_default(),
+                        "intent": "recent_order",
+                        "status": o.try_get::<String, _>("status").unwrap_or_default(),
+                    }));
+                }
+            }
+            if let Ok(envelopes) = env_res {
+                for e in envelopes {
+                    let mut item = serde_json::json!({
+                        "id": e.try_get::<String, _>("id").unwrap_or_default(),
+                        "intent": "task_envelope",
+                        "status": e.try_get::<String, _>("status").unwrap_or_default(),
+                        "customer_info": { "department": e.try_get::<String, _>("current_department").unwrap_or_default() }
+                    });
+                    if !mobile_optimized {
+                        let payload_str: String = e.try_get("payload").unwrap_or_else(|_| "{}".to_string());
+                        item["suggested_actions"] = serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+                    }
+                    items.push(item);
+                }
+            }
+            Ok(items)
         }
     }
 }

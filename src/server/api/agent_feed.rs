@@ -21,8 +21,6 @@ use redis::AsyncCommands;
 pub struct MobileAgentFeedItem {
     pub id: String,
     pub event_source: String,
-    pub context_payload: Option<sqlx::types::Json<serde_json::Value>>,
-    pub proposed_action: Option<sqlx::types::Json<serde_json::Value>>,
     pub lifecycle_state: String,
     pub created_at: Option<DateTime<Utc>>,
 }
@@ -206,8 +204,6 @@ async fn list_feed_items(
                         let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
                             id: item.id,
                             event_source: item.event_source,
-                            context_payload: None,
-                            proposed_action: None,
                             lifecycle_state: item.lifecycle_state,
                             created_at: item.created_at,
                         }).collect();
