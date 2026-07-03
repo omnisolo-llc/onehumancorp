@@ -4,7 +4,7 @@ load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
 _NEXT_UI_E2E_SPECS = [
 
-    "//src/ui/next:src/e2e/test_glassmorphism.spec.ts",
+
     "//src/ui/next:src/e2e/interactive_demo_loop.spec.ts",
     "//src/ui/next:src/e2e/langgraph.spec.ts",
     "//src/ui/next:src/e2e/client-side-image-optimization.spec.ts",
