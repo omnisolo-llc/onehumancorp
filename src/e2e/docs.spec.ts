@@ -22,7 +22,7 @@ test.describe('Documentation & Help Features', () => {
     await helpBtn.click();
 
     // Verify widget opened by checking if "Help Center" title inside the widget is visible
-    const helpCenterTitle = page.getByRole('heading', { name: 'In-App Help Center', exact: true });
+    const helpCenterTitle = page.getByRole('heading', { name: 'Help Center', exact: true });
     await expect(helpCenterTitle).toBeVisible();
 
     // Check for article (since backend might be returning it slowly, add retries or let playwright handle it)
