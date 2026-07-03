@@ -110,7 +110,10 @@ async fn handle_rpc(
     }
 
     if payload.method == "execute_visual_workflow" {
-        let workflow_req = payload.params.clone().unwrap_or_else(|| serde_json::json!({}));
+        let workflow_req = payload
+            .params
+            .clone()
+            .unwrap_or_else(|| serde_json::json!({}));
         let client = reqwest::Client::new();
         let url = "http://localhost:18789/api/workflow/run".to_string();
         match client.post(&url).json(&workflow_req).send().await {

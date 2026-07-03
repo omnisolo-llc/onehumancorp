@@ -44,6 +44,9 @@ pub trait CheckpointSaver: Send + Sync {
     ) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
+    async fn list_threads(&self) -> Result<Vec<String>, String> {
+        Ok(vec![])
+    }
     #[allow(unused_variables)]
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
         Ok(())
@@ -335,7 +338,10 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("push")
             .arg("--include-untracked")
             .arg("-m")
-            .arg(format!("Auto-stash before restoring checkpoint {}", checkpoint_id))
+            .arg(format!(
+                "Auto-stash before restoring checkpoint {}",
+                checkpoint_id
+            ))
             .current_dir(&self.repo_path)
             .output()
             .await
@@ -482,6 +488,36 @@ impl CheckpointSaver for GitCheckpointer {
 
         Ok(checkpoints)
     }
+
+    async fn list_threads(&self) -> Result<Vec<String>, String> {
+        let output = Command::new("git")
+            .arg("ls-tree")
+            .arg("-r")
+            .arg("HEAD")
+            .arg("--name-only")
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Ok(vec![]);
+        }
+
+        let mut threads = std::collections::HashSet::new();
+        let files = String::from_utf8_lossy(&output.stdout);
+        for file in files.lines() {
+            let file = file.trim();
+            if file.starts_with(".agent_progress_") && file.ends_with(".json") {
+                let thread_id = file
+                    .trim_start_matches(".agent_progress_")
+                    .trim_end_matches(".json");
+                threads.insert(thread_id.to_string());
+            }
+        }
+
+        Ok(threads.into_iter().collect())
+    }
 }
 
 #[async_trait]
@@ -583,6 +619,21 @@ impl CheckpointSaver for PgCheckpointer {
         }
 
         Ok(checkpoints)
+    }
+
+    async fn list_threads(&self) -> Result<Vec<String>, String> {
+        let rows = sqlx::query("SELECT DISTINCT thread_id FROM swarm_checkpoints")
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let mut threads = Vec::new();
+        for row in rows {
+            let thread_id: String = sqlx::Row::get(&row, "thread_id");
+            threads.push(thread_id);
+        }
+
+        Ok(threads)
     }
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {

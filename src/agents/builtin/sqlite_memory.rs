@@ -278,7 +278,10 @@ impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
 
     async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
         // Fallback to cross-session search
-        <Self as crate::memory_store::LongTermMemory>::search_cross_session_messages(self, _query, _limit, false).await
+        <Self as crate::memory_store::LongTermMemory>::search_cross_session_messages(
+            self, _query, _limit, false,
+        )
+        .await
     }
 
     async fn search_cross_session_messages(
@@ -287,7 +290,10 @@ impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
         limit: usize,
         summarize: bool,
     ) -> Result<Vec<String>, String> {
-        <Self as crate::memory_store::LongTermMemory>::search_cross_session_messages(self, query, limit, summarize).await
+        <Self as crate::memory_store::LongTermMemory>::search_cross_session_messages(
+            self, query, limit, summarize,
+        )
+        .await
     }
 
     async fn write_topic(&self, _topic_name: &str, _content: &str) -> Result<(), String> {
