@@ -322,6 +322,26 @@
 </div>
 
 <script>
+
+      // Fetch dynamic referral code
+      let __ohcReferralCode = (() => { try { return localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant'; } catch(e) { return 'default-tenant'; } })();
+      (async function() {
+        try {
+          const token = localStorage.getItem('ohc_token');
+          const headers = token ? { 'authorization': `Bearer ${token}` } : {};
+          let url = '/api/v1/growth/referrals/generate';
+          if (window.__TAURI__ && window.__TAURI__.core) { url = 'http://127.0.0.1:18789/api/v1/growth/referrals/generate'; }
+          const res = await fetch(url, { method: 'POST', headers });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.referral_link) {
+              const parts = data.referral_link.split('/ref/');
+              if (parts.length > 1) { __ohcReferralCode = parts[1]; }
+            }
+          }
+        } catch(e) {}
+      })();
+
   const widgetTitle = document.getElementById('widgetTitle');
   const discountCode = document.getElementById('discountCode');
   const reviewUrl = document.getElementById('reviewUrl');
@@ -356,7 +376,7 @@
   <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #111;">${titleStr}</h3>
   <p style="margin: 0 0 16px 0; font-size: 14px; color: #666;">Click below to leave a review and unlock your code!</p>
   <button onclick="window.open('${urlStr}', '_blank'); this.innerText='Code: ${codeStr}'; this.style.background='#34c759';" style="background: #0071e3; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; width: 100%; transition: 0.2s;">Leave a Review</button>
-  ${!brandingToggle.checked ? `<a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=review_reward" target="_blank" style="display: block; margin-top: 12px; font-size: 11px; color: #888; text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>` : ''}
+  ${!brandingToggle.checked ? `<a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${__ohcReferralCode}" target="_blank" style="display: block; margin-top: 12px; font-size: 11px; color: #888; text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>` : ''}
 </div>
     `.trim();
 

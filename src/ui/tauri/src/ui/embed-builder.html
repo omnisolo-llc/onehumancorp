@@ -258,6 +258,30 @@
   </div>
 
   <script>
+
+      // OHC Referral Fetcher
+      let __ohcReferralCode = (() => { try { return localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team'; } catch(e) { return 'default-team'; } })();
+      (async function() {
+        try {
+          let token = localStorage.getItem('ohc_token');
+          let headers = token ? { 'authorization': `Bearer ${token}` } : {};
+          let url = '/api/v1/growth/referrals/generate';
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            url = 'http://127.0.0.1:18789/api/v1/growth/referrals/generate';
+          }
+          let res = await fetch(url, { method: 'POST', headers });
+          if (res.ok) {
+            let data = await res.json();
+            if (data.referral_link) {
+              let parts = data.referral_link.split('/ref/');
+              if (parts.length > 1) {
+                __ohcReferralCode = parts[1];
+              }
+            }
+          }
+        } catch(e) {}
+      })();
+
     document.addEventListener('DOMContentLoaded', () => {
       const typeBtns = document.querySelectorAll('.type-btn:not(.theme-btn)');
       const themeBtns = document.querySelectorAll('.theme-btn');
@@ -288,13 +312,13 @@
         // Update Code Snippet
         const snippet = `<div class="ohc-embed-container" style="width: 100%; max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
   <iframe src="${embedUrl}" width="100%" height="400" style="border:none; border-radius:16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"></iframe>
-  <a href="${window.location.origin}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}" target="_blank" style="margin-top: 12px; font-size: 12px; color: #86868b; text-decoration: none; font-family: sans-serif; font-weight: 600;">⚡ Powered by OHC</a>
+  <a href="${window.location.origin}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(__ohcReferralCode)}" target="_blank" style="margin-top: 12px; font-size: 12px; color: #86868b; text-decoration: none; font-family: sans-serif; font-weight: 600;">⚡ Powered by OHC</a>
 </div>`;
 
         embedCodeEl.textContent = snippet;
 
         // Update Preview link
-        previewPoweredBy.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenant)}`;
+        previewPoweredBy.href = `/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(__ohcReferralCode)}`;
       }
 
       typeBtns.forEach(btn => {

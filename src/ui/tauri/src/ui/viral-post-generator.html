@@ -217,6 +217,30 @@
   </div>
 
   <script>
+
+      // OHC Referral Fetcher
+      let __ohcReferralCode = (() => { try { return localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team'; } catch(e) { return 'default-team'; } })();
+      (async function() {
+        try {
+          let token = localStorage.getItem('ohc_token');
+          let headers = token ? { 'authorization': `Bearer ${token}` } : {};
+          let url = '/api/v1/growth/referrals/generate';
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            url = 'http://127.0.0.1:18789/api/v1/growth/referrals/generate';
+          }
+          let res = await fetch(url, { method: 'POST', headers });
+          if (res.ok) {
+            let data = await res.json();
+            if (data.referral_link) {
+              let parts = data.referral_link.split('/ref/');
+              if (parts.length > 1) {
+                __ohcReferralCode = parts[1];
+              }
+            }
+          }
+        } catch(e) {}
+      })();
+
     document.addEventListener('DOMContentLoaded', () => {
       let hasPro = false;
       try { hasPro = localStorage.getItem('has_pro') === 'true'; } catch(e) {}
@@ -246,7 +270,7 @@
       shareToUnlockBtn.addEventListener('click', async () => {
           let tenantId = "demo";
           try { tenantId = localStorage.getItem('tenant') || "demo"; } catch(e) {}
-          const message = `I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://app.onehumancorp.com/setup.html?ref=${tenantId}`;
+          const message = `I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: https://app.onehumancorp.com/setup.html?ref=${__ohcReferralCode}`;
           const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
           window.open(shareUrl, '_blank');

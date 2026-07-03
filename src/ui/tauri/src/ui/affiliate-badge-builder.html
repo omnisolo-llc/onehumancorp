@@ -266,6 +266,30 @@
   </div>
 
   <script>
+
+      // OHC Referral Fetcher
+      let __ohcReferralCode = (() => { try { return localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team'; } catch(e) { return 'default-team'; } })();
+      (async function() {
+        try {
+          let token = localStorage.getItem('ohc_token');
+          let headers = token ? { 'authorization': `Bearer ${token}` } : {};
+          let url = '/api/v1/growth/referrals/generate';
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            url = 'http://127.0.0.1:18789/api/v1/growth/referrals/generate';
+          }
+          let res = await fetch(url, { method: 'POST', headers });
+          if (res.ok) {
+            let data = await res.json();
+            if (data.referral_link) {
+              let parts = data.referral_link.split('/ref/');
+              if (parts.length > 1) {
+                __ohcReferralCode = parts[1];
+              }
+            }
+          }
+        } catch(e) {}
+      })();
+
     document.addEventListener('DOMContentLoaded', () => {
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
       const badgeText = document.getElementById('badgeText');
@@ -277,7 +301,7 @@
       const linkPreview = document.getElementById('linkPreview');
 
       const originUrl = window.location.origin.includes('file://') ? 'https://ohc.app' : window.location.origin;
-      const targetUrl = `${originUrl}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}&source=affiliate_badge`;
+      const targetUrl = `${originUrl}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(__ohcReferralCode)}&source=affiliate_badge`;
 
       linkPreview.textContent = targetUrl;
 

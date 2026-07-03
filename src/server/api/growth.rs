@@ -2665,11 +2665,21 @@ async fn handle_referral_click_post(
     Extension(state): Extension<GrowthState>,
     Json(req): axum::extract::Json<ReferralIdRequest>,
 ) -> Result<axum::response::Response, StatusCode> {
-    match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
+    let mut res = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
         .bind(&req.id)
         .execute(&state.pool)
-        .await
-    {
+        .await;
+
+    if let Ok(result) = &res {
+        if result.rows_affected() == 0 {
+            res = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id IN (SELECT id FROM referrals WHERE tenant_id = $1 ORDER BY created_at_unix ASC LIMIT 1)")
+                .bind(&req.id)
+                .execute(&state.pool)
+                .await;
+        }
+    }
+
+    match res {
         Ok(result) => {
             if result.rows_affected() == 0 {
                 return Err(StatusCode::NOT_FOUND);
@@ -2702,10 +2712,20 @@ async fn handle_referral_click_get(
     state.hub.append_recent_event(msg);
 
     // Record click if it maps to an actual referral code
-    let _ = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE referral_code = $1")
+    let mut res = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE referral_code = $1")
         .bind(tenant_ref)
         .execute(&state.pool)
         .await;
+
+    // Fallback: If no rows were affected by referral_code, see if tenant_ref is a tenant_id
+    if let Ok(result) = &res {
+        if result.rows_affected() == 0 {
+            res = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id IN (SELECT id FROM referrals WHERE tenant_id = $1 ORDER BY created_at_unix ASC LIMIT 1)")
+                .bind(tenant_ref)
+                .execute(&state.pool)
+                .await;
+        }
+    }
 
     // Redirect user to the intended target (or dashboard if not specified)
     let redirect_url = if target_url.starts_with('/') {
