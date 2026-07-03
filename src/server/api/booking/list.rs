@@ -70,17 +70,20 @@ async fn handle_list_bookings(
 
     let _ = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
-    let res = sqlx::query!(
+
+    use sqlx::Row;
+    let res = sqlx::query(
         r#"
-        SELECT id, product_id, customer_id, start_time, end_time, status
+        SELECT id, service_id, customer_id, start_time, end_time, status
         FROM bookings
         WHERE tenant_id = $1
         ORDER BY start_time ASC
-        "#,
-        tenant_id
+        "#
     )
+    .bind(&tenant_id)
     .fetch_all(&mut *tx)
     .await;
+
 
     let rows = match res {
         Ok(r) => r,
@@ -96,15 +99,23 @@ async fn handle_list_bookings(
         }
     };
 
+
     let mut bookings = Vec::new();
     for row in rows {
+        let id: String = row.get("id");
+        let service_id: Option<String> = row.try_get("service_id").unwrap_or(None);
+        let customer_id: Option<uuid::Uuid> = row.try_get("customer_id").unwrap_or(None);
+        let start_time: chrono::DateTime<chrono::Utc> = row.get("start_time");
+        let end_time: chrono::DateTime<chrono::Utc> = row.get("end_time");
+        let status: String = row.get("status");
+
         bookings.push(Booking {
-            id: row.id,
-            product_id: row.product_id.unwrap_or_default(),
-            customer_id: row.customer_id.unwrap_or_default(),
-            start_time: row.start_time.to_rfc3339(),
-            end_time: row.end_time.to_rfc3339(),
-            status: row.status.unwrap_or_else(|| "pending".to_string()),
+            id,
+            product_id: service_id.unwrap_or_default(),
+            customer_id: customer_id.map(|u| u.to_string()).unwrap_or_default(),
+            start_time: start_time.to_rfc3339(),
+            end_time: end_time.to_rfc3339(),
+            status,
         });
     }
 

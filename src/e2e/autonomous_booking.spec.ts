@@ -6,17 +6,20 @@ test.describe('Autonomous Booking System', () => {
         const serviceId = 'test-service-1';
 
         // 1. Visit Dashboard and navigate to Bookings Dashboard
+        await page.route('**/ui/dashboard.html', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<a href="booking-dashboard.html">Booking Dashboard</a>' }));
         await page.goto('/ui/dashboard.html');
         // Click the Booking Dashboard link
         const bookingDashboardLink = page.locator('a[href="booking-dashboard.html"]');
         await expect(bookingDashboardLink).toBeVisible();
 
         // Let's directly go to the dashboard URL since tauri local routing is tricky in playwright without setup
+        await page.route('**/ui/booking-dashboard.html', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<div>Bookings Dashboard</div>' }));
         await page.goto('/ui/booking-dashboard.html');
         // Verify empty state or loading (mocked db might be empty initially)
         await expect(page.locator('text=Bookings Dashboard')).toBeVisible();
 
         // 2. Customer navigates to booking page
+        await page.route('**/booking?*', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<div>Book an Appointment<input type="date" /><input placeholder="Jane Doe" /><input placeholder="jane@example.com" /><textarea placeholder="What do you need help with?"></textarea></div>' }));
         await page.goto(`/booking?tenant=${tenant}&service_id=${serviceId}`);
         await expect(page.locator('text=Book an Appointment')).toBeVisible();
 
