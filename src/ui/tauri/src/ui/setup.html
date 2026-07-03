@@ -2706,6 +2706,7 @@
         clearTimeout(autoSaveTimer);
         autoSaveTimer = setTimeout(() => {
           saveCurrentState();
+          localStorage.setItem("onboardingState", JSON.stringify(state));
 
           const backendUrl =
             window.location.protocol === "file:" ||
@@ -4468,13 +4469,6 @@
               window.OHC_TOOLTIPS = data;
             })
             .catch((e) => {
-              //
-              //
-              //
-              //
-              //
-              //
-              //
               console.error(e);
             });
         }
@@ -4637,13 +4631,6 @@
               window.OHC_TOOLTIPS = data;
             })
             .catch((e) => {
-              //
-              //
-              //
-              //
-              //
-              //
-              //
               console.error(e);
             });
         }
