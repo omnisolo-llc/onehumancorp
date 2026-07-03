@@ -33,7 +33,7 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.locator('#step-context .next-step-btn').click();
 
     await expect(page.locator('#business-categories')).toBeVisible();
-    await page.locator('#business-categories').selectOption('Bakery');
+    await page.locator('#business-categories').selectOption('Home Baker');
     await page.locator('#step-categories .next-step-btn').click();
 
     await expect(page.getByRole('heading', { name: /What's the name of your business\?/ })).toBeVisible();
@@ -52,7 +52,7 @@ test.describe('Wizard and Onboarding flows', () => {
     await page.getByText("I'm a Baker").click();
     await page.locator('#step-context .next-step-btn').click();
     await expect(page.locator('#business-categories')).toBeVisible();
-    await page.locator('#business-categories').selectOption('Bakery');
+    await page.locator('#business-categories').selectOption('Home Baker');
     await page.locator('#step-categories .next-step-btn').click();
 
     await expect(page.getByRole('heading', { name: /What's the name of your business\?/ })).toBeVisible();

@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { memberPage, e2eTenantId } from './fixtures';
+import { expect, test } from './fixtures';
 
 test.describe('CFO Agent Safe To Spend Dashboard', () => {
   test('Dashboard displays Safe to Spend card and correct breakdown', async ({ memberPage: page }) => {

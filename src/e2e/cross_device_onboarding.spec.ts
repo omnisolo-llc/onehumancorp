@@ -30,7 +30,7 @@ test.describe('Cross Device Onboarding CUJ', () => {
     await expect(page.getByText('How do you work?')).toBeVisible();
     await page.getByText("I'm a Baker").click();
     await page.getByText('Next').first().click();
-    await page.locator('#business-categories').selectOption('Bakery');
+    await page.locator('#business-categories').selectOption('Home Baker');
     await page.getByRole('button', { name: 'Next' }).click();
 
     const nameInput = page.locator('#business-name');
