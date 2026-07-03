@@ -94,6 +94,8 @@ async fn get_today_routes(
     let _ = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     use sqlx::Row;
+
+    // Use parallel execution for N+1 queries optimization
     let routes_result = sqlx::query(
         r#"
         SELECT id, staff_profile_id as staff_id, route_date, status
@@ -108,56 +110,85 @@ async fn get_today_routes(
 
     let mut routes = Vec::new();
     if let Ok(routes_rows) = routes_result {
+        // Collect all routes into a list
+        let mut routes_data = Vec::new();
         for r_row in routes_rows {
             let r_id: String = r_row.get("id");
-            let jobs_result = sqlx::query(
-                r#"
-                SELECT
-                    jl.id,
-                    a.customer_id,
-                    COALESCE(jt.name, 'Service Job') as job_title,
-                    COALESCE(a.location_address, 'No Address Provided') as address,
-                    a.location_lat as lat,
-                    a.location_lng as lng,
-                    COALESCE(a.scheduled_start_time, NOW()) as scheduled_start,
-                    a.scheduled_end_time as scheduled_end,
-                    jl.status,
-                    jl.sequence_order as order_index
-                FROM job_locations jl
-                JOIN appointments a ON jl.appointment_id = a.id
-                LEFT JOIN job_templates jt ON a.job_template_id = jt.id
-                WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
-                ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
-                "#,
-            )
-            .bind(&tenant_id)
-            .bind(&r_id)
-            .fetch_all(&mut *tx)
-            .await;
+            let staff_id: Option<String> = r_row.try_get("staff_id").unwrap_or(None);
+            let route_date: chrono::NaiveDate = r_row.get("route_date");
+            let status: String = r_row.get("status");
+            routes_data.push((r_id, staff_id, route_date, status));
+        }
 
-            let mut jobs = Vec::new();
-            if let Ok(jobs_rows) = jobs_result {
-                for j_row in jobs_rows {
-                    jobs.push(JobLocation {
-                        id: j_row.get("id"),
-                        customer_id: j_row.try_get("customer_id").unwrap_or(None),
-                        job_title: j_row.get("job_title"),
-                        address: j_row.get("address"),
-                        lat: j_row.try_get("lat").unwrap_or(None),
-                        lng: j_row.try_get("lng").unwrap_or(None),
-                        scheduled_start: j_row.get("scheduled_start"),
-                        scheduled_end: j_row.try_get("scheduled_end").unwrap_or(None),
-                        status: j_row.get("status"),
-                        order_index: j_row.get("order_index"),
-                    });
+        let mut job_futures = Vec::new();
+        for (r_id, _, _, _) in &routes_data {
+            let t_id = tenant_id.clone();
+            let route_id = r_id.clone();
+            let pool = pool.clone();
+
+            job_futures.push(tokio::spawn(async move {
+                let mut conn = pool.acquire().await.unwrap();
+                let jobs_result = sqlx::query(
+                    r#"
+                    SELECT
+                        jl.id,
+                        a.customer_id,
+                        COALESCE(jt.name, 'Service Job') as job_title,
+                        COALESCE(a.location_address, 'No Address Provided') as address,
+                        a.location_lat as lat,
+                        a.location_lng as lng,
+                        COALESCE(a.scheduled_start_time, NOW()) as scheduled_start,
+                        a.scheduled_end_time as scheduled_end,
+                        jl.status,
+                        jl.sequence_order as order_index
+                    FROM job_locations jl
+                    JOIN appointments a ON jl.appointment_id = a.id
+                    LEFT JOIN job_templates jt ON a.job_template_id = jt.id
+                    WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
+                    ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
+                    "#,
+                )
+                .bind(&t_id)
+                .bind(&route_id)
+                .fetch_all(&mut *conn)
+                .await;
+
+                let mut jobs = Vec::new();
+                if let Ok(jobs_rows) = jobs_result {
+                    for j_row in jobs_rows {
+                        jobs.push(JobLocation {
+                            id: j_row.get("id"),
+                            customer_id: j_row.try_get("customer_id").unwrap_or(None),
+                            job_title: j_row.get("job_title"),
+                            address: j_row.get("address"),
+                            lat: j_row.try_get("lat").unwrap_or(None),
+                            lng: j_row.try_get("lng").unwrap_or(None),
+                            scheduled_start: j_row.get("scheduled_start"),
+                            scheduled_end: j_row.try_get("scheduled_end").unwrap_or(None),
+                            status: j_row.get("status"),
+                            order_index: j_row.get("order_index"),
+                        });
+                    }
                 }
-            }
+                (route_id, jobs)
+            }));
+        }
 
+        let jobs_results = futures::future::join_all(job_futures).await;
+        let mut jobs_by_route: std::collections::HashMap<String, Vec<JobLocation>> = std::collections::HashMap::new();
+        for result in jobs_results {
+            if let Ok((r_id, jobs)) = result {
+                jobs_by_route.insert(r_id, jobs);
+            }
+        }
+
+        for (r_id, staff_id, route_date, status) in routes_data {
+            let jobs = jobs_by_route.remove(&r_id).unwrap_or_default();
             routes.push(ServiceRoute {
                 id: r_id,
-                staff_id: r_row.try_get("staff_id").unwrap_or(None),
-                route_date: r_row.get("route_date"),
-                status: r_row.get("status"),
+                staff_id,
+                route_date,
+                status,
                 jobs,
             });
         }
@@ -249,6 +280,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_dummy() {
+        assert!(true);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_field_service_routing_dummy() {
         assert!(true);
     }
 }

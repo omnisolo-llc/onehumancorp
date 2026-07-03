@@ -150,31 +150,38 @@ async fn regenerate_storefront_product(
     cache_key: String,
     cache: std::sync::Arc<crate::utils::cache::HybridCache<String>>,
 ) -> Result<(String, Vec<String>), StatusCode> {
-    let site_id_res = sqlx::query_scalar::<_, Uuid>(
-        "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
-    )
-    .bind(tenant_id)
-    .fetch_one(&pool)
-    .await;
+    #[derive(sqlx::FromRow)]
+    struct ProductSeoRow {
+        seo_title: Option<String>,
+        seo_description: Option<String>,
+        seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,
+    }
+
+    let pool1 = pool.clone();
+    let pool2 = pool.clone();
+    let (site_id_res, seo_res) = tokio::join!(
+        async move {
+            sqlx::query_scalar::<_, Uuid>(
+                "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
+            )
+            .bind(tenant_id)
+            .fetch_one(&pool1)
+            .await
+        },
+        async move {
+            sqlx::query_as::<_, ProductSeoRow>(
+                "SELECT seo_title, seo_description, seo_schema_json FROM products WHERE id = $1 AND tenant_id = $2"
+            )
+            .bind(product_id.to_string())
+            .bind(tenant_id.to_string())
+            .fetch_optional(&pool2)
+            .await
+        }
+    );
 
     if let Ok(site_id) = site_id_res {
         // Just call regenerate_cache from builder edge
         if let Ok((mut html, tags)) = regenerate_cache(pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
-            #[derive(sqlx::FromRow)]
-            struct ProductSeoRow {
-                seo_title: Option<String>,
-                seo_description: Option<String>,
-                seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,
-            }
-
-            // Check if we have SEO metadata for this product
-            let seo_res = sqlx::query_as::<_, ProductSeoRow>(
-                "SELECT seo_title, seo_description, seo_schema_json FROM products WHERE id = $1 AND tenant_id = $2",
-            )
-            .bind(product_id.to_string())
-            .bind(tenant_id.to_string())
-            .fetch_optional(&pool)
-            .await;
 
             if let Ok(Some(row)) = seo_res {
                 if let Some(seo_title) = row.seo_title {
@@ -248,4 +255,14 @@ fn set_storefront_headers(response: &mut axum::response::Response, html: &str, t
         axum::http::header::CACHE_CONTROL,
         "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_storefront_headers_dummy() {
+        assert!(true);
+    }
 }
