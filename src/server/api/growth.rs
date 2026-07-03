@@ -369,6 +369,7 @@ where
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
+        .route("/unboxing-share/generate", post(handle_unboxing_share_generate))
         .route("/waitlist/embed", get(handle_waitlist_embed))
         .route("/birthday-club/embed", get(handle_birthday_club_embed))
         .route("/birthday-club/capture", post(handle_birthday_club_capture))
@@ -2953,6 +2954,37 @@ async fn handle_viral_loop_metrics(
     }))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UnboxingShareGenerateRequest {
+    pub product_name: String,
+    pub hashtag: String,
+    pub reward: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UnboxingShareGenerateResponse {
+    pub success: bool,
+}
+
+pub async fn handle_unboxing_share_generate(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<UnboxingShareGenerateRequest>,
+) -> Result<Json<UnboxingShareGenerateResponse>, StatusCode> {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.unboxing_share_generated",
+        "tenant_id": auth_info.org_id,
+        "product_name": req.product_name,
+        "hashtag": req.hashtag,
+        "reward": req.reward
+    }));
+    state.hub.append_recent_event(msg);
+
+    Ok(Json(UnboxingShareGenerateResponse {
+        success: true,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2972,7 +3004,47 @@ mod tests {
         pool
     }
 
+
     #[tokio::test]
+    async fn test_unboxing_share_generator() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let tracker = Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new());
+        let state = GrowthState {
+            pool: pool.clone(),
+            hub,
+            viral_loop_tracker: tracker,
+        };
+
+        let req = UnboxingShareGenerateRequest {
+            product_name: "Awesome Widget".to_string(),
+            hashtag: "#UnboxAwesome".to_string(),
+            reward: "10% off next purchase".to_string(),
+        };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: "test-org".to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        let res = super::handle_unboxing_share_generate(
+            Extension(state),
+            axum::extract::Extension(auth_info),
+            Json(req),
+        )
+        .await;
+
+        assert!(res.is_ok());
+        let json = res.unwrap().0;
+        assert_eq!(json.success, true);
+    }
+#[tokio::test]
     async fn test_handle_one_tap_referral_embed() {
         let query = OneTapReferralEmbedQuery {
             tenant: Some("test_tenant".to_string()),
