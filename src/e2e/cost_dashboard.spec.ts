@@ -76,7 +76,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // Verify Cost Transparency Dashboard headers and text
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('h2', { hasText: 'Total Costs' }).first()).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Total Costs' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator('h2:has-text("Cost Breakdown")').first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'LLM Usage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();

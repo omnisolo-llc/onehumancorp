@@ -42,6 +42,7 @@ test.describe('Onboarding Keyboard Friction Mitigation', () => {
 
     // Step Categories
     await page.locator('#business-categories').selectOption('Handyman');
+    await page.locator('#business-categories').focus();
     // For select, we need to focus it or body to press Enter, let's just press Enter globally
     await page.keyboard.press('Enter');
     await expect(page.locator('#step-name')).toHaveClass(/active/);

@@ -312,8 +312,10 @@ mod tests {
     fn test_persona_journeys() {
         let journeys = get_persona_journeys();
         assert_eq!(journeys.len(), 5);
-        for j in journeys {
+        for j in &journeys {
             assert!(j.steps.len() > 100);
         }
+        let maya = journeys.iter().find(|j| j.name == "Maya").expect("Maya persona not found");
+        assert_eq!(maya.business_type, "Home Baker");
     }
 }
