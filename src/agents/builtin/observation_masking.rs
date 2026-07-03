@@ -119,8 +119,16 @@ impl JetBrainsObservationMasker {
 
                 if original_len > current_limit {
                     let priority_keys = [
-                        "error", "stack_trace", "message", "status", "code", "type", "name", "id",
-                        "success", "result",
+                        "error",
+                        "stack_trace",
+                        "message",
+                        "status",
+                        "code",
+                        "type",
+                        "name",
+                        "id",
+                        "success",
+                        "result",
                     ];
                     let mut sorted_keys: Vec<String> = obj.keys().cloned().collect();
                     sorted_keys.sort_by_cached_key(|k| {
@@ -262,8 +270,12 @@ impl JetBrainsObservationMasker {
                                     let keep = std::cmp::max(self.size_limit / 5, 20);
                                     if char_count > keep * 2 {
                                         let start: String = tr.content.chars().take(keep).collect();
-                                        let end: String = tr.content.chars().skip(char_count - keep).collect();
-                                        tr.content = format!("{}... [Observation Masked: {} bytes truncated. Use RecallObservation ID '{}'] ...{}", start, bytes, tr.tool_call_id, end);
+                                        let end: String =
+                                            tr.content.chars().skip(char_count - keep).collect();
+                                        tr.content = format!(
+                                            "{}... [Observation Masked: {} bytes truncated. Use RecallObservation ID '{}'] ...{}",
+                                            start, bytes, tr.tool_call_id, end
+                                        );
                                     } else {
                                         tr.content = raw_msg;
                                     }
@@ -572,7 +584,10 @@ mod additional_tests {
     fn test_mask_preserves_priority_keys() {
         let mut obj = serde_json::Map::new();
         obj.insert("irrelevant_key_1".to_string(), Value::String("a".into()));
-        obj.insert("error".to_string(), Value::String("critical failure".into()));
+        obj.insert(
+            "error".to_string(),
+            Value::String("critical failure".into()),
+        );
         obj.insert("irrelevant_key_2".to_string(), Value::String("b".into()));
         obj.insert("status".to_string(), Value::String("failed".into()));
         obj.insert("irrelevant_key_3".to_string(), Value::String("c".into()));

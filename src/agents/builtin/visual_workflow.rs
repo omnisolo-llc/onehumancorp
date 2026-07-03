@@ -157,11 +157,7 @@ impl WorkflowExecutor {
         if let Some(last_node) = stopped_at {
             if let Some(node) = self.graph.nodes.iter().find(|n| n.id == last_node) {
                 if matches!(node.node_type, NodeType::Output) {
-                    if let Some(edge) = self
-                        .graph
-                        .edges
-                        .iter()
-                        .find(|e| e.target == last_node)
+                    if let Some(edge) = self.graph.edges.iter().find(|e| e.target == last_node)
                         && let Some(val) = final_state.get(&edge.source)
                     {
                         return Ok(val.clone());
@@ -293,7 +289,9 @@ impl WorkflowExecutor {
                         let result_str = match result {
                             Ok(res) => res,
                             Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&tool_name, &msg)
+                                ohc_builtin_agent_core::types::format_llm_recoverable_error(
+                                    &tool_name, &msg,
+                                )
                             }
                             Err(ohc_builtin_agent_core::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE: {}", msg));
@@ -942,7 +940,8 @@ mod tests {
             async fn chat(
                 &self,
                 _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
+            {
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("mock"),
                     usage: crate::types::Usage::default(),
