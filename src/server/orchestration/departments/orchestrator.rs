@@ -1146,31 +1146,34 @@ pub async fn execute_action(
                                         tracing::info!("Finalized and sent invoice via Stripe: {}", sent_invoice.id);
 
                                         // Record the sent invoice in the database
-                                        if let DbStore::Postgres = &self.db.store {
-                                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, 'Client', 'sent', $4, 'USD', $5, $6, 'unpaid', 0, 0)")
-                                                .bind(&sent_invoice.id)
-                                                .bind(tenant_id)
-                                                .bind(&customer_id_to_use)
-                                                .bind(now + chrono::Duration::days(30))
-                                                .bind(amount_cents as f64 / 100.0)
-                                                .bind(amount_cents)
-                                                .execute(&self.db.pool)
-                                                .await
-                                            {
-                                                tracing::error!("Failed to insert invoice for invoice_draft: {}", e);
+                                        match &self.db.store {
+                                            DbStore::Postgres => {
+                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, 'Client', 'sent', $4, 'USD', $5, $6, 'unpaid', 0, 0)")
+                                                    .bind(&sent_invoice.id)
+                                                    .bind(tenant_id)
+                                                    .bind(&customer_id_to_use)
+                                                    .bind(now + chrono::Duration::days(30))
+                                                    .bind(amount_cents as f64 / 100.0)
+                                                    .bind(amount_cents)
+                                                    .execute(&self.db.pool)
+                                                    .await
+                                                {
+                                                    tracing::error!("Failed to insert invoice for invoice_draft: {}", e);
+                                                }
                                             }
-                                        } else {
-                                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'sent', ?, 'USD', ?, ?, 'unpaid', 0, 0)")
-                                                .bind(&sent_invoice.id)
-                                                .bind(tenant_id)
-                                                .bind(&customer_id_to_use)
-                                                .bind(now + chrono::Duration::days(30))
-                                                .bind(amount_cents as f64 / 100.0)
-                                                .bind(amount_cents)
-                                                .execute(&self.db.pool)
-                                                .await
-                                            {
-                                                tracing::error!("Failed to insert invoice for invoice_draft: {}", e);
+                                            DbStore::Sqlite(_) => {
+                                                if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'sent', ?, 'USD', ?, ?, 'unpaid', 0, 0)")
+                                                    .bind(&sent_invoice.id)
+                                                    .bind(tenant_id)
+                                                    .bind(&customer_id_to_use)
+                                                    .bind(now + chrono::Duration::days(30))
+                                                    .bind(amount_cents as f64 / 100.0)
+                                                    .bind(amount_cents)
+                                                    .execute(&self.db.pool)
+                                                    .await
+                                                {
+                                                    tracing::error!("Failed to insert invoice for invoice_draft: {}", e);
+                                                }
                                             }
                                         }
                                     },
