@@ -173,10 +173,18 @@ mod tests {
         fn log_run_start(&self, _task: &str, _run_id: &str) {
             self.log.lock().unwrap().push("run_start".to_string());
         }
-        fn log_llm_request(&self, _run_id: &str, _req: &ChatRequest) {}
-        fn log_llm_response(&self, _run_id: &str, _resp: &ChatResponse) {}
-        fn log_tool_call(&self, _run_id: &str, _tool_call: &ToolCall) {}
-        fn log_tool_result(&self, _run_id: &str, _tool_id: &str, _result: &str) {}
+        fn log_llm_request(&self, _run_id: &str, _req: &ChatRequest) {
+            self.log.lock().unwrap().push("llm_request".to_string());
+        }
+        fn log_llm_response(&self, _run_id: &str, _resp: &ChatResponse) {
+            self.log.lock().unwrap().push("llm_response".to_string());
+        }
+        fn log_tool_call(&self, _run_id: &str, _tool_call: &ToolCall) {
+            self.log.lock().unwrap().push("tool_call".to_string());
+        }
+        fn log_tool_result(&self, _run_id: &str, _tool_id: &str, _result: &str) {
+            self.log.lock().unwrap().push("tool_result".to_string());
+        }
         fn log_run_end(&self, _run_id: &str, _final_output: &str) {
             self.log.lock().unwrap().push("run_end".to_string());
         }

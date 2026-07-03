@@ -25,7 +25,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       if (action_type === 'Draft Booking' || (payload && payload.action_type === 'Draft Booking')) {
         const tenantId = '00000000-0000-0000-0000-000000000001';
         // In reality, this would hit the gRPC BookingService or a worker would process it
-        console.log("Processing Draft Booking approval for:", payload.suggested_time);
       }
     }
 

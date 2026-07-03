@@ -121,4 +121,26 @@ pub fn cleanup_stale_temp_files() {
             }
         }
     }
+
+    // Clean up .tmp files created by agents/builtin/json_store.rs
+    let ohc_runtime_dir = std::env::var("OHC_RUNTIME_DIR").unwrap_or_else(|_| ".ohc/runtime".to_string());
+    let memory_dir = std::path::PathBuf::from(ohc_runtime_dir).join("memory");
+    if let Ok(entries) = std::fs::read_dir(&memory_dir) {
+        let now = std::time::SystemTime::now();
+        for entry in entries.flatten() {
+            if let Some(ext) = entry.path().extension() {
+                if ext == "tmp" {
+                    if let Ok(meta) = entry.metadata() {
+                        if let Ok(modified) = meta.modified() {
+                            if let Ok(duration) = now.duration_since(modified) {
+                                if duration.as_secs() > 3600 {
+                                    let _ = std::fs::remove_file(entry.path());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
