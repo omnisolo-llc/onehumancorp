@@ -105,11 +105,18 @@ impl Department for FinanceAgent {
             });
         } else if event.event_type == "invoice.overdue" {
             let invoice_id = event.payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+            let default_original = format!("Invoice {} is overdue.", invoice_id);
+            let default_generated = format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id);
+
+            let original_message = event.payload.get("original_message").and_then(|v| v.as_str()).unwrap_or(&default_original);
+            let generated_response = event.payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or(&default_generated);
+
             payload = serde_json::json!({
                 "feature_type": "invoice_followup",
                 "invoice_id": invoice_id,
-                "original_message": format!("Invoice {} is overdue.", invoice_id),
-                "generated_response": format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id),
+                "original_message": original_message,
+                "generated_response": generated_response,
                 "operational_action": "Draft personalized reminder",
                 "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
             });
