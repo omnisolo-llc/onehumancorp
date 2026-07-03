@@ -164,6 +164,15 @@
       <p>Manage your upcoming appointments and requests</p>
     </div>
 
+    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; margin-top: 24px;">AI Suggested Follow-ups</h2>
+    <div class="glass-card" id="agent-feed-card" style="display: none;">
+      <div id="agent-feed-list">
+        <!-- Feed items will be inserted here -->
+      </div>
+    </div>
+    <div id="agent-feed-empty" style="text-align: center; padding: 20px; color: var(--text-sub); display: none;">No pending follow-ups.</div>
+
+    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; margin-top: 24px;">Upcoming Bookings</h2>
     <div class="glass-card">
       <div id="loading" style="text-align: center; padding: 20px; color: var(--text-sub);">Loading bookings...</div>
       <div id="empty-state" style="display: none; text-align: center; padding: 20px; color: var(--text-sub);">No bookings found.</div>
@@ -178,9 +187,72 @@
       const loadingEl = document.getElementById('loading');
       const emptyStateEl = document.getElementById('empty-state');
       const listEl = document.getElementById('bookings-list');
+      const feedCard = document.getElementById('agent-feed-card');
+      const feedList = document.getElementById('agent-feed-list');
+      const feedEmpty = document.getElementById('agent-feed-empty');
 
+      const tenantId = localStorage.getItem('ohc_tenant_id') || 'default-store';
+
+      // 1. Fetch unified agent feed via WS to display pending follow-ups
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const token = localStorage.getItem('token') || '';
+      const wsUrl = `${protocol}//${window.location.host}/api/v1/feed/ws`;
+
+      let ws;
       try {
-        const tenantId = localStorage.getItem('ohc_tenant_id') || 'default-store';
+          ws = new WebSocket(wsUrl, ["access_token", token]);
+      } catch(e) {
+          console.warn("WebSocket init failed", e);
+      }
+
+      if (ws) {
+          ws.onopen = () => {
+              ws.send(JSON.stringify({
+                  event: "subscribe",
+                  data: { tenant_id: tenantId, channel: "agent_feed" }
+              }));
+          };
+
+          ws.onmessage = (event) => {
+              try {
+                  const data = JSON.parse(event.data);
+                  if (data.event === "init" || data.event === "update") {
+                      const feedItems = data.data || [];
+                      const pendingItems = feedItems.filter(item => item.lifecycle_state === 'PENDING_APPROVAL');
+
+                      if (pendingItems.length === 0) {
+                          feedCard.style.display = 'none';
+                          feedEmpty.style.display = 'block';
+                      } else {
+                          feedEmpty.style.display = 'none';
+                          feedCard.style.display = 'block';
+                          feedList.innerHTML = pendingItems.map(item => {
+                              const payload = item.context_payload || {};
+                              const action = item.proposed_action || {};
+                              return `
+                                <div class="booking-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                                  <div style="display: flex; justify-content: space-between; width: 100%;">
+                                    <div class="booking-title" style="color: var(--accent-color);">✨ ${payload.description || 'AI Action'}</div>
+                                    <div class="status-badge status-pending">Action Required</div>
+                                  </div>
+                                  <div class="booking-time" style="font-size: 14px;">${action.message || action.draft_action || ''}</div>
+                                  <div style="display: flex; gap: 8px; margin-top: 8px; width: 100%;">
+                                    <button class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; flex: 1;">Approve</button>
+                                    <button class="btn" style="padding: 8px 16px; font-size: 14px; flex: 1;">Dismiss</button>
+                                  </div>
+                                </div>
+                              `;
+                          }).join('');
+                      }
+                  }
+              } catch(e) {
+                  console.error("Feed error", e);
+              }
+          };
+      }
+
+      // 2. Fetch bookings
+      try {
         const res = await fetch('/api/v1/booking/engine/list', {
           headers: {
             'x-tenant-id': tenantId
