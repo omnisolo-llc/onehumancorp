@@ -393,8 +393,9 @@ pub async fn execute_action(
         _action_payload: serde_json::Value,
     ) -> Result<ApprovalRequest, String> {
         let cost = 1;
-        if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
-            return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
+        let within_budget = self.check_ai_budget(&tenant_id, cost).await.unwrap_or(true);
+        if !within_budget {
+            tracing::info!("💰 Miser telemetry: Tenant {} soft limit reached. Action allowed. Please upgrade your plan.", tenant_id);
         }
 
         match risk {
