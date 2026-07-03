@@ -393,7 +393,7 @@ impl PydanticToolExecutor<BookingRescheduleArgs> for BookingRescheduleExecutor {
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         let new_id = uuid::Uuid::new_v4().to_string();
-        let notes = args.reason.map(|r| format!("Rescheduled from {}. Reason: {}", args.booking_id, r));
+        let _notes = args.reason.map(|r| format!("Rescheduled from {}. Reason: {}", args.booking_id, r));
 
         sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(&new_id)

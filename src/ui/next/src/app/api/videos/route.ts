@@ -1,5 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
 

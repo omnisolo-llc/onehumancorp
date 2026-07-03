@@ -79,12 +79,15 @@ describe('ReferralMilestonesWidget', () => {
   });
 
   it('renders nothing when data fetch fails', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    // suppress the console.error output to prevent test noise / crash
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockFetch.mockRejectedValueOnce(new Error('Test mock Network error'));
 
     const { container } = render(<ReferralMilestonesWidget tenantId="test-tenant" />);
 
     await waitFor(() => {
         expect(mockFetch).toHaveBeenCalled();
+        expect(container.firstChild).toBeNull();
     });
 
     // Component returns null on error

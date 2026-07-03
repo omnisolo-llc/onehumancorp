@@ -25,22 +25,23 @@ export default function FeedPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
-  useEffect(() => {
-    async function fetchFeed() {
-      try {
-        const res = await fetch('/api/agent-feed');
-        if (!res.ok) {
-          throw new Error('Failed to fetch feed');
-        }
-        const data = await res.json();
-        // Only show pending items on this feed view
-        setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchFeed = async () => {
+    try {
+      const res = await fetch('/api/agent-feed');
+      if (!res.ok) {
+        throw new Error('Failed to fetch feed');
       }
+      const data = await res.json();
+      // Only show pending items on this feed view
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
 
     fetchFeed();
 
@@ -206,7 +207,7 @@ export default function FeedPage() {
         })
       });
       if (response.ok) {
-        fetchFeedItems();
+        fetchFeed();
       }
     } catch (error) {
       console.error('Error simulating shift coverage draft:', error);
