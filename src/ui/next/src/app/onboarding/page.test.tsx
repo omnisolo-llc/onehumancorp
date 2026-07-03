@@ -1223,7 +1223,7 @@ describe("OnboardingWizard", () => {
     const backButton = screen.getAllByRole("button", { name: /Back/i })[0];
     await user.click(backButton);
 
-    screen.getByText("10-Minute Setup Wizard");
+    screen.getByText("Setup Assistant");
     expect(useOnboardingStore.getState().step).toBe(-2);
   });
 

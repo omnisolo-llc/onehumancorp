@@ -1051,7 +1051,7 @@ Image provided: ${instantImageUrl}`;
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
+          <div className="absolute top-4 left-4 right-4 z-[9999] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
             <svg
               className="w-5 h-5 flex-shrink-0"
               fill="none"
@@ -1088,7 +1088,7 @@ Image provided: ${instantImageUrl}`;
                 </svg>
               </div>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
-                10-Minute Setup Wizard
+                Setup Assistant
               </h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-8 leading-relaxed max-w-sm">
                 Zero tech skills needed. We do the heavy lifting. Review and add
