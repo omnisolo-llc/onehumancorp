@@ -607,3 +607,5 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
+
+// Help widget logic globally initialized.
