@@ -1,7 +1,6 @@
 use axum::{body::Body, http::{Request, StatusCode}, Router};
 use std::sync::Arc;
 use tower::ServiceExt;
-use axum_extra::extract::cookie::Cookie;
 
 use crate::{db::{DB, DbStore}, domain::repository::action_required_queue_repo::ActionRequiredQueueRepo};
 
