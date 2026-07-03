@@ -41,6 +41,8 @@ impl Department for FinanceAgent {
 
         let action_description = if event.event_type == "payment.captured" {
             "Analyze transaction for split tags and record ledger split".to_string()
+        } else if event.event_type == "project_milestone_completed" {
+            "Draft Invoice ready for Nora's Design Project".to_string()
         } else if event.event_type == "charge.dispute.created" {
             "Draft dispute resolution for review".to_string()
         } else if event.event_type == "invoice.overdue" {
@@ -63,6 +65,43 @@ impl Department for FinanceAgent {
                 "operational_action": "Mark transaction as disputed in ledger",
                 "sender_id": "@customer",
                 "customer_id": event.payload.get("customer").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+        } else if event.event_type == "project_milestone_completed" {
+            let invoice_id = uuid::Uuid::new_v4().to_string();
+            let project_id = event.payload.get("project_id").and_then(|v| v.as_str()).unwrap_or("proj_1");
+
+            let pool = self.orchestrator.db().pool.clone();
+            match &self.orchestrator.db().store {
+                crate::db::DbStore::Postgres => {
+                    let _ = sqlx::query(
+                        "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount)
+                         VALUES ($1, $2, 'new-client', 'New Client', 'draft', $3, 'USD', 100.0) ON CONFLICT DO NOTHING"
+                    )
+                    .bind(&invoice_id)
+                    .bind(&event.tenant_id)
+                    .bind(chrono::Utc::now().timestamp() + 86400 * 30)
+                    .execute(&pool)
+                    .await;
+
+                    let line_item_id = uuid::Uuid::new_v4().to_string();
+                    let _ = sqlx::query(
+                        "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount)
+                         VALUES ($1, $2, $3, 'Consulting Services', 1, 100.0, 100.0) ON CONFLICT DO NOTHING"
+                    )
+                    .bind(&line_item_id)
+                    .bind(&event.tenant_id)
+                    .bind(&invoice_id)
+                    .execute(&pool)
+                    .await;
+                }
+                _ => {}
+            }
+
+            payload = serde_json::json!({
+                "feature_type": "draft_invoice",
+                "invoice_id": invoice_id,
+                "project_id": project_id,
+                "operational_action": "Draft Invoice"
             });
         } else if event.event_type == "invoice.overdue" {
             let invoice_id = event.payload.get("invoice_id").and_then(|v| v.as_str()).unwrap_or("unknown");
