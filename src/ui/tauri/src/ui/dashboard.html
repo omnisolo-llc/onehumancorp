@@ -1442,6 +1442,13 @@
             document.getElementById('viral-loop-active-referrals').innerText = data.metrics?.active_referrals || '0';
             document.getElementById('viral-loop-revenue').innerText = '$' + (data.metrics?.revenue || 0).toFixed(2);
             document.getElementById('viral-loop-pending-rewards').innerText = '$' + (data.metrics?.pending_rewards || 0).toFixed(2);
+
+            // Also fetch the real-time tracker counts
+            const vtRes = await fetch('/api/v1/growth/viral-loop/metrics', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
+            if (vtRes.ok) {
+              const vtData = await vtRes.json();
+              document.getElementById('viral-loop-invites-sent').innerText = (data.total_invites || 0) + (vtData.invites_sent || 0);
+            }
           }
         } catch (e) {
           console.error("Failed to fetch viral loop metrics", e);
@@ -2814,6 +2821,7 @@ document.addEventListener('DOMContentLoaded', () => {
               btn.style.display = 'none';
               container.style.display = 'block';
             }
+            setTimeout(() => { fetchViralLoopMetrics(); }, 500);
         });
 
         copyBtn.addEventListener('click', () => {

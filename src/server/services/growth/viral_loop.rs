@@ -35,6 +35,13 @@ impl ViralLoopTracker {
         self.invites_accepted_metric.add(1, &[]);
     }
 
+    pub fn get_metrics(&self) -> (i32, i32) {
+        (
+            *self.invites_sent.read().unwrap(),
+            *self.invites_accepted.read().unwrap()
+        )
+    }
+
     pub fn calculate_k_factor(&self) -> f64 {
         let sent = self.invites_sent.read().unwrap();
         let accepted = self.invites_accepted.read().unwrap();
