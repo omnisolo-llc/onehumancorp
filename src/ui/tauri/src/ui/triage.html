@@ -675,6 +675,10 @@
             `;
           }
 
+          let sourceIcon = "💬";
+          if (item.source && item.source.toLowerCase() === "whatsapp") {
+            sourceIcon = "📱 WhatsApp";
+          }
           const displaySource = item.customer_id || item.source || "Unknown Source";
           const displayContext = item.context || item.customer_info?.message || item.intent || "No context provided";
 
@@ -728,7 +732,7 @@
               <div class="triage-header">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div class="triage-source">
-                        <span>💬</span> ${displaySource}
+                        <span>${sourceIcon}</span> ${displaySource}
                     </div>
                     <span class="app-badge ${badgeTone(item.priority)}">${item.priority || "Normal"}</span>
                 </div>

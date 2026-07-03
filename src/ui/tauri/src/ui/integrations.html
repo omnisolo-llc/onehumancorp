@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Integrations - OHC</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+  <style>
+    body { font-family: 'Outfit', sans-serif; background: #f5f5f7; color: #1d1d1f; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 0 auto; padding: 24px; }
+    .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; }
+    .btn-primary { background: #0066FF; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; box-sizing: border-box; display: block; text-align: center; }
+    .btn-primary:hover { background: #0055dd; }
+    .btn-secondary { background: rgba(255, 255, 255, 0.5); color: #1d1d1f; padding: 12px 24px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; box-sizing: border-box; display: block; text-align: center; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+    .form-group input { width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: rgba(255,255,255,0.8); box-sizing: border-box; font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="display: flex; align-items: center; margin-bottom: 24px; gap: 16px;">
+      <a href="dashboard.html" style="text-decoration: none; color: #0066FF; font-weight: 600;">&larr; Back</a>
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700;">Integrations</h1>
+    </div>
+
+    <div class="glassmorphism">
+      <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 20px;">Connect WhatsApp (via Twilio)</h2>
+      <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Connect your WhatsApp Business number to reply to customers directly from OHC.</p>
+
+      <form id="whatsapp-twilio-form">
+        <div class="form-group">
+          <label for="twilio_sid">Twilio Account SID</label>
+          <input type="text" id="twilio_sid" required placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label for="twilio_token">Twilio Auth Token</label>
+          <input type="password" id="twilio_token" required placeholder="Your Auth Token">
+        </div>
+        <div class="form-group">
+          <label for="twilio_phone">WhatsApp Phone Number</label>
+          <input type="text" id="twilio_phone" required placeholder="+1234567890">
+        </div>
+
+        <div id="wa-status" style="margin-bottom: 16px; font-size: 14px; display: none; padding: 12px; border-radius: 8px;"></div>
+
+        <button type="submit" class="btn-primary" id="wa-connect-btn">Connect WhatsApp</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('whatsapp-twilio-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const btn = document.getElementById('wa-connect-btn');
+      const statusEl = document.getElementById('wa-status');
+      const originalText = btn.innerText;
+
+      btn.disabled = true;
+      btn.innerText = 'Connecting...';
+      statusEl.style.display = 'none';
+
+      const bot_token = document.getElementById('twilio_sid').value;
+      const api_token = document.getElementById('twilio_token').value;
+      const from_phone = document.getElementById('twilio_phone').value;
+
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || 'default';
+        const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+
+        const res = await fetch('/api/v1/settings/integrations/whatsapp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({
+            bot_token,
+            api_token,
+            from_phone
+          })
+        });
+
+        if (res.ok) {
+          statusEl.innerText = 'WhatsApp successfully connected!';
+          statusEl.style.backgroundColor = '#dcfce7';
+          statusEl.style.color = '#166534';
+          statusEl.style.display = 'block';
+        } else {
+          statusEl.innerText = 'Failed to connect. Check your credentials.';
+          statusEl.style.backgroundColor = '#fee2e2';
+          statusEl.style.color = '#991b1b';
+          statusEl.style.display = 'block';
+        }
+      } catch (err) {
+        statusEl.innerText = 'Network error. Please try again.';
+        statusEl.style.backgroundColor = '#fee2e2';
+        statusEl.style.color = '#991b1b';
+        statusEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+      }
+    });
+  </script>
+</body>
+</html>

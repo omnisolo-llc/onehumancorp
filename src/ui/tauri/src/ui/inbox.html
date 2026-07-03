@@ -220,7 +220,11 @@
 
           const sourceSpan = document.createElement('span');
           sourceSpan.className = 'message-source';
-          sourceSpan.textContent = msg.source || 'Unknown';
+          let displaySource = msg.source || 'Unknown';
+          if (displaySource.toLowerCase() === 'whatsapp') {
+            displaySource = '📱 WhatsApp';
+          }
+          sourceSpan.textContent = displaySource;
 
           const senderSpan = document.createElement('span');
           senderSpan.textContent = msg.sender_id || '';
