@@ -247,7 +247,7 @@ impl PromptCache {
             // Keep at least some content if the last space is too early.
             // Using char_count / 2 to avoid slicing a UTF-8 character based on bytes.
             let space_char_count = slice[..last_space].chars().count();
-            if space_char_count > char_count / 2 {
+            if space_char_count > max_chars / 2 {
                 slice = &slice[..last_space];
             }
         }
