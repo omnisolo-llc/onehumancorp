@@ -39,7 +39,15 @@ static STOP_WORDS: &[&str] = &[
     "a", "an", "the", "is", "are",
     "and", "or", "but", "in", "on",
     "at", "to", "for", "with", "by",
-    "about", "as", "of",
+    "about", "as", "of", "it", "this",
+    "that", "these", "those", "then",
+    "than", "so", "because",
+    "while", "where", "when", "how",
+    "all", "any", "both", "each",
+    "few", "more", "most", "other",
+    "some", "such", "only", "own", "same",
+    "too", "very", "can", "will",
+    "just", "should", "now"
 ];
 
 static REDUCE_TOKENS_CACHE: OnceLock<DashMap<String, String>> = OnceLock::new();
@@ -55,8 +63,8 @@ pub fn reduce_tokens(data: &str) -> String {
         .filter(|word| {
             // Optimization: Iterate over stop words directly. No allocation.
             let len = word.len();
-            if len == 0 || len > 5 {
-                return true; // None of our stop words are > 5 chars (longest is 'about')
+            if len == 0 || len > 7 {
+                return true; // None of our stop words are > 7 chars (longest is 'because')
             }
             !STOP_WORDS.iter().any(|&stop_word| {
                 if stop_word.len() != len {
@@ -170,11 +178,11 @@ mod tests {
     #[test]
     fn test_reduce_tokens() {
         let input = "This is a long sentence with some stop words in it and about some things.";
-        // Stop words: a, an, the, is, are, and, or, but, in, on, at, to, for, with, by, about, as, of
-        // Result should remove "is", "a", "with", "in", "and", "about".
-        // Note: 'it' and 'some' are not stop words here.
+        // Stop words now include: a, an, the, is, are, and, or, but, in, on, at, to, for, with, by, about, as, of, it, this, some...
+        // Result should remove "is", "a", "with", "some", "in", "it", "and", "about", "some".
         let reduced = reduce_tokens(input);
-        assert_eq!(reduced, "This long sentence some stop words it some things.");
+        // Note: "This" is removed because "this" is in stop words and the check is case-insensitive.
+        assert_eq!(reduced, "long sentence stop words things.");
     }
 
     #[test]
