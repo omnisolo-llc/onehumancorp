@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
+
 
 test('viral wrapped: verify year in review widget is dynamically rendered and shareable', async ({ browser }) => {
   // Set up local storage to simulate being a tenant
-  const page = await adminPage(browser);
+  const page = page = await adminPage(browser);
   await page.evaluate(() => {
     localStorage.setItem('tenant', 'e2e_tenant_id');
   });

@@ -1,9 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect, adminPage } from './fixtures';
+
 
 test.describe('Twilio WhatsApp Omnichannel', () => {
     test('Should simulate receiving and drafting a reply to a Twilio WhatsApp message', async ({ browser }) => {
-        const page = await adminPage({ browser } as any);
+        const page = page = await adminPage(browser);
 
         // Use the existing omni-inbox mock to create a WhatsApp message instead of Instagram
         const mockPayload = {
