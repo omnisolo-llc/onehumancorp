@@ -982,7 +982,7 @@ pub async fn advisory_insights_handler(
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
                     )
                     .bind(&tenant_id1)
                     .fetch_optional(pool)
