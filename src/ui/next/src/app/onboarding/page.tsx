@@ -1088,7 +1088,7 @@ Image provided: ${instantImageUrl}`;
                 </svg>
               </div>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
-                10-Minute Setup Wizard
+                Setup Assistant
               </h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-8 leading-relaxed max-w-sm">
                 Zero tech skills needed. We do the heavy lifting. Review and add

@@ -13,7 +13,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
     await expect(page.getByText("What's the name of your business?")).toBeVisible();
 
@@ -48,7 +48,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Carlos Fixes It');
@@ -82,7 +82,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Leo Guitar Lessons');
@@ -116,7 +116,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Fatima Halal Food');
@@ -151,7 +151,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     // 1. Start Wizard and Save Draft
     await page.goto('/onboarding');
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
 
     // Check for glassmorphism classes
     await expect(page.locator('#setup-screen')).toHaveClass(/.*glassmorphism.*/);
@@ -180,7 +180,7 @@ test.describe('OnboardingWizard CUJ', () => {
   test('Validation errors prevent launching without complete admin info', async ({ page }) => {
 
     await page.goto('/onboarding');
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Test Business');
@@ -220,7 +220,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
   test('Submitting empty inputs displays validation errors with visual indicators', async ({ page }) => {
     await page.goto('/onboarding');
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     // Step 1: Empty Business Name
@@ -274,7 +274,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
   test('User can use Instant Build to launch storefront quickly', async ({ page }) => {
     await page.goto('/onboarding');
-    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
 
     await page.getByRole('button', { name: 'Instant Build' }).click();
     await expect(page.getByText("Tell us about your business")).toBeVisible();
