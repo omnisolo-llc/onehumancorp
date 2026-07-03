@@ -4203,7 +4203,12 @@ pub async fn handle_viral_widget_embed(
         <h2>{title}</h2>
         <p>This is a viral widget for {tenant}. Share it with your friends!</p>
         <button onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share Now</button>
-"#
+"#,
+        bg_color = bg_color,
+        border_color = border_color,
+        text_color = text_color,
+        title = title,
+        tenant = tenant
     );
 
     if show_branding {
