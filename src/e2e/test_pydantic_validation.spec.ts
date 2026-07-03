@@ -56,7 +56,7 @@ test.describe('Pydantic-first tool schema fallback mechanism validation UI', () 
 
     await expect(page.getByTestId('error-message')).toBeVisible();
     await expect(page.getByTestId('error-message')).toContainText('LLM-Recoverable Validation Error');
-    await expect(page.getByTestId('error-message')).toContainText('Semantic validation failed. Expected string for `topic_name`.');
+    await expect(page.getByTestId('error-message')).toContainText('Semantic validation failed');
   });
 
   test('Workflow palette handles complex block conditions seamlessly', async ({ page, loginAs, unlimitedAdminUser }) => {

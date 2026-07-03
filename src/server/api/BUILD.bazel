@@ -118,6 +118,7 @@ rust_library(
     "//src/server/api/ohc_job_queue:srcs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
+        "//src/server/api/agents:pydantic.rs",
         "//src/server/api/agents:hire.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:mission/handoff.rs",
