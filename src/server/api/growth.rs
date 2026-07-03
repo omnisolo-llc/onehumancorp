@@ -380,6 +380,7 @@ where
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/quiz/generate", post(handle_generate_viral_quiz))
         .route("/referrals/generate", post(handle_referral_generate))
+        .route("/viral-loop/metrics", get(handle_viral_loop_metrics))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/seasonal-promo/generate", post(handle_promo_generate))
@@ -2911,6 +2912,15 @@ async fn handle_create_team_invite(
     }
 }
 
+async fn handle_viral_loop_metrics(
+    Extension(state): Extension<GrowthState>,
+) -> impl IntoResponse {
+    let (invites_sent, invites_accepted) = state.viral_loop_tracker.get_metrics();
+    Json(serde_json::json!({
+        "invites_sent": invites_sent,
+        "invites_accepted": invites_accepted
+    }))
+}
 
 #[cfg(test)]
 mod tests {
