@@ -1051,7 +1051,7 @@ Image provided: ${instantImageUrl}`;
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 z-10 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
+          <div className="absolute top-4 left-4 right-4 z-[9999] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake">
             <svg
               className="w-5 h-5 flex-shrink-0"
               fill="none"

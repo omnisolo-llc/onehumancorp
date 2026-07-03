@@ -161,13 +161,23 @@
       }
 
       .error-msg {
-        color: #ff3b30;
-        font-size: 12px;
-        margin-top: -15px;
-        margin-bottom: 15px;
+        background: rgba(255, 59, 48, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 59, 48, 0.5);
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 8px;
+        margin-bottom: 16px;
+        min-height: 44px;
         display: none;
+        align-items: center;
+        justify-content: flex-start;
+        color: #ff3b30;
+        font-size: 14px;
+        font-weight: 600;
         text-align: left;
-      }
+    }
 
       .invalid-input {
         background: rgba(255, 59, 48, 0.1) !important;
@@ -3111,14 +3121,14 @@
             'input[name="work_context"]:checked',
           );
           if (!selected) {
-            errors.context.style.display = "block";
+            errors.context.style.display = "flex";
             isValid = false;
           } else {
             state.work_context = selected.value;
           }
         } else if (stepId === "step-categories") {
           if (inputs.categories.value.trim() === "") {
-            errors.categories.style.display = "block";
+            errors.categories.style.display = "flex";
             inputs.categories.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3129,7 +3139,7 @@
         } else if (stepId === "step-name") {
           if (inputs.name.value.trim().length < 3) {
             errors.name.innerText = "Business Name must be at least 3 characters.";
-            errors.name.style.display = "block";
+            errors.name.style.display = "flex";
             inputs.name.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3219,7 +3229,7 @@
         } else if (stepId === "step-location") {
           if (inputs.location.value.trim() === "") {
             errors.location.innerText = "Please tell us your location.";
-            errors.location.style.display = "block";
+            errors.location.style.display = "flex";
             inputs.location.classList.add("invalid-input");
             isValid = false;
           } else {
@@ -3230,7 +3240,7 @@
         } else if (stepId === "step-target-audience") {
           if (inputs.target_audience.value.trim() === "") {
             errors.target_audience.innerText = "Please tell us your target audience.";
-            errors.target_audience.style.display = "block";
+            errors.target_audience.style.display = "flex";
             inputs.target_audience.classList.add("invalid-input");
             isValid = false;
           } else {
