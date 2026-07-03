@@ -15,12 +15,12 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
 
             // Find invoices that are overdue (e.g. past due_date, status = 'Draft' or 'Pending')
             // Using different logic for Postgres/Sqlite.
-            let mut overdue_invoices: Vec<(String, String, String)> = vec![]; // (id, tenant_id, customer_id)
+            let mut overdue_invoices: Vec<(String, String, String)> = vec![]; // (id, tenant_id, client_id)
 
             match &db.store {
                 DbStore::Postgres => {
                     if let Ok(rows) = sqlx::query_as::<_, (String, String, Option<String>)>(
-                        "SELECT id, tenant_id, customer_id FROM invoices WHERE payment_status != 'paid' AND due_date < CURRENT_TIMESTAMP AND (status = 'draft' OR status = 'pending')"
+                        "SELECT id, tenant_id, client_id FROM invoices WHERE payment_status != 'paid' AND due_date < CURRENT_TIMESTAMP AND (status = 'draft' OR status = 'pending')"
                     )
                     .fetch_all(&db.pool).await {
                         for row in rows {
@@ -30,7 +30,7 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
                 },
                 DbStore::Sqlite(_) => {
                     if let Ok(rows) = sqlx::query_as::<_, (String, String, Option<String>)>(
-                        "SELECT id, tenant_id, customer_id FROM invoices WHERE payment_status != 'paid' AND due_date < datetime('now') AND (status = 'draft' OR status = 'pending')"
+                        "SELECT id, tenant_id, client_id FROM invoices WHERE payment_status != 'paid' AND due_date < datetime('now') AND (status = 'draft' OR status = 'pending')"
                     )
                     .fetch_all(&db.pool).await {
                         for row in rows {
@@ -40,7 +40,7 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
                 }
             }
 
-            for (invoice_id, tenant_id, customer_id) in overdue_invoices {
+            for (invoice_id, tenant_id, client_id) in overdue_invoices {
                 info!("Triggering Finance Agent for overdue invoice {}", invoice_id);
 
                 let event = DepartmentEvent {
@@ -49,7 +49,7 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
                     event_type: "invoice.overdue".to_string(),
                     payload: serde_json::json!({
                         "invoice_id": invoice_id,
-                        "customer_id": customer_id
+                        "client_id": client_id
                     }),
                 };
 

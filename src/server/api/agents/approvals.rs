@@ -129,6 +129,7 @@ where
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/simulate-autonomous-booking-quote", post(simulate_autonomous_booking_quote))
         .route("/simulate-invoice-draft", post(simulate_invoice_draft))
+        .route("/simulate-invoice-followup", post(simulate_invoice_followup))
         .route("/stream", get(stream_agent_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
@@ -605,6 +606,38 @@ async fn simulate_autonomous_booking_quote(
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate autonomous booking quote: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
+async fn simulate_invoice_followup(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "invoice_followup",
+        "invoice_id": "inv_simulated_123",
+        "original_message": "Invoice inv_simulated_123 is overdue.",
+        "generated_response": "Hi there, just checking in to see if you received invoice inv_simulated_123. Let us know if you have any questions!",
+        "operational_action": "Draft personalized reminder",
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::Finance,
+        "Draft personalized invoice follow-up for review".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate invoice followup: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
         }
     }
