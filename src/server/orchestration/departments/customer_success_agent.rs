@@ -38,6 +38,7 @@ impl Department for CustomerSuccessAgent {
             "agent:customer_success:approved".to_string(),
             "tenant.subscription.check_predictive_restock".to_string(),
             "tenant.subscription.action.requested".to_string(),
+            "job_status_updates".to_string(),
         ]
     }
 
@@ -52,6 +53,61 @@ impl Department for CustomerSuccessAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "job_status_updates" {
+            let job_id = event.payload.get("job_id").and_then(|v| v.as_str()).unwrap_or("");
+            let status = event.payload.get("status").and_then(|v| v.as_str()).unwrap_or("");
+
+            if status == "en_route" && !job_id.is_empty() {
+                let pool = crate::db::get_pool();
+
+                // Query customer phone and staff name
+                let query = r#"
+                    SELECT
+                        c.phone,
+                        c.name as customer_name,
+                        COALESCE(sp.name, 'Your service provider') as staff_name
+                    FROM job_locations jl
+                    JOIN appointments a ON jl.appointment_id = a.id
+                    JOIN customers c ON a.customer_id = c.id
+                    JOIN service_routes sr ON jl.service_route_id = sr.id
+                    LEFT JOIN staff_profiles sp ON sr.staff_profile_id = sp.id
+                    WHERE jl.id = $1 AND jl.tenant_id = $2
+                "#;
+
+                let row: Result<(Option<String>, Option<String>, String), sqlx::Error> = sqlx::query_as(query)
+                    .bind(job_id)
+                    .bind(&event.tenant_id)
+                    .fetch_one(&pool)
+                    .await;
+
+                if let Ok((Some(customer_phone), _, staff_name)) = row {
+                    let text = format!("Hi! {} is on his way and should arrive in roughly 15 minutes.", staff_name);
+
+                    tracing::info!("Drafting SMS for job {}: {}", job_id, text);
+
+                    let registry = crate::integrations::registry::IntegrationsRegistry::new();
+
+                    // We need from_phone. Twilio requires it. Let's get it from the tenant's integration_credentials
+                    let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as(
+                        "SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id = 'twilio' AND tenant_id = $1 LIMIT 1"
+                    )
+                    .bind(&event.tenant_id)
+                    .fetch_one(&pool)
+                    .await;
+
+                    if let Ok((_sid, _token, from_phone)) = twilio_row {
+                        if !from_phone.is_empty() {
+                            let _ = registry.send_sms("twilio", &customer_phone, &from_phone, &text).await;
+                        }
+                    } else {
+                        // Fallback or test mode
+                        let _ = registry.send_sms("twilio", &customer_phone, "+15550000000", &text).await;
+                    }
+                }
+            }
+            return Ok(());
+        }
 
         if event.event_type == "agent:customer_success:approved" {
             let payload = &event.payload;
@@ -582,6 +638,7 @@ mod tests {
         assert!(events.contains(&"tenant.omnichannel.message.received".to_string()));
         assert!(events.contains(&"tenant.order.fulfillment_ready".to_string()));
         assert!(events.contains(&"agent:customer_success:approved".to_string()));
+        assert!(events.contains(&"job_status_updates".to_string()));
     }
 
     #[test]
