@@ -4,7 +4,6 @@ use std::sync::OnceLock;
 use tonic::{Request, Response, Status};
 
 static HELP_ARTICLES: OnceLock<Vec<HelpArticle>> = OnceLock::new();
-static TOOLTIPS: OnceLock<Vec<Tooltip>> = OnceLock::new();
 static VIDEO_TUTORIALS: OnceLock<Vec<VideoTutorial>> = OnceLock::new();
 
 pub struct MyDocsService;
@@ -75,38 +74,6 @@ fn get_video_tutorials() -> &'static Vec<VideoTutorial> {
     })
 }
 
-fn get_tooltips() -> &'static Vec<Tooltip> {
-    TOOLTIPS.get_or_init(|| {
-        vec![
-            Tooltip {
-                element_id: "nav-store".to_string(),
-                title: "Your Storefront".to_string(),
-                plain_language_description: "This is where you manage what you sell. Add or edit products here.".to_string(),
-            },
-            Tooltip {
-                element_id: "nav-agents".to_string(),
-                title: "AI Helpers".to_string(),
-                plain_language_description: "These are your digital employees. They can talk to customers and do tasks for you.".to_string(),
-            },
-            Tooltip {
-                element_id: "btn-new-product".to_string(),
-                title: "Add Product".to_string(),
-                plain_language_description: "Click here to add something new to sell. You can add a photo and a price.".to_string(),
-            },
-            Tooltip {
-                element_id: "setting-multitenant".to_string(),
-                title: "Cloud Mode".to_string(),
-                plain_language_description: "Runs your app on our fast servers. This is best for most businesses.".to_string(),
-            },
-            Tooltip {
-                element_id: "setting-standalone".to_string(),
-                title: "Standalone Mode".to_string(),
-                plain_language_description: "Runs entirely on your computer. Great if you don't have internet.".to_string(),
-            },
-        ]
-    })
-}
-
 #[tonic::async_trait]
 impl DocsService for MyDocsService {
     async fn get_help_article(
@@ -165,15 +132,14 @@ impl DocsService for MyDocsService {
         request: Request<GetTooltipRequest>,
     ) -> Result<Response<GetTooltipResponse>, Status> {
         let req = request.into_inner();
-        let tooltips = get_tooltips();
-
-        if let Some(tooltip) = tooltips.iter().find(|t| t.element_id == req.element_id) {
-            Ok(Response::new(GetTooltipResponse {
-                tooltip: Some(tooltip.clone()),
-            }))
-        } else {
-            Err(Status::not_found("Tooltip not found"))
-        }
+        // Since we removed TOOLTIPS vector, just return a dummy
+        Ok(Response::new(GetTooltipResponse {
+            tooltip: Some(Tooltip {
+                element_id: req.element_id.clone(),
+                title: req.element_id,
+                plain_language_description: "Dummy tooltip from grpc service. Please hit the REST endpoint instead.".to_string(),
+            }),
+        }))
     }
 
     async fn get_video_tutorials(
