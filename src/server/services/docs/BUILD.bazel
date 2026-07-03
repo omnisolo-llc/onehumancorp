@@ -26,6 +26,7 @@ rust_library(
         "//src/proto:docs_tonic",
         "@crates//:tokio",
         "@crates//:tonic",
+        "@crates//:sqlx",
     ],
 )
 
