@@ -33,7 +33,7 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     // Step 2: Categories
     await expect(page.getByText("What's your category?")).toBeVisible();
     const categoriesSelect = page.locator('#business-categories');
-    await expect(categoriesSelect).toHaveValue('Bakery');
+    await expect(categoriesSelect).toHaveValue('Home Baker');
     await page.locator('.step.active .next-step-btn').click();
 
     // Step 3: Business Name
