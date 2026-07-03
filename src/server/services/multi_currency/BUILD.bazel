@@ -1,0 +1,12 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "multi_currency",
+    srcs = glob(["**/*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+    ],
+)
