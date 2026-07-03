@@ -23,3 +23,4 @@ pub mod daily_ops_routine_worker;
 mod invoice_followup_worker_test;
 pub mod proactive_operations_worker;
 pub mod agent_action_worker;
+pub mod quickbooks_sync_worker;

@@ -20,6 +20,7 @@ pub use ::server_integrations_shippo as shippo;
 pub use ::server_integrations_zoom as zoom;
 pub use ::server_integrations_calendly as calendly;
 pub use ::server_integrations_mailchimp as mailchimp;
+pub mod quickbooks;
 
 pub use ::server_integrations_ayrshare as ayrshare;
 pub use ::server_integrations_listmonk as listmonk;

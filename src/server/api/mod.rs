@@ -1,3 +1,4 @@
+pub mod settings;
 pub mod sync;
 pub mod oauth;
 pub mod offline_sync;

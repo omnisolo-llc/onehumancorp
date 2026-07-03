@@ -28,6 +28,7 @@ pub struct IntegrationsRegistry {
     pub razorpay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::razorpay::provider::RazorpayProvider>>>,
     pub manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
+    pub quickbooks_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::quickbooks::provider::QuickBooksProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
@@ -73,6 +74,7 @@ impl IntegrationsRegistry {
             manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            quickbooks_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -353,6 +355,12 @@ impl IntegrationsRegistry {
         prs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(pr.clone());
 
         Ok(pr)
+    }
+
+
+    pub fn get_quickbooks(&self, tenant_id: &str) -> Option<std::sync::Arc<crate::integrations::quickbooks::provider::QuickBooksProvider>> {
+        let clients = self.quickbooks_clients.read().unwrap();
+        clients.get(tenant_id).cloned()
     }
 
     pub fn merge_pull_request(&self, pr_id: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {

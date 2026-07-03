@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 
@@ -16,6 +16,7 @@ export default function Integrations() {
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
     { id: "taxjar", name: "TaxJar", category: "finance", status: "disconnected", icon: "🏛️", description: "Automatically calculate and track sales tax for your orders." },
+    { id: "quickbooks", name: "QuickBooks Online", category: "finance", status: "disconnected", icon: "📒", description: "Sync payments and invoices automatically to your accounting ledger." },
     { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
     { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
@@ -27,6 +28,32 @@ export default function Integrations() {
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
+
+
+  const [showQuickBooksModal, setShowQuickBooksModal] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      if (code) {
+        const realmId = urlParams.get('realmId') || 'unknown';
+        const tenantId = window.location.host.split(".")[0] || "default";
+        fetch(`/api/v1/tenants/${tenantId}/integrations/quickbooks/connect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, realm_id: realmId, redirect_uri: `${window.location.protocol}//${window.location.host}/integrations` })
+        }).then(res => {
+          if (res.ok) {
+            setStatusMessage("QuickBooks connected successfully");
+            setIntegrations(integrations.map(i => i.id === 'quickbooks' ? { ...i, status: 'connected' } : i));
+          } else {
+            setStatusMessage("Failed to connect QuickBooks");
+          }
+          window.history.pushState({}, '', window.location.pathname);
+        });
+      }
+    }
+  }, [integrations]);
 
   const [showTwilioModal, setShowTwilioModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -328,7 +355,33 @@ export default function Integrations() {
           )}
 
           {/* Integration Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {showQuickBooksModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+            <h2 className="text-xl font-bold mb-4">Connect QuickBooks Online</h2>
+            <p className="text-gray-600 mb-6">You will be redirected to Intuit to authorize OHC to sync invoices and payments.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 border rounded-md hover:bg-gray-50"
+                onClick={() => setShowQuickBooksModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                onClick={() => {
+                  const clientId = "client"; // Normally injected from env
+                  const redirectUri = `${window.location.protocol}//${window.location.host}/integrations`;
+                  window.location.href = `https://appcenter.intuit.com/connect/oauth2?client_id=${clientId}&redirect_uri=${redirectUri}&scope=com.intuit.quickbooks.accounting&response_type=code&state=dummy_state`;
+                }}
+              >
+                Continue to QuickBooks
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredIntegrations.map(integration => (
               <div key={integration.id}
                    className="p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md glassmorphism border border-white/40 dark:border-white/10"

@@ -2704,6 +2704,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let agent_action_worker = std::sync::Arc::new(crate::workers::agent_action_worker::AgentActionWorker::new(db.pool.clone(), std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string())));
     agent_action_worker.start();
     let _ = crate::workers::invoice_followup_worker::start_invoice_followup_worker(db.clone(), dept_orchestrator.clone());
+    crate::workers::quickbooks_sync_worker::start_quickbooks_sync_worker(db.clone(), std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())).await;
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone()).with_hub(hub.clone())));
@@ -6356,6 +6357,7 @@ async fn create_ui_bom_item_handler(
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .nest("/api/integrations", crate::api::tool_integrations::router(db.clone()))
+        .nest("/api/v1/tenants/:tenant_id/integrations/quickbooks", crate::api::settings::integrations::quickbooks::router().with_state(std::sync::Arc::new(crate::api::payment_ledger::AppState { db: db.clone(), hub: hub.clone() })))
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work", axum::routing::get(crate::api::work_triage::get_daily_work_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/daily-work/action/{id}", axum::routing::post(crate::api::work_triage::approve_daily_work_handler).with_state(db.clone()))
@@ -6935,6 +6937,7 @@ async fn create_ui_bom_item_handler(
         .merge(twilio_voice_webhook_router)
         .merge(api::unified_inbox_webhook::router(db.clone()))
         .merge(health_router)
+
         .fallback(api_not_found_handler);
 
     let port = std::env::var("OHC_PORT")

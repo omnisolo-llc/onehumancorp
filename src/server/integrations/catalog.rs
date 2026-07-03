@@ -9,6 +9,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "https://api.taxjar.com/v2".to_string(),
         ),
         metadata_provider(
+            "quickbooks",
+            "QuickBooks Online",
+            "accounting",
+            "https://sandbox-quickbooks.api.intuit.com/v3".to_string(),
+        ),
+        metadata_provider(
             "nats",
             "NATS Event Mesh",
             "event_mesh",
