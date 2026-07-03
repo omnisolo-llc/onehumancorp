@@ -5,10 +5,20 @@ export async function POST(req: Request) {
     const body = await req.json();
     const backendUrl = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
 
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
+    const tenantId = req.headers.get("x-tenant-id") || "default";
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-tenant-id": tenantId,
+    };
+    if (authHeader) {
+      headers["authorization"] = authHeader;
+    }
+
     // Try to actually store the credentials in the database if there is an endpoint
     const response = await fetch(`${backendUrl}/api/v1/settings/integrations/whatsapp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(body),
     });
 
