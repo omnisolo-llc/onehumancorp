@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('OHC: Local Sovereignty UI Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/settings');
-    await expect(page.getByRole('heading', { name: 'Workspace Settings' }).first()).toBeVisible({ timeout: 45000 });
+    await expect(page.locator('h1', { hasText: 'Workspace Settings' }).first()).toBeVisible({ timeout: 45000 });
   });
 
   test('should display Local Sovereignty & Data Sharing controls', async ({ page }) => {
