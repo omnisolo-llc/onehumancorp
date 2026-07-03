@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Autonomous Booking System', () => {
     test('end-to-end booking flow: dashboard view, availability fetch, and submission', async ({ page }) => {
-        const tenant = 'test-tenant-booking-123';
-        const serviceId = 'test-service-1';
+        const tenant = 'e2e-tenant';
+        const serviceId = 'e2e-product-class';
 
         // 1. Visit Dashboard and navigate to Bookings Dashboard
         await page.goto('/ui/dashboard.html');

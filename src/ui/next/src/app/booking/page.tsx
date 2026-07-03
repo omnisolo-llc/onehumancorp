@@ -177,7 +177,7 @@ function BookingForm() {
                 {isLoadingSlots ? (
                   <div className="text-sm text-gray-500 text-center py-4">Loading slots...</div>
                 ) : availableSlots.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {availableSlots.map((slot) => {
                       const d = new Date(slot.start_time);
                       const timeString = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

@@ -274,6 +274,16 @@ SET customer_id = EXCLUDED.customer_id,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO availability_blocks (id, tenant_id, service_id, start_time, end_time, is_available)
+VALUES
+  ('e2e-avail-1', 'e2e-tenant', 'e2e-product-class', CURRENT_TIMESTAMP + interval '1 day', CURRENT_TIMESTAMP + interval '1 day 1 hour', true),
+  ('e2e-avail-2', 'e2e-tenant', 'e2e-product-class', CURRENT_TIMESTAMP + interval '1 day 2 hours', CURRENT_TIMESTAMP + interval '1 day 3 hours', true)
+ON CONFLICT (id) DO UPDATE
+SET start_time = EXCLUDED.start_time,
+    end_time = EXCLUDED.end_time,
+    is_available = EXCLUDED.is_available,
+    updated_at = CURRENT_TIMESTAMP;
+
 INSERT INTO shared_tasks (id, tenant_id, title, description, status, agent_id, priority, payload)
 VALUES
   ('e2e-task-restock', 'e2e-tenant', 'Prepare weekend inventory', 'Review seeded orders and prep ingredients.', 'PENDING', 'e2e-agent-ops', 'P1', '{"source":"database_seed"}'),
