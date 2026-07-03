@@ -4,6 +4,7 @@ load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 exports_files(
     [
         "booking.rs",
+        "omnichannel_service.rs",
         "mod.rs",
         "cache_invalidator.rs",
         "wizard.rs",
@@ -22,6 +23,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "booking.rs",
+        "omnichannel_service.rs",
         "mod.rs",
         "cache_invalidator.rs",
         "wizard.rs",
