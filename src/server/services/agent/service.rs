@@ -38,19 +38,19 @@ impl MyAgentManagerService {
         let org_id_clone_for_meetings = org_id.to_string();
         let (agents_res, meetings_res, cost_res_spawn, tasks_res) = if mobile_optimized {
             let (r1, r2) = tokio::join!(
-                tokio::task::spawn_blocking(move || Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents))),
+                tokio::spawn(async move { Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents)) }),
                 tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_for_meetings).await })
             );
             (r1, r2, Ok((0.0, 0, vec![])), Ok(vec![]))
         } else {
             tokio::join!(
-                tokio::task::spawn_blocking(move || Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents))),
+                tokio::spawn(async move { Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents)) }),
                 tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_for_meetings).await }),
-                tokio::task::spawn_blocking(move || {
+                tokio::spawn(async move {
                     let cost_auditor = hub_cost.get_cost_auditor();
                     (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
                 }),
-                tokio::task::spawn_blocking(move || {
+                tokio::spawn(async move {
                     hub_tasks.task_manager().get_pending_approvals(&org_id_clone)
                 })
             )
@@ -61,6 +61,13 @@ impl MyAgentManagerService {
         let task_queue = tasks_res.unwrap();
         let queue_length = task_queue.len() as i32;
         let proto_task_queue = task_queue.into_iter().map(|t| t.into_proto()).collect();
+        let mut proto_task_queue_mut: Vec<::server_ohc::orchestration::SharedTask> = proto_task_queue;
+        if mobile_optimized {
+            for task in proto_task_queue_mut.iter_mut() {
+                task.description.clear();
+                task.payload.clear();
+            }
+        }
 
         let mut agent_costs = Vec::new();
         for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
@@ -104,7 +111,7 @@ impl MyAgentManagerService {
             costs: Some(costs),
             agents: agents_list,
             statuses,
-            task_queue: proto_task_queue,
+            task_queue: proto_task_queue_mut,
             queue_length,
             updated_at_unix: Utc::now().timestamp(),
         };
