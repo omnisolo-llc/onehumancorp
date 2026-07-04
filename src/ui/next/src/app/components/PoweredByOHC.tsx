@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 interface PoweredByOHCProps {
   tenantId: string;
   isOwner?: boolean;
+  className?: string;
 }
 
 export function PoweredByOHC({ tenantId, isOwner = false }: PoweredByOHCProps) {

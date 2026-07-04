@@ -1,6 +1,15 @@
 import { SyncManager } from './SyncManager';
-import { enqueueOperationIntent, OperationIntent } from '../../app/utils/offlineQueue';
+import { enqueueAction, OfflineAction } from '../../app/utils/offlineQueue';
 import { v4 as uuidv4 } from 'uuid';
+
+export interface OperationIntent {
+  id: string;
+  action_type: string;
+  payload: any;
+  status: string;
+  retry_count: number;
+  created_at: string;
+}
 
 export class MutationService {
   private static instance: MutationService;
@@ -41,7 +50,12 @@ export class MutationService {
       optimisticUpdate();
 
       // 2. Queue the intent
-      await enqueueOperationIntent(intent);
+      await enqueueAction({
+        id: intent.id,
+        type: intent.action_type,
+        payload: intent.payload,
+        timestamp: Date.now()
+      });
 
       // 3. Trigger sync via SyncManager
       const syncManager = SyncManager.getInstance();
