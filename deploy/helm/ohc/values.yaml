@@ -4,7 +4,7 @@ backend:
     maxReplicas: 100
     minReplicas: 2
     targetCPUUtilizationPercentage: 75
-    targetMemoryUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 75
   headless: false
   image: onehumancorp/server:latest
   multiTenant: true
@@ -28,8 +28,8 @@ chatwoot:
     enabled: true
     maxReplicas: 100
     minReplicas: 2
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
   databaseUrl: ''
   enabled: true
   image: chatwoot/chatwoot:v3.15.1
@@ -103,8 +103,8 @@ ohcCore:
     enabled: true
     maxReplicas: 100
     minReplicas: 2
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
   enabled: true
   image: onehumancorp/mono-core:latest
   networkPolicy:
@@ -126,8 +126,8 @@ powersync:
     enabled: true
     maxReplicas: 100
     minReplicas: 2
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 75
+    targetMemoryUtilizationPercentage: 75
   enabled: true
   image: journeyapps/powersync-service:latest
   networkPolicy:
