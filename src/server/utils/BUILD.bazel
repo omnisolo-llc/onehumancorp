@@ -10,6 +10,7 @@ rust_library(
         "cache.rs",
         "dialect.rs",
         "fs.rs",
+        "payload_shaper.rs",
         "gzip_middleware.rs",
         "mod.rs",
         "slug.rs",
