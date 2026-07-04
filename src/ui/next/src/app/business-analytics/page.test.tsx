@@ -21,6 +21,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Mock window.open for trial
   global.window.open = vi.fn();
+  global.fetch = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ total_sales: 100, pending_orders: 10, active_customers: 5 }) })) as any;
   // Mock alert
   global.alert = vi.fn();
 });
