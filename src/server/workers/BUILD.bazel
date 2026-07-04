@@ -26,6 +26,8 @@ exports_files(
         "daily_ops_routine_worker.rs",
         "agent_action_worker.rs",
         "agent_action_worker_test.rs",
+        "escalation_worker.rs",
+        "escalation_worker_test.rs",
     ],
     visibility = ["//visibility:public"],
 )

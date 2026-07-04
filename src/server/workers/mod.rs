@@ -24,3 +24,5 @@ mod invoice_followup_worker_test;
 pub mod proactive_operations_worker;
 pub mod agent_action_worker;
 pub mod booking_reengagement_job;
+pub mod escalation_worker;
+mod escalation_worker_test;
