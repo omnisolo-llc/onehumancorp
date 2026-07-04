@@ -46,7 +46,7 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let _should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
 
         let query = r#"
         INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
@@ -60,7 +60,7 @@ impl UserRepository for SqliteUserRepository {
         .bind(&user.password_hash)
         .bind(roles_json)
         .bind(user.active)
-        .bind(org_id)
+        .bind(if should_bypass { "system" } else { org_id })
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)

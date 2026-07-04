@@ -106,26 +106,8 @@ pub fn get_safe_user_dir() -> std::path::PathBuf {
     #[cfg(unix)]
     {
         use std::os::unix::fs::DirBuilderExt;
-        use std::os::unix::fs::PermissionsExt;
-
-        #[allow(clippy::collapsible_if)]
-        if let Ok(sym_meta) = std::fs::symlink_metadata(&dir) {
-            #[allow(clippy::collapsible_if)]
-            if sym_meta.file_type().is_symlink() {
-                tracing::error!("CRITICAL SECURITY ERROR: OHC user directory is a symlink. Aborting to prevent TOCTOU vulnerability.");
-                std::process::exit(1);
-            }
-        }
 
         let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(&dir);
-
-        if let Ok(metadata) = std::fs::symlink_metadata(&dir) {
-            let perms = metadata.permissions();
-            if perms.mode() & 0o777 != 0o700 {
-                tracing::warn!("Insecure permissions on OHC user directory. Ignoring it to prevent TOCTOU attacks.");
-                std::process::exit(1);
-            }
-        }
     }
     #[cfg(not(unix))]
     {
