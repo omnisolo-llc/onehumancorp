@@ -189,3 +189,195 @@ describe('HelpChat accessibility', () => {
     expect(log).toHaveAttribute('aria-live', 'polite');
   });
 });
+
+describe('HelpChat normalizeAgentReply and URL safety', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('filters unsafe URLs and returns only text', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          reply: 'Here is a link',
+          link: { url: 'javascript:alert(1)', title: 'Click me' }
+        }),
+      })
+    ) as jest.Mock;
+
+    render(<HelpChat />);
+    const user = userEvent.setup({ delay: null });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
+
+    const input = screen.getByPlaceholderText('Ask anything...');
+    const submitBtn = screen.getByRole('button', { name: 'Send message' });
+
+    await act(async () => {
+      await user.type(input, 'Test unsafe link');
+    });
+
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Here is a link')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Read the full article →')).not.toBeInTheDocument();
+  });
+
+  it('handles invalid chat responses by throwing an error that is caught', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(null),
+      })
+    ) as jest.Mock;
+
+    render(<HelpChat />);
+    const user = userEvent.setup({ delay: null });
+    fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
+
+    await act(async () => {
+      await user.type(screen.getByPlaceholderText('Ask anything...'), 'Test null');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeInTheDocument();
+    });
+
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ reply: '   ' }),
+      })
+    ) as jest.Mock;
+
+    await act(async () => {
+      await user.type(screen.getByPlaceholderText('Ask anything...'), 'Test empty reply');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Sorry, I'm having trouble connecting right now.").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it('scrolls to bottom when a new message is sent', async () => {
+    const scrollIntoViewMock = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
+
+    render(<HelpChat />);
+    const user = userEvent.setup({ delay: null });
+    fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
+
+    scrollIntoViewMock.mockClear();
+
+    await act(async () => {
+      await user.type(screen.getByPlaceholderText('Ask anything...'), 'Hello');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(scrollIntoViewMock).toHaveBeenCalled();
+  });
+});
+
+describe('HelpChat safe link handling', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('renders a safe link when provided by the agent', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          reply: 'Here is a link',
+          link: { url: 'https://example.com/safe', title: 'Safe Link' }
+        }),
+      })
+    ) as jest.Mock;
+
+    render(<HelpChat />);
+    const user = userEvent.setup({ delay: null });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
+
+    const input = screen.getByPlaceholderText('Ask anything...');
+    const submitBtn = screen.getByRole('button', { name: 'Send message' });
+
+    await act(async () => {
+      await user.type(input, 'Test safe link');
+    });
+
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Here is a link')).toBeInTheDocument();
+    });
+
+    const link = screen.getByText('Read the full article →');
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', 'https://example.com/safe');
+  });
+});
+
+describe('HelpChat remaining branches', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('handles forceChat in E2E environments', async () => {
+    const originalEnv = process.env.NEXT_PUBLIC_E2E;
+    process.env.NEXT_PUBLIC_E2E = 'true';
+
+    const originalLocation = window.location;
+    // @ts-ignore
+    delete window.location;
+    window.location = { ...originalLocation, search: '?test_chat=true' };
+
+    render(<HelpChat />);
+    expect(screen.getByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
+
+    process.env.NEXT_PUBLIC_E2E = originalEnv;
+    window.location = originalLocation;
+  });
+
+  it('prevents submitting empty messages', async () => {
+    render(<HelpChat />);
+    const user = userEvent.setup({ delay: null });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
+
+    const submitBtn = screen.getByRole('button', { name: 'Send message' });
+
+    expect(submitBtn).toBeDisabled();
+
+    const input = screen.getByPlaceholderText('Ask anything...');
+    await act(async () => {
+      await user.type(input, '   ');
+    });
+
+    expect(submitBtn).toBeDisabled();
+
+    fireEvent.submit(submitBtn.closest('form')!);
+
+    expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeInTheDocument();
+  });
+});

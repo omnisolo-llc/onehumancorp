@@ -1553,6 +1553,7 @@
               class="glassmorphism"
               placeholder="Type a message..."
               enterkeyhint="send"
+              autocomplete="off"
               style="
                 margin-bottom: 0;
                 flex-grow: 1;
@@ -2385,7 +2386,7 @@
             aria-label="Previous Step"
             title="Previous Step"
             data-testid="prev-step-btn"
-            data-prev="step-offer"
+            data-prev="step-target-audience"
           >
             Back
           </button>
@@ -2507,7 +2508,7 @@
             aria-label="Previous Step"
             title="Previous Step"
             data-testid="prev-step-btn"
-            data-prev="step-offer"
+            data-prev="step-target-audience"
           >
             Back
           </button>
@@ -3449,6 +3450,9 @@
       document.querySelectorAll("select, input").forEach((input) => {
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
+            if (e.target.id === "chat-input" || e.target.id === "chat-image-url") {
+              return;
+            }
             e.preventDefault();
             const step = e.target.closest(".step");
             const nextBtn =

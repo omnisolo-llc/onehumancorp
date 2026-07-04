@@ -28,7 +28,7 @@ test.describe('Pricing Page Loop', () => {
 
   test('Pricing page Back button navigates to dashboard', async ({ page }) => {
     await page.goto('/pricing');
-    await page.locator('button', { hasText: 'Back' }).click();
+    await page.locator('a', { hasText: 'Back to Dashboard' }).click();
     await expect(page).toHaveURL('/dashboard');
   });
 });

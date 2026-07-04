@@ -23,7 +23,7 @@ BEGIN
                   AND tablename = t_name
                   AND policyname = 'tenant_isolation_' || t_name
             ) THEN
-                EXECUTE format('CREATE POLICY tenant_isolation_%I ON %I USING (tenant_id::text = current_setting(''app.current_tenant'', true)) WITH CHECK (tenant_id::text = current_setting(''app.current_tenant'', true))', t_name, t_name);
+                EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY; CREATE POLICY tenant_isolation_%I ON %I USING (tenant_id::text = current_setting(''app.current_tenant'', true)) WITH CHECK (tenant_id::text = current_setting(''app.current_tenant'', true))', t_name, t_name);
             END IF;
         END IF;
     END LOOP;
@@ -54,7 +54,7 @@ BEGIN
                   AND tablename = t_name
                   AND policyname = 'tenant_isolation_' || t_name
             ) THEN
-                EXECUTE format('CREATE POLICY tenant_isolation_%I ON %I USING (tenant_id::text = current_setting(''app.current_tenant'', true)) WITH CHECK (tenant_id::text = current_setting(''app.current_tenant'', true))', t_name, t_name);
+                EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY; CREATE POLICY tenant_isolation_%I ON %I USING (tenant_id::text = current_setting(''app.current_tenant'', true)) WITH CHECK (tenant_id::text = current_setting(''app.current_tenant'', true))', t_name, t_name);
             END IF;
         END IF;
     END LOOP;
