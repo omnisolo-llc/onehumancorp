@@ -64,18 +64,30 @@ impl JitContextRetriever {
             return None;
         }
 
-        // Score terms based on a combination of frequency and length (longer words are often more specific domain terms)
-        let mut scored_terms: Vec<(String, usize)> = term_frequencies
+        // Score terms based on an Okapi BM25-inspired heuristic for JIT Retrieval.
+        // BM25 usually requires document frequency across a corpus, but here we only have the query text.
+        // We simulate semantic importance by prioritizing rare/long words and using log smoothing on frequency.
+        // Master Catalog B.4. Context Management: JIT Retrieval Semantic Weighting
+        let msg_len = content.split_whitespace().count() as f64;
+        let avg_dl = 15.0; // Assume an average user message length of 15 words
+
+        let mut scored_terms: Vec<(String, f64)> = term_frequencies
             .into_iter()
             .map(|(term, freq)| {
-                // Score = frequency * length multiplier
-                let score = freq * term.len();
+                let k1 = 1.2;
+                let b = 0.75;
+                // Since we lack total document counts, we heavily weight term length as a proxy for rarity/specificity.
+                let idf_proxy = (term.len() as f64).ln() + 1.0;
+                let tf = freq as f64;
+
+                // Simplified BM25 formula component
+                let score = idf_proxy * (tf * (k1 + 1.0)) / (tf + k1 * (1.0 - b + b * (msg_len / avg_dl)));
                 (term, score)
             })
             .collect();
 
         // Sort by score descending
-        scored_terms.sort_by(|a, b| b.1.cmp(&a.1));
+        scored_terms.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         // Take top 3 most relevant keywords
         let query = scored_terms
