@@ -8,13 +8,18 @@ test.describe('Documentation UI Verification', () => {
     // Make sure the title renders properly
     await expect(page.locator('h1')).toContainText('In-App Help Center');
 
+    // Open floating widget
+    const helpBtn = page.locator('#ohc-floating-help-btn');
+    await helpBtn.waitFor({ state: 'visible' });
+    await helpBtn.click();
+
     // Open videos tab
     const videosTab = page.locator('[data-target="tab-videos"]');
     await videosTab.waitFor({ state: 'visible' });
     await videosTab.click();
 
     // Verify video list is populated
-    const videoList = page.locator('#video-list');
+    const videoList = page.locator('.ohc-help-content.active #video-list').first();
     await videoList.waitFor({ state: 'visible' });
     await expect(videoList).not.toBeEmpty();
     // Verify it isn't just loading text

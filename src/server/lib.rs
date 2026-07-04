@@ -34,7 +34,6 @@ struct CreateWorkflowRequest {
     workflow: String,
 }
 
-static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
 static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
 
@@ -115,103 +114,6 @@ pub struct CreateTriageItemPayload {
 
 pub fn is_standalone_runtime() -> bool {
     crate::config::get().standalone
-}
-
-pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
-    TOOLTIPS_REGISTRY.get_or_init(|| {
-    let mut m = HashMap::new();
-    m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
-    m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
-    m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
-
-    m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
-    m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
-    m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
-    m.insert("dashboard-widget-btn".to_string(), "Build a referral widget for your website.".to_string());
-    m.insert("help-center-nav-btn".to_string(), "Open the Help Center for guides and support.".to_string());
-    m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
-    m.insert("ohc-floating-help-btn".to_string(), "Open Help Center.".to_string());
-
-    m.insert("checkout-title-tooltip".to_string(), "Review your order summary and provide payment details to complete the checkout.".to_string());
-    m.insert("checkout-plan-upgrade-tooltip".to_string(), "Upgrading your plan gives you access to premium features.".to_string());
-    m.insert("checkout-cancel-tooltip".to_string(), "Cancel the checkout process and return to the previous page.".to_string());
-    m.insert("checkout-pay-tooltip".to_string(), "Complete your secure payment.".to_string());
-
-    m.insert("cart-recovery-tooltip".to_string(), "Recover abandoned carts with personalized AI follow-ups.".to_string());
-    m.insert("flash-sale-tooltip".to_string(), "Create high-converting flash sale countdown widgets.".to_string());
-    m.insert("pre-order-tooltip".to_string(), "Launch an omnichannel pre-order engine with tiered waitlist capabilities.".to_string());
-    m.insert("discount-code-tooltip".to_string(), "Create discount code widgets for your customers.".to_string());
-    m.insert("link-in-bio-tooltip".to_string(), "One link to rule them all. Drive social traffic to your store.".to_string());
-    m.insert("spin-to-win-tooltip".to_string(), "Create interactive discount wheels to capture emails.".to_string());
-    m.insert("trial-extension-tooltip".to_string(), "Share your setup on X to instantly unlock 7 extra days of Pro.".to_string());
-    m.insert("field-ops-tooltip".to_string(), "Offline-first mobile route management for field service workers.".to_string());
-    m.insert("proposal-draft-tooltip".to_string(), "Generate complex AI proposals instantly.".to_string());
-    m.insert("settings-widget-tooltip".to_string(), "Manage your account and preferences.".to_string());
-
-    m.insert("lead-capture-tooltip".to_string(), "Embed a smart lead capture form with a viral loop directly on your site.".to_string());
-    m.insert("quiz-generator-tooltip".to_string(), "Create AI-powered product recommendation quizzes to capture leads.".to_string());
-
-
-
-    // Additional default tooltips for existing dashboard buttons
-    m.insert("promoter-btn".to_string(), "Launch a new marketing campaign to grow your audience.".to_string());
-    m.insert("share-savings-btn".to_string(), "Share your success to unlock 7 days of Pro.".to_string());
-    m.insert("milestone-copy-btn".to_string(), "Copy your milestone link to share with others.".to_string());
-    m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
-    m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
-    m.insert("generate-link-btn".to_string(), "Click here to share access with a team member.".to_string());
-
-    // Fallback tooltips matching frontend
-    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest updates.".to_string());
-    m.insert("api-docs-tooltip".to_string(), "Connect custom tools with your account. Only needed for advanced setups.".to_string());
-    m.insert("help-btn-tooltip-appshell".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("morning-briefing".to_string(), "Your AI Decision Assistant's daily summary.".to_string());
-    m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
-    m.insert("walkthrough-btn-tooltip".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
-    m.insert("checkout-pay-now-tooltip".to_string(), "Click here to securely finish your purchase and process your payment.".to_string());
-    m.insert("checkout-subscribe-tooltip".to_string(), "Start a monthly subscription using saved wallet payment for frictionless vaulting.".to_string());
-    m.insert("checkout-tap-to-pay-tooltip".to_string(), "Tap your card or phone on the reader to pay in person.".to_string());
-    m.insert("checkout-mercadopago-tooltip".to_string(), "Pay securely using Mercado Pago.".to_string());
-    m.insert("checkout-cancel-tooltip".to_string(), "Go back to the previous screen without subscribing.".to_string());
-    m.insert("checkout-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan.".to_string());
-    m.insert("change-vibe-tooltip".to_string(), "Change the theme and colors of your website.".to_string());
-    m.insert("help-center-nav-btn".to_string(), "Access the Help Center".to_string());
-    m.insert("search-input".to_string(), "Search our knowledge base for help articles.".to_string());
-    m.insert("nav-store".to_string(), "Your Storefront. This is where you manage what you sell.".to_string());
-    m.insert("nav-agents".to_string(), "AI Helpers. These are your digital employees.".to_string());
-    m.insert("ohc-help-btn".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("ohc-floating-help-btn".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("pos-walkthrough-btn".to_string(), "Take a tour of Quick Charge POS".to_string());
-    m.insert("assistant-walkthrough-btn".to_string(), "Take a tour of the Assistant Workspace".to_string());
-    m.insert("remove-branding-tooltip".to_string(), "Upgrade to Premium to remove OHC branding.".to_string());
-    m.insert("settings-verify-tooltip".to_string(), "Verify your number to receive critical notifications.".to_string());
-    m.insert("settings-otp-tooltip".to_string(), "Click to confirm the code sent to your phone.".to_string());
-    m.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
-    m.insert("total-sales-tooltip".to_string(), "Total revenue generated from database orders.".to_string());
-    m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
-    m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
-    m.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
-    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
-    m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
-    m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
-    m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
-    m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
-    m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
-    m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
-    m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
-    m.insert("morning-briefing".to_string(), "Your AI Decision Assistant's daily summary.".to_string());
-    m.insert("checkout-mercadopago-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan via Mercado Pago.".to_string());
-    m.insert("api-docs-spec-tooltip".to_string(), "The raw OpenAPI JSON specification.".to_string());
-    m.insert("help-search-tooltip".to_string(), "Search our knowledge base for help articles.".to_string());
-    m.insert("changelog-tooltip".to_string(), "See what has changed in the latest version.".to_string());
-    m.insert("rate-limit-close-tooltip".to_string(), "Dismiss this warning.".to_string());
-    m.insert("network-status-tooltip".to_string(), "Shows whether you are currently online and syncing to the cloud, or offline.".to_string());
-    m.insert("voice-assistant-tooltip".to_string(), "Hold to speak a command to your AI Assistant.".to_string());
-    m.insert("my-plan-tooltip".to_string(), "View and manage your subscription plan and usage.".to_string());
-    RwLock::new(m)
-    })
 }
 
 pub fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
@@ -6935,6 +6837,7 @@ async fn create_ui_bom_item_handler(
         .merge(omnichannel_webhook_router)
         .nest("/api/inbox", inbox_webhook_router)
         .nest("/api/memory", api::inbox::customer_memory::router(db.clone()))
+        .nest("/api/inbox/action_required", api::inbox::action_required::router(db.clone()))
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(api::unified_inbox_webhook::router(db.clone()))
