@@ -334,8 +334,6 @@ mod tests {
 #[cfg(test)]
 mod tests2 {
     // use super::*
-    use super::*;
-    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_ml_resilience_agent_memory_pipeline_timeout() {

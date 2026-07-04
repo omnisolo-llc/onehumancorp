@@ -24,9 +24,9 @@ pub fn router<S>() -> Router<S> where S: Clone + Send + Sync + 'static {
 async fn validate_pydantic(
     Json(payload): Json<PydanticValidateRequest>,
 ) -> axum::response::Response {
-    use axum::response::{IntoResponse, Response};
-use axum::http::StatusCode;
-    use ohc_builtin_agent::types::{format_pydantic_error_string, format_pydantic_error};
+    use axum::response::IntoResponse;
+
+    use ohc_builtin_agent::types::format_pydantic_error;
 
     let mut err_msg = None;
     let mut is_recoverable = false;
