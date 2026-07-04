@@ -60,6 +60,7 @@ pub struct UiTenantQuery {
     pub tenant_id: Option<String>,
     pub tenant: Option<String>,
     pub mobile_optimized: Option<bool>,
+    pub fields: Option<String>,
 }
 
 pub fn ui_tenant_id(query: &UiTenantQuery) -> String {
