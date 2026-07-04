@@ -1,14 +1,17 @@
 -- +goose Up
 
 -- Fix customer_profile RLS policy
+ALTER TABLE IF EXISTS customer_profile ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS customer_profile_tenant_isolation_policy ON customer_profile;
 CREATE POLICY customer_profile_tenant_isolation_policy ON customer_profile FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 -- Fix work_item RLS policy
+ALTER TABLE IF EXISTS work_item ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS work_item_tenant_isolation_policy ON work_item;
 CREATE POLICY work_item_tenant_isolation_policy ON work_item FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 -- Fix agent_draft RLS policy
+ALTER TABLE IF EXISTS agent_draft ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS agent_draft_tenant_isolation_policy ON agent_draft;
 CREATE POLICY agent_draft_tenant_isolation_policy ON agent_draft FOR ALL USING (
     EXISTS (
@@ -17,19 +20,23 @@ CREATE POLICY agent_draft_tenant_isolation_policy ON agent_draft FOR ALL USING (
 );
 
 -- Fix proposed_bookings RLS policy
+ALTER TABLE IF EXISTS proposed_bookings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS proposed_bookings_tenant_isolation ON proposed_bookings;
 CREATE POLICY proposed_bookings_tenant_isolation ON proposed_bookings USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 -- Fix work_tasks RLS policy
+ALTER TABLE IF EXISTS work_tasks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS work_tasks_tenant_isolation ON work_tasks;
 CREATE POLICY work_tasks_tenant_isolation ON work_tasks USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 -- Fix availability_schedules RLS policy
+ALTER TABLE IF EXISTS availability_schedules ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS availability_schedules_tenant_isolation ON availability_schedules;
 CREATE POLICY availability_schedules_tenant_isolation ON availability_schedules
     USING (tenant_id = current_setting('app.current_tenant', true));
 
 -- Fix calendar_integrations RLS policy
+ALTER TABLE IF EXISTS calendar_integrations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS calendar_integrations_tenant_isolation ON calendar_integrations;
 CREATE POLICY calendar_integrations_tenant_isolation ON calendar_integrations
     USING (tenant_id = current_setting('app.current_tenant', true));

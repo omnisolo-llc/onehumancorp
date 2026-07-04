@@ -226,10 +226,14 @@ mod tests {
         std::fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").expect("should succeed in test");
 
         let ts_file = src_dir.join("app.ts");
-        std::fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").expect("should succeed in test");
+        std::fs::write(&ts_file, "export function init() {
+  // Initialization logic
+}\ninterface Config {}\n").expect("should succeed in test");
 
         let go_file = src_dir.join("server.go");
-        std::fs::write(&go_file, "package main\nfunc StartServer() {}\ntype Handler struct {}\n").expect("should succeed in test");
+        std::fs::write(&go_file, "package main\nfunc StartServer() {
+	// Server start logic
+}\ntype Handler struct {}\n").expect("should succeed in test");
 
         let cpp_file = src_dir.join("engine.cpp");
         std::fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").expect("should succeed in test");

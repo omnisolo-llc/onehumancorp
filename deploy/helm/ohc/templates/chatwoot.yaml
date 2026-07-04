@@ -46,7 +46,7 @@ spec:
                   key: secretKeyBase
                   optional: true
             - name: DATABASE_URL
-              value: {{ if .Values.chatwoot.databaseUrl }}{{ .Values.chatwoot.databaseUrl | quote }}{{ else }}"postgres://ohc:ohc@{{ .Release.Name }}-postgres:5432/chatwoot?sslmode=disable"{{ end }}
+              value: {{ if .Values.chatwoot.databaseUrl }}{{ .Values.chatwoot.databaseUrl | quote }}{{ else }}"postgres://ohc:ohc@{{ .Release.Name }}-postgres/chatwoot?sslmode=disable"{{ end }}
             - name: REDIS_URL
               value: {{ if .Values.chatwoot.redisUrl }}{{ .Values.chatwoot.redisUrl | quote }}{{ else }}{{ include "ohc.valkey.url" . | quote }}{{ end }}
             - name: RAILS_ENV
@@ -118,7 +118,7 @@ spec:
                   key: secretKeyBase
                   optional: true
             - name: DATABASE_URL
-              value: {{ if .Values.chatwoot.databaseUrl }}{{ .Values.chatwoot.databaseUrl | quote }}{{ else }}"postgres://ohc:ohc@{{ .Release.Name }}-postgres:5432/chatwoot?sslmode=disable"{{ end }}
+              value: {{ if .Values.chatwoot.databaseUrl }}{{ .Values.chatwoot.databaseUrl | quote }}{{ else }}"postgres://ohc:ohc@{{ .Release.Name }}-postgres/chatwoot?sslmode=disable"{{ end }}
             - name: REDIS_URL
               value: {{ if .Values.chatwoot.redisUrl }}{{ .Values.chatwoot.redisUrl | quote }}{{ else }}{{ include "ohc.valkey.url" . | quote }}{{ end }}
             - name: RAILS_ENV
@@ -204,7 +204,7 @@ spec:
                   key: secretKeyBase
                   optional: true
             - name: DATABASE_URL
-              value: {{ if .Values.chatwoot.databaseUrl }}{{ .Values.chatwoot.databaseUrl | quote }}{{ else }}"postgres://ohc:ohc@{{ .Release.Name }}-postgres:5432/chatwoot?sslmode=disable"{{ end }}
+              value: {{ if .Values.chatwoot.databaseUrl }}{{ .Values.chatwoot.databaseUrl | quote }}{{ else }}"postgres://ohc:ohc@{{ .Release.Name }}-postgres/chatwoot?sslmode=disable"{{ end }}
             - name: REDIS_URL
               value: {{ if .Values.chatwoot.redisUrl }}{{ .Values.chatwoot.redisUrl | quote }}{{ else }}{{ include "ohc.valkey.url" . | quote }}{{ end }}
             - name: RAILS_ENV
