@@ -16,6 +16,7 @@ pub mod quotes;
 pub mod estimator;
 pub mod inbox;
 pub mod incidents;
+pub mod invoice;
 pub mod agent_approvals;
 pub mod booking;
 pub mod money;
