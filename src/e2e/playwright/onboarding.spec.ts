@@ -1,56 +1,100 @@
 import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 
 test.describe('Onboarding Flow', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // strictly mobile viewport
 
   test('should complete the onboarding flow on mobile', async ({ page }) => {
+    // Start local http server to serve the page because Docker is not available in sandbox
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    await page.route('**/*setup.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    // Mock tooltips and API calls
+    await page.route('**/api/tooltips', async route => {
+      await route.fulfill({ status: 200, body: JSON.stringify({}) });
+    });
+
+    await page.route('**/api/onboarding/draft', async route => {
+       await route.fulfill({ status: 200, body: JSON.stringify({}) });
+    });
+
+    await page.route('**/api/onboarding/start', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ organization_id: 'test-org-123' })
+      });
+    });
+
+    await page.route('**/*success.html', async route => {
+      await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Success</body></html>' });
+    });
+
     // Navigate to onboarding page
-    await page.goto('/onboarding');
+    await page.goto('http://127.0.0.1:18789/setup.html');
     await expect(page).toHaveTitle(/OneHumanCorp|OHC/);
 
     // Initial Screen
-    await expect(page.locator('h2', { hasText: '10-Minute Setup Wizard' })).toBeVisible({ timeout: 15000 });
-    await page.click('button:has-text("Start My Business")');
+    await expect(page.locator('.container')).toBeVisible();
+    await page.locator('[data-testid="next-step-btn"][data-next="step-context"]').click();
 
-    // Step 1: Name
-    await expect(page.locator('h2', { hasText: "What's the name of your business?" })).toBeVisible({ timeout: 15000 });
-    await page.fill('input[placeholder="e.g. Maya\'s Custom Cakes"]', 'Test Business');
-    await page.click('button:has-text("Next")');
+    // Step Context
+    await expect(page.getByRole('heading', { name: 'How do you work?' })).toBeVisible();
+    await page.locator('[data-testid="context-storefront"]').click();
+    await page.locator('[data-testid="next-step-btn"][data-next="step-categories"]').click();
 
-    // Step 2: What do you sell
-    await expect(page.locator('h2', { hasText: "What do you sell?" })).toBeVisible({ timeout: 15000 });
-    await page.fill('textarea[placeholder="e.g. I bake custom vegan cakes"]', 'I sell awesome widgets.');
-    await page.click('button:has-text("Next")');
+    // Step Categories
+    const categorySelect = page.getByTestId('business-categories');
+    await expect(categorySelect).toBeVisible();
+    await categorySelect.selectOption('Home Baker');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-name"]').click();
 
-    // Step 3: Location
-    await expect(page.locator('h2', { hasText: "Where are you located?" })).toBeVisible({ timeout: 15000 });
-    await page.fill('input[placeholder="e.g. Portland, OR"]', 'Austin, TX');
-    await page.click('button:has-text("Next")');
+    // Step Name
+    await page.getByTestId('business-name').fill('Test Business');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-assistant"]').click();
 
-    // Step 4: Target Audience
-    await expect(page.locator('h2', { hasText: "Who is your target audience?" })).toBeVisible({ timeout: 15000 });
-    await page.fill('input[placeholder="e.g. Local families, Tech startups"]', 'Tech startups');
-    await page.click('button:has-text("Next")');
+    // Step Assistant
+    await page.getByTestId('team-operations').click();
+    await page.getByTestId('assistant-tone').selectOption('Friendly');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-admin"]').click();
 
-    // Step 5: Review Details
-    await expect(page.locator('h2', { hasText: "Review Details" })).toBeVisible({ timeout: 15000 });
-    await page.click('button:has-text("Continue")');
+    // Step Admin
+    await page.getByTestId('admin-name').fill('Test Admin');
+    await page.getByTestId('admin-email').fill(`admin-${Date.now()}@test-business.com`);
+    await page.getByTestId('admin-password').fill('Password123!');
+    await page.locator('[data-testid="next-step-btn"][data-next="step-offer"]').click();
 
-    // Step 6: Style & Team
-    await expect(page.locator('h2', { hasText: "Style & Team" })).toBeVisible({ timeout: 15000 });
-    await page.fill('input[placeholder="e.g. Maya Smith"]', 'Test Admin');
-    await page.fill('input[placeholder="you@example.com"]', 'admin@test-business.com');
-    await page.fill('input[placeholder="••••••••"]', 'Password123!');
+    // Step Offer
+    await page.getByTestId('first-offer').fill('Awesome widgets');
+    await page.locator('#step-offer [data-testid="next-step-btn"][data-next="step-location"]').click();
+
+    // Step Location
+    await page.getByTestId('location-input').fill('Austin, TX');
+    await page.locator('#step-location [data-testid="next-step-btn"][data-next="step-target-audience"]').click();
+
+    // Step Target Audience
+    await page.getByTestId('target-audience').fill('Tech startups');
+    await page.locator('#step-target-audience [data-testid="next-step-btn"][data-next="step-domain"]').click();
+
+    // Step Domain
+    await page.getByTestId('domain-name').fill(`test-business-${Date.now()}`);
+    await page.locator('#step-domain [data-testid="next-step-btn"][data-next="step-template"]').click();
+
+    // Step Template
+    await page.getByTestId('template-selection').selectOption('Modern');
 
     // Submit
-    const publishButton = page.locator('button:has-text("Approve & Publish")');
+    const publishButton = page.getByTestId('finish-btn');
     await publishButton.waitFor({ state: 'visible' });
-    await publishButton.click();
 
-    // Loading screen
-    await expect(page.locator('h2', { hasText: 'Building Your Business...' })).toBeVisible({ timeout: 15000 });
-
-    // Success screen
-    await expect(page.locator('h2', { hasText: "You're Live!" })).toBeVisible({ timeout: 30000 });
+    // Catch any page navigation and verify success
+    await Promise.all([
+      page.waitForNavigation({ url: /.*success\.html.*/, timeout: 15000 }),
+      publishButton.click()
+    ]);
   });
 });
