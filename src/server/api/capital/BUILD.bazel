@@ -25,7 +25,9 @@ rust_library(
         "//src/proto:funding_tonic",
 
         "//src/server/services/capital:server_services_capital",
+        "//src/server/utils:server_utils",
         "@crates//:sqlx",
+        "@crates//:redis",
         "@crates//:tonic",
         "@crates//:tokio",
     ],

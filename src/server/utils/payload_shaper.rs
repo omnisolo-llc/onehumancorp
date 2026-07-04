@@ -51,13 +51,13 @@ pub fn parse_fields(fields: &str) -> std::collections::HashMap<String, FieldNode
     root
 }
 
-pub fn shape_value(mut val: Value, tree: &std::collections::HashMap<String, FieldNode>) -> Value {
+pub fn shape_value(val: Value, tree: &std::collections::HashMap<String, FieldNode>) -> Value {
     if tree.is_empty() {
         return val; // If no specific fields requested for this level, return all (or should it be none? Usually returning all is safer if they didn't specify nested, meaning they want the whole nested object).
     }
 
     match val {
-        Value::Object(mut map) => {
+        Value::Object(map) => {
             let mut new_map = serde_json::Map::new();
             for (k, v) in map.into_iter() {
                 if let Some(node) = tree.get(&k) {
