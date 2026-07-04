@@ -24,9 +24,8 @@ pub fn router<S>() -> Router<S> where S: Clone + Send + Sync + 'static {
 async fn validate_pydantic(
     Json(payload): Json<PydanticValidateRequest>,
 ) -> axum::response::Response {
-    use axum::response::{IntoResponse, Response};
-use axum::http::StatusCode;
-    use ohc_builtin_agent::types::{format_pydantic_error_string, format_pydantic_error};
+    use axum::response::IntoResponse;
+    use ohc_builtin_agent::types::format_pydantic_error;
 
     let mut err_msg = None;
     let mut is_recoverable = false;
@@ -34,7 +33,7 @@ use axum::http::StatusCode;
     match payload.tool_name.as_str() {
         "TopicRetrieve" => {
             #[derive(Deserialize)]
-            struct Args { topic_name: String }
+            struct Args { #[allow(dead_code)] topic_name: String }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
                 err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
                 is_recoverable = true;
@@ -42,7 +41,7 @@ use axum::http::StatusCode;
         }
         "TranscriptSearch" => {
             #[derive(Deserialize)]
-            struct Args { query: String }
+            struct Args { #[allow(dead_code)] query: String }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
                 err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
                 is_recoverable = true;
@@ -50,7 +49,7 @@ use axum::http::StatusCode;
         }
         "TopicWrite" => {
             #[derive(Deserialize)]
-            struct Args { topic_name: String, content: String }
+            struct Args { #[allow(dead_code)] topic_name: String, #[allow(dead_code)] content: String }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
                 err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
                 is_recoverable = true;
@@ -58,7 +57,7 @@ use axum::http::StatusCode;
         }
         "Bash" => {
             #[derive(Deserialize)]
-            struct Args { command: String }
+            struct Args { #[allow(dead_code)] command: String }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
                 err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
                 is_recoverable = true;
