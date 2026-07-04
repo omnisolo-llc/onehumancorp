@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Invoice Generator | OHC</title>
+  <title>Invoices | OHC</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -114,22 +114,6 @@
     button:hover { background-color: var(--primary-hover); }
     button:active { transform: scale(0.98); }
 
-    #result-area {
-      display: none;
-      margin-top: 25px;
-      padding-top: 25px;
-      border-top: 1px solid rgba(134, 134, 139, 0.2);
-    }
-
-    #result-area h2 {
-      font-weight: 700;
-      color: var(--text-color);
-      margin-top: 0;
-      margin-bottom: 15px;
-      text-align: center;
-      font-size: 20px;
-    }
-
     .action-group {
         display: flex;
         flex-direction: column;
@@ -142,6 +126,10 @@
         text-decoration: none;
         display: block;
         text-align: center;
+        padding: 14px 24px;
+        border-radius: 12px;
+        color: white;
+        font-weight: 600;
     }
     .btn-secondary:hover { background-color: #000; }
 
@@ -184,39 +172,91 @@
     .footer-link:hover {
         color: var(--text-color);
     }
+
+    .invoice-card {
+        background: var(--input-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .invoice-client {
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .invoice-status {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 10px;
+        text-transform: uppercase;
+    }
+
+    .status-draft { background-color: rgba(134, 134, 139, 0.2); color: var(--text-color); }
+    .status-pending { background-color: rgba(255, 149, 0, 0.2); color: #ff9500; }
+    .status-overdue { background-color: rgba(255, 59, 48, 0.2); color: #ff3b30; }
+    .status-paid { background-color: rgba(52, 199, 89, 0.2); color: #34c759; }
+
+    .invoice-details {
+        font-size: 14px;
+        color: #86868b;
+        margin-bottom: 10px;
+    }
+
+    .invoice-amount-text {
+        font-weight: 700;
+        font-size: 18px;
+        color: var(--text-color);
+    }
   </style>
 </head>
 <body>
   <div class="container glassmorphism">
     <div style="font-size: 48px; text-align: center; margin-bottom: 10px;">📄</div>
     <h1 style="display: none;">Invoice Generator</h1> <!-- For test assertion -->
-    <h2>Invoice Generator</h2>
-    <h2>Create Professional Invoice</h2>
+    <h2>Invoices</h2>
 
-    <div>
-      <label for="client">Client Name</label>
-      <input type="text" id="client" placeholder="e.g. Acme Corp" />
+    <div id="invoice-list">
+        <div style="text-align: center; padding: 20px; color: #86868b;">Loading invoices...</div>
     </div>
 
-    <div>
-      <label for="desc">Description</label>
-      <textarea id="desc" rows="3" placeholder="e.g. Website Redesign and SEO Optimization"></textarea>
+    <div style="margin-top: 20px;">
+        <button id="new-invoice-btn" onclick="document.getElementById('new-invoice-form').style.display='block'; this.style.display='none';">Create New Invoice</button>
     </div>
 
-    <div>
-      <label for="amount">Amount ($)</label>
-      <input type="text" id="amount" placeholder="e.g. 1500.00" />
+    <div id="new-invoice-form" style="display: none; margin-top: 25px; padding-top: 25px; border-top: 1px solid rgba(134, 134, 139, 0.2);">
+        <h2>Create Professional Invoice</h2>
+
+        <div>
+        <label for="client">Client Name</label>
+        <input type="text" id="client" placeholder="e.g. Acme Corp" />
+        </div>
+
+        <div>
+        <label for="desc">Description</label>
+        <textarea id="desc" rows="3" placeholder="e.g. Website Redesign and SEO Optimization"></textarea>
+        </div>
+
+        <div>
+        <label for="amount">Amount ($)</label>
+        <input type="text" id="amount" placeholder="e.g. 1500.00" />
+        </div>
+
+        <button id="generate-btn">Generate Shareable Invoice</button>
+        <div style="margin-top: 10px;">
+            <a href="#" class="btn-secondary" onclick="document.getElementById('new-invoice-form').style.display='none'; document.getElementById('new-invoice-btn').style.display='block'; return false;">Cancel</a>
+        </div>
     </div>
 
-    <button id="generate-btn">Generate Shareable Invoice</button>
-
-    <div id="result-area">
-      <h2>Your Invoice is Ready!</h2>
-
-      <div class="action-group">
-          <a id="preview-link" href="#" class="btn-secondary" style="padding: 14px 24px; border-radius: 12px; color: white; font-weight: 600;">Preview Invoice</a>
-      </div>
-    </div>
   </div>
 
   <a href="/dashboard" class="back-link">&larr; Back to Dashboard</a>
@@ -226,30 +266,105 @@
   </footer>
 
   <script>
-    document.getElementById('generate-btn').addEventListener('click', () => {
+    function getStatusClass(status) {
+        status = (status || 'draft').toLowerCase();
+        if (status === 'overdue') return 'status-overdue';
+        if (status === 'paid') return 'status-paid';
+        if (status === 'pending') return 'status-pending';
+        return 'status-draft';
+    }
+
+    async function loadInvoices() {
+        const listEl = document.getElementById('invoice-list');
+        try {
+            const res = await fetch('/api/invoices?mobile_optimized=true');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.invoices && data.invoices.length > 0) {
+                    let html = '';
+                    data.invoices.forEach(inv => {
+                        const statusClass = getStatusClass(inv.status);
+                        const displayStatus = (inv.status || 'draft').toUpperCase();
+
+                        html += `
+                        <div class="invoice-card">
+                            <div class="invoice-header">
+                                <div class="invoice-client">${inv.client_name || 'Unknown Client'}</div>
+                                <div class="invoice-status ${statusClass}">${displayStatus}</div>
+                            </div>
+                            <div class="invoice-details">Due: ${new Date(inv.due_date * 1000).toLocaleDateString()}</div>
+                            <div class="invoice-amount-text">${inv.currency || '$'} ${(inv.total_amount_cents / 100).toFixed(2)}</div>
+                        </div>
+                        `;
+                    });
+                    listEl.innerHTML = html;
+                } else {
+                    listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #86868b;">No active invoices found.</div>';
+                }
+            } else {
+                listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff3b30;">Failed to load invoices.</div>';
+            }
+        } catch (err) {
+            console.error(err);
+            listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff3b30;">Error loading invoices.</div>';
+        }
+    }
+
+    document.getElementById('generate-btn').addEventListener('click', async () => {
       const client = document.getElementById('client').value.trim();
       const desc = document.getElementById('desc').value.trim();
-      const amount = document.getElementById('amount').value.trim();
+      const amountStr = document.getElementById('amount').value.trim();
 
-      if (!client || !desc || !amount) {
+      if (!client || !desc || !amountStr) {
         alert("Please fill in all fields.");
         return;
       }
 
-      const data = {
-        client: client,
-        desc: desc,
-        amount: amount
+      const amount = parseFloat(amountStr);
+      if (isNaN(amount)) {
+          alert("Invalid amount.");
+          return;
+      }
+
+      const payload = {
+        client_id: "new_client",
+        client_name: client,
+        due_date: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // Due in 30 days
+        currency: "USD",
+        line_items: [
+            {
+                description: desc,
+                quantity: 1,
+                unit_price: amount
+            }
+        ]
       };
 
-      const encodedData = btoa(encodeURIComponent(JSON.stringify(data)));
-
-      const baseUrl = window.location.origin;
-      const previewUrl = `/invoice-generator/view?data=${encodedData}`;
-
-      document.getElementById('preview-link').href = previewUrl;
-      document.getElementById('result-area').style.display = 'block';
+      try {
+          const res = await fetch('/api/invoices', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+              alert("Invoice generated successfully!");
+              document.getElementById('client').value = '';
+              document.getElementById('desc').value = '';
+              document.getElementById('amount').value = '';
+              document.getElementById('new-invoice-form').style.display = 'none';
+              document.getElementById('new-invoice-btn').style.display = 'block';
+              loadInvoices();
+          } else {
+              alert("Failed to generate invoice.");
+          }
+      } catch (e) {
+          console.error(e);
+          alert("Error generating invoice.");
+      }
     });
+
+    // Load invoices on startup
+    loadInvoices();
   </script>
 </body>
 </html>

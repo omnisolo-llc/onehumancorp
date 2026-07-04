@@ -19,18 +19,28 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
 
             match &db.store {
                 DbStore::Postgres => {
-                    if let Ok(rows) = sqlx::query_as::<_, (String, String, Option<String>)>(
-                        "SELECT id, tenant_id, customer_id FROM invoices WHERE payment_status != 'paid' AND due_date < extract(epoch from now()) AND (status = 'draft' OR status = 'pending')"
-                    )
-                    .fetch_all(&db.pool).await {
-                        for row in rows {
-                            overdue_invoices.push((row.0, row.1, row.2.unwrap_or_default()));
+                    // Update to use PostgreSQL SKIP LOCKED for the background job as per the design doc
+                    if let Ok(mut tx) = db.pool.begin().await {
+                        if let Ok(rows) = sqlx::query_as::<_, (String, String, Option<String>)>(
+                            "SELECT id, tenant_id, client_id as customer_id FROM invoices WHERE status != 'paid' AND payment_status != 'paid' AND due_date < extract(epoch from now()) AND (status = 'draft' OR status = 'pending') FOR UPDATE SKIP LOCKED"
+                        )
+                        .fetch_all(&mut *tx).await {
+                            for row in rows {
+                                overdue_invoices.push((row.0.clone(), row.1, row.2.unwrap_or_default()));
+
+                                // Update status to 'overdue' so it's not picked up again immediately
+                                let _ = sqlx::query("UPDATE invoices SET status = 'overdue' WHERE id = $1")
+                                    .bind(&row.0)
+                                    .execute(&mut *tx)
+                                    .await;
+                            }
                         }
+                        let _ = tx.commit().await;
                     }
                 },
                 DbStore::Sqlite(_) => {
                     if let Ok(rows) = sqlx::query_as::<_, (String, String, Option<String>)>(
-                        "SELECT id, tenant_id, customer_id FROM invoices WHERE payment_status != 'paid' AND due_date < strftime('%s', 'now') AND (status = 'draft' OR status = 'pending')"
+                        "SELECT id, tenant_id, client_id as customer_id FROM invoices WHERE payment_status != 'paid' AND due_date < strftime('%s', 'now') AND (status = 'draft' OR status = 'pending')"
                     )
                     .fetch_all(&db.pool).await {
                         for row in rows {
