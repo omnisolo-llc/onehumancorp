@@ -234,7 +234,9 @@ mod tests {
 
         let mut main_ts = File::create(root.join("main.ts")).unwrap();
         main_ts
-            .write_all(b"export interface Config {}\n\nclass App {}\n\nfunction start() {}\n")
+            .write_all(b"export interface Config {}\n\nclass App {}\n\nfunction start() {
+  // Implementation pending
+}\n")
             .unwrap();
 
         let repo_map = RepoMap::new(root);
@@ -244,7 +246,9 @@ mod tests {
             "└── main.ts",
             "    ├── export interface Config {}",
             "    ├── class App {}",
-            "    └── function start() {}",
+            "    └── function start() {
+  // Implementation pending
+}",
         ];
 
         let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();

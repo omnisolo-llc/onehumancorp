@@ -45,6 +45,9 @@ CREATE POLICY "Tenant isolation for pre_order_entries delete"
     ON pre_order_entries FOR DELETE
     USING (tenant_id::text = current_setting('app.current_tenant', true));
 
+ALTER TABLE waitlist_campaigns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pre_order_entries ENABLE ROW LEVEL SECURITY;
+
 -- Change column type for tenant_id from UUID to TEXT to be consistent with rest of DB
 ALTER TABLE waitlist_campaigns ALTER COLUMN tenant_id TYPE TEXT;
 ALTER TABLE pre_order_entries ALTER COLUMN tenant_id TYPE TEXT;

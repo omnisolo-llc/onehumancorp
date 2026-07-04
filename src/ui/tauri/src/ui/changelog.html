@@ -8,17 +8,15 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
-        border-radius: 16px;
+          border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
       }
@@ -171,7 +169,7 @@
           }
 
           if (!data || data.length === 0) {
-             container.innerHTML = '<p>No release notes found.</p>';
+             container.innerHTML = '<p style="color: #64748b;">No release notes found.</p>';
              return;
           }
 
@@ -190,7 +188,7 @@
              let imgHtml = item.screenshot_url ? `<img src="${item.screenshot_url}" class="screenshot" alt="Screenshot" onerror="this.style.display='none'"/>` : '';
 
              html += `
-                <div class="changelog-card">
+                <div class="changelog-card glassmorphism" style="padding: 24px; margin-bottom: 24px;">
                   <h2 class="version-title">${item.version}</h2>
                   ${imgHtml}
                   ${contentHtml}
