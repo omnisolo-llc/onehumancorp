@@ -8,7 +8,7 @@ test.describe('Tauri Onboarding Admin Setup', () => {
 
     // We expect the setup to redirect or load the initial step
     await page.waitForSelector('#step-initial .next-step-btn');
-    await page.click('#step-initial .next-step-btn');
+    await page.locator('#step-initial [data-next="step-context"]').click();
 
     // Step Context
     await page.waitForSelector('#step-context:not([style*="display: none"])');
