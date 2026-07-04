@@ -129,9 +129,9 @@ impl SipDB {
 
                 let is_standalone = crate::is_standalone_runtime();
                 let query_str = if is_standalone {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stagnant', 'agent_missions', payload, '[cleanup] Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 } else {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', payload, '[cleanup] Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload::text, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 };
                 sqlx::query(query_str)
                     .bind(threshold_time.naive_utc())
@@ -1329,6 +1329,13 @@ mod tests {
                 .await
                 .unwrap();
             assert_eq!(count_stagnant, 0);
+
+            // Verify dead letters were created
+            let count_dead_letters: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM department_dead_letters WHERE event_type = 'mission_stagnant'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            assert_eq!(count_dead_letters, 3);
 
             // Verify recent mission is still IN_PROGRESS
             let row_recent = sqlx::query("SELECT status FROM agent_missions WHERE id = 'recent_in_progress_mission'")
