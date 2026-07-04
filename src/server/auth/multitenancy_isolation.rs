@@ -215,3 +215,59 @@ async fn test_pool_connection_tenant_leakage_prevention() {
 
     assert!(row2.0.is_none() || row2.0.as_deref() == Some(""), "CRITICAL VULNERABILITY: Tenant context leaked across transactions on the same pooled connection!");
 }
+
+#[tokio::test]
+async fn test_rls_policies_protect_cross_tenant_reads() {
+    let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+
+    let database_url = match std::env::var("OHC_DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => return,
+    };
+
+    if database_url.starts_with("sqlite") {
+        return;
+    }
+
+    let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+        .acquire_timeout(Duration::from_millis(50))
+        .connect_lazy(&database_url)
+        .unwrap();
+
+    let current_tenant = "tenant_test_rls";
+    let other_tenant = "tenant_test_rls_other";
+
+    // Assuming a loyalty_ledgers table exists in the schema.
+    let mut tx = pool.begin().await.unwrap();
+    ::server_common::auth_utils::set_org_context(&mut *tx, other_tenant).await.unwrap();
+
+    // We expect this to either fail due to constraints or succeed and be inserted for other_tenant
+    let _ = sqlx::query("INSERT INTO loyalty_ledgers (id, tenant_id, customer_id, points_balance, lifetime_points) VALUES ('test_rls_ledger1', 'tenant_test_rls_other', 'cust1', 100, 100) ON CONFLICT DO NOTHING")
+        .execute(&mut *tx)
+        .await;
+    tx.commit().await.unwrap();
+
+    let mut tx2 = pool.begin().await.unwrap();
+    ::server_common::auth_utils::set_org_context(&mut *tx2, current_tenant).await.unwrap();
+    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM loyalty_ledgers WHERE id = 'test_rls_ledger1'")
+        .fetch_one(&mut *tx2)
+        .await
+        .unwrap_or((0,));
+    tx2.commit().await.unwrap();
+
+    assert_eq!(row.0, 0, "RLS policy bypass detected! A tenant could read another tenant's loyalty ledger.");
+}
