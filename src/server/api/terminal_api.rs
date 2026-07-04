@@ -32,6 +32,7 @@ pub struct CapturePaymentIntentRequest {
     pub quantity: Option<i32>,
     pub lock_id: Option<String>,
     pub amount_cents: Option<i64>,
+    pub idempotency_key: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -946,6 +947,32 @@ pub async fn capture_payment_intent_handler(
         }
     };
 
+    let idempotency_key = req_data.idempotency_key.clone().or_else(|| {
+        _headers.get("Idempotency-Key").and_then(|v| v.to_str().ok()).map(|s| s.to_string())
+    });
+
+    if let Some(ref ikey) = idempotency_key {
+        let pool = crate::db::get_pool();
+        let existing: Option<(String,)> = sqlx::query_as(
+            "SELECT status FROM payment_intents WHERE tenant_id = $1 AND stripe_payment_intent_id = $2"
+        )
+        .bind(&tenant_id)
+        .bind(&req_data.payment_intent_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap_or(None);
+
+        if let Some((status,)) = existing {
+            if status == "succeeded" {
+                return Json(CapturePaymentIntentResponse {
+                    success: true,
+                    status: "succeeded".to_string(),
+                    error_message: None,
+                });
+            }
+        }
+    }
+
     info!(tenant_id = %tenant_id, payment_intent_id = %req_data.payment_intent_id, "Capturing Stripe Terminal Payment Intent");
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
@@ -953,7 +980,7 @@ pub async fn capture_payment_intent_handler(
 
     match client.require_api_key() {
         Ok(_) => {
-            match client.capture_terminal_payment_intent(&req_data.payment_intent_id).await {
+            match client.capture_terminal_payment_intent(&req_data.payment_intent_id, idempotency_key.as_deref()).await {
                 Ok(status) => {
                     if let Some(product_id) = &req_data.product_id {
                         let quantity = req_data.quantity.unwrap_or(1);
@@ -966,8 +993,16 @@ pub async fn capture_payment_intent_handler(
                                 tracing::error!("Failed to commit inventory after successful capture: {}", res.error_message);
                             },
                             Ok(_) => {
-                                // Inventory commit successful, log an order if possible
                                 let pool = crate::db::get_pool();
+
+                                // Update payment intent status to succeeded
+                                let _ = sqlx::query("UPDATE payment_intents SET status = 'succeeded' WHERE tenant_id = $1 AND stripe_payment_intent_id = $2")
+                                    .bind(&tenant_id)
+                                    .bind(&req_data.payment_intent_id)
+                                    .execute(&pool)
+                                    .await;
+
+                                // Inventory commit successful, log an order if possible
                                 if let Ok(mut tx) = pool.begin().await {
                                     if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
                                         let order_id = uuid::Uuid::new_v4().to_string();
