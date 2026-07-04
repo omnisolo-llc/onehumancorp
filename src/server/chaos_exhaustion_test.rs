@@ -3,7 +3,7 @@ mod chaos_exhaustion_tests {
     use crate::db::{DB, DbStore};
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_graceful_degradation_host_exhaustion() {
         // Start heavy CPU and memory workload
         let mut heavy_handles = vec![];
