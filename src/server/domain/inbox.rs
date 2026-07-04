@@ -32,16 +32,49 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
 
         if let Some((source, sender_id)) = row {
             if source == "whatsapp" {
-                let registry = crate::integrations::registry::IntegrationsRegistry::new();
+                let creds_row: Option<(String, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
+                    "SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'whatsapp_cloud_api') AND tenant_id = $1 ORDER BY integration_id ASC LIMIT 1"
+                )
+                .bind(tenant_id)
+                .fetch_optional(pool)
+                .await?;
+
                 let draft_reply_clone = draft_reply.to_string();
                 let sender_id_clone = sender_id.to_string();
-                tokio::spawn(async move {
-                    if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
-                        tracing::error!("Failed to send WhatsApp reply: {}", e);
+
+                if let Some((integration_id, bot_token_opt, api_token_opt, from_phone_opt)) = creds_row {
+                    let bot_token = bot_token_opt.unwrap_or_default();
+                    let api_token = api_token_opt.unwrap_or_default();
+                    let from_phone = from_phone_opt.unwrap_or_default();
+                    if integration_id == "whatsapp" {
+                        tokio::spawn(async move {
+                            let provider = crate::integrations::twilio::provider::TwilioProvider::new(bot_token, api_token);
+                            if let Err(e) = provider.send_whatsapp(&sender_id_clone, &from_phone, &draft_reply_clone).await {
+                                tracing::error!("Failed to send Twilio WhatsApp reply: {}", e);
+                            } else {
+                                tracing::info!("Successfully sent Twilio WhatsApp reply to {}", sender_id_clone);
+                            }
+                        });
                     } else {
-                        tracing::info!("Successfully sent WhatsApp reply to {}", sender_id_clone);
+                        let registry = crate::integrations::registry::IntegrationsRegistry::new();
+                        tokio::spawn(async move {
+                            if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
+                                tracing::error!("Failed to send WhatsApp Cloud API reply: {}", e);
+                            } else {
+                                tracing::info!("Successfully sent WhatsApp Cloud API reply to {}", sender_id_clone);
+                            }
+                        });
                     }
-                });
+                } else {
+                    let registry = crate::integrations::registry::IntegrationsRegistry::new();
+                    tokio::spawn(async move {
+                        if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
+                            tracing::error!("Failed to send WhatsApp reply: {}", e);
+                        } else {
+                            tracing::info!("Successfully sent WhatsApp reply to {}", sender_id_clone);
+                        }
+                    });
+                }
             } else if source == "instagram" || source == "facebook" {
                 let meta_creds: Result<String, sqlx::Error> = sqlx::query_scalar(
                     "SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1"
