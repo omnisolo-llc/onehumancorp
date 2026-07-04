@@ -455,7 +455,9 @@ mod tests {
             "appointments": [
                 {
                     "id": "job_1",
+                    "customer_id": "cust_1",
                     "customer_name": "John Doe",
+                    "job_template_id": "tpl_1",
                     "job_name": "Fix A/C",
                     "location_address": "123 Main St",
                     "location_lat": 37.7749,
@@ -464,7 +466,9 @@ mod tests {
                 },
                 {
                     "id": "job_2",
+                    "customer_id": "cust_1",
                     "customer_name": "John Doe",
+                    "job_template_id": "tpl_1",
                     "job_name": "Fix A/C",
                     "location_address": "123 Main St",
                     "location_lat": 37.7749,

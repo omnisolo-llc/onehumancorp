@@ -35,7 +35,7 @@ impl FundingService for FundingApi {
         let tenant_id = req.tenant_id.clone();
 
         let cache_key = format!("funding_opportunities:{}", tenant_id);
-        let cache = FUNDING_OPPORTUNITIES_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+        let cache = FUNDING_OPPORTUNITIES_CACHE.get_or_init(|| HybridCache::new(std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())));
 
         if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
             if !is_stale {

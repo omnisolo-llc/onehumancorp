@@ -1307,7 +1307,16 @@ impl HubService for MyHubService {
             crate::api::billing_api::department_tier_usage_for_tenant(&hub_clone_for_dept, &t_id_3).await
         });
 
-        let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future);
+        let t_id_4 = tenant_id.clone();
+        let db_pool_3 = self.hub.pool.clone();
+        let tier_future = tokio::task::spawn(async move {
+            sqlx::query_scalar::<_, String>("SELECT tier FROM tenants WHERE id = $1")
+                .bind(&t_id_4)
+                .fetch_optional(&db_pool_3)
+                .await
+        });
+
+        let (storage_res, auditor_res, trend_res, agent_costs_res, department_res, tier_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future, tier_future);
 
         let storage_bytes = storage_res.unwrap_or(0);
         let trend = trend_res.unwrap_or_else(|_| vec![]);
@@ -1349,11 +1358,7 @@ impl HubService for MyHubService {
             now.day()
         };
 
-        let tier_str = sqlx::query_scalar::<_, String>("SELECT tier FROM tenants WHERE id = $1")
-            .bind(&tenant_id)
-            .fetch_optional(&self.hub.pool)
-            .await
-            .unwrap_or(None)
+        let tier_str = tier_res.unwrap_or(Ok(None)).unwrap_or(None)
             .unwrap_or_else(|| "free".to_string());
 
         let tier = match tier_str.to_lowercase().as_str() {
@@ -3390,7 +3395,7 @@ pub async fn simulate_ui_triage_item_handler(
             .bind(&item_id)
             .bind(&tenant_id)
             .bind("Draft Reply")
-            .bind("Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]")
+            .bind(r#"{"feature_type": "instagram_dm", "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]", "customer_message": "Do you have vegan chocolate cake available this weekend?"}"#)
             .execute(&mut *tx)
             .await {
                 tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
@@ -3433,7 +3438,7 @@ pub async fn simulate_ui_triage_item_handler(
             .bind(&item_id)
             .bind(&tenant_id)
             .bind("Draft Reply")
-            .bind("Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]")
+            .bind(r#"{"feature_type": "instagram_dm", "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]", "customer_message": "Do you have vegan chocolate cake available this weekend?"}"#)
             .execute(&mut *tx)
             .await {
                 tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
