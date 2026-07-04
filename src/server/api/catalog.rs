@@ -12,6 +12,7 @@ use sqlx::Row;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use crate::utils::cache::HybridCache;
+use crate::builder::edge::get_edge_cache;
 
 pub static CATALOG_CACHE: OnceLock<HybridCache<i64>> = OnceLock::new();
 
@@ -289,6 +290,10 @@ async fn handle_create_product(
     // Invalidate cache
     let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
     cache.invalidate(&tenant_id).await;
+
+    let edge_cache = get_edge_cache();
+    let _ = edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
 
     if let Err(e) = hub.tracker().record_product_added(&tenant_id).await {
         tracing::warn!(

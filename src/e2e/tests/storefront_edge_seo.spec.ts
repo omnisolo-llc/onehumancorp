@@ -41,4 +41,29 @@ test.describe('Storefront Edge SEO and Caching', () => {
         // Assert cache was successfully invalidated internally by our webhook above
         expect(true).toBe(true);
     });
+
+
+    test('catalog endpoint leverages edge cache and invalidation', async ({ request, page }) => {
+        const tenantId = '33333333-3333-3333-3333-333333333333';
+
+        // 1. Initial hit should cache
+        let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/catalog`);
+        expect(res.status()).toBe(200);
+
+        // 2. Next hit should be HIT
+        let res2 = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/catalog`);
+        expect(res2.headers()['x-cache']).toBe('HIT');
+
+        // 3. Invalidate via webhook for tenant
+        const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/storefront/webhook/invalidate', {
+            data: { tags: [`tenant-id:${tenantId}`] }
+        });
+        expect(invalidateRes.status()).toBe(200);
+
+        await page.waitForTimeout(2000);
+
+        // 4. Hit after invalidation should be MISS
+        let res3 = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/catalog`);
+        expect(res3.headers()['x-cache']).toBe('MISS');
+    });
 });

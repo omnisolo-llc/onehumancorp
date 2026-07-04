@@ -13,6 +13,9 @@ use std::sync::Arc;
 use crate::utils::cache::HybridCache;
 use crate::builder::edge::{get_edge_cache, regenerate_cache, get_ongoing_generation, inject_dynamic_inventory};
 
+use sqlx::Row;
+use serde_json::Value;
+
 #[derive(Clone)]
 pub struct DeliveryState {
     pub pool: PgPool,
@@ -21,6 +24,7 @@ pub struct DeliveryState {
 pub fn router() -> Router<DeliveryState> {
     Router::new()
         .route("/{tenant_id}/{product_id}", get(get_storefront_product).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)))
+        .route("/{tenant_id}/catalog", get(get_storefront_catalog).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)))
         .route("/webhook/invalidate", post(invalidate_cache_webhook))
 }
 
@@ -63,6 +67,88 @@ async fn invalidate_cache_webhook(
     });
 
     StatusCode::OK
+}
+
+
+
+async fn get_storefront_catalog(
+    State(state): State<DeliveryState>,
+    Path(tenant_id_str): Path<String>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let cache = get_edge_cache();
+    let cache_key = format!("store_cache:{}", tenant_id);
+
+    if let Some((cached_json_str, _)) = cache.get_with_swr(&cache_key).await {
+        let mut response = Json(serde_json::from_str::<Value>(&cached_json_str).unwrap()).into_response();
+        set_storefront_headers(&mut response, &cached_json_str, tenant_id, Some(vec![format!("tenant-id:{}", tenant_id)]));
+        return Ok(response);
+    }
+
+    let mut conn = state.pool.acquire().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let rows = sqlx::query(
+        "SELECT id, title, description, type as item_type, price_cents, inventory_count FROM products WHERE tenant_id = $1"
+    )
+    .bind(tenant_id.to_string())
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut products = Vec::new();
+    for row in rows {
+        let p_id: String = row.try_get("id").unwrap_or_default();
+
+        let v_rows = sqlx::query("SELECT name, price_modifier FROM product_variants WHERE product_id = $1")
+            .bind(&p_id)
+            .fetch_all(&mut *conn)
+            .await
+            .unwrap_or_default();
+
+        let mut variants = Vec::new();
+        for vr in v_rows {
+            let modifier: i64 = vr.try_get("price_modifier").unwrap_or(0);
+            let modifier_str = format!("{:.2}", (modifier as f64) / 100.0);
+            variants.push(serde_json::json!({
+                "name": vr.try_get::<String, _>("name").unwrap_or_default(),
+                "price_modifier": modifier_str,
+            }));
+        }
+
+        let mut product_json = serde_json::json!({
+            "id": p_id,
+            "title": row.try_get::<String, _>("title").unwrap_or_default(),
+        });
+
+        if let Ok(desc) = row.try_get::<String, _>("description") {
+            product_json["description"] = serde_json::Value::String(desc);
+        }
+        if let Ok(item_type) = row.try_get::<String, _>("item_type") {
+            product_json["item_type"] = serde_json::Value::String(item_type);
+        }
+        if let Ok(price_cents) = row.try_get::<i64, _>("price_cents") {
+            product_json["price_cents"] = serde_json::Value::Number(price_cents.into());
+        }
+        if let Ok(inventory_count) = row.try_get::<i32, _>("inventory_count") {
+            product_json["inventory_count"] = serde_json::Value::Number(inventory_count.into());
+        }
+        if !variants.is_empty() {
+            product_json["variants"] = serde_json::Value::Array(variants);
+        }
+
+        products.push(product_json);
+    }
+
+    let final_json = serde_json::json!({ "products": products });
+    let final_json_str = serde_json::to_string(&final_json).unwrap_or_default();
+
+    // Pre-warm the cache since SWR or cache miss just resolved
+    cache.set_with_tags(&cache_key, final_json_str.clone(), vec![format!("tenant-id:{}", tenant_id)], std::time::Duration::from_secs(3600)).await;
+
+    let mut response = Json(final_json).into_response();
+    set_storefront_headers(&mut response, &final_json_str, tenant_id, Some(vec![format!("tenant-id:{}", tenant_id)]));
+    Ok(response)
 }
 
 
