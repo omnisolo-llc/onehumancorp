@@ -18,6 +18,7 @@
         let request = Request::new(GetHelpArticleRequest {
             id: "not-found".to_string(),
         });
+        #[allow(unused_variables)]
         let response = service.get_help_article(request).await;
         // assert!(response.is_err()); // Dummy tooltip is always returned
     }
@@ -82,6 +83,7 @@
         let request = Request::new(GetTooltipRequest {
             element_id: "not-found".to_string(),
         });
+        #[allow(unused_variables)]
         let response = service.get_tooltip(request).await;
         // assert!(response.is_err()); // Dummy tooltip is always returned
     }
@@ -224,10 +226,11 @@
             ("missing-100", false, ""),
         ];
 
-        for (id, should_exist, expected_title) in test_cases {
+        for (id, should_exist, _expected_title) in test_cases {
             let request = Request::new(GetTooltipRequest {
                 element_id: id.to_string(),
             });
+            #[allow(unused_variables)]
             let response = service.get_tooltip(request).await;
 
             if should_exist {
@@ -853,6 +856,7 @@
             let request = Request::new(GetHelpArticleRequest {
                 id: id.to_string(),
             });
+            #[allow(unused_variables)]
             let response = service.get_help_article(request).await;
             assert_eq!(response.is_ok(), expected_success, "Failed for article id '{}'", id);
 
