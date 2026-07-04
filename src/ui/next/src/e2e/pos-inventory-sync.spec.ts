@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('POS Inventory Sync - E2E Race Condition', () => {
   test('POS terminal applies lock and prevents double booking online', async ({ page }) => {
-    const tenantId = 'e2e-tenant-pos';
-    const productId = 'e2e-product-cake-pos';
+    const tenantId = 'test_org';
+    const productId = 'test_prod_1';
 
     // Simulate POS (User B) acquiring lock
     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
@@ -62,8 +62,8 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
   });
 
   test('Online checkout UI shows Item just sold out when POS locks item', async ({ page }) => {
-    const tenantId = 'e2e-tenant';
-    const productId = 'e2e-product-cake';
+    const tenantId = 'test_org';
+    const productId = 'test_prod_1';
 
     // 1. Setup tenant info in local storage for checkout page
     await page.goto('/checkout');
@@ -117,8 +117,8 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     });
   });
   test('Commit inventory correctly deducts stock', async ({ page }) => {
-    const tenantId = 'e2e-tenant-pos-additional';
-    const productId = 'e2e-product-cake-pos-additional';
+    const tenantId = 'test_org';
+    const productId = 'test_prod_1';
 
     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
         data: {

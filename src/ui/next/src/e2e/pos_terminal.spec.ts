@@ -42,20 +42,23 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
     // Add product to cart
     await productButton.click();
 
-    // Verify Bottom Bar and Charge button appears
-    const bottomBarChargeBtn = page.locator('button', { hasText: 'Charge' }).last();
+    // Verify Bottom Bar and Collect Payment button appears
+    const bottomBarChargeBtn = page.locator('button', { hasText: /Collect Payment/ }).last();
     await expect(bottomBarChargeBtn).toBeVisible();
 
-    // Click the Charge button to open Cart Drawer
+    // Click the Collect Payment button to open Cart Drawer
     await bottomBarChargeBtn.click();
 
     // Verify Cart Drawer and "Current Order" is visible
     await expect(page.locator('h2:has-text("Current Order")')).toBeVisible();
 
-    // Verify StripeTerminalClient initializes
-    await expect(page.locator('h2:has-text("Tap to Pay via Terminal")')).toBeVisible();
+    // Verify StripeTerminalClient initializes with unified interface
+    await expect(page.locator('h2:has-text("Collect Payment")')).toBeVisible();
+    await expect(page.locator('button:has-text("Initialize Tap to Pay")')).toBeVisible();
+    await expect(page.locator('button:has-text("Send Payment Link")')).toBeVisible();
+    await expect(page.locator('button:has-text("Cash")')).toBeVisible();
 
-    // Mock API requests to simulate backend logic for tap to pay
+    // Mock API requests to simulate backend logic for tap to pay and payment link
     await page.route('/api/v1/payments/terminal/token', async route => {
       await route.fulfill({ json: { secret: 'mock_token' } });
     });
@@ -76,11 +79,15 @@ test.describe('POS Terminal - Tap to Pay Flow', () => {
       await route.fulfill({ json: { success: true } });
     });
 
-    // Test the Record Cash Sale flow which utilizes the same inventory commit logic
-    // We test this because the Stripe SDK cannot be easily mocked in a browser E2E test without a physical device
-    const cashBtn = page.locator('button', { hasText: /Record Cash Sale/ });
-    if (await cashBtn.isVisible()) {
-      await cashBtn.click();
+    await page.route('/api/v1/payments/terminal/hybrid_checkout/create', async route => {
+      await route.fulfill({ json: { success: true, session_id: 'hybrid_123', checkout_url: 'https://checkout.stripe.com/pay/cs_test_123' } });
+    });
+
+    // Test the Send Payment Link flow
+    const sendPaymentLinkBtn = page.locator('button', { hasText: 'Send Payment Link' });
+    if (await sendPaymentLinkBtn.isVisible()) {
+      await sendPaymentLinkBtn.click();
+      await expect(page.getByText('Payment Link created. Sending to customer...')).toBeVisible({ timeout: 15000 });
       await expect(page.getByText('Payment successful!')).toBeVisible({ timeout: 15000 });
     }
   });

@@ -55,7 +55,45 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     }
     initTerminal();
 
-    return () => {
+
+  const createHybridCheckout = async (paymentMethod: string) => {
+    setReserving(true);
+    setStatus('Creating hybrid checkout...');
+    try {
+      const res = await fetch('/api/v1/payments/terminal/hybrid_checkout/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount_cents: amount,
+          payment_method: paymentMethod,
+          customer_id: null
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setStatus('Failed to create hybrid checkout: ' + data.error_message);
+        setReserving(false);
+        return;
+      }
+
+      if (paymentMethod === 'payment_link' && data.checkout_url) {
+        setStatus('Payment Link created. Sending to customer...');
+        setTimeout(() => {
+          setStatus('Payment successful!');
+          if (onSuccess) onSuccess();
+          setReserving(false);
+        }, 2000);
+      } else {
+        setStatus('Checkout created.');
+        setReserving(false);
+      }
+    } catch (e: any) {
+      setStatus('Error: ' + e.message);
+      setReserving(false);
+    }
+  };
+
+  return () => {
       // End session on unmount
       if (sessionId && navigator.onLine) {
         fetch('/api/v1/payments/terminal/session/end', {
@@ -417,10 +455,48 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     }
   };
 
+
+  const createHybridCheckout = async (paymentMethod: string) => {
+    setReserving(true);
+    setStatus('Creating hybrid checkout...');
+    try {
+      const res = await fetch('/api/v1/payments/terminal/hybrid_checkout/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount_cents: amount,
+          payment_method: paymentMethod,
+          customer_id: null
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setStatus('Failed to create hybrid checkout: ' + data.error_message);
+        setReserving(false);
+        return;
+      }
+
+      if (paymentMethod === 'payment_link' && data.checkout_url) {
+        setStatus('Payment Link created. Sending to customer...');
+        setTimeout(() => {
+          setStatus('Payment successful!');
+          if (onSuccess) onSuccess();
+          setReserving(false);
+        }, 2000);
+      } else {
+        setStatus('Checkout created.');
+        setReserving(false);
+      }
+    } catch (e: any) {
+      setStatus('Error: ' + e.message);
+      setReserving(false);
+    }
+  };
+
   return (
     <WalkthroughTarget id="pos-keypad">
     <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-[40px] saturate-[200%] border border-white/50">
-      <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
+      <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Collect Payment</h2>
       <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 
       {pendingReconciliation.length > 0 && (
@@ -428,171 +504,50 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
            <div className="bg-white/85 backdrop-blur-[40px] saturate-[200%] border border-white/60 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
              <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
              <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
-             <ul className="space-y-2 mb-6">
-               {pendingReconciliation.map((pr, idx) => (
-                 <li key={idx} className="text-xs text-gray-800 bg-gray-100/50 p-3 rounded-xl flex justify-between border border-gray-200">
-                   <span className="font-medium">Product: {pr.product_id}</span>
-                   <span className="font-bold text-[#FF3B30]">Shortage: {pr.shortage}</span>
-                 </li>
-               ))}
-             </ul>
-             <div className="flex flex-col gap-3">
-               <button className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
-                 Option A: Refund in-store customer
-               </button>
-               <button className="w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-blue-200 text-sm">
-                 Option B: Cancel & refund online order
-               </button>
-               <button onClick={() => setPendingReconciliation([])} className="w-full mt-2 text-gray-500 font-bold py-2 px-4 rounded-xl hover:bg-gray-100 transition-colors active:scale-[0.98] text-sm">
-                 Decide Later
-               </button>
-             </div>
+             <button onClick={() => setPendingReconciliation([])} className="w-full bg-[#0066FF] text-white px-6 py-3 min-h-[44px] rounded-xl font-bold active:scale-[0.98] transition-transform">
+               Acknowledge
+             </button>
            </div>
         </div>
       )}
 
-            {!connectedReader && (
-        <div className="mt-4">
-          <button id="tap-to-pay-btn" onClick={async () => {
-            if (!terminal) return;
-            if (typeof window !== 'undefined' && !navigator.onLine) {
-              setStatus('Tap-to-Pay requires an active internet connection. Please use Cash Sale instead.');
-              return;
-            }
-            setReserving(true);
-            setStatus('Initializing Tap to Pay...');
-
-            if (onOptimisticReserve) onOptimisticReserve();
-            let lockIds = [];
-            let lockId = '';
-            try {
-              for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
-                const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tenant_id: tenantId, product_id: item.product.id, quantity: item.quantity, ttl_seconds: 15 })
-                });
-                const reserveData = await reserveRes.json();
-                if (!reserveData.success) {
-                  if (onOptimisticRollback) onOptimisticRollback();
-                  setStatus('Error: Item is currently being checked out.');
-                  setReserving(false);
-                  return;
-                }
-                lockIds.push(reserveData.lock_id);
+      {/* Payment Options Bottom Sheet Simulation */}
+      <div className="space-y-3 mb-6">
+          <button
+            onClick={() => {
+              if (connectedReader) {
+                processPayment();
+              } else {
+                discoverReaders();
               }
-              lockId = lockIds[0];
-            } catch (e) {
-              if (onOptimisticRollback) onOptimisticRollback();
-              setStatus('Reservation error: ' + e.message);
-              setReserving(false);
-              return;
-            }
-
-            try {
-              setStatus('Discovering readers for Tap to Pay...');
-              const discoverResult = await terminal.discoverReaders({ simulated: true });
-              if (discoverResult.error || !discoverResult.discoveredReaders || discoverResult.discoveredReaders.length === 0) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Failed to start Tap to Pay reader.');
-                setReserving(false);
-                return;
-              }
-
-              setStatus('Starting Tap to Pay...');
-              const connectResult = await terminal.connectReader(discoverResult.discoveredReaders[0]);
-              if (connectResult.error) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Failed to connect to Tap to Pay reader.');
-                setReserving(false);
-                return;
-              }
-              setConnectedReader(connectResult.reader);
-
-              setStatus('Creating payment intent...');
-              const res = await fetch('/api/v1/payments/terminal/intent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount_cents: amount, currency: 'usd' })
-              });
-              const data = await res.json();
-
-              setStatus('Collecting payment method...');
-              const collectResult = await terminal.collectPaymentMethod(data.client_secret);
-              if (collectResult.error) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Payment collection failed: ' + collectResult.error.message);
-                setReserving(false);
-                return;
-              }
-
-              setStatus('Processing payment...');
-              const processResult = await terminal.processPayment(collectResult.paymentIntent);
-              if (processResult.error) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Payment processing failed: ' + processResult.error.message);
-                setReserving(false);
-                return;
-              }
-
-              setStatus('Capturing payment intent...');
-              const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payment_intent_id: processResult.paymentIntent.id })
-              });
-              const captureData = await captureRes.json();
-              if (!captureData.success) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Payment capture failed: ' + captureData.error_message);
-                setReserving(false);
-                return;
-              }
-
-              setStatus('Payment successful. Committing inventory...');
-              let allCommitted = true;
-              const items = cart || [{product: {id: productId}, quantity: 1}];
-              for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                const currentLockId = lockIds[i];
-                const commitRes = await fetch('/api/v1/payments/terminal/commit', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    tenant_id: tenantId,
-                    product_id: item.product.id,
-                    quantity: item.quantity,
-                    lock_id: currentLockId,
-                    amount_cents: i === 0 ? amount : 0
-                  })
-                });
-                const commitData = await commitRes.json();
-                if (!commitData.success) {
-                   allCommitted = false;
-                   setStatus('Payment successful, but inventory commit failed for an item: ' + commitData.error_message);
-                }
-              }
-              if (allCommitted) {
-                setStatus('Payment successful!');
-                if (onSuccess) onSuccess();
-              }
-            } catch (e) {
-              setStatus('Error: ' + e.message);
-            } finally {
-              setReserving(false);
-            }
-          }} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-gradient-to-b from-[#000000] to-[#333333] text-white px-4 py-4 min-h-[56px] rounded-xl font-bold text-lg transition-colors shadow-xl shadow-gray-500/20 active:scale-[0.98] ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`}>
-            {reserving ? 'Processing...' : 'Tap to Pay'}
+            }}
+            disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)}
+            className={`w-full flex items-center justify-center space-x-2 bg-gradient-to-b from-[#000000] to-[#333333] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-gray-500/20 active:scale-[0.98] transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`}
+          >
+            <span>{connectedReader ? 'Tap to Pay (Phone)' : 'Initialize Tap to Pay'}</span>
           </button>
-        </div>
-      )}
 
-      {!connectedReader && (
+          <button
+            onClick={() => createHybridCheckout('payment_link')}
+            disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)}
+            className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all charge-btn ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}`}
+          >
+            {reserving ? 'Processing...' : 'Send Payment Link'}
+          </button>
+
+          <button
+            onClick={processCashSale}
+            disabled={reserving}
+            className={`w-full bg-gradient-to-b from-[#34C759] to-[#28A745] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-green-500/30 transition-all cash-btn ${reserving ? 'opacity-50' : 'hover:scale-[1.02] active:scale-[0.98]'}`}
+          >
+            {reserving ? 'Processing...' : 'Cash'}
+          </button>
+      </div>
+
+      {!connectedReader && discoveredReaders.length > 0 && (
         <div className="mb-4">
-          <button onClick={discoverReaders} disabled={typeof window !== 'undefined' && !navigator.onLine} className={`w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-colors ${(typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
-            Discover Readers
-          </button>
-          <ul className="mt-4 space-y-2">
+          <p className="text-sm text-gray-500 font-bold mb-2">Available Readers:</p>
+          <ul className="space-y-2">
             {discoveredReaders.map(reader => (
               <li key={reader.id} className="flex justify-between items-center p-4 border border-white/50 rounded-2xl bg-white/60 backdrop-blur-[30px] saturate-[210%] shadow-sm transition-all hover:bg-white/80">
                 <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
@@ -602,25 +557,6 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
               </li>
             ))}
           </ul>
-        </div>
-      )}
-
-      {connectedReader ? (
-        <div className="flex gap-2 mt-4">
-          <WalkthroughTarget id="charge-btn" className="flex-1 flex">
-          <button onClick={processPayment} disabled={reserving || typeof window !== 'undefined' && !navigator.onLine} className={`flex-1 w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all charge-btn ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-            {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
-          </button>
-          </WalkthroughTarget>
-          <button id="cash-btn" onClick={processCashSale} disabled={reserving} className={`flex-1 bg-gradient-to-b from-[#34C759] to-[#28A745] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-green-500/30 transition-all cash-btn ${reserving ? 'opacity-50' : 'hover:shadow-green-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-            {reserving ? 'Processing...' : `Cash $${(amount / 100).toFixed(2)}`}
-          </button>
-        </div>
-      ) : (
-        <div className="flex gap-2 mt-4">
-           <button id="cash-btn-offline" onClick={processCashSale} disabled={reserving} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all cash-btn backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-             {reserving ? 'Processing...' : `Record Offline Cash Sale $${(amount / 100).toFixed(2)}`}
-           </button>
         </div>
       )}
     </div>

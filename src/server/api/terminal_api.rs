@@ -43,6 +43,7 @@ pub struct CapturePaymentIntentResponse {
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
+        .route("/hybrid_checkout/create", axum::routing::post(super::hybrid_checkout::create_hybrid_checkout_handler))
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
         .route("/intent/capture", axum::routing::post(capture_payment_intent_handler))
