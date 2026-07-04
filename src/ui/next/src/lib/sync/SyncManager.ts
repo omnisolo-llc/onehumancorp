@@ -78,6 +78,50 @@ export class SyncManager {
     }
   }
 
+  public mapGeneralMutation(m: any): any {
+    if (m.type === 'inventory_toggle') {
+       return {
+          timestamp: new Date(m.timestamp || Date.now()).toISOString(),
+          transaction_id: m.id,
+          product_id: m.id.replace('e2e-product-', ''),
+          quantity_deducted: 1, // Assume 1 for E2E logic
+          amount: null,
+          payment_method: null,
+          payment_intent_id: null,
+          currency: null
+       };
+    } else if (m.type === 'draft_quote') {
+      return {
+         timestamp: new Date(m.timestamp || Date.now()).toISOString(),
+         transaction_id: m.id,
+         product_id: 'draft_quote',
+         quantity_deducted: 0,
+         amount: null,
+         payment_method: null,
+         payment_intent_id: null,
+         currency: 'usd',
+         mutation_type: 'draft_quote',
+         payload: m.notes
+      };
+    } else if (m.type === 'agent_intent') {
+      return {
+         timestamp: new Date(m.timestamp || Date.now()).toISOString(),
+         transaction_id: m.id,
+         product_id: 'agent_intent',
+         quantity_deducted: 0,
+         amount: null,
+         payment_method: null,
+         payment_intent_id: null,
+         currency: 'usd',
+         mutation_type: 'agent_intent',
+         payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
+      };
+    } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'generate_invoice') {
+        return m; // keep them for specific APIs
+    }
+    return m;
+  }
+
   public async sync(retryCount = 0) {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
 
@@ -106,49 +150,7 @@ export class SyncManager {
         };
       });
 
-      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale').map(m => {
-        if (m.type === 'inventory_toggle') {
-           return {
-              timestamp: new Date(m.timestamp || Date.now()).toISOString(),
-              transaction_id: m.id,
-              product_id: m.id.replace('e2e-product-', ''),
-              quantity_deducted: 1, // Assume 1 for E2E logic
-              amount: null,
-              payment_method: null,
-              payment_intent_id: null,
-              currency: null
-           };
-        } else if (m.type === 'draft_quote') {
-          return {
-             timestamp: new Date(m.timestamp || Date.now()).toISOString(),
-             transaction_id: m.id,
-             product_id: 'draft_quote',
-             quantity_deducted: 0,
-             amount: null,
-             payment_method: null,
-             payment_intent_id: null,
-             currency: 'usd',
-             mutation_type: 'draft_quote',
-             payload: m.notes
-          };
-        } else if (m.type === 'agent_intent') {
-          return {
-             timestamp: new Date(m.timestamp || Date.now()).toISOString(),
-             transaction_id: m.id,
-             product_id: 'agent_intent',
-             quantity_deducted: 0,
-             amount: null,
-             payment_method: null,
-             payment_intent_id: null,
-             currency: 'usd',
-             mutation_type: 'agent_intent',
-             payload: typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)
-          };
-        } else if (m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT' || m.type === 'update_quote' || m.type === 'approve_quote' || m.type === 'triage_action' || m.type === 'advisory_action' || m.type === 'field_ops_status' || m.type === 'generate_invoice') {
-            return m; // keep them for specific APIs
-        }
-        return m;
-      });
+      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale').map(m => this.mapGeneralMutation(m));
 
       const crdtDeltas = queue.filter(m => m.type === 'CRDT_MUTATION').map(m => {
          return {
