@@ -705,10 +705,12 @@ impl DB {
                 )));
             }
 
-            #[cfg(test)]
-            let remaining_time = timeout_duration;
-            #[cfg(not(test))]
-            let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
+            // In tests we want tokio::time::timeout to handle paused time cleanly.
+            let remaining_time = if cfg!(test) {
+                timeout_duration
+            } else {
+                timeout_duration.saturating_sub(start_time.elapsed())
+            };
 
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
