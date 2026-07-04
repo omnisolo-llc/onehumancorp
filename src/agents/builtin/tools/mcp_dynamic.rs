@@ -241,7 +241,7 @@ async fn discover_mcp_tool_specs(server: &McpServerConfig) -> Vec<McpToolSpec> {
             })
             .collect(),
         Err(e) => {
-            tracing::warn!("Failed to list MCP tools for server '{}': {}", server.name, e);
+            tracing::warn!("Failed to list MCP tools for server '{}': {}", server.name, e); // pii-safe
             Vec::new()
         }
     }

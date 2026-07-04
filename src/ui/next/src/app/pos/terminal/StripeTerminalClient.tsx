@@ -158,7 +158,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                   setReserving(false);
                 }
               }} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-                {reserving ? 'Processing...' : `Confirm & Tap $${(amount / 100).toFixed(2)}`}
+                {reserving ? 'Processing...' : `Confirm & Tap ${(amount / 100).toFixed(2)}`}
               </button>
             </div>
           )}
@@ -181,7 +181,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    setReserving(false);
                  }
                }} disabled={reserving} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-                 {reserving ? 'Processing...' : `Record Offline Cash Sale $${(amount / 100).toFixed(2)}`}
+                 {reserving ? 'Processing...' : `Record Offline Cash Sale ${(amount / 100).toFixed(2)}`}
                </button>
             </div>
           )}
@@ -209,7 +209,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    setReserving(false);
                  }
                }} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-[#0066FF] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}`}>
-                 Send Link for $${(amount / 100).toFixed(2)}
+                 Send Link for ${(amount / 100).toFixed(2)}
                </button>
             </div>
           )}

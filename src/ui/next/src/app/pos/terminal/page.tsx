@@ -436,13 +436,13 @@ export default function POSTerminal() {
 
            {/* Bottom Bar */}
            {cartItemCount > 0 && !checkoutComplete && (
-             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-t border-white/40 z-40 pb-safe pb-8 shadow-[0_-8px_32px_rgba(0,0,0,0.1)]">
+             <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-[30px] border-t border-gray-200 z-40 pb-safe pb-8">
                <button
                  onClick={() => setIsCartOpen(true)}
                  className="w-full bg-[#0066FF] text-white rounded-xl min-h-[60px] text-lg font-bold flex justify-between items-center px-6 shadow-lg active:scale-[0.98]"
                >
                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm">{cartItemCount} item{cartItemCount > 1 ? 's' : ''}</span>
-                 <span>Collect Payment ${(cartTotal / 100).toFixed(2)}</span>
+                 <span>Charge ${(cartTotal / 100).toFixed(2)}</span>
                </button>
              </div>
            )}
@@ -499,7 +499,7 @@ export default function POSTerminal() {
                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                  </div>
                  <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Payment Successful!</h2>
-                 <p className="text-gray-500 mb-8">Receipt sent. Inventory updated. The total of ${(cartTotal / 100).toFixed(2)} was charged. Follow-up task queued.</p>
+                 <p className="text-gray-500 mb-8">The total of ${(cartTotal / 100).toFixed(2)} was charged.</p>
 
                  {!receiptSent ? (
                    <div className="text-left">
