@@ -542,16 +542,16 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         .unwrap();
 
         // Insert stuck tasks
-        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id) VALUES ('stuck_mission_sqlite', 'IN_PROGRESS', datetime('now', '-2 hour'), 'tenant1')")
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_sqlite', 'IN_PROGRESS', datetime('now', '-2 hour'), 'tenant1', '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id) VALUES ('stuck_mission_pg', 'RUNNING', NOW() - INTERVAL '2 hours', 'tenant1')")
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_pg', 'RUNNING', NOW() - INTERVAL '2 hours', 'tenant1', '{}')")
             .execute(&pg_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at) VALUES ('stuck_queue_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'))")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'), '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at) VALUES ('stuck_queue_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours')")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_queue_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
@@ -636,10 +636,10 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         // Insert stuck queued tasks
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at) VALUES ('stuck_queued_sqlite', 'tenant1', 'QUEUED', datetime('now', '-25 hour'))")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at, payload) VALUES ('stuck_queued_sqlite', 'tenant1', 'QUEUED', datetime('now', '-25 hour'), '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at) VALUES ('stuck_queued_pg', 'tenant1', 'QUEUED', NOW() - INTERVAL '25 hours')")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at, payload) VALUES ('stuck_queued_pg', 'tenant1', 'QUEUED', NOW() - INTERVAL '25 hours', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
@@ -701,10 +701,10 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         .unwrap();
 
         // Insert stuck mission
-        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id) VALUES ('stuck_mission_sqlite_cat', 'IN_PROGRESS', datetime('now', '-2 hour'), 'tenant1')")
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_sqlite_cat', 'IN_PROGRESS', datetime('now', '-2 hour'), 'tenant1', '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id) VALUES ('stuck_mission_pg_cat', 'RUNNING', NOW() - INTERVAL '2 hours', 'tenant1')")
+        sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id, payload) VALUES ('stuck_mission_pg_cat', 'RUNNING', NOW() - INTERVAL '2 hours', 'tenant1', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
