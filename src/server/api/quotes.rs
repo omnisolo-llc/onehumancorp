@@ -302,6 +302,7 @@ async fn update_quote(
             &current_quote.customer_id.to_string(),
             amount_usd,
             None,
+            None,
             None
         ).await {
             Ok(url) => {
@@ -527,6 +528,7 @@ async fn accept_quote(
         &format!("Invoice for Quote #{}", quote.id),
         &quote.customer_id.to_string(),
         total_amount,
+        None,
         None,
         None
     ).await {

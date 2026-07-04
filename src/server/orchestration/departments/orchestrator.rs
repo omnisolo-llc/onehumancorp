@@ -1030,7 +1030,7 @@ pub async fn execute_action(
 
                         let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
                         let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
-                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id, (deposit_amount as f64) / 100.0, None, None).await.unwrap_or_default();
+                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id, (deposit_amount as f64) / 100.0, None, None, None).await.unwrap_or_default();
 
                         if let DbStore::Postgres = &self.db.store {
                             // Convert string times to DateTime
@@ -1084,7 +1084,7 @@ pub async fn execute_action(
 
                         let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
                         let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
-                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id, (deposit_amount as f64) / 100.0, None, None).await.unwrap_or_default();
+                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id, (deposit_amount as f64) / 100.0, None, None, None).await.unwrap_or_default();
 
                         if let DbStore::Postgres = &self.db.store {
                             // Convert string times to DateTime
@@ -1141,10 +1141,10 @@ pub async fn execute_action(
                         let milestone_name = payload.get("milestone_name").and_then(|v| v.as_str()).unwrap_or("Milestone");
                         let description = format!("Invoice for {} - {}", project_name, milestone_name);
 
-                        match stripe.create_draft_invoice(&customer_id_to_use, amount_cents, &description).await {
+                        match stripe.create_draft_invoice(&customer_id_to_use, amount_cents, &description, None).await {
                             Ok(draft_invoice) => {
                                 tracing::info!("Created draft invoice in Stripe: {}", draft_invoice.id);
-                                match stripe.finalize_and_send_invoice(&draft_invoice.id).await {
+                                match stripe.finalize_and_send_invoice(&draft_invoice.id, None).await {
                                     Ok(sent_invoice) => {
                                         tracing::info!("Finalized and sent invoice via Stripe: {}", sent_invoice.id);
 
@@ -1208,7 +1208,7 @@ pub async fn execute_action(
 
                         let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
                         let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
-                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id_to_use, price * 0.20, None, None).await.unwrap_or_default();
+                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id_to_use, price * 0.20, None, None, None).await.unwrap_or_default();
 
 
                         let mut generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("").to_string();

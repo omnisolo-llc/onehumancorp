@@ -366,7 +366,7 @@ impl Department for SalesAgent {
                             std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
                         );
 
-                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, None, None).await {
+                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, None, None, None).await {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
                                 // Optional: Update timeline or send a message

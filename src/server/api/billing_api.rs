@@ -146,6 +146,7 @@ pub struct CreateCheckoutSessionRequest {
     pub product_id: Option<String>,
     pub quantity: Option<i32>,
     pub ttl_seconds: Option<i32>,
+    pub idempotency_key: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -167,7 +168,7 @@ pub async fn create_billing_portal_session_handler(
     let customer_id = format!("cus_{}", tenant_id); // Basic fallback to avoid DB join here for simplicity
 
     if let Some(client) = &hub.tracker().stripe_client {
-        match client.create_billing_portal_session(&customer_id).await {
+        match client.create_billing_portal_session(&customer_id, None).await {
             Ok(url) => Ok(Json(CreateBillingPortalSessionResponse { url })),
             Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
         }
@@ -289,7 +290,7 @@ pub async fn create_checkout_session_handler(
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
         let product_id_opt = req.product_id.clone();
-        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval, product_id_opt).await {
+        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval, product_id_opt, req.idempotency_key.as_deref()).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
@@ -882,6 +883,7 @@ mod department_tier_usage_tests {
             product_id: Some("prod_123".to_string()),
             quantity: Some(1),
             ttl_seconds: Some(300),
+            idempotency_key: None,
         };
         assert_eq!(req.tier.unwrap(), "starter");
         assert_eq!(req.product_id.unwrap(), "prod_123");

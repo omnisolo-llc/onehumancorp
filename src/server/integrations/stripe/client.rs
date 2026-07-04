@@ -53,7 +53,7 @@ impl StripeClient {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 
-    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>, product_id: Option<String>) -> Result<String, String> {
+    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>, product_id: Option<String>, idempotency_key: Option<&str>) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);
         tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${} in fees", savings);
@@ -124,12 +124,11 @@ impl StripeClient {
             }
         }
 
-        let res = reqwest::Client::new()
-            .post(format!("{}/v1/checkout/sessions", Self::api_base()))
-            .basic_auth(api_key, Some(""))
-            .form(&form)
-            .send()
-            .await
+        let mut req = reqwest::Client::new().post(format!("{}/v1/checkout/sessions", Self::api_base())).basic_auth(api_key, Some("")).form(&form);
+        if let Some(ik) = idempotency_key {
+            req = req.header("Idempotency-Key", ik);
+        }
+        let res = req.send().await
             .map_err(|e| format!("Stripe Checkout request failed: {}", e))?;
 
         if !res.status().is_success() {
@@ -145,7 +144,7 @@ impl StripeClient {
     }
 
 
-    pub async fn create_billing_portal_session(&self, customer_id: &str) -> Result<String, String> {
+    pub async fn create_billing_portal_session(&self, customer_id: &str, idempotency_key: Option<&str>) -> Result<String, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {
             return Ok("/pricing".to_string());
@@ -157,12 +156,11 @@ impl StripeClient {
         let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string());
         form.insert("return_url".to_string(), format!("{}/pricing", base_url));
 
-        let res = reqwest::Client::new()
-            .post(format!("{}/v1/billing_portal/sessions", Self::api_base()))
-            .basic_auth(api_key, Some(""))
-            .form(&form)
-            .send()
-            .await
+        let mut req = reqwest::Client::new().post(format!("{}/v1/billing_portal/sessions", Self::api_base())).basic_auth(api_key, Some("")).form(&form);
+        if let Some(ik) = idempotency_key {
+            req = req.header("Idempotency-Key", ik);
+        }
+        let res = req.send().await
             .map_err(|e| format!("Stripe Billing Portal request failed: {}", e))?;
 
         if !res.status().is_success() {
@@ -209,7 +207,7 @@ impl StripeClient {
         Ok(())
     }
 
-    pub async fn create_draft_invoice(&self, customer_id: &str, amount_cents: i64, description: &str) -> Result<StripeInvoice, String> {
+    pub async fn create_draft_invoice(&self, customer_id: &str, amount_cents: i64, description: &str, idempotency_key: Option<&str>) -> Result<StripeInvoice, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {
             // Mock response if no real key
@@ -230,12 +228,11 @@ impl StripeClient {
         form_item.insert("currency".to_string(), "usd".to_string());
         form_item.insert("description".to_string(), description.to_string());
 
-        let res_item = client
-            .post(format!("{}/v1/invoiceitems", Self::api_base()))
-            .basic_auth(api_key, Some(""))
-            .form(&form_item)
-            .send()
-            .await
+        let mut req_item = client.post(format!("{}/v1/invoiceitems", Self::api_base())).basic_auth(api_key, Some("")).form(&form_item);
+        if let Some(ik) = idempotency_key {
+            req_item = req_item.header("Idempotency-Key", format!("{}_item", ik));
+        }
+        let res_item = req_item.send().await
             .map_err(|e| format!("Stripe InvoiceItem request failed: {}", e))?;
 
         if !res_item.status().is_success() {
@@ -250,12 +247,11 @@ impl StripeClient {
         form_inv.insert("collection_method".to_string(), "send_invoice".to_string());
         form_inv.insert("days_until_due".to_string(), "30".to_string());
 
-        let res_inv = client
-            .post(format!("{}/v1/invoices", Self::api_base()))
-            .basic_auth(api_key, Some(""))
-            .form(&form_inv)
-            .send()
-            .await
+        let mut req_inv = client.post(format!("{}/v1/invoices", Self::api_base())).basic_auth(api_key, Some("")).form(&form_inv);
+        if let Some(ik) = idempotency_key {
+            req_inv = req_inv.header("Idempotency-Key", ik);
+        }
+        let res_inv = req_inv.send().await
             .map_err(|e| format!("Stripe Invoice request failed: {}", e))?;
 
         if !res_inv.status().is_success() {
@@ -273,7 +269,7 @@ impl StripeClient {
         })
     }
 
-    pub async fn finalize_and_send_invoice(&self, invoice_id: &str) -> Result<StripeInvoice, String> {
+    pub async fn finalize_and_send_invoice(&self, invoice_id: &str, idempotency_key: Option<&str>) -> Result<StripeInvoice, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {
             // Mock response if no real key
@@ -287,11 +283,11 @@ impl StripeClient {
         let api_key = api_key_res.unwrap();
         let client = reqwest::Client::new();
 
-        let res_inv = client
-            .post(format!("{}/v1/invoices/{}/send", Self::api_base(), invoice_id))
-            .basic_auth(api_key, Some(""))
-            .send()
-            .await
+        let mut req_inv = client.post(format!("{}/v1/invoices/{}/send", Self::api_base(), invoice_id)).basic_auth(api_key, Some(""));
+        if let Some(ik) = idempotency_key {
+            req_inv = req_inv.header("Idempotency-Key", ik);
+        }
+        let res_inv = req_inv.send().await
             .map_err(|e| format!("Stripe Invoice Send request failed: {}", e))?;
 
         if !res_inv.status().is_success() {

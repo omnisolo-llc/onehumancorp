@@ -276,6 +276,7 @@ async fn approve_proposal(
         &proposal.customer_id,
         amount_usd,
         None,
+        None,
         None
     ).await {
         Ok(url) => url,

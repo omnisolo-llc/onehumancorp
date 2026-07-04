@@ -36,7 +36,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
         let mut stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
         // Fallback to fake url if external integration fails to prevent silently erroring
-        match stripe_client.create_checkout_session(scope, client_id, price, None, None).await {
+        match stripe_client.create_checkout_session(scope, client_id, price, None, None, None).await {
              Ok(link) => {
                  stripe_payment_link = link;
              }
