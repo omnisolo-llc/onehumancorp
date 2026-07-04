@@ -57,7 +57,7 @@ pub fn shape_value(mut val: Value, tree: &std::collections::HashMap<String, Fiel
     }
 
     match val {
-        Value::Object(mut map) => {
+        Value::Object(map) => {
             let mut new_map = serde_json::Map::new();
             for (k, v) in map.into_iter() {
                 if let Some(node) = tree.get(&k) {

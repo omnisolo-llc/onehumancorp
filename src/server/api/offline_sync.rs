@@ -979,7 +979,7 @@ pub async fn operation_intents_handler(
     }
 
     let mut applied_count = 0;
-    let mut conflict_count = 0;
+    let conflict_count = 0;
     let mut failed_count = 0;
 
     for intent in &payload.intents {
