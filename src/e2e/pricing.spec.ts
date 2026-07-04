@@ -13,12 +13,22 @@ test.describe('Pricing Page', () => {
     await expect(page.locator('h3', { hasText: 'What is the storage limit?' })).toBeVisible();
   });
 
+
+  test('should display My Plan section', async ({ page }) => {
+    await page.goto('/pricing');
+    await expect(page.locator('h2', { hasText: 'My Plan: Free' })).toBeVisible();
+    await expect(page.locator('p', { hasText: 'AI Actions Used' })).toBeVisible();
+    await expect(page.locator('p', { hasText: 'Storage Used' })).toBeVisible();
+    await expect(page.locator('p', { hasText: 'Estimated Next Bill' })).toBeVisible();
+    await expect(page.locator('button', { hasText: 'Manage Plan & Billing' })).toBeVisible();
+  });
+
   test('should display all four pricing tiers', async ({ page }) => {
     await page.goto('/pricing');
-    await expect(page.locator('.plan-name', { hasText: 'Free' })).toBeVisible();
-    await expect(page.locator('.plan-name', { hasText: 'Starter' })).toBeVisible();
-    await expect(page.locator('.plan-name', { hasText: 'Pro' })).toBeVisible();
-    await expect(page.locator('.plan-name', { hasText: 'Business' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Free' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Starter' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Pro' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Business' })).toBeVisible();
   });
 
   test('should verify Back button functions', async ({ page }) => {
@@ -26,7 +36,7 @@ test.describe('Pricing Page', () => {
     const backButton = page.locator('a', { hasText: 'Back to Dashboard' });
     await expect(backButton).toBeVisible();
     await backButton.click();
-    await expect(page.url()).toContain('/dashboard.html');
+    await expect(page.url()).toContain('/dashboard');
   });
 
   test('should verify upgrade button routes to checkout', async ({ page }) => {

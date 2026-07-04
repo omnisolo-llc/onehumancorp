@@ -19,10 +19,11 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible({ timeout: 15000 });
 
     // Check for individual breakdown items
-    await expect(page.locator('span', { hasText: 'LLM Usage' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Base Platform' })).toBeVisible();
     await expect(page.locator('span', { hasText: /^Storage$/ })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Compute Usage' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Network & Bandwidth' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Email Sends' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Outbound API Calls' })).toBeVisible();
   });
