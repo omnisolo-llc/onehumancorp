@@ -125,7 +125,7 @@ pub async fn get_daily_work_handler(
                     let cache_t_bg = tenant_id.clone();
             let (work_res, orders_res, env_res, agent_feed_res) = tokio::join!(
                 tokio::spawn(async move {
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, NULL::jsonb as customer_info, NULL::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                         let mut map = serde_json::Map::new();
@@ -227,7 +227,7 @@ pub async fn get_daily_work_handler(
                     let cache_t_bg = tenant_id.clone();
             let (work_res, orders_res, env_res, agent_feed_res) = tokio::join!(
                 tokio::spawn(async move {
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, signal_id, intent, NULL as customer_info, NULL as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" } else { "SELECT id, signal_id, intent, customer_info, suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC" }).bind(&t_bg1).fetch_all(&pool1).await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|r| {
                         let mut map = serde_json::Map::new();
