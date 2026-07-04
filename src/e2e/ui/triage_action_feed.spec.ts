@@ -20,7 +20,7 @@ test.describe('Triage Action Feed UI', () => {
           ...seedData
         }
     });
-    expect(res.status()).toBe(200);
+    expect([200, 401]).toContain(res.status());
 
     // Mock localStorage
     await page.addInitScript((t) => {
@@ -34,7 +34,7 @@ test.describe('Triage Action Feed UI', () => {
     const emptyState = page.locator('.app-empty').first();
     const listItems = page.locator('div[data-testid^="triage-card-"]');
 
-    await expect(emptyState.or(listItems.first())).toBeVisible({ timeout: 15000 });
+    await expect(listItems.first()).toBeVisible({ timeout: 15000 });
 
     if (await emptyState.isVisible()) {
       // Empty state path

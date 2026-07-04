@@ -3878,6 +3878,30 @@ pub async fn update_ui_triage_action_handler(
                 .execute(&mut *tx)
                 .await;
 
+            let legacy_status = if payload.approved { "APPROVED" } else { "REJECTED" };
+            let _ = sqlx::query("UPDATE agent_approvals SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                .bind(legacy_status)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            let legacy_status_req = if payload.approved { "Approved" } else { "Rejected" };
+            let _ = sqlx::query("UPDATE agent_action_requests SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                .bind(legacy_status_req)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            let daily_status = if payload.approved { "COMPLETED" } else { "DISMISSED" };
+            let _ = sqlx::query("UPDATE daily_work_items SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                .bind(daily_status)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
             let _ = sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
                 .bind(status)
                 .bind(&payload.triage_item_id)
@@ -4136,6 +4160,30 @@ pub async fn update_ui_triage_action_handler(
             let lifecycle_state = if payload.approved { "APPROVED_EXECUTION_QUEUED" } else { "DISMISSED" };
             let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ? WHERE id = ? AND tenant_id = ?")
                 .bind(lifecycle_state)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            let legacy_status = if payload.approved { "APPROVED" } else { "REJECTED" };
+            let _ = sqlx::query("UPDATE agent_approvals SET status = ? WHERE id = ? AND tenant_id = ?")
+                .bind(legacy_status)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            let legacy_status_req = if payload.approved { "Approved" } else { "Rejected" };
+            let _ = sqlx::query("UPDATE agent_action_requests SET status = ? WHERE id = ? AND tenant_id = ?")
+                .bind(legacy_status_req)
+                .bind(&payload.triage_item_id)
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await;
+
+            let daily_status = if payload.approved { "COMPLETED" } else { "DISMISSED" };
+            let _ = sqlx::query("UPDATE daily_work_items SET status = ? WHERE id = ? AND tenant_id = ?")
+                .bind(daily_status)
                 .bind(&payload.triage_item_id)
                 .bind(&tenant_id)
                 .execute(&mut *tx)
