@@ -1,8 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
+interface FeedItemRaw {
+  id: string;
+  tenant_id: string;
+  event_source: string;
+  context_payload?: any;
+  proposed_action?: any;
+  lifecycle_state: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface WorkItem {
   id: string;
@@ -15,6 +24,7 @@ interface AgentDraft {
   id: string;
   response: string;
   status: string;
+  action_type?: string;
 }
 
 interface FeedItem {
@@ -25,74 +35,140 @@ interface FeedItem {
 export default function UnifiedFeed() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    // In a real app, this would fetch from the backend via REST/gRPC
-    // and subscribe to Redis Pub/Sub (e.g., via Server-Sent Events or WebSockets)
-    setLoading(false);
-  }, []);
+  const fetchFeed = async () => {
+    try {
+      const res = await fetch('/api/agent-feed');
+      if (!res.ok) {
+        throw new Error('Failed to fetch feed');
+      }
+      const data = await res.json();
+      const rawItems = (data.items || []) as FeedItemRaw[];
+      const pendingItems = rawItems.filter(i => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED");
 
-  const handleApprove = (itemId: string) => {
-    // Send approval to backend
+      const mappedItems: FeedItem[] = pendingItems.map(raw => {
+         return {
+           workItem: {
+             id: raw.id,
+             source: raw.event_source || 'Unknown',
+             payload: raw.context_payload,
+             status: raw.lifecycle_state,
+           },
+           draft: raw.proposed_action ? {
+             id: raw.id,
+             response: raw.proposed_action.draft_reply || raw.proposed_action.summary || JSON.stringify(raw.proposed_action),
+             status: 'draft',
+             action_type: raw.proposed_action.action_type
+           } : undefined
+         };
+      });
+      setFeedItems(mappedItems);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchFeed();
+  }, []);
+
+  const handleAction = async (itemId: string, action: string) => {
+    setProcessingId(itemId);
+    try {
+      const res = await fetch(`/api/agent-feed/${itemId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      if (res.ok) {
+        setFeedItems(prev => prev.filter(i => i.workItem.id !== itemId));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleApprove = (itemId: string) => handleAction(itemId, 'APPROVED');
+  const handleReject = (itemId: string) => handleAction(itemId, 'DISMISSED');
+
   const handleEdit = (itemId: string) => {
-    // Open edit modal
+    // Basic stub for edit flow
+    alert('Edit draft triggered for ' + itemId);
   };
 
   if (loading) return <div className="p-4 text-center">Loading feed...</div>;
+  if (error) return <div className="p-4 text-center text-red-500">Error: {error}</div>;
 
   return (
-    <div className="w-full max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-200 p-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-gray-900">Unified Feed</h1>
+    <div className="w-full max-w-[375px] mx-auto min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] flex flex-col text-[#1D1D1F] dark:text-[#F5F5F7]">
+      <header className="bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50 p-4 sticky top-0 z-10 flex justify-between items-center">
+        <h1 className="text-xl font-bold tracking-tight">Today</h1>
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 space-y-4">
         {feedItems.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <p>No new work items.</p>
+          <div className="text-center text-gray-500 py-8 flex flex-col items-center gap-3">
+             <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+               <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+             </div>
+            <p className="font-medium text-sm">All caught up.</p>
           </div>
         ) : (
           feedItems.map((item) => (
-            <Card key={item.workItem.id} className="w-full bg-white shadow-sm border border-gray-100 rounded-xl overflow-hidden transition-all hover:shadow-md">
-              <CardHeader className="p-4 pb-2 border-b border-gray-50">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                    {item.workItem.source}
-                  </span>
-                  <span className="text-xs text-gray-400">Just now</span>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4">
-                 <p className="text-sm text-gray-800 line-clamp-3">
-                   {/* Extract meaningful text from payload */}
-                   {item.workItem.payload?.msg || JSON.stringify(item.workItem.payload)}
+            <div key={item.workItem.id} className="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300">
+              <div className="p-4 pb-3 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#0066FF]/20 px-2.5 py-1 rounded-full">
+                        {item.workItem.source}
+                      </span>
+                  </div>
+                  <span className="text-[11px] font-medium text-gray-400">Just now</span>
+              </div>
+              <div className="p-4">
+                 <p className="text-[14px] leading-relaxed text-gray-800 dark:text-gray-200">
+                   {item.workItem.payload?.msg || item.workItem.payload?.text || item.workItem.payload?.description || JSON.stringify(item.workItem.payload)}
                  </p>
-              </CardContent>
+              </div>
               {item.draft && (
-                <CardFooter className="p-4 pt-2 bg-gray-50 border-t border-gray-100 flex flex-col gap-3">
-                   <div className="w-full text-sm text-gray-600 italic border-l-2 border-blue-300 pl-3 py-1">
+                <div className="p-4 pt-3 bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100/50 dark:border-gray-700/50 flex flex-col gap-4">
+                   <div className="w-full text-[13px] leading-relaxed text-gray-700 dark:text-gray-300 italic border-l-2 border-[#0066FF] pl-3 py-1">
                      "{item.draft.response}"
                    </div>
                    <div className="flex gap-2 w-full">
-                     <Button
-                       variant="outline"
-                       className="flex-1 text-sm bg-white border-gray-200 text-gray-700 hover:bg-gray-100"
+                     <button
+                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
+                       onClick={() => handleReject(item.workItem.id)}
+                       disabled={processingId === item.workItem.id}
+                       data-testid="unified-feed-reject-btn"
+                     >
+                       Reject
+                     </button>
+                     <button
+                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
                        onClick={() => handleEdit(item.workItem.id)}
+                       disabled={processingId === item.workItem.id}
+                       data-testid="unified-feed-edit-btn"
                      >
                        Edit
-                     </Button>
-                     <Button
-                       className="flex-1 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+                     </button>
+                     <button
+                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-[#0066FF] text-white rounded-xl hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all"
                        onClick={() => handleApprove(item.workItem.id)}
+                       disabled={processingId === item.workItem.id}
+                       data-testid="unified-feed-approve-btn"
                      >
-                       Approve & Send
-                     </Button>
+                       {processingId === item.workItem.id ? '...' : 'Approve & Send'}
+                     </button>
                    </div>
-                </CardFooter>
+                </div>
               )}
-            </Card>
+            </div>
           ))
         )}
       </main>
