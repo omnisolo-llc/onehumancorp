@@ -28,7 +28,7 @@ spec:
               value: "{{ .Values.powersync.service.targetPort }}"
             {{- if .Values.cnpg.enabled }}
             - name: PS_DATA_SOURCE_URI
-              value: "postgres://{{ .Values.cnpg.owner }}:$(POSTGRES_PASSWORD)@{{ .Values.cnpg.clusterName }}-rw:5432/{{ .Values.cnpg.database }}?sslmode=require"
+              value: "postgres://{{ .Values.cnpg.owner }}:$(POSTGRES_PASSWORD)@{{ .Values.cnpg.clusterName }}-rw/{{ .Values.cnpg.database }}?sslmode=require"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -36,7 +36,7 @@ spec:
                   key: password
             {{- else }}
             - name: PS_DATA_SOURCE_URI
-              value: "postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable"
+              value: "postgres://ohc:ohc@postgres/ohc?sslmode=disable"
             {{- end }}
           resources:
             {{- toYaml .Values.powersync.resources | nindent 12 }}

@@ -8,7 +8,7 @@ test.describe('Automated Re-engagement Agent for Service Bookings', () => {
     const testCustomerName = 'Leo Customer';
 
     test.beforeAll(async () => {
-        const dbUrl = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/ohc';
+        const dbUrl = process.env.DATABASE_URL as string;
         pool = new Pool({ connectionString: dbUrl });
 
         try {
