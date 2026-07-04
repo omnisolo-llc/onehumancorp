@@ -6703,6 +6703,8 @@ async fn create_ui_bom_item_handler(
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
+        .nest("/", crate::api::jsonrpc::router())
+        .nest("/rpc", crate::api::jsonrpc::router())
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
