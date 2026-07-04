@@ -178,3 +178,74 @@ describe('TooltipRegistry window resize', () => {
     expect(true).toBe(true);
   });
 });
+
+describe('TooltipRegistry scroll and contextmenu', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('hides tooltip on scroll', async () => {
+    const ui = (
+      <TooltipProvider>
+        <WithTooltip id="test-id" defaultText="Default Tooltip">
+          <button>Hover me</button>
+        </WithTooltip>
+      </TooltipProvider>
+    );
+    await act(async () => {
+      render(ui);
+      vi.advanceTimersByTime(20);
+    });
+
+    const button = screen.getByText('Hover me');
+
+    Element.prototype.getBoundingClientRect = vi.fn(() => ({
+      width: 100, height: 20, top: 10, left: 10, bottom: 30, right: 110, x: 10, y: 10, toJSON: () => {}
+    }));
+
+    await act(async () => {
+        fireEvent.mouseEnter(button.parentElement!);
+        vi.advanceTimersByTime(20);
+    });
+
+    expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
+
+    await act(async () => {
+        fireEvent.scroll(window);
+        vi.advanceTimersByTime(20);
+    });
+
+    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
+  });
+
+  it('prevents default on context menu', async () => {
+    const ui = (
+      <TooltipProvider>
+        <WithTooltip id="test-id" defaultText="Default Tooltip">
+          <button>Hover me</button>
+        </WithTooltip>
+      </TooltipProvider>
+    );
+    await act(async () => {
+      render(ui);
+      vi.advanceTimersByTime(20);
+    });
+
+    const button = screen.getByText('Hover me');
+
+    let preventDefaultCalled = false;
+    await act(async () => {
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+      });
+      event.preventDefault = () => { preventDefaultCalled = true; };
+      button.parentElement!.dispatchEvent(event);
+    });
+
+    expect(preventDefaultCalled).toBe(true);
+  });
+});
