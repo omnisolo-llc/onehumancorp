@@ -369,6 +369,7 @@ export default function Dashboard() {
         <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [], pendingReviews: dashboardData?.pendingReviews || [] }} />
       </div>
 
+      <div className="hidden md:block">
       <AIUsageLimitWidget />
 
       <AiTimeSavingsWidget />
@@ -1159,6 +1160,7 @@ export default function Dashboard() {
           </div>
         </section>
       </main>
+      </div>
 
     </AppShell>
     </>
