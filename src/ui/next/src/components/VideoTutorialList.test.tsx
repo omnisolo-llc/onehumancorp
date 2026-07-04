@@ -93,3 +93,57 @@ describe('VideoTutorialList', () => {
     });
   });
 });
+
+  it('handles fetch failure gracefully', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+    render(<VideoTutorialList />);
+
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to load video tutorials', expect.any(Error));
+    });
+
+    expect(screen.getByText('No video tutorials available right now.')).toBeInTheDocument();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('uses external videos and loading state', async () => {
+    const externalVideos = [
+      { id: 3, title: "External Video", duration: "2:00", video_url: "http://example.com/ext.mp4" }
+    ];
+
+    render(<VideoTutorialList videos={externalVideos} loading={false} />);
+
+    expect(screen.getByText('External Video')).toBeInTheDocument();
+  });
+
+  it('opens and closes the video modal', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve([
+        { id: 1, title: "Modal Video", duration: "1:23", video_url: "http://example.com/vid.mp4" }
+      ])
+    });
+
+    render(<VideoTutorialList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Modal Video')).toBeInTheDocument();
+    });
+
+    const videoTitle = screen.getByText('Modal Video');
+    const videoCard = videoTitle.closest('.cursor-pointer');
+    fireEvent.click(videoCard!);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Close video')).toBeInTheDocument();
+    });
+
+    const closeBtn = screen.getByLabelText('Close video');
+    fireEvent.click(closeBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
+    });
+  });
