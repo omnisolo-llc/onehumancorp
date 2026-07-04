@@ -1376,11 +1376,10 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
 
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut results = Vec::new();
-        if let Ok(index) = self.get_lightweight_index().await {
-            if !index.is_empty() {
+        if let Ok(index) = self.get_lightweight_index().await
+            && !index.is_empty() {
                 results.push(format!("Index:\n{}", index));
             }
-        }
         if let Ok(mut transcripts) = LongTermMemory::search_transcripts(self, query, limit).await {
             results.append(&mut transcripts);
         }

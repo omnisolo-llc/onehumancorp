@@ -129,8 +129,8 @@ impl AgentProtocolServer {
     /// GET /ap/v1/agent/tasks
     pub async fn list_tasks(&self) -> serde_json::Value {
         let mut tasks = Vec::new();
-        if let Some(cp) = &self.runner.core.agent.checkpointer {
-            if let Ok(threads) = cp.list_threads().await {
+        if let Some(cp) = &self.runner.core.agent.checkpointer
+            && let Ok(threads) = cp.list_threads().await {
                 for thread_id in threads {
                     let status = match cp.list_checkpoints(&thread_id).await {
                         Ok(cps) if !cps.is_empty() => "Running",
@@ -144,14 +144,13 @@ impl AgentProtocolServer {
                     });
                 }
             }
-        }
 
         let total_items = tasks.len();
         let resp = TaskListResponse {
             tasks,
             pagination: Pagination {
                 total_items,
-                total_pages: if total_items == 0 { 1 } else { 1 },
+                total_pages: 1,
                 current_page: 1,
                 page_size: std::cmp::max(total_items, 10),
             },
@@ -183,8 +182,8 @@ impl AgentProtocolServer {
     /// GET /ap/v1/agent/tasks/{task_id}/steps
     pub async fn list_steps(&self, task_id: &str) -> serde_json::Value {
         let mut steps = Vec::new();
-        if let Some(cp) = &self.runner.core.agent.checkpointer {
-            if let Ok(checkpoints) = cp.list_checkpoints(task_id).await {
+        if let Some(cp) = &self.runner.core.agent.checkpointer
+            && let Ok(checkpoints) = cp.list_checkpoints(task_id).await {
                 for (i, checkpoint) in checkpoints.into_iter().enumerate() {
                     steps.push(Step {
                         task_id: task_id.to_string(),
@@ -198,14 +197,13 @@ impl AgentProtocolServer {
                     });
                 }
             }
-        }
 
         let total_items = steps.len();
         let resp = TaskStepsListResponse {
             steps,
             pagination: Pagination {
                 total_items,
-                total_pages: if total_items == 0 { 1 } else { 1 },
+                total_pages: 1,
                 current_page: 1,
                 page_size: std::cmp::max(total_items, 10),
             },
@@ -215,8 +213,8 @@ impl AgentProtocolServer {
 
     /// GET /ap/v1/agent/tasks/{task_id}/steps/{step_id}
     pub async fn get_step(&self, task_id: &str, step_id: &str) -> serde_json::Value {
-        if let Some(cp) = &self.runner.core.agent.checkpointer {
-            if let Ok(Some(checkpoint)) = cp.get_checkpoint(task_id, step_id).await {
+        if let Some(cp) = &self.runner.core.agent.checkpointer
+            && let Ok(Some(checkpoint)) = cp.get_checkpoint(task_id, step_id).await {
                 let step = Step {
                     task_id: task_id.to_string(),
                     step_id: checkpoint.checkpoint_id.clone(),
@@ -229,7 +227,6 @@ impl AgentProtocolServer {
                 };
                 return serde_json::to_value(&step).unwrap();
             }
-        }
 
         serde_json::to_value(&ErrorResponse {
             error: "Step not found".to_string(),
