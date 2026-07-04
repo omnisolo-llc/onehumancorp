@@ -761,6 +761,31 @@ mod tests {
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-offline-1', 'tenant-offline', 'Test Prod', 5) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
 
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS pos_terminal_sessions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                device_id TEXT NOT NULL,
+                sync_status TEXT NOT NULL DEFAULT 'SYNCED',
+                pending_reconciliation JSONB DEFAULT '[]'::jsonb
+            )"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS pos_offline_transactions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                amount_cents INT,
+                currency TEXT,
+                payload JSONB,
+                created_at TIMESTAMPTZ,
+                updated_at TIMESTAMPTZ,
+                _sync_status TEXT
+            )"
+        ).execute(&pool).await.unwrap();
+
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool.clone(), mesh.clone()));
 
