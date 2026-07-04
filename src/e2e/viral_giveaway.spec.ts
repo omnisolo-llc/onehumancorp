@@ -60,7 +60,7 @@ test.describe('Viral Giveaway Loop', () => {
     const footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OHC' }).first();
     await expect(footerLink).toBeVisible();
     const footerHref = await footerLink.getAttribute('href');
-    expect(footerHref).toContain('/onboarding?ref=');
+    expect(footerHref).toContain('/api/v1/growth/referrals/click');
 
     // 7. Fill in an email and click enter
     const emailInput = publicPage.getByPlaceholder('Enter your email');
@@ -80,6 +80,63 @@ test.describe('Viral Giveaway Loop', () => {
     await expect(shareLink).toBeVisible();
     const shareValue = await shareLink.inputValue();
     expect(shareValue).toContain('/giveaway/enter');
+
+    await publicPage.close();
+  });
+
+  test('should show soft paywall when attempting to remove branding without pro', async ({ page }) => {
+    await page.goto('/giveaway');
+    await page.evaluate(() => {
+        localStorage.setItem('tenant', 'e2e-test-store');
+        localStorage.setItem('has_pro', 'false');
+    });
+    await page.reload();
+
+    const toggle = page.locator('input[type="checkbox"]');
+    await toggle.click({ force: true }); // It's hidden behind styling
+
+    // Soft paywall should appear
+    await expect(page.locator('text=Pro Feature')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Upgrade to Pro' }).first()).toBeVisible();
+  });
+
+  test('should hide branding when pro is enabled and toggle is clicked', async ({ page, context }) => {
+    await page.goto('/giveaway');
+    await page.evaluate(() => {
+        localStorage.setItem('tenant', 'e2e-test-store');
+        localStorage.setItem('has_pro', 'true');
+    });
+    await page.reload();
+
+    // 3. Fill out the giveaway configuration
+    const titleInput = page.getByLabel('Prize / Title');
+    await titleInput.fill('Win a Free iPad');
+
+    const toggle = page.locator('input[type="checkbox"]');
+    await toggle.click({ force: true });
+
+    // Soft paywall should not appear
+    await expect(page.locator('text=Pro Feature')).not.toBeVisible();
+
+    // Preview section should hide the branding
+    await expect(page.locator('a', { hasText: '⚡ Powered by OHC' })).not.toBeVisible();
+
+    const generateBtn = page.getByRole('button', { name: 'Generate Giveaway Link' });
+    await expect(generateBtn).toBeEnabled();
+    await generateBtn.click();
+
+    // 5. Capture the URL
+    await expect(page.getByText('Link Ready!')).toBeVisible();
+    const linkInput = page.locator('input[readonly]');
+    const generatedUrl = await linkInput.inputValue();
+    expect(generatedUrl).toContain('branding=false');
+
+    // Navigate to the generated public URL
+    const publicPage = await context.newPage();
+    await publicPage.goto(generatedUrl);
+
+    // Verify "Powered by OHC" footer is not present
+    await expect(publicPage.locator('a', { hasText: '⚡ Powered by OHC' })).not.toBeVisible();
 
     await publicPage.close();
   });

@@ -30,14 +30,11 @@ describe('GiveawayPage', () => {
     expect(textElements.length).toBeGreaterThan(0);
   });
 
-  it('triggers generation and shows paywall', async () => {
+  it('shows paywall when removing branding without pro', async () => {
     render(<GiveawayPage />);
 
-    const titleInput = screen.getByPlaceholderText('e.g. Win a $100 Gift Card!');
-    fireEvent.change(titleInput, { target: { value: 'Win a New Car!' } });
-
-    const generateButton = screen.getByText('Generate Giveaway Link');
-    fireEvent.click(generateButton);
+    const removeBrandingCheckbox = document.getElementById('removeBranding') as HTMLInputElement;
+    fireEvent.click(removeBrandingCheckbox);
 
     await waitFor(() => {
         expect(screen.getAllByText('Upgrade to Pro')[0]).toBeDefined();

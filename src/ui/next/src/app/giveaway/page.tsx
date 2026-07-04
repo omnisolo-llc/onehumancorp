@@ -13,6 +13,7 @@ export default function GiveawayGeneratorPage() {
   const [hasPro, setHasPro] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [removeBranding, setRemoveBranding] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -31,16 +32,22 @@ export default function GiveawayGeneratorPage() {
   const generateLink = () => {
     setIsGenerating(true);
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
-    const link = `${origin}/giveaway/enter?tenant=${encodeURIComponent(tenant)}&title=${encodeURIComponent(title || 'Enter our Giveaway!')}&description=${encodeURIComponent(description)}`;
+    const brandingParam = removeBranding ? '&branding=false' : '';
+    const link = `${origin}/giveaway/enter?tenant=${encodeURIComponent(tenant)}&title=${encodeURIComponent(title || 'Enter our Giveaway!')}&description=${encodeURIComponent(description)}${brandingParam}`;
     setGiveawayLink(link);
     setIsGenerating(false);
   };
 
-  const handleGenerate = () => {
+  const handleRemoveBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!hasPro) {
+      e.preventDefault();
       setShowSoftPaywall(true);
-      return;
+    } else {
+      setRemoveBranding(e.target.checked);
     }
+  };
+
+  const handleGenerate = () => {
     generateLink();
   };
 
@@ -102,6 +109,29 @@ export default function GiveawayGeneratorPage() {
                   placeholder="e.g. Enter your email below to win. Get 3 extra entries if you share on social media!"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                 />
+              </div>
+
+              <div className="mt-2 flex items-center gap-3 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                  <div className="relative flex items-center">
+                    <input
+                      type="checkbox"
+                      id="removeBranding"
+                      className="peer sr-only"
+                      checked={removeBranding}
+                      onChange={handleRemoveBrandingToggle}
+                    />
+                    <label
+                      htmlFor="removeBranding"
+                      className="block h-6 w-11 cursor-pointer rounded-full bg-gray-300 transition-colors peer-checked:bg-purple-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500 peer-focus:ring-offset-2"
+                    ></label>
+                    <div className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5 shadow-sm"></div>
+                  </div>
+                  <label htmlFor="removeBranding" className="text-sm text-gray-700 font-medium cursor-pointer flex-1 select-none">
+                      Remove "Powered by OHC" branding
+                  </label>
+                  {!hasPro && (
+                      <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-1 rounded">Pro</span>
+                  )}
               </div>
 
               <button
@@ -170,9 +200,11 @@ export default function GiveawayGeneratorPage() {
                          </button>
                      </div>
 
+                     {!removeBranding && (
                      <div className="mt-8">
-                        <a href={`/onboarding?ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OHC</a>
+                        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OHC</a>
                      </div>
+                     )}
                  </div>
              </div>
         </section>

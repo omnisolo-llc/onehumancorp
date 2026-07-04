@@ -27,6 +27,13 @@ export function GrowBusinessCard() {
               Promoter Agent
             </Link>
             <Link
+              id="giveaway-btn"
+              href="/giveaway"
+              className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Giveaway
+            </Link>
+            <Link
               id="viral-widget-btn"
               href="/viral-powered-by-ohc-widget"
               className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
