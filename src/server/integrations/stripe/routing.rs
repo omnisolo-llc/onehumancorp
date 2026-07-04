@@ -43,6 +43,17 @@ impl PaymentRouter {
         Self::optimize_payment_method_with_currency(amount_usd, "USD")
     }
 
+    pub fn get_optimal_source(amount: f64, currency: &str) -> String {
+        let optimal_method = Self::optimize_payment_method_with_currency(amount, currency);
+        match optimal_method {
+            PaymentMethod::Ach => "ach".to_string(),
+            PaymentMethod::CreditCard => "card".to_string(),
+            PaymentMethod::Razorpay => "razorpay".to_string(),
+            PaymentMethod::MercadoPago => "mercadopago".to_string(),
+            PaymentMethod::Alipay => "alipay".to_string(),
+        }
+    }
+
     pub fn optimize_payment_method_with_currency(amount: f64, currency: &str) -> PaymentMethod {
         if currency.eq_ignore_ascii_case("INR") {
             return PaymentMethod::Razorpay;
