@@ -37,7 +37,7 @@ test.describe('Documentation & Help Features', () => {
     await searchInput.fill('payment');
 
     // Wait for the results to update
-    await expect(page.getByText('Getting Paid')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Accepting Payments')).toBeVisible({ timeout: 10000 });
   });
 
   test('should show video tutorials', async ({ page, loginAs, unlimitedAdminUser }) => {
