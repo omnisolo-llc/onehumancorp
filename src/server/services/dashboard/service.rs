@@ -568,7 +568,7 @@ impl DashboardService for MyDashboardService {
                 let name = if req.mobile_optimized {
                     String::new()
                 } else {
-                    let compressed = ::server_pricing::compression::reduce_tokens(&a.name);
+                    let compressed = a.name.clone();
                     if orig_len > 0 {
                         compressed_prompts_len += compressed.len();
                     }
@@ -600,7 +600,7 @@ impl DashboardService for MyDashboardService {
                 let orig_len = prompt.len();
                 if orig_len > 0 {
                     original_prompts_len += orig_len;
-                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                    let compressed = prompt.clone();
                     compressed_prompts_len += compressed.len();
                 }
             }
