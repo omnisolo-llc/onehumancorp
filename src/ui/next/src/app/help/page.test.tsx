@@ -19,8 +19,9 @@ describe('HelpCenterPage', () => {
       if (url === '/api/help') {
         return Promise.resolve({
           json: () => Promise.resolve([
-            { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-            { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
+            { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1", category: "General" },
+            { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store", category: "General" },
+            { title: "API Documentation", desc: "Advanced.", link: "/api-docs", category: "Advanced" }
           ])
         });
       }
