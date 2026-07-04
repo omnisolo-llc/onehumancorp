@@ -43,107 +43,106 @@ Received: false
   20  |     });
   21  |
   22  |
-  23  |     if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
-> 24  |     expect(reserveRes.ok()).toBe(true);
+> 23  |     expect(reserveRes.ok()).toBe(true);
       |                             ^ Error: expect(received).toBe(expected) // Object.is equality
-  25  |     const lockData = await reserveRes.json();
-  26  |     expect(lockData.success).toBe(true);
-  27  |
-  28  |     // Simulate Online User (User A) attempting checkout for the same item
-  29  |     const reserveRes2 = await page.request.post('/api/v1/payments/terminal/reserve', {
-  30  |         data: {
-  31  |             tenant_id: tenantId,
-  32  |             product_id: productId,
-  33  |             quantity: 1,
-  34  |             ttl_seconds: 15
-  35  |         },
-  36  |         headers: {
-  37  |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
-  38  |             'x-tenant-id': tenantId
-  39  |         }
-  40  |     });
-  41  |
-  42  |     // It should fail gracefully
-  43  |     const lockData2 = await reserveRes2.json();
-  44  |     expect(lockData2.success).toBe(false);
-  45  |     expect(lockData2.error_message).toContain('another customer');
-  46  |
-  47  |     // POS (User B) completes checkout
-  48  |     const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
-  49  |         data: {
-  50  |             tenant_id: tenantId,
-  51  |             product_id: productId,
-  52  |             quantity: 1,
-  53  |             lock_id: lockData.lock_id
-  54  |         },
-  55  |         headers: {
-  56  |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
-  57  |             'x-tenant-id': tenantId
-  58  |         }
-  59  |     });
-  60  |
-  61  |     expect(commitRes.ok()).toBe(true);
-  62  |   });
-  63  |
-  64  |   test('Online checkout UI shows Item just sold out when POS locks item', async ({ page }) => {
-  65  |     const tenantId = 'e2e-tenant';
-  66  |     const productId = 'e2e-product-cake';
-  67  |
-  68  |     // 1. Setup tenant info in local storage for checkout page
-  69  |     await page.goto('/checkout');
-  70  |     await page.evaluate((tenant) => {
-  71  |       localStorage.setItem('tenant', tenant);
-  72  |       localStorage.setItem('customer_id', 'e2e-customer');
-  73  |     }, tenantId);
-  74  |
-  75  |     // Simulate POS (User B) acquiring lock
-  76  |     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
-  77  |         data: {
-  78  |             tenant_id: tenantId,
-  79  |             product_id: productId,
-  80  |             quantity: 1,
-  81  |             ttl_seconds: 15
-  82  |         },
-  83  |         headers: {
-  84  |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
-  85  |             'x-tenant-id': tenantId
-  86  |         }
-  87  |     });
+  24  |     const lockData = await reserveRes.json();
+  25  |     expect(lockData.success).toBe(true);
+  26  |
+  27  |     // Simulate Online User (User A) attempting checkout for the same item
+  28  |     const reserveRes2 = await page.request.post('/api/v1/payments/terminal/reserve', {
+  29  |         data: {
+  30  |             tenant_id: tenantId,
+  31  |             product_id: productId,
+  32  |             quantity: 1,
+  33  |             ttl_seconds: 15
+  34  |         },
+  35  |         headers: {
+  36  |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
+  37  |             'x-tenant-id': tenantId
+  38  |         }
+  39  |     });
+  40  |
+  41  |     // It should fail gracefully
+  42  |     const lockData2 = await reserveRes2.json();
+  43  |     expect(lockData2.success).toBe(false);
+  44  |     expect(lockData2.error_message).toContain('another customer');
+  45  |
+  46  |     // POS (User B) completes checkout
+  47  |     const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
+  48  |         data: {
+  49  |             tenant_id: tenantId,
+  50  |             product_id: productId,
+  51  |             quantity: 1,
+  52  |             lock_id: lockData.lock_id
+  53  |         },
+  54  |         headers: {
+  55  |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
+  56  |             'x-tenant-id': tenantId
+  57  |         }
+  58  |     });
+  59  |
+  60  |     expect(commitRes.ok()).toBe(true);
+  61  |   });
+  62  |
+  63  |   test('Online checkout UI shows Item just sold out when POS locks item', async ({ page }) => {
+  64  |     const tenantId = 'e2e-tenant';
+  65  |     const productId = 'e2e-product-cake';
+  66  |
+  67  |     // 1. Setup tenant info in local storage for checkout page
+  68  |     await page.goto('/checkout');
+  69  |     await page.evaluate((tenant) => {
+  70  |       localStorage.setItem('tenant', tenant);
+  71  |       localStorage.setItem('customer_id', 'e2e-customer');
+  72  |     }, tenantId);
+  73  |
+  74  |     // Simulate POS (User B) acquiring lock
+  75  |     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
+  76  |         data: {
+  77  |             tenant_id: tenantId,
+  78  |             product_id: productId,
+  79  |             quantity: 1,
+  80  |             ttl_seconds: 15
+  81  |         },
+  82  |         headers: {
+  83  |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
+  84  |             'x-tenant-id': tenantId
+  85  |         }
+  86  |     });
+  87  |
   88  |
-  89  |
-  90  |     if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
-  91  |     expect(reserveRes.ok()).toBe(true);
-  92  |     const lockData = await reserveRes.json();
-  93  |     expect(lockData.success).toBe(true);
-  94  |
-  95  |     // 2. Navigate to checkout page for the locked product
-  96  |     await page.goto(`/checkout?product_id=${productId}&quantity=1`);
-  97  |
-  98  |     // 3. Click the Pay button
-  99  |     await page.getByRole('button', { name: 'Pay' }).click();
-  100 |
-  101 |     // 4. Verify the "Item just sold out" message appears
-  102 |     await expect(page.locator('h3', { hasText: 'Oops! Item just sold out.' })).toBeVisible();
-  103 |
-  104 |     // Cleanup: Release lock so it doesn't affect other tests if they run concurrently
-  105 |     // (Actually the lock will expire in 15 seconds, but let's release it cleanly)
-  106 |     await page.request.post('/api/v1/payments/terminal/commit', {
-  107 |         data: {
-  108 |             tenant_id: tenantId,
-  109 |             product_id: productId,
-  110 |             quantity: 1,
-  111 |             lock_id: lockData.lock_id
-  112 |         },
-  113 |         headers: {
-  114 |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
-  115 |             'x-tenant-id': tenantId
-  116 |         }
-  117 |     });
-  118 |   });
-  119 |   test('Commit inventory correctly deducts stock', async ({ page }) => {
-  120 |     const tenantId = 'e2e-tenant-pos-additional';
-  121 |     const productId = 'e2e-product-cake-pos-additional';
-  122 |
-  123 |     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
-  124 |         data: {
+  89  |     expect(reserveRes.ok()).toBe(true);
+  90  |     const lockData = await reserveRes.json();
+  91  |     expect(lockData.success).toBe(true);
+  92  |
+  93  |     // 2. Navigate to checkout page for the locked product
+  94  |     await page.goto(`/checkout?product_id=${productId}&quantity=1`);
+  95  |
+  96  |     // 3. Click the Pay button
+  97  |     await page.getByRole('button', { name: 'Pay' }).click();
+  98  |
+  99  |     // 4. Verify the "Item just sold out" message appears
+  100 |     await expect(page.locator('h3', { hasText: 'Oops! Item just sold out.' })).toBeVisible();
+  101 |
+  102 |     // Cleanup: Release lock so it doesn't affect other tests if they run concurrently
+  103 |     // (Actually the lock will expire in 15 seconds, but let's release it cleanly)
+  104 |     await page.request.post('/api/v1/payments/terminal/commit', {
+  105 |         data: {
+  106 |             tenant_id: tenantId,
+  107 |             product_id: productId,
+  108 |             quantity: 1,
+  109 |             lock_id: lockData.lock_id
+  110 |         },
+  111 |         headers: {
+  112 |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
+  113 |             'x-tenant-id': tenantId
+  114 |         }
+  115 |     });
+  116 |   });
+  117 |   test('Commit inventory correctly deducts stock', async ({ page }) => {
+  118 |     const tenantId = 'e2e-tenant-pos-additional';
+  119 |     const productId = 'e2e-product-cake-pos-additional';
+  120 |
+  121 |     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
+  122 |         data: {
+  123 |             tenant_id: tenantId,
 ```

@@ -30,7 +30,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
     expect(createProductRes.ok()).toBeTruthy();
 
     // Navigate to POS terminal
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
     await page.evaluate(() => { localStorage.setItem("tenant_id", "default"); });
 
     // Login with PIN 1234
@@ -100,7 +100,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
     expect(createProductRes.ok()).toBeTruthy();
 
     // Navigate to POS terminal to login
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
     await page.evaluate(() => { localStorage.setItem("tenant_id", "default"); });
 
     // Login with PIN 1234
@@ -205,7 +205,7 @@ test.describe('POS Inventory Sync - Optimistic UI', () => {
     expect(createProductRes.ok()).toBeTruthy();
 
     // Navigate to POS terminal
-    await page.goto('/pos/terminal');
+    await page.goto('/pos.html');
     await page.evaluate(() => { localStorage.setItem("tenant_id", "default"); });
 
     // Login with PIN 1234
