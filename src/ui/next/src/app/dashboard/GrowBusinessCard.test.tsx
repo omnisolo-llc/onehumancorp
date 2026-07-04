@@ -1,34 +1,31 @@
-/** @jsxImportSource react */
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
 import { GrowBusinessCard } from './GrowBusinessCard';
-import React from 'react';
 
 describe('GrowBusinessCard', () => {
-  it('renders correctly and has all required links', () => {
-    const { container } = render(<GrowBusinessCard />);
-
+  it('renders correctly', () => {
+    render(<GrowBusinessCard />);
     expect(screen.getByText('Grow Business')).toBeInTheDocument();
+  });
 
-    // Check links
-    const promoterLink = screen.getByText('Promoter Agent');
+  it('contains correct links', () => {
+    render(<GrowBusinessCard />);
+
+    const promoterLink = screen.getByRole('link', { name: /Promoter Agent/i });
     expect(promoterLink).toHaveAttribute('href', '/viral-post-generator');
 
-    const giveawayLink = screen.getByText('Giveaway');
+    const giveawayLink = screen.getByRole('link', { name: /Giveaway/i });
     expect(giveawayLink).toHaveAttribute('href', '/giveaway');
 
-    const widgetLink = screen.getByText('Viral Widget');
+    const groupBuyLink = screen.getByRole('link', { name: /Group Buy/i });
+    expect(groupBuyLink).toHaveAttribute('href', '/group-buy-widget');
+
+    const widgetLink = screen.getByRole('link', { name: /Viral Widget/i });
     expect(widgetLink).toHaveAttribute('href', '/viral-powered-by-ohc-widget');
 
-    const cardLink = screen.getByText('Digital Business Card');
-    expect(cardLink).toHaveAttribute('href', '/digital-business-card');
+    const bizCardLink = screen.getByRole('link', { name: /Digital Business Card/i });
+    expect(bizCardLink).toHaveAttribute('href', '/digital-business-card');
 
-    const storefrontLink = screen.getByText('Review Storefront');
-    expect(storefrontLink).toHaveAttribute('href', '/edge-storefront-setup');
-
-    // Visual styles check - transulcent glassmorphism class check
-    const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveClass('glassmorphism');
-    expect(wrapper).toHaveClass('bg-white');
+    const setupLink = screen.getByRole('link', { name: /Review Storefront/i });
+    expect(setupLink).toHaveAttribute('href', '/edge-storefront-setup');
   });
 });

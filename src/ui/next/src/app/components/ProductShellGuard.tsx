@@ -103,6 +103,7 @@ const titleOverrides: Record<string, string> = {
   "/fulfillment-hub": "Fulfillment Hub",
   "/gift-cards": "Gift Cards",
   "/giveaway": "Giveaway",
+  "/group-buy-widget": "Group Buy Widget",
   "/help": "Help",
   "/incidents": "Incidents",
   "/invoice-generator": "Invoice Generator",
