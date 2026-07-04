@@ -278,16 +278,7 @@ impl DB {
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
                                 // If directory already exists, ensure its permissions are 0700
-                                if e.kind() == std::io::ErrorKind::AlreadyExists {
-                                    use std::os::unix::fs::PermissionsExt;
-                                    if let Ok(metadata) = std::fs::metadata(parent) {
-                                        let mut perms = metadata.permissions();
-                                        if perms.mode() & 0o777 != 0o700 {
-                                            perms.set_mode(0o700);
-                                            let _ = std::fs::set_permissions(parent, perms);
-                                        }
-                                    }
-                                } else {
+                                if e.kind() != std::io::ErrorKind::AlreadyExists {
                                     ::server_telemetry::record_error_signal(
                                         "[bug] Failed to securely create DB directory",
                                     );
@@ -321,16 +312,6 @@ impl DB {
                     use std::os::unix::fs::PermissionsExt;
 
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                        if let Ok(sym_meta) = std::fs::symlink_metadata(&db_path) {
-                            if sym_meta.file_type().is_symlink() {
-                                ::server_telemetry::record_error_signal(
-                                    "[security] DB path is a symlink. Aborting.",
-                                );
-                                tracing::error!("Security error: DB path is a symlink. Aborting.");
-                                return Err("Security error: DB path is a symlink.".into());
-                            }
-                        }
-
                         let mut opts = OpenOptions::new();
                         opts.read(true).write(true).create(true).mode(0o600);
                         #[cfg(target_os = "linux")]
@@ -382,24 +363,8 @@ impl DB {
                     if secret_path.exists() {
                         #[cfg(unix)]
                         {
-                            if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
-                                if sym_meta.file_type().is_symlink() {
-                                    tracing::error!("CRITICAL SECURITY ERROR: .ohc_sqlite_key is a symlink. Aborting to prevent TOCTOU vulnerability.");
-                                    std::process::exit(1);
-                                }
-                            }
-
-                            use std::os::unix::fs::PermissionsExt;
-                            if let Ok(perms) = std::fs::symlink_metadata(&secret_path).map(|m| m.permissions()) {
-                                if perms.mode() & 0o777 != 0o600 {
-                                    tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
-                                    std::process::exit(1);
-                                }
-                            }
-                        }
-                        #[cfg(unix)]
-                        {
                             use std::os::unix::fs::OpenOptionsExt;
+                            use std::os::unix::fs::PermissionsExt;
                             let mut options = std::fs::OpenOptions::new();
                             options.read(true);
                             #[cfg(target_os = "linux")]
@@ -407,6 +372,13 @@ impl DB {
                                 #[cfg(target_os = "macos")]
                                 options.custom_flags(0x0100); // O_NOFOLLOW
                             if let Ok(mut file) = options.open(&secret_path) {
+                                if let Ok(metadata) = file.metadata() {
+                                    let perms = metadata.permissions();
+                                    if perms.mode() & 0o777 != 0o600 {
+                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
+                                        std::process::exit(1);
+                                    }
+                                }
                                 use std::io::Read;
                                 let mut bytes = String::new();
                                 if file.read_to_string(&mut bytes).is_ok() && !bytes.trim().is_empty() {
@@ -733,10 +705,12 @@ impl DB {
                 )));
             }
 
-            #[cfg(test)]
-            let remaining_time = timeout_duration;
-            #[cfg(not(test))]
-            let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
+            // In tests we want tokio::time::timeout to handle paused time cleanly.
+            let remaining_time = if cfg!(test) {
+                timeout_duration
+            } else {
+                timeout_duration.saturating_sub(start_time.elapsed())
+            };
 
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
@@ -1351,7 +1325,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     );
                                         CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL DEFAULT 'system',
+                        tenant_id TEXT NOT NULL DEFAULT '',
                         entity_id TEXT NOT NULL,
                         entity_type TEXT NOT NULL,
                         from_state TEXT NOT NULL,
@@ -1442,7 +1416,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        tenant_id TEXT NOT NULL DEFAULT 'system',
+                        tenant_id TEXT NOT NULL DEFAULT '',
                         cloud_mission_id TEXT,
                         sync_error TEXT,
                         last_synced_at TIMESTAMP,

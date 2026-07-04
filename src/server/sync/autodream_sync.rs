@@ -214,7 +214,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                tenant_id TEXT NOT NULL DEFAULT 'system',
+                tenant_id TEXT NOT NULL DEFAULT '',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at TIMESTAMP,

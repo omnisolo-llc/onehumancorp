@@ -16,6 +16,7 @@ pub struct PaymentIntentRequest {
     pub product_id: Option<String>,
     pub quantity: Option<i32>,
     pub order_id: Option<String>,
+    pub idempotency_key: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -661,6 +662,25 @@ pub async fn create_payment_intent_handler(
         }
     };
 
+    let idempotency_key = req_data.idempotency_key.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+
+    let pool = crate::db::get_pool();
+
+    // Check for existing intent with the same idempotency key
+    let existing: Option<(String,)> = sqlx::query_as(
+        "SELECT stripe_payment_intent_id FROM payment_intents WHERE tenant_id = $1 AND idempotency_key = $2"
+    )
+    .bind(&tenant_id)
+    .bind(&idempotency_key)
+    .fetch_optional(&pool)
+    .await.unwrap_or(None);
+
+    if let Some((stripe_id,)) = existing {
+        // Return existing client secret from stripe - though we might not have it in db, we can re-construct or just return a generic success since it's idempotent.
+        // Actually Stripe's idempotency will return the exact same response anyway if we just pass the idempotency key down.
+        // Let's just let Stripe handle the idempotency by passing the key, but we need to make sure we don't crash on DB unique constraint if it already exists.
+    }
+
     let mut lock_id_out = None;
 
     if let Some(product_id) = &req_data.product_id {
@@ -695,8 +715,6 @@ pub async fn create_payment_intent_handler(
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     let session_manager = crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
 
-    let idempotency_key = uuid::Uuid::new_v4().to_string();
-
     match crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default()).require_api_key() {
         Ok(_) => match session_manager.create_terminal_payment_intent(
             &tenant_id,
@@ -711,15 +729,17 @@ pub async fn create_payment_intent_handler(
                 let pool = crate::db::get_pool();
 
                 let amount_float = (req_data.amount_cents as f64) / 100.0;
+                let payment_id = uuid::Uuid::new_v4().to_string();
+
+                // Use ON CONFLICT DO NOTHING to avoid duplicate key errors if idempotency_key is reused and already exists.
                 let _ = sqlx::query(
-                    "INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, source, stripe_payment_intent_id) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                    "INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, status, source, stripe_payment_intent_id) VALUES ($1, $2, $3, $4, $5, 'pending', 'in_person', $6) ON CONFLICT (idempotency_key) DO NOTHING"
                 )
                 .bind(&tenant_id)
-                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&payment_id)
                 .bind(&idempotency_key)
                 .bind(amount_float)
                 .bind(&req_data.currency)
-                .bind("in_person")
                 .bind(&payment_intent_id)
                 .execute(&pool)
                 .await;
@@ -736,25 +756,6 @@ pub async fn create_payment_intent_handler(
                 .execute(&pool)
                 .await {
                     tracing::warn!("Failed to update pos terminal session for generic intent: {}", e);
-                }
-
-                let payment_intent_id = client_secret.split("_secret_").next().unwrap_or("").to_string();
-                let payment_id = uuid::Uuid::new_v4().to_string();
-                let idempotency_key = uuid::Uuid::new_v4().to_string();
-
-                if let Err(e) = sqlx::query(
-                    "INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, status, source, stripe_payment_intent_id)
-                     VALUES ($1, $2, $3, $4, $5, 'pending', 'in_person', $6)"
-                )
-                .bind(&tenant_id)
-                .bind(&payment_id)
-                .bind(&idempotency_key)
-                .bind(req_data.amount_cents as f64 / 100.0)
-                .bind(&req_data.currency)
-                .bind(&payment_intent_id)
-                .execute(&pool)
-                .await {
-                    tracing::warn!("Failed to create payment_intent record for terminal: {}", e);
                 }
 
                 Json(Ok(PaymentIntentResponse { client_secret, lock_id: lock_id_out }))

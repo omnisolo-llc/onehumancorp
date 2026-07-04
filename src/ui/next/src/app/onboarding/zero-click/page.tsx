@@ -30,7 +30,7 @@ export default function ZeroClickBuilderPage() {
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 font-outfit selection:bg-indigo-100 selection:text-indigo-900">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl mb-4">
+          <div className="inline-flex items-center justify-center p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-[16px] mb-4">
             <span className="text-3xl">✨</span>
           </div>
           <h1 className="text-4xl font-bold text-[#1D1D1F] dark:text-white tracking-tight mb-3">

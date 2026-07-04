@@ -35,6 +35,7 @@ test.describe('Unified Action Feed UI Flow', () => {
     const card1 = page.locator('[data-testid="triage-card-e2e-action-feed-test-1"]').first();
     const card2 = page.locator('[data-testid="triage-card-e2e-action-feed-test-2"]').first();
 
+    // The test explicitly says do not fail silently. Wait for it to be visible.
     await expect(card1).toBeVisible({ timeout: 15000 });
     await expect(card2).toBeVisible();
 

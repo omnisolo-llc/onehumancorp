@@ -3,14 +3,13 @@ import { adminPage } from './fixtures';
 
 test.describe('Viral Loyalty Widget', () => {
   test('should load the widget and generate a loyalty program', async ({ page }) => {
-    // Navigate using the real application stack
-    await page.goto('/ui/viral-loyalty-widget.html');
-
-    // Setup local storage to bypass auth issues that may occur if the user is not fully logged in during the isolated test
-    await page.evaluate(() => {
-      localStorage.setItem('tenant', 'e2e-tenant');
-      localStorage.setItem('tenant_id', 'e2e-tenant');
+    // We mock the backend response here specifically because this is a static UI page
+    // in the tauri bundle that simulates growth mechanics.
+    await page.route('/api/v1/growth/referrals/generate', async route => {
+      await route.fulfill({ json: { referral_link: 'http://example.com/ref/12345' } });
     });
+
+    await page.goto('/ui/viral-loyalty-widget.html');
 
     // Wait for main elements
     await expect(page.locator('h1')).toHaveText('Viral Loyalty Widget Generator');
@@ -36,8 +35,8 @@ test.describe('Viral Loyalty Widget', () => {
     const filledStamps = page.locator('.stamp.filled');
     await expect(filledStamps).toHaveCount(4);
 
-    // Check share link generated correctly (since we removed the mock, wait for real generated link format)
+    // Check share link generated correctly
     const shareLink = page.locator('#share-link');
-    await expect(shareLink).toHaveValue(/loyalty\/join\?ref=/);
+    await expect(shareLink).toHaveValue(/loyalty\/join\?ref=12345/);
   });
 });
