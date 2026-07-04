@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             height: 28px;
             fill: currentColor;
         }
-        #ohc-floating-help-widget {
+        #ai-chat-interface {
             position: fixed;
             bottom: 96px;
             right: 24px;
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         @media (max-width: 480px) {
-            #ohc-floating-help-widget {
+            #ai-chat-interface {
                 bottom: 0;
                 right: 0;
                 width: 100vw;
@@ -265,10 +265,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the widget
     const widget = document.createElement('div');
-    widget.id = 'ohc-floating-help-widget';
+    widget.id = 'ai-chat-interface';
     widget.innerHTML = `
         <div id="ohc-floating-help-header">
-            <h3>In-App Help Center</h3>
+            <h3>Ask AI Help</h3>
             <button id="ohc-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -326,15 +326,20 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="tab-chat" class="ohc-help-content" style="padding-bottom: 12px;">
             <div id="ohc-help-chat-messages">
                 <div class="ohc-chat-msg agent">
-                    Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OHC.
+                    Need help setting up your store? I am your AI Help Agent! How can I assist you today?
                 </div>
             </div>
             <div id="ohc-help-chat-input-container">
-                <input type="text" id="ohc-help-chat-input" placeholder="Ask AI...">
-                <button id="ohc-help-chat-send" aria-label="Send message">Send</button>
+                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
+                <button id="ohc-help-chat-send" aria-label="Send message" disabled>Send</button>
             </div>
         </div>
     `;
+
+    window.addEventListener('open-help-chat', () => {
+        widget.style.display = 'flex';
+    });
+
     document.body.appendChild(widget);
 
     // Logic
@@ -422,7 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     chatSend.addEventListener('click', handleSend);
     chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSend();
+        if (e.key === 'Enter' && !chatSend.disabled) handleSend();
+    });
+    chatInput.addEventListener('input', (e) => {
+        chatSend.disabled = e.target.value.trim() === '';
     });
 
     // --- Global Tooltip & Walkthrough Logic ---
