@@ -260,14 +260,15 @@ impl AgentMemoryPipeline {
 #[cfg(test)]
 mod tests {
     // use super::*
-    use super::*;
+    use super::{AgentMemoryPipeline, MemoryEmbeddingApi};
+    use crate::db::{DB, DbStore};
     use std::sync::Arc;
 
     struct MockEmbeddingApi {
         succeeds: bool,
     }
 
-    #[async_trait]
+    #[async_trait::async_trait]
     impl MemoryEmbeddingApi for MockEmbeddingApi {
         async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, String> {
             if self.succeeds {
@@ -333,10 +334,6 @@ mod tests {
 
 #[cfg(test)]
 mod tests2 {
-    // use super::*
-    use super::*;
-    use std::sync::Arc;
-
     #[tokio::test]
     async fn test_ml_resilience_agent_memory_pipeline_timeout() {
         let start = std::time::Instant::now();
