@@ -2556,7 +2556,7 @@ impl Agent {
                                 role: crate::types::Role::Tool,
                                 content: String::new(),
                                 tool_calls: vec![],
-                                tool_results: vec![error_result],
+                                tool_results: vec![error_result.clone()],
                                 response_id: None,
                                 previous_response_id: None,
                             };
@@ -2707,7 +2707,7 @@ impl Agent {
                             role: crate::types::Role::Tool,
                             content: String::new(),
                             tool_calls: vec![],
-                            tool_results: vec![error_result],
+                            tool_results: vec![error_result.clone()],
                             response_id: None,
                             previous_response_id: None,
                         };
@@ -3652,7 +3652,7 @@ impl Agent {
             let req = ChatRequest {
                 model: final_cfg.model.clone(),
                 system: combined_system.clone(),
-                messages: final_messages,
+                messages: final_messages.clone(),
                 tools: req_tools,
                 max_tokens: final_cfg.max_tokens,
                 temperature: final_cfg.temperature,
@@ -4245,7 +4245,7 @@ impl Agent {
                             content: String::new(),
                             error: self_correct_msg.clone(),
                         };
-                        let _msg_to_push = Message {
+                        let msg_to_push = Message {
                             role: Role::Tool,
                             content: String::new(),
                             tool_calls: vec![],
@@ -4253,6 +4253,7 @@ impl Agent {
                             response_id: None,
                             previous_response_id: None,
                         };
+                        final_messages.push(msg_to_push);
                         tool_results[idx] = error_result;
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -4510,14 +4511,15 @@ impl Agent {
                                 content: String::new(),
                                 error: self_correct_msg.clone(),
                             };
-                            let _msg_to_push = Message {
+                            let msg_to_push = Message {
                                 role: Role::Tool,
                                 content: String::new(),
                                 tool_calls: vec![],
-                                tool_results: vec![error_result],
+                                tool_results: vec![error_result.clone()],
                                 response_id: None,
                                 previous_response_id: None,
                             };
+                            final_messages.push(msg_to_push);
                             error = self_correct_msg;
                             content = String::new();
                             break;
@@ -11408,4 +11410,105 @@ mod fail_fast_tests {
         let res_2 = agent_2.run(&cfg, initial_message, &mut on_event).await;
         assert!(res_2.is_ok());
     }
+}
+#[tokio::test]
+async fn test_agent_loop_llm_recoverable() {
+    use crate::agent::{Agent, AgentRunConfig, AgentEvent};
+    use crate::types::{Message, Role, ToolCall, ToolResult, ChatRequest, ChatResponse, Usage};
+    use crate::llm::LlmClient;
+    use crate::tools::Tool;
+    use ohc_builtin_agent_core::types::ToolError;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+    use async_trait::async_trait;
+
+    struct MockFailingLlm {
+        call_count: Mutex<usize>,
+    }
+
+    #[async_trait]
+    impl LlmClient for MockFailingLlm {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            if *count == 1 {
+                // First call: returns a tool call
+                let mut msg = Message::assistant("Calling tool");
+                msg.tool_calls.push(ToolCall {
+                    id: "call_1".to_string(),
+                    name: "dummy_fail".to_string(),
+                    arguments: serde_json::json!({}),
+                });
+                Ok(ChatResponse {
+                    message: msg,
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            } else if *count == 2 {
+                // Second call: after getting the recoverable error, fixes it
+                let mut msg = Message::assistant("Fixing arguments");
+                msg.tool_calls.push(ToolCall {
+                    id: "call_2".to_string(),
+                    name: "dummy_success".to_string(),
+                    arguments: serde_json::json!({"fixed": true}),
+                });
+                Ok(ChatResponse {
+                    message: msg,
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("id2".to_string()),
+                })
+            } else {
+                // Third call: final answer
+                Ok(ChatResponse {
+                    message: Message::assistant("Done"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id3".to_string()),
+                })
+            }
+        }
+    }
+
+    struct DummyFailExecutor;
+    #[async_trait]
+    impl ohc_builtin_agent_tools::ToolExecutor for DummyFailExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Err(ToolError::LlmRecoverable("Validation Error (Pydantic-first tool schema): missing fixed field".to_string()))
+        }
+    }
+
+    struct DummySuccessExecutor;
+    #[async_trait]
+    impl ohc_builtin_agent_tools::ToolExecutor for DummySuccessExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Ok("Success".to_string())
+        }
+    }
+
+    let llm: Arc<dyn LlmClient> = Arc::new(MockFailingLlm { call_count: Mutex::new(0) });
+    let tool_fail = Tool {
+        name: "dummy_fail".to_string(),
+        description: "fails".to_string(),
+        parameters: serde_json::json!({}),
+        is_read_only: true,
+        execute: Arc::new(DummyFailExecutor),
+    };
+    let tool_success = Tool {
+        name: "dummy_success".to_string(),
+        description: "succeeds".to_string(),
+        parameters: serde_json::json!({}),
+        is_read_only: true,
+        execute: Arc::new(DummySuccessExecutor),
+    };
+
+    let agent = Agent::new(llm, vec![tool_fail, tool_success]);
+    let cfg = AgentRunConfig { max_retries: 3, ..Default::default() };
+
+    let mut on_event = |_| {};
+    let final_resp = agent.run(&cfg, "Do the task", &mut on_event).await.unwrap();
+
+    assert_eq!(final_resp, "Done");
 }
