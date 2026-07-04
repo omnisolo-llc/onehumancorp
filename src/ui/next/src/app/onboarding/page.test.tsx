@@ -1050,20 +1050,7 @@ describe("OnboardingWizard", () => {
     global.fetch = vi.fn().mockImplementation((url, options) => {
       fetchCalls.push({ url, options });
 
-      if (typeof url === "string" && url.includes("/api/onboarding/intake")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({
-            business_name: "Instant Tech",
-            business_type: "Consulting",
-            categories: ["digital"],
-            location: "SF",
-            target_audience: "Startups",
-            initial_products: [{ name: "Consult", price: "500.00" }]
-          }),
-        });
-      }
-      if (typeof url === "string" && url.includes("/api/onboarding/start")) {
+      if (typeof url === "string" && url.includes("/api/onboarding/start_zero_click")) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ organization_id: "org_123" }),
@@ -1104,14 +1091,10 @@ describe("OnboardingWizard", () => {
       expect(screen.queryByText(/You're Live!/i)).toBeInTheDocument();
     }, { timeout: 4000 });
 
-    const intakeCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/intake'));
-    expect(intakeCall).toBeDefined();
-
-    const startCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/start'));
-    expect(startCall).toBeDefined();
-    const startBody = JSON.parse(startCall.options.body);
-    expect(startBody.company_name).toBe("Instant Tech");
-    expect(startBody.first_product_name).toBe("Consult");
+    const startZeroClickCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/start_zero_click'));
+    expect(startZeroClickCall).toBeDefined();
+    const startZeroBody = JSON.parse(startZeroClickCall.options.body);
+    expect(startZeroBody.prompt).toContain("I consult startups in SF.");
 
     const launchCall = fetchCalls.find(call => typeof call.url === 'string' && call.url.includes('/api/onboarding/launch'));
     expect(launchCall).toBeDefined();
@@ -1124,7 +1107,7 @@ describe("OnboardingWizard", () => {
     console.error = vi.fn(); // Suppress expected error log
 
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (typeof url === "string" && url.includes("/api/onboarding/intake")) {
+      if (typeof url === "string" && url.includes("/api/onboarding/start_zero_click")) {
         return Promise.resolve({
           ok: false,
           status: 500,
@@ -1145,7 +1128,7 @@ describe("OnboardingWizard", () => {
     await user.click(generateBtn);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Failed to generate storefront: 500|Failed to generate your business|Backend connection failed|error/i)).not.toBeNull();
+      expect(screen.queryByText(/Failed to generate your business/i)).toBeInTheDocument();
     });
 
     console.error = originalConsoleError;
@@ -1382,7 +1365,7 @@ describe("OnboardingWizard", () => {
 
     // Mock API
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (typeof url === "string" && url.includes("/api/onboarding/intake")) {
+      if (typeof url === "string" && url.includes("/api/onboarding/start_zero_click")) {
         return Promise.resolve({
           ok: false,
           status: 500,
