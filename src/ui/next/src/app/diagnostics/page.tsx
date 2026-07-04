@@ -109,13 +109,18 @@ export default function DiagnosticsPage() {
         </CardContent>
 </Card>
 
-        <Card className="p-6 flex flex-col md:flex-row items-center gap-4">
+        <Card className="p-6">
+          <CardContent className="flex flex-col md:flex-row items-center gap-4 p-0">
             <button onClick={() => setResult('Running diagnostics test result passed')} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-semibold rounded-lg text-sm w-full md:w-auto shadow-sm transition-colors border-none">Run Test</button>
             <button onClick={() => setResult('Diagnostics data refreshed')} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-semibold rounded-lg text-sm w-full md:w-auto shadow-sm transition-colors border-none">Refresh</button>
             <button onClick={() => setResult('Diagnostics report download ready')} className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-800 dark:text-gray-200 font-semibold rounded-lg text-sm w-full md:w-auto shadow-sm transition-colors border border-gray-200 dark:border-zinc-700">Export Report</button>
             <div id="diagnostics-result" className="text-sm font-semibold text-[#0f766e] dark:text-[#6ac5bd] mt-2 md:mt-0 flex-1 text-center md:text-left">
                 {result}
             </div>
+<<<<<<< Updated upstream
+          </CardContent>
+=======
+>>>>>>> Stashed changes
         </Card>
       </div>
     </AppShell>

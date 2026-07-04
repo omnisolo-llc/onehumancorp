@@ -45,7 +45,7 @@ function CustomerProposalViewContent() {
         }
     };
 
-    if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
+    if (error) return <div className="p-4 text-center text-[#FF3B30]">{error}</div>;
     if (!quote) return <div className="p-4 text-center">Loading...</div>;
 
     return (
