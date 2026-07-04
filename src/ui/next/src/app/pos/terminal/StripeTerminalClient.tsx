@@ -23,6 +23,10 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const [reserving, setReserving] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [pendingReconciliation, setPendingReconciliation] = useState<any[]>([]);
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+
 
   useEffect(() => {
     async function initTerminal() {
@@ -55,302 +59,53 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     }
     initTerminal();
 
-    return () => {
-      // End session on unmount
-      if (sessionId && navigator.onLine) {
-        fetch('/api/v1/payments/terminal/session/end', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Keep-Alive': 'timeout=5, max=100' },
-          body: JSON.stringify({ session_id: sessionId }),
-          keepalive: true
-        }).catch(console.error);
-      }
-    };
-  }, [sessionId]);
 
-  useEffect(() => {
-    const handleOnline = async () => {
-      if (sessionId && connectedReader) {
-        await fetch('/api/v1/payments/terminal/session/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId, status: 'ACTIVE' })
-        }).catch(console.error);
-      }
-    };
-    const handleOffline = async () => {
-      if (sessionId) {
-        // Optimistic offline status locally, as we can't send a request when offline
-        setStatus('Terminal is Offline');
-      }
-    };
-
-    const handleSyncReconciliation = (event: any) => {
-      if (event.detail && event.detail.pending_reconciliation) {
-         setPendingReconciliation(event.detail.pending_reconciliation);
-         setStatus('Offline sync completed with conflicts');
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-        window.addEventListener('ohc_sync_reconciliation', handleSyncReconciliation);
-        return () => {
-          window.removeEventListener('online', handleOnline);
-          window.removeEventListener('offline', handleOffline);
-          window.removeEventListener('ohc_sync_reconciliation', handleSyncReconciliation);
-        };
-    }
-  }, [sessionId, connectedReader]);
-
-  const discoverReaders = async () => {
-    if (!terminal) return;
-    setStatus('Discovering readers...');
-    const result = await terminal.discoverReaders({ simulated: true });
-    if (result.error) {
-      setStatus('Discovery failed: ' + result.error.message);
-    } else {
-      setDiscoveredReaders(result.discoveredReaders);
-      setStatus('Discovered ' + result.discoveredReaders.length + ' readers.');
-    }
-  };
-
-  const connectReader = async (reader: any) => {
-    if (!terminal) return;
-    setStatus('Connecting to reader...');
-    const result = await terminal.connectReader(reader);
-    if (result.error) {
-      setStatus('Connection failed: ' + result.error.message);
-    } else {
-      setConnectedReader(result.reader);
-      setStatus('Connected to reader: ' + result.reader.label);
-
-      // Start a session
-      try {
-        const res = await fetch('/api/v1/payments/terminal/session/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ device_id: result.reader.id })
-        });
-        const data = await res.json();
-        if (data.success) {
-          setSessionId(data.session_id);
-          if (typeof window !== 'undefined') {
-             localStorage.setItem('ohc_active_terminal_session_id', data.session_id);
-          }
-        } else {
-          console.error("Failed to start terminal session:", data.error_message);
-          setStatus("Connected, but session start failed: " + data.error_message);
-        }
-      } catch (err) {
-        console.error("Failed to start terminal session", err);
-        setStatus("Connected, but session start failed");
-      }
-    }
-  };
-
-  const processCashSale = async () => {
-    setReserving(true);
-    setStatus('Processing cash sale...');
-    onOptimisticReserve?.();
-
-    if (!navigator.onLine) {
-       setTimeout(async () => {
-          let storedDeviceId = 'terminal_1';
-          if (typeof window !== 'undefined') {
-              storedDeviceId = localStorage.getItem('ohc_pos_device_id') || 'terminal_1';
-          }
-          const transactionId = `tx_offline_cash_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-          const tx = {
-             id: transactionId,
-             type: 'cash_sale',
-             client_id: storedDeviceId,
-             amount_cents: amount,
-             amount: amount,
-             currency: 'usd',
-             product_id: cart ? cart[0].product.id : productId,
-             quantity: cart ? cart[0].quantity : 1,
-             payload: JSON.stringify((cart || [{product: {id: productId}, quantity: 1}]).map(c => ({ product_id: c.product.id, quantity: c.quantity }))),
-             timestamp: new Date().toISOString(),
-             device_signature: `sig_offline_${storedDeviceId}_${transactionId}`
-          };
-
-          await SyncManager.getInstance().enqueue(tx);
-
-          setStatus('Cash sale saved offline. Will sync when network is restored.');
-          setTimeout(() => {
-             setStatus('Terminal ready.');
-             if (onSuccess) onSuccess();
-          }, 1500);
-          setReserving(false);
-       }, 500);
-       return;
-    }
-
+  const startTapToPay = async () => {
     try {
-        let allCommitted = true;
-        let lockIds: string[] = [];
-        const items = cart || [{product: {id: productId}, quantity: 1}];
+      setStatus('Initializing Tap to Pay...');
+      setReserving(true);
 
-        for (const item of items) {
-          const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tenant_id: tenantId, product_id: item.product.id, quantity: item.quantity, ttl_seconds: 15 })
-          });
-          const reserveData = await reserveRes.json();
-          if (!reserveData.success) {
-            onOptimisticRollback?.();
-            setStatus('Error: Item is currently being checked out.');
-            setReserving(false);
+      const sessionRes = await fetch('/api/v1/checkout/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: tenantId,
+          type: 'IN_PERSON',
+          amount_cents: amount,
+          cart_payload: cart,
+          device_id: connectedReader?.id
+        })
+      });
+      const sessionData = await sessionRes.json();
 
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'pos-error-overlay';
-            errorDiv.style.position = 'fixed';
-            errorDiv.style.inset = '0';
-            errorDiv.style.display = 'flex';
-            errorDiv.style.alignItems = 'center';
-            errorDiv.style.justifyContent = 'center';
-            errorDiv.style.background = 'rgba(255,255,255,0.8)';
-            errorDiv.style.backdropFilter = 'blur(30px)';
-            errorDiv.style.zIndex = '1000';
-            errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
-                <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Item is currently being checked out.</h3>
-                <p style="color: #666;">This item was purchased online just now.</p>
-                <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
-            </div>`;
-            document.body.appendChild(errorDiv);
-            return;
-          }
-          lockIds.push(reserveData.lock_id);
-        }
-
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-          const currentLockId = lockIds[i];
-          const commitRes = await fetch('/api/v1/payments/terminal/commit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tenant_id: tenantId,
-              product_id: item.product.id,
-              quantity: item.quantity,
-              lock_id: currentLockId,
-              amount_cents: i === 0 ? amount : 0
-            })
-          });
-          const commitData = await commitRes.json();
-          if (!commitData.success) {
-             allCommitted = false;
-             setStatus('Cash sale successful, but inventory commit failed for an item: ' + commitData.error_message);
-          }
-        }
-        if (allCommitted) {
-          setStatus('Cash sale successful!');
-          if (onSuccess) onSuccess();
-        }
-    } catch (e: any) {
-        onOptimisticRollback?.();
-        setStatus('Error processing cash sale: ' + e.message);
-    } finally {
+      if (!sessionData.success) {
+        setStatus('Failed to start checkout session.');
         setReserving(false);
-    }
-  };
+        return;
+      }
 
-  const processPayment = async () => {
-    if (!terminal || !connectedReader) return;
-
-    setReserving(true);
-
-    setStatus('Reserving inventory...');
-    onOptimisticReserve?.();
-
-    if (!navigator.onLine) {
-       setTimeout(async () => {
-          const transactionId = `tx_offline_tap_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-          const tx = {
-             id: transactionId,
-             type: 'tap_to_pay',
-             client_id: 'terminal_1',
-             amount_cents: amount,
-             amount: amount,
-             currency: 'usd',
-             product_id: cart ? cart[0].product.id : productId,
-             quantity: cart ? cart[0].quantity : 1,
-             payload: JSON.stringify((cart || [{product: {id: productId}, quantity: 1}]).map(c => ({ product_id: c.product.id, quantity: c.quantity }))),
-             timestamp: new Date().toISOString()
-          };
-
-          await SyncManager.getInstance().enqueue(tx);
-
-          setStatus('Tap-to-Pay saved offline. Will sync when network is restored.');
-          setTimeout(() => {
-             setStatus('Terminal ready.');
-             if (onSuccess) onSuccess();
-          }, 1500);
+      if (!connectedReader) {
+        const discoverResult = await terminal.discoverReaders({ simulated: true });
+        if (discoverResult.error || !discoverResult.discoveredReaders || discoverResult.discoveredReaders.length === 0) {
+          setStatus('Failed to start Tap to Pay reader.');
           setReserving(false);
-       }, 500);
-       return;
-    }
-
-    let lockIds: string[] = [];
-    let lockId = '';
-    try {
-      for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
-        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: tenantId, product_id: item.product.id, quantity: item.quantity, ttl_seconds: 15 })
-        });
-        const reserveData = await reserveRes.json();
-        if (!reserveData.success) {
-          onOptimisticRollback?.();
-          setStatus('Error: Item is currently being checked out.');
-          setReserving(false);
-
-          const errorDiv = document.createElement('div');
-          errorDiv.className = 'pos-error-overlay';
-          errorDiv.style.position = 'fixed';
-          errorDiv.style.inset = '0';
-          errorDiv.style.display = 'flex';
-          errorDiv.style.alignItems = 'center';
-          errorDiv.style.justifyContent = 'center';
-          errorDiv.style.background = 'rgba(255,255,255,0.8)';
-          errorDiv.style.backdropFilter = 'blur(30px)';
-          errorDiv.style.zIndex = '1000';
-          errorDiv.innerHTML = `<div style="background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(255,59,48,0.4);">
-              <h3 style="color: #FF3B30; font-family: Outfit; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem;">Item is currently being checked out.</h3>
-              <p style="color: #666;">This item was purchased online just now.</p>
-              <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0066FF; color: white; border-radius: 0.5rem; font-weight: bold; cursor: pointer; border: none;">Got it</button>
-          </div>`;
-          document.body.appendChild(errorDiv);
           return;
         }
-        lockIds.push(reserveData.lock_id);
+        await terminal.connectReader(discoverResult.discoveredReaders[0]);
       }
-      lockId = lockIds[0]; // Legacy
-    } catch (e: any) {
-      onOptimisticRollback?.();
-      setStatus('Reservation error: ' + e.message);
-      setReserving(false);
-      return;
-    }
 
-    setStatus('Creating payment intent...');
-    try {
-      const res = await fetch('/api/v1/payments/terminal/intent', {
+      setStatus('Creating payment intent...');
+      const intentRes = await fetch('/api/v1/payments/terminal/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount_cents: amount, currency: 'usd' })
       });
-      const data = await res.json();
+      const intentData = await intentRes.json();
 
       setStatus('Collecting payment method...');
-      const collectResult = await terminal.collectPaymentMethod(data.client_secret);
+      const collectResult = await terminal.collectPaymentMethod(intentData.client_secret);
       if (collectResult.error) {
-        onOptimisticRollback?.();
-        setStatus('Payment collection failed: ' + collectResult.error.message);
+        setStatus('Payment collection failed.');
         setReserving(false);
         return;
       }
@@ -358,272 +113,149 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
       setStatus('Processing payment...');
       const processResult = await terminal.processPayment(collectResult.paymentIntent);
       if (processResult.error) {
-        onOptimisticRollback?.();
-        setStatus('Payment processing failed: ' + processResult.error.message);
+        setStatus('Payment processing failed.');
         setReserving(false);
         return;
-      } else {
-        setStatus('Capturing payment intent...');
-        const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ payment_intent_id: processResult.paymentIntent.id })
-        });
-        const captureData = await captureRes.json();
-        if (!captureData.success) {
-          onOptimisticRollback?.();
-          setStatus('Payment capture failed: ' + captureData.error_message);
-          setReserving(false);
-          return;
-        }
-
-        setStatus('Payment successful. Committing inventory...');
-
-        try {
-          let allCommitted = true;
-          const items = cart || [{product: {id: productId}, quantity: 1}];
-          for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            const currentLockId = lockIds[i];
-            const commitRes = await fetch('/api/v1/payments/terminal/commit', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                tenant_id: tenantId,
-                product_id: item.product.id,
-                quantity: item.quantity,
-                lock_id: currentLockId,
-                amount_cents: i === 0 ? amount : 0
-              })
-            });
-            const commitData = await commitRes.json();
-            if (!commitData.success) {
-               allCommitted = false;
-               setStatus('Payment successful, but inventory commit failed for an item: ' + commitData.error_message);
-            }
-          }
-          if (allCommitted) {
-            setStatus('Payment successful!');
-            if (onSuccess) onSuccess();
-          }
-        } catch (commitErr: any) {
-          setStatus('Payment successful, but inventory commit error: ' + commitErr.message);
-        }
       }
-    } catch (e: any) {
+
+      if (onSuccess) onSuccess();
+    } catch(e: any) {
       setStatus('Error: ' + e.message);
     } finally {
       setReserving(false);
     }
   };
 
+
   return (
     <WalkthroughTarget id="pos-keypad">
     <div className="p-6 rounded-3xl shadow-2xl mt-6 relative overflow-hidden bg-white/70 backdrop-blur-[40px] saturate-[200%] border border-white/50">
-      <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
-      <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 
-      {pendingReconciliation.length > 0 && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[20px] saturate-[150%] p-4">
-           <div className="bg-white/85 backdrop-blur-[40px] saturate-[200%] border border-white/60 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
-             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
-             <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
-             <ul className="space-y-2 mb-6">
-               {pendingReconciliation.map((pr, idx) => (
-                 <li key={idx} className="text-xs text-gray-800 bg-gray-100/50 p-3 rounded-xl flex justify-between border border-gray-200">
-                   <span className="font-medium">Product: {pr.product_id}</span>
-                   <span className="font-bold text-[#FF3B30]">Shortage: {pr.shortage}</span>
-                 </li>
-               ))}
-             </ul>
-             <div className="flex flex-col gap-3">
-               <button className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
-                 Option A: Refund in-store customer
-               </button>
-               <button className="w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-blue-200 text-sm">
-                 Option B: Cancel & refund online order
-               </button>
-               <button onClick={() => setPendingReconciliation([])} className="w-full mt-2 text-gray-500 font-bold py-2 px-4 rounded-xl hover:bg-gray-100 transition-colors active:scale-[0.98] text-sm">
-                 Decide Later
-               </button>
-             </div>
-           </div>
-        </div>
-      )}
-
-            {!connectedReader && (
-        <div className="mt-4">
-          <button id="tap-to-pay-btn" onClick={async () => {
-            if (!terminal) return;
-            if (typeof window !== 'undefined' && !navigator.onLine) {
-              setStatus('Tap-to-Pay requires an active internet connection. Please use Cash Sale instead.');
-              return;
-            }
-            setReserving(true);
-            setStatus('Initializing Tap to Pay...');
-
-            if (onOptimisticReserve) onOptimisticReserve();
-            let lockIds = [];
-            let lockId = '';
-            try {
-              for (const item of (cart || [{product: {id: productId}, quantity: 1}])) {
-                const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tenant_id: tenantId, product_id: item.product.id, quantity: item.quantity, ttl_seconds: 15 })
-                });
-                const reserveData = await reserveRes.json();
-                if (!reserveData.success) {
-                  if (onOptimisticRollback) onOptimisticRollback();
-                  setStatus('Error: Item is currently being checked out.');
-                  setReserving(false);
-                  return;
-                }
-                lockIds.push(reserveData.lock_id);
-              }
-              lockId = lockIds[0];
-            } catch (e) {
-              if (onOptimisticRollback) onOptimisticRollback();
-              setStatus('Reservation error: ' + e.message);
-              setReserving(false);
-              return;
-            }
-
-            try {
-              setStatus('Discovering readers for Tap to Pay...');
-              const discoverResult = await terminal.discoverReaders({ simulated: true });
-              if (discoverResult.error || !discoverResult.discoveredReaders || discoverResult.discoveredReaders.length === 0) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Failed to start Tap to Pay reader.');
-                setReserving(false);
-                return;
-              }
-
-              setStatus('Starting Tap to Pay...');
-              const connectResult = await terminal.connectReader(discoverResult.discoveredReaders[0]);
-              if (connectResult.error) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Failed to connect to Tap to Pay reader.');
-                setReserving(false);
-                return;
-              }
-              setConnectedReader(connectResult.reader);
-
-              setStatus('Creating payment intent...');
-              const res = await fetch('/api/v1/payments/terminal/intent', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount_cents: amount, currency: 'usd' })
-              });
-              const data = await res.json();
-
-              setStatus('Collecting payment method...');
-              const collectResult = await terminal.collectPaymentMethod(data.client_secret);
-              if (collectResult.error) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Payment collection failed: ' + collectResult.error.message);
-                setReserving(false);
-                return;
-              }
-
-              setStatus('Processing payment...');
-              const processResult = await terminal.processPayment(collectResult.paymentIntent);
-              if (processResult.error) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Payment processing failed: ' + processResult.error.message);
-                setReserving(false);
-                return;
-              }
-
-              setStatus('Capturing payment intent...');
-              const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payment_intent_id: processResult.paymentIntent.id })
-              });
-              const captureData = await captureRes.json();
-              if (!captureData.success) {
-                if (onOptimisticRollback) onOptimisticRollback();
-                setStatus('Payment capture failed: ' + captureData.error_message);
-                setReserving(false);
-                return;
-              }
-
-              setStatus('Payment successful. Committing inventory...');
-              let allCommitted = true;
-              const items = cart || [{product: {id: productId}, quantity: 1}];
-              for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                const currentLockId = lockIds[i];
-                const commitRes = await fetch('/api/v1/payments/terminal/commit', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    tenant_id: tenantId,
-                    product_id: item.product.id,
-                    quantity: item.quantity,
-                    lock_id: currentLockId,
-                    amount_cents: i === 0 ? amount : 0
-                  })
-                });
-                const commitData = await commitRes.json();
-                if (!commitData.success) {
-                   allCommitted = false;
-                   setStatus('Payment successful, but inventory commit failed for an item: ' + commitData.error_message);
-                }
-              }
-              if (allCommitted) {
-                setStatus('Payment successful!');
-                if (onSuccess) onSuccess();
-              }
-            } catch (e) {
-              setStatus('Error: ' + e.message);
-            } finally {
-              setReserving(false);
-            }
-          }} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-gradient-to-b from-[#000000] to-[#333333] text-white px-4 py-4 min-h-[56px] rounded-xl font-bold text-lg transition-colors shadow-xl shadow-gray-500/20 active:scale-[0.98] ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'}`}>
-            {reserving ? 'Processing...' : 'Tap to Pay'}
-          </button>
-        </div>
-      )}
-
-      {!connectedReader && (
-        <div className="mb-4">
-          <button onClick={discoverReaders} disabled={typeof window !== 'undefined' && !navigator.onLine} className={`w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-colors ${(typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
-            Discover Readers
-          </button>
-          <ul className="mt-4 space-y-2">
-            {discoveredReaders.map(reader => (
-              <li key={reader.id} className="flex justify-between items-center p-4 border border-white/50 rounded-2xl bg-white/60 backdrop-blur-[30px] saturate-[210%] shadow-sm transition-all hover:bg-white/80">
-                <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
-                <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-5 py-2 min-h-[44px] min-w-[44px] rounded-xl text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
-                  Connect
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {connectedReader ? (
-        <div className="flex gap-2 mt-4">
-          <WalkthroughTarget id="charge-btn" className="flex-1 flex">
-          <button onClick={processPayment} disabled={reserving || typeof window !== 'undefined' && !navigator.onLine} className={`flex-1 w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all charge-btn ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-            {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
-          </button>
-          </WalkthroughTarget>
-          <button id="cash-btn" onClick={processCashSale} disabled={reserving} className={`flex-1 bg-gradient-to-b from-[#34C759] to-[#28A745] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-green-500/30 transition-all cash-btn ${reserving ? 'opacity-50' : 'hover:shadow-green-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-            {reserving ? 'Processing...' : `Cash $${(amount / 100).toFixed(2)}`}
-          </button>
-        </div>
-      ) : (
-        <div className="flex gap-2 mt-4">
-           <button id="cash-btn-offline" onClick={processCashSale} disabled={reserving} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all cash-btn backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-             {reserving ? 'Processing...' : `Record Offline Cash Sale $${(amount / 100).toFixed(2)}`}
+      {!selectedMethod ? (
+        <div className="flex flex-col space-y-3 slide-in-from-bottom animate-in duration-300">
+           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2">Payment Method</h2>
+           <button
+             onClick={() => setSelectedMethod('tap')}
+             className="w-full bg-gradient-to-b from-[#000000] to-[#333333] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-gray-500/20 active:scale-[0.98] transition-all flex items-center justify-center space-x-3"
+           >
+             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+             <span>Tap to Pay (Phone)</span>
+           </button>
+           <button
+             onClick={() => setSelectedMethod('link')}
+             className="w-full bg-white/80 text-[#0066FF] border border-[#0066FF]/30 px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-sm active:scale-[0.98] transition-all flex items-center justify-center space-x-3"
+           >
+             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+             <span>Send Payment Link</span>
+           </button>
+           <button
+             onClick={() => setSelectedMethod('cash')}
+             className="w-full bg-gradient-to-b from-[#34C759] to-[#28A745] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-green-500/20 active:scale-[0.98] transition-all flex items-center justify-center space-x-3"
+           >
+             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+             <span>Cash</span>
            </button>
         </div>
+      ) : (
+        <>
+          <div className="flex justify-between items-center mb-4">
+             <h2 className="text-lg font-bold font-outfit text-gray-900">
+               {selectedMethod === 'tap' ? 'Tap to Pay Active' : selectedMethod === 'link' ? 'Send Payment Link' : 'Record Cash Sale'}
+             </h2>
+             <button onClick={() => setSelectedMethod(null)} className="text-sm font-bold text-gray-500 hover:text-gray-700">Back</button>
+          </div>
+          <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
+
+          {pendingReconciliation.length > 0 && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[20px] saturate-[150%] p-4">
+               <div className="bg-white/85 backdrop-blur-[40px] saturate-[200%] border border-white/60 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center">
+                 <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Inventory Conflict Detected</h2>
+                 <p className="text-sm text-gray-600 mb-6">Some offline sales conflicted with online inventory. The Operations Agent has drafted an alternative offer for the online customer.</p>
+                 <ul className="space-y-2 mb-6">
+                   {pendingReconciliation.map((pr, idx) => (
+                     <li key={idx} className="text-xs text-gray-800 bg-gray-100/50 p-3 rounded-xl flex justify-between border border-gray-200">
+                       <span className="font-medium">Product: {pr.product_id}</span>
+                       <span className="font-bold text-[#FF3B30]">Shortage: {pr.shortage}</span>
+                     </li>
+                   ))}
+                 </ul>
+                 <div className="flex flex-col gap-3">
+                   <button className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-3 px-4 rounded-xl transition-colors active:scale-[0.98] border border-red-200 text-sm">
+                     Cancel Pending Offline Orders
+                   </button>
+                   <button onClick={() => setPendingReconciliation([])} className="w-full mt-2 text-gray-500 font-bold py-2 px-4 rounded-xl hover:bg-gray-100 transition-colors active:scale-[0.98] text-sm">
+                     Decide Later
+                   </button>
+                 </div>
+               </div>
+            </div>
+          )}
+
+          {selectedMethod === 'tap' && !connectedReader && (
+            <div className="mb-4">
+              <button onClick={discoverReaders} disabled={typeof window !== 'undefined' && !navigator.onLine} className={`w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-colors ${(typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
+                Discover Readers
+              </button>
+              <ul className="mt-4 space-y-2">
+                {discoveredReaders.map(reader => (
+                  <li key={reader.id} className="flex justify-between items-center p-4 border border-white/50 rounded-2xl bg-white/60 backdrop-blur-[30px] saturate-[210%] shadow-sm transition-all hover:bg-white/80">
+                    <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
+                    <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-5 py-2 min-h-[44px] min-w-[44px] rounded-xl text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
+                      Connect
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {selectedMethod === 'tap' && connectedReader && (
+            <div className="mt-4">
+              <button onClick={processPayment} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+                {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
+              </button>
+            </div>
+          )}
+
+          {selectedMethod === 'cash' && (
+            <div className="mt-4">
+               <button id="cash-btn-offline" onClick={processCashSale} disabled={reserving} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+                 {reserving ? 'Processing...' : `Record Offline Cash Sale $${(amount / 100).toFixed(2)}`}
+               </button>
+            </div>
+          )}
+
+          {selectedMethod === 'link' && (
+            <div className="mt-4">
+               <button onClick={async () => {
+                 setStatus('Sending payment link...');
+                 setReserving(true);
+                 try {
+                   const res = await fetch('/api/v1/checkout/session', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ tenant_id: tenantId, type: 'ONLINE', amount_cents: amount, cart_payload: cart })
+                   });
+                   if (res.ok) {
+                     setStatus('Link Sent Successfully');
+                     if (onSuccess) onSuccess();
+                   } else {
+                     setStatus('Failed to send link');
+                   }
+                 } catch (e) {
+                   setStatus('Network error');
+                 } finally {
+                   setReserving(false);
+                 }
+               }} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-[#0066FF] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-[0.98]'}`}>
+                 Send Link for $${(amount / 100).toFixed(2)}
+               </button>
+            </div>
+          )}
+        </>
       )}
     </div>
     </WalkthroughTarget>
   );
+
 }
