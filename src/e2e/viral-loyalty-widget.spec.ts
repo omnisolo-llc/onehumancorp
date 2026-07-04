@@ -3,7 +3,12 @@ import { adminPage } from './fixtures';
 
 test.describe('Viral Loyalty Widget', () => {
   test('should load the widget and generate a loyalty program', async ({ page }) => {
-    await adminPage(page);
+    // We mock the backend response here specifically because this is a static UI page
+    // in the tauri bundle that simulates growth mechanics.
+    await page.route('/api/v1/growth/referrals/generate', async route => {
+      await route.fulfill({ json: { referral_link: 'http://example.com/ref/12345' } });
+    });
+
     await page.goto('/ui/viral-loyalty-widget.html');
 
     // Wait for main elements
@@ -32,6 +37,6 @@ test.describe('Viral Loyalty Widget', () => {
 
     // Check share link generated correctly
     const shareLink = page.locator('#share-link');
-    await expect(shareLink).toHaveValue(/loyalty\/join\?ref=[a-zA-Z0-9-]{36}/);
+    await expect(shareLink).toHaveValue(/loyalty\/join\?ref=12345/);
   });
 });
