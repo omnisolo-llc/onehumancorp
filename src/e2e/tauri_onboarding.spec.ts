@@ -374,6 +374,49 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
 test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
+  test('Verify full Onboarding UI and functionality manually with exact selectors', async ({ page }) => {
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR || path.resolve(__dirname, '..', '..'), process.env.TEST_WORKSPACE)
+        : path.resolve(__dirname, '..', '..');
+
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+
+    await page.route('http://mock/setup.html', async route => {
+        const content = require('fs').readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+    await page.route('**/api/tooltips', async route => {
+      await route.fulfill({ status: 200, body: JSON.stringify({}) });
+    });
+
+    // We add an intercept to track that start_zero_click does what is expected.
+    await page.route('**/api/onboarding/start_zero_click', async route => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ organization_id: 'test-org-new', user_id: 'owner' }) });
+    });
+
+    await page.goto('http://mock/setup.html');
+
+    const container = page.locator('.container');
+    await expect(container).toHaveClass(/glassmorphism/);
+
+    // Fill the instant bio box
+    const bioBox = page.locator('#instant-bio');
+    await expect(bioBox).toBeVisible();
+    await bioBox.fill('I am a local plumber');
+
+    const startBtn = page.locator('#generate-storefront-btn');
+    await expect(startBtn).toBeEnabled();
+
+    // intercept the redirect
+    await page.route('**/success.html*', async route => {
+      await route.fulfill({ status: 200, body: 'Success!' });
+    });
+
+    await startBtn.click();
+    await expect(page).toHaveURL(/.*success.html.*/);
+  });
+
+
 
   test('Setup UI should have glassmorphism aesthetics applied', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
