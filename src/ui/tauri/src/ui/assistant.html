@@ -4,7 +4,7 @@
     <style>
       .glassmorphism {
         border-radius: 16px;
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
@@ -23,7 +23,7 @@
         }
       }
       .old-glassmorphism {
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
@@ -53,7 +53,7 @@
 
       /* OHC Translucent Glass Theme */
       .glass-panel {
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
@@ -120,7 +120,7 @@
         margin-bottom: 5px;
         font-size: 14px;
         color: #1d1d1f;
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
       }
       .task-item:hover, .task-item.active {
         background: rgba(0, 102, 255, 0.1);
@@ -171,7 +171,7 @@
         margin-left: auto;
       }
       .message.assistant {
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
       }
       .composer {
         padding: 20px;
@@ -185,7 +185,7 @@
         font-size: 14px;
         box-sizing: border-box;
         resize: none;
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
       }
       .composer-input:focus {
         outline: none;
@@ -219,7 +219,7 @@
       }
       .result-item {
         padding: 10px;
-        background: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
         border-radius: 16px;
         margin-bottom: 10px;
         font-size: 13px;
@@ -274,7 +274,7 @@
       <div class="left-rail glass-panel">
         <div class="rail-section">
           <div class="rail-title">Workspace</div>
-          <select style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 10px; background: rgba(255, 255, 255, 0.65);" aria-label="Workspace Selector">
+          <select style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 10px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);" aria-label="Workspace Selector">
             <option>Personal Workspace</option>
           </select>
         </div>
@@ -349,7 +349,7 @@
         }
         .ohc-walkthrough-bubble {
             position: absolute;
-            background: rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
             backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(0, 102, 255, 0.3);
             border-radius: 16px;
@@ -573,7 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
     style.textContent = `
         .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.65);
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
@@ -723,7 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <style>
 .ohc-tooltip {
     position: fixed;
-    background: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
     backdrop-filter: blur(30px) saturate(210%);
     -webkit-backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.4);
@@ -848,7 +848,7 @@ function initWalkthrough() {
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
 
         function renderStep() {
