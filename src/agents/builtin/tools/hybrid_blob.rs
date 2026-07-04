@@ -107,7 +107,7 @@ impl BlobManager for HybridBlobManager {
 
         if self.is_cloud {
             // Mock S3 put object
-            tracing::debug!("Cloud: Writing to S3 key {}", safe_key);
+            tracing::debug!("Cloud: Writing to S3 key {}", safe_key); // pii-safe
             self.cloud_mock_store.insert(safe_key, data.to_vec());
             Ok(())
         } else {
@@ -132,7 +132,7 @@ impl BlobManager for HybridBlobManager {
 
         if self.is_cloud {
             // Mock S3 get object
-            tracing::debug!("Cloud: Reading from S3 key {}", safe_key);
+            tracing::debug!("Cloud: Reading from S3 key {}", safe_key); // pii-safe
             if let Some(data) = self.cloud_mock_store.get(&safe_key) {
                 Ok(data.clone())
             } else {
