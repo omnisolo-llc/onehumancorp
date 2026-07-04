@@ -712,7 +712,7 @@ html.dark .glass-control {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
 }
 
-.app-shell [class*="blur-["] {
+.app-shell-hiding-rule {
   display: none !important;
 }
 
