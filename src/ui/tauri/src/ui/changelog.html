@@ -171,7 +171,7 @@
           }
 
           if (!data || data.length === 0) {
-             container.innerHTML = '<p>No release notes found.</p>';
+             container.innerHTML = '<p style="color: #64748b;">No release notes found.</p>';
              return;
           }
 
@@ -190,7 +190,7 @@
              let imgHtml = item.screenshot_url ? `<img src="${item.screenshot_url}" class="screenshot" alt="Screenshot" onerror="this.style.display='none'"/>` : '';
 
              html += `
-                <div class="changelog-card">
+                <div class="changelog-card glassmorphism" style="padding: 24px; margin-bottom: 24px;">
                   <h2 class="version-title">${item.version}</h2>
                   ${imgHtml}
                   ${contentHtml}
