@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Embeddable AI Support Agent Widget Builder | OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #F5F5F7;
+      color: #1d1d1f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-sizing: border-box;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .back-btn {
+      text-decoration: none;
+      color: #0066FF;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .container {
+      max-width: 900px;
+      width: 100%;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    .glassmorphism {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+    }
+    .panel {
+      flex: 1;
+      min-width: 300px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #86868b;
+    }
+    input[type="text"], select {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #d2d2d7;
+      font-size: 16px;
+      font-family: inherit;
+      box-sizing: border-box;
+      background: white;
+      transition: all 0.2s;
+    }
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: #0066FF;
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 14px;
+      background: #0066FF;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .btn:hover {
+      background: #005ce6;
+      transform: translateY(-1px);
+    }
+    .btn:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .preview-box {
+      border: 1px dashed #d2d2d7;
+      border-radius: 16px;
+      height: 300px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      background: #fafafa;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 20px;
+      padding: 20px;
+    }
+    .preview-box::before {
+      content: 'Live Preview (External Site)';
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 11px;
+      color: #86868b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #d2d2d7;
+      font-family: monospace;
+      font-size: 12px;
+      color: #1d1d1f;
+      background: #f5f5f7;
+      resize: none;
+      box-sizing: border-box;
+    }
+
+    /* Chat Widget Mock styles */
+    .mock-chat-widget {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 300px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+
+    .mock-chat-header {
+        background: #0066FF;
+        color: white;
+        padding: 12px 16px;
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .mock-chat-body {
+        padding: 16px;
+        background: #f9f9f9;
+        height: 150px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+    }
+
+    .mock-chat-message {
+        background: white;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border-bottom-left-radius: 2px;
+        font-size: 13px;
+        color: #333;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        margin-bottom: 8px;
+        align-self: flex-start;
+        max-width: 85%;
+    }
+
+    .mock-chat-input {
+        padding: 12px 16px;
+        border-top: 1px solid #eee;
+        display: flex;
+        background: white;
+    }
+
+    .mock-chat-input input {
+        border: none;
+        outline: none;
+        width: 100%;
+        font-size: 13px;
+        color: #666;
+    }
+
+    .mock-chat-footer {
+        text-align: center;
+        padding: 6px;
+        font-size: 10px;
+        color: #999;
+        background: #f0f0f0;
+        border-top: 1px solid #e5e5e5;
+    }
+
+    .mock-chat-footer a {
+        color: #0066FF;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #16161a;
+        color: #F5F5F7;
+      }
+      header, .glassmorphism {
+        background: rgba(22, 22, 26, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .preview-box {
+          background: #111;
+          border-color: #333;
+      }
+      textarea, input[type="text"] {
+          background: #222;
+          color: white;
+          border-color: #444;
+      }
+      .mock-chat-widget {
+          background: #1e1e1e;
+          border-color: #333;
+      }
+      .mock-chat-body {
+          background: #121212;
+      }
+      .mock-chat-message {
+          background: #2a2a2a;
+          color: #eee;
+      }
+      .mock-chat-input {
+          background: #1e1e1e;
+          border-color: #333;
+      }
+      .mock-chat-input input {
+          background: transparent;
+          color: white;
+      }
+      .mock-chat-footer {
+          background: #1a1a1a;
+          border-color: #333;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Embeddable AI Support Widget 💬</h1>
+    <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+  </header>
+
+  <div class="container">
+    <div class="panel glassmorphism">
+      <h2 style="margin-top: 0; margin-bottom: 24px; font-size: 24px;">Configure Your Agent</h2>
+      <p style="color: #86868b; font-size: 14px; margin-bottom: 24px;">Generate a script tag to add your AI agent to any external website. This serves as a powerful acquisition channel for your brand.</p>
+
+      <div class="form-group">
+        <label for="agentGreeting">Initial Greeting</label>
+        <input type="text" id="agentGreeting" value="Hi! How can I help you today?">
+      </div>
+
+      <div class="form-group">
+        <label for="themeColor">Theme Color (Hex)</label>
+        <input type="text" id="themeColor" value="#0066FF" placeholder="#0066FF">
+      </div>
+
+      <button id="generateBtn" class="btn">Generate Embed Code</button>
+    </div>
+
+    <div class="panel glassmorphism">
+      <h2 style="margin-top: 0; margin-bottom: 24px; font-size: 24px;">Preview & Embed</h2>
+
+      <div class="preview-box" id="previewBox">
+        <div class="mock-chat-widget" id="mockWidget">
+            <div class="mock-chat-header" id="mockHeader">
+                Chat with Us
+                <span>−</span>
+            </div>
+            <div class="mock-chat-body">
+                <div class="mock-chat-message" id="mockGreeting">Hi! How can I help you today?</div>
+            </div>
+            <div class="mock-chat-input">
+                <input type="text" placeholder="Type your message..." readonly>
+            </div>
+            <div class="mock-chat-footer">
+                ⚡ Powered by <a href="#" id="referralLinkPreview" target="_blank">OHC</a>
+            </div>
+        </div>
+      </div>
+
+      <div class="form-group" id="resultArea" style="display: none;">
+        <label>Embed Code</label>
+        <textarea id="embedCode" readonly></textarea>
+        <button id="copyBtn" class="btn" style="margin-top: 10px; background-color: #1d1d1f;">Copy HTML Code</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+
+      const agentGreeting = document.getElementById('agentGreeting');
+      const themeColor = document.getElementById('themeColor');
+
+      const mockGreeting = document.getElementById('mockGreeting');
+      const mockHeader = document.getElementById('mockHeader');
+
+      const generateBtn = document.getElementById('generateBtn');
+      const resultArea = document.getElementById('resultArea');
+      const embedCode = document.getElementById('embedCode');
+      const copyBtn = document.getElementById('copyBtn');
+      const referralLinkPreview = document.getElementById('referralLinkPreview');
+
+      const originUrl = window.location.origin.includes('file://') ? 'https://ohc.app' : window.location.origin;
+
+      function updatePreview() {
+        mockGreeting.textContent = agentGreeting.value || 'Hi! How can I help you today?';
+        const color = themeColor.value || '#0066FF';
+        mockHeader.style.backgroundColor = color;
+      }
+
+      agentGreeting.addEventListener('input', updatePreview);
+      themeColor.addEventListener('input', updatePreview);
+
+      generateBtn.addEventListener('click', async () => {
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'Generating...';
+
+        try {
+            let refId = tenantId;
+
+            // Try to generate a real referral link
+            try {
+              const res = await fetch('/api/v1/growth/referrals/generate', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+                  }
+              });
+
+              if (res.ok) {
+                  const data = await res.json();
+                  if (data.referral_link) {
+                      refId = data.referral_link.split('/').pop();
+                  }
+              }
+            } catch (e) {
+                console.warn('Backend not available, using default tenant ID for referral.', e);
+            }
+
+            const targetUrl = `${originUrl}/setup.html?ref=${encodeURIComponent(refId)}&source=ai_support_widget`;
+            referralLinkPreview.href = targetUrl;
+
+            const greeting = agentGreeting.value.replace(/"/g, '&quot;');
+            const color = themeColor.value.replace(/"/g, '&quot;');
+
+            const codeSnippet = `<!-- OHC AI Support Widget -->
+<script>
+  window.OHC_WIDGET_CONFIG = {
+    tenantId: "${tenantId}",
+    greeting: "${greeting}",
+    themeColor: "${color}",
+    referralLink: "${targetUrl}"
+  };
+<\/script>
+<script src="${originUrl}/widget.js" async defer><\/script>`;
+
+            embedCode.value = codeSnippet;
+            resultArea.style.display = 'block';
+
+        } catch (error) {
+            console.error('Error generating widget code:', error);
+        } finally {
+            generateBtn.disabled = false;
+            generateBtn.textContent = 'Generate Embed Code';
+        }
+      });
+
+      copyBtn.addEventListener('click', () => {
+        embedCode.select();
+        navigator.clipboard.writeText(embedCode.value);
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.backgroundColor = '#34C759';
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+          copyBtn.style.backgroundColor = '#1d1d1f';
+        }, 2000);
+      });
+
+      updatePreview();
+    });
+  </script>
+  <script src="help-widget.mjs" type="module"></script>
+</body>
+</html>
