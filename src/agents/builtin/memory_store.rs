@@ -1301,18 +1301,11 @@ impl Anthropic3TierMemoryStore {
 impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn search_cross_session_messages(
         &self,
-        _query: &str,
-        _limit: usize,
+        query: &str,
+        limit: usize,
         _summarize: bool,
     ) -> Result<Vec<String>, String> {
-        // Delegate to underlying memory store's cross session search.
-        // Wait, self.memory does not have search_cross_session_messages. Let's fix LongTermMemory trait usage instead.
-        // Anthropic3TierMemoryStore has a field `memory: crate::memory::anthropic_tier::Anthropic3TierMemory`.
-        // Wait, we can't call self.memory.search_cross_session_messages because Anthropic3TierMemory doesn't have it.
-        // But what about SqliteMemoryStore? It does.
-        // If the LLM uses CrossSessionSearch, it should hit SqliteMemoryStore directly if we return a SqliteMemoryStore as the memory store, or we delegate to the trait.
-        // Wait, Anthropic3TierMemoryStore IS a LongTermMemory. And it has its own tools.
-        Ok(vec!["Fallback: Anthropic 3-Tier memory does not currently support cross-session search directly. Please use SqliteMemoryStore if this feature is required.".to_string()])
+        crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(self, query, limit).await
     }
 
     async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
@@ -1381,9 +1374,17 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
         crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(self, query, limit).await
     }
 
-    async fn retrieve(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
-        // Delegation to retrieve or search
-        Ok(vec![])
+    async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
+        let mut results = Vec::new();
+        if let Ok(index) = self.get_lightweight_index().await {
+            if !index.is_empty() {
+                results.push(format!("Index:\n{}", index));
+            }
+        }
+        if let Ok(mut transcripts) = LongTermMemory::search_transcripts(self, query, limit).await {
+            results.append(&mut transcripts);
+        }
+        Ok(results)
     }
 
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {

@@ -536,6 +536,8 @@ impl AgentServiceImpl {
                 Some(redis_store as std::sync::Arc<dyn crate::memory_store::LongTermMemory>)
             } else if sqlite_memory.is_some() {
                 sqlite_memory
+            } else if let Some(anthropic_store) = self.anthropic_memory.clone() {
+                Some(anthropic_store as std::sync::Arc<dyn crate::memory_store::LongTermMemory>)
             } else if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
                 let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR")
                     .unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
