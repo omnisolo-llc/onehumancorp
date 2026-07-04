@@ -15,7 +15,7 @@ test.describe('In-App Help & Documentation Features', () => {
     await searchInput.fill('Payments', { force: true });
 
     // Should show payments-related article
-    await expect(page.getByText('Getting Paid').first()).toBeVisible();
+    await expect(page.getByText('Accepting Payments').first()).toBeVisible();
   });
 
   test('views individual help article', async ({ page }) => {

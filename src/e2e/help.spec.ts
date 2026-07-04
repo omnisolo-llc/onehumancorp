@@ -29,7 +29,7 @@ test.describe('In-App Help Center', () => {
 
     // There should be search results
     await page.waitForTimeout(1000); // Wait for debounce
-    await expect(page.getByText('Getting Paid').first()).toBeVisible();
+    await expect(page.getByText('Accepting Payments').first()).toBeVisible();
   });
 
   test('should display contact support option', async ({ page }) => {
