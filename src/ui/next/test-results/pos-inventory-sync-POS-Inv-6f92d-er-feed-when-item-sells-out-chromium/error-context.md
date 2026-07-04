@@ -6,144 +6,47 @@
 
 # Test info
 
-- Name: pos-inventory-sync.spec.ts >> POS Inventory Sync - E2E Race Condition >> Online checkout UI shows Item just sold out when POS locks item
-- Location: src/e2e/pos-inventory-sync.spec.ts:64:7
+- Name: pos-inventory-sync.spec.ts >> POS Inventory Sync - E2E Race Condition >> Operations Agent generates a Restock notification in the owner feed when item sells out
+- Location: src/e2e/pos-inventory-sync.spec.ts:159:7
 
 # Error details
 
 ```
-Error: expect(received).toBe(expected) // Object.is equality
+Test timeout of 30000ms exceeded.
+```
 
-Expected: true
-Received: false
+```
+Error: locator.fill: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for getByPlaceholder('Email address')
+
 ```
 
 # Page snapshot
 
 ```yaml
 - generic [active] [ref=e1]:
-  - generic [ref=e2]:
-    - banner [ref=e3]:
-      - heading "Secure Checkout" [level=1] [ref=e5]
-    - main [ref=e6]:
-      - generic [ref=e7]:
-        - generic [ref=e8]:
-          - generic [ref=e9]: Service Deposit
-          - generic [ref=e10]: $45.00
-        - paragraph [ref=e12]: A 20% discount (20%) has been applied to this order automatically.
-        - generic [ref=e14] [cursor=pointer]:
-          - generic [ref=e15]:
-            - paragraph [ref=e16]: Neighborhood Collective Points
-            - paragraph [ref=e17]: You have 50 points available
-          - generic [ref=e19]: "-10% off"
-        - generic [ref=e20]:
-          - generic [ref=e21]: Delivery Address (Optional)
-          - generic [ref=e22]:
-            - textbox "Enter address for delivery quote" [ref=e23]
-            - button "Check" [disabled] [ref=e24]
-        - generic [ref=e25]:
-          - generic [ref=e26]:
-            - generic [ref=e27]: Available Rewards
-            - generic [ref=e28]: 1 Reward Available
-          - paragraph [ref=e29]: You have earned a free coffee! Tap 'Pay' to automatically apply your reward at checkout.
-        - generic [ref=e31]:
-          - generic [ref=e33]: 🎁
-          - generic [ref=e34]:
-            - heading "Share & Save 10%" [level=3] [ref=e35]
-            - paragraph [ref=e36]: Share our store with your friends on social media to instantly unlock a 10% discount on this order!
-            - generic [ref=e37]:
-              - button "Share on X" [ref=e38]:
-                - img [ref=e39]
-                - text: Share on X
-              - button "WhatsApp" [ref=e41]:
-                - img [ref=e42]
-                - text: WhatsApp
-        - generic [ref=e44]:
-          - generic [ref=e45]: Taxes and Fees
-          - generic [ref=e46]: Calculated at checkout
-        - generic [ref=e47]:
-          - generic [ref=e48]: Total
-          - generic [ref=e49]: $45.00
-        - button "Pay" [ref=e51]
-        - button "Cancel" [ref=e53]
-      - link "⚡ Powered by OHC" [ref=e56] [cursor=pointer]:
-        - /url: /onboarding?ref=e2e-tenant&source=footer_widget
-        - generic [ref=e57]: ⚡
-        - text: Powered by OHC
-  - button "Help" [ref=e60]:
-    - img [ref=e61]
-  - button "Open help chat" [ref=e65]:
-    - generic [ref=e66]: ✨
-    - generic [ref=e67]: Ask anything
-  - button "Voice Assistant" [ref=e68]:
-    - img [ref=e69]
-  - alert [ref=e71]
+  - generic [ref=e3]:
+    - heading "Login" [level=1] [ref=e4]
+    - generic [ref=e5]:
+      - textbox "Email or Username" [ref=e6]
+      - textbox "Password" [ref=e7]
+      - button "Log In" [ref=e8]
+    - generic [ref=e11]: or
+    - button "Start Business Setup" [ref=e13]
+  - button "Help" [ref=e16]:
+    - img [ref=e17]
+  - button "Open help chat" [ref=e21]:
+    - generic [ref=e22]: ✨
+    - generic [ref=e23]: Ask anything
+  - button "Voice Assistant" [ref=e24]:
+    - img [ref=e25]
+  - alert [ref=e27]
 ```
 
 # Test source
 
 ```ts
-  1   | import { test, expect } from '@playwright/test';
-  2   |
-  3   | test.describe('POS Inventory Sync - E2E Race Condition', () => {
-  4   |   test('POS terminal applies lock and prevents double booking online', async ({ page }) => {
-  5   |     const tenantId = 'e2e-tenant-pos';
-  6   |     const productId = 'e2e-product-cake-pos';
-  7   |
-  8   |     // Simulate POS (User B) acquiring lock
-  9   |     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
-  10  |         data: {
-  11  |             tenant_id: tenantId,
-  12  |             product_id: productId,
-  13  |             quantity: 1,
-  14  |             ttl_seconds: 15
-  15  |         },
-  16  |         headers: {
-  17  |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
-  18  |             'x-tenant-id': tenantId
-  19  |         }
-  20  |     });
-  21  |
-  22  |
-  23  |     if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
-  24  |     expect(reserveRes.ok()).toBe(true);
-  25  |     const lockData = await reserveRes.json();
-  26  |     expect(lockData.success).toBe(true);
-  27  |
-  28  |     // Simulate Online User (User A) attempting checkout for the same item
-  29  |     const reserveRes2 = await page.request.post('/api/v1/payments/terminal/reserve', {
-  30  |         data: {
-  31  |             tenant_id: tenantId,
-  32  |             product_id: productId,
-  33  |             quantity: 1,
-  34  |             ttl_seconds: 15
-  35  |         },
-  36  |         headers: {
-  37  |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
-  38  |             'x-tenant-id': tenantId
-  39  |         }
-  40  |     });
-  41  |
-  42  |     // It should fail gracefully
-  43  |     const lockData2 = await reserveRes2.json();
-  44  |     expect(lockData2.success).toBe(false);
-  45  |     expect(lockData2.error_message).toContain('another customer');
-  46  |
-  47  |     // POS (User B) completes checkout
-  48  |     const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
-  49  |         data: {
-  50  |             tenant_id: tenantId,
-  51  |             product_id: productId,
-  52  |             quantity: 1,
-  53  |             lock_id: lockData.lock_id
-  54  |         },
-  55  |         headers: {
-  56  |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
-  57  |             'x-tenant-id': tenantId
-  58  |         }
-  59  |     });
-  60  |
-  61  |     expect(commitRes.ok()).toBe(true);
   62  |   });
   63  |
   64  |   test('Online checkout UI shows Item just sold out when POS locks item', async ({ page }) => {
@@ -173,8 +76,7 @@ Received: false
   88  |
   89  |
   90  |     if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
-> 91  |     expect(reserveRes.ok()).toBe(true);
-      |                             ^ Error: expect(received).toBe(expected) // Object.is equality
+  91  |     expect(reserveRes.ok()).toBe(true);
   92  |     const lockData = await reserveRes.json();
   93  |     expect(lockData.success).toBe(true);
   94  |
@@ -245,7 +147,8 @@ Received: false
   159 |   test('Operations Agent generates a Restock notification in the owner feed when item sells out', async ({ page }) => {
   160 |     // 1. Log in to get token
   161 |     await page.goto('/login');
-  162 |     await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+> 162 |     await page.getByPlaceholder('Email address').fill('admin@ohc.local');
+      |                                                  ^ Error: locator.fill: Test timeout of 30000ms exceeded.
   163 |     await page.getByPlaceholder('Password').fill('admin');
   164 |     await page.getByRole('button', { name: 'Sign In' }).click();
   165 |     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 15000 });
@@ -275,4 +178,49 @@ Received: false
   189 |     expect(createProductRes.ok()).toBeTruthy();
   190 |
   191 |     // Simulate POS (User B) acquiring lock
+  192 |     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
+  193 |         data: {
+  194 |             tenant_id: tenantId,
+  195 |             product_id: productId,
+  196 |             quantity: 1,
+  197 |             ttl_seconds: 15
+  198 |         },
+  199 |         headers: {
+  200 |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
+  201 |             'x-tenant-id': tenantId
+  202 |         }
+  203 |     });
+  204 |
+  205 |     if (!reserveRes.ok()) { console.log(await reserveRes.text()); }
+  206 |     expect(reserveRes.ok()).toBe(true);
+  207 |     const lockData = await reserveRes.json();
+  208 |     expect(lockData.success).toBe(true);
+  209 |
+  210 |     // POS (User B) completes checkout
+  211 |     const commitRes = await page.request.post('/api/v1/payments/terminal/commit', {
+  212 |         data: {
+  213 |             tenant_id: tenantId,
+  214 |             product_id: productId,
+  215 |             quantity: 1,
+  216 |             lock_id: lockData.lock_id
+  217 |         },
+  218 |         headers: {
+  219 |             'x-spiffe-id': 'spiffe://ohc/org/' + tenantId + '/agent/browser',
+  220 |             'x-tenant-id': tenantId
+  221 |         }
+  222 |     });
+  223 |
+  224 |     expect(commitRes.ok()).toBe(true);
+  225 |
+  226 |     await page.waitForTimeout(5000);
+  227 |
+  228 |     // Navigate to Action Center
+  229 |     await page.goto('/dashboard');
+  230 |
+  231 |     // Check if the agent action request appears in the feed
+  232 |     await expect(page.locator('body')).toContainText('Action Request: Reorder', { timeout: 30000 });
+  233 |   });
+  234 |
+  235 | });
+  236 |
 ```
