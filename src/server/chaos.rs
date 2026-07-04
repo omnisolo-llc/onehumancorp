@@ -372,7 +372,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'system',
+                organization_id TEXT NOT NULL DEFAULT '',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
@@ -508,7 +508,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                organization_id TEXT NOT NULL DEFAULT 'system',
+                organization_id TEXT NOT NULL DEFAULT '',
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
@@ -902,7 +902,7 @@ mod tests {
                 payload TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                tenant_id TEXT DEFAULT 'system',
+                tenant_id TEXT DEFAULT '',
                 mission_log TEXT
             );"
         ).execute(&pool).await.unwrap();
@@ -1102,7 +1102,7 @@ mod tests {
                 id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
                 payload TEXT NOT NULL,
-                tenant_id TEXT DEFAULT 'system',
+                tenant_id TEXT DEFAULT '',
                 mission_log TEXT
             );"
         ).execute(&pool).await.unwrap();

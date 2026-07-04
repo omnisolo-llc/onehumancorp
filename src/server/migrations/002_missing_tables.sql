@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
 
 CREATE TABLE IF NOT EXISTS state_machine_transitions (
     id TEXT PRIMARY KEY,
-    tenant_id TEXT DEFAULT 'system',
+    tenant_id TEXT DEFAULT '',
     entity_id TEXT,
     entity_type TEXT,
     from_state TEXT NOT NULL,

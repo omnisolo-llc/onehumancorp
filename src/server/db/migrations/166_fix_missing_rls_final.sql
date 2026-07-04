@@ -202,7 +202,7 @@ ALTER TABLE IF EXISTS agent_violations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_agent_violations ON agent_violations;
 CREATE POLICY tenant_isolation_agent_violations ON agent_violations USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
-src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT 'system',
+src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT '',
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
@@ -359,7 +359,7 @@ DROP POLICY IF EXISTS tenant_isolation_auto_reply_policies ON auto_reply_policie
 CREATE POLICY tenant_isolation_auto_reply_policies ON auto_reply_policies USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 src/server/migrations/002_missing_tables.sql-    tenant_id TEXT NOT NULL,
-src/server/migrations/002_missing_tables.sql-    tenant_id TEXT DEFAULT 'system',
+src/server/migrations/002_missing_tables.sql-    tenant_id TEXT DEFAULT '',
 src/server/migrations/002_missing_tables.sql-    tenant_id TEXT NOT NULL,
 src/server/migrations/002_missing_tables.sql-    tenant_id TEXT NOT NULL,
 -- Adding RLS for autodream_memories
@@ -818,7 +818,7 @@ CREATE POLICY tenant_isolation_department_dead_letters ON department_dead_letter
 
 src/server/migrations/002_missing_tables.sql-    tenant_id TEXT NOT NULL,
 src/server/migrations/002_missing_tables.sql-    tenant_id TEXT NOT NULL,
-src/server/migrations/002_missing_tables.sql-    tenant_id TEXT DEFAULT 'system',
+src/server/migrations/002_missing_tables.sql-    tenant_id TEXT DEFAULT '',
 src/server/migrations/002_missing_tables.sql-    tenant_id TEXT NOT NULL,
 -- Adding RLS for department_tasks
 ALTER TABLE IF EXISTS department_tasks ADD COLUMN IF NOT EXISTS tenant_id VARCHAR;
@@ -2010,8 +2010,8 @@ ALTER TABLE IF EXISTS reviews ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_reviews ON reviews;
 CREATE POLICY tenant_isolation_reviews ON reviews USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
-src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT 'system',
-src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT 'system',
+src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT '',
+src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT '',
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
@@ -2043,8 +2043,8 @@ ALTER TABLE IF EXISTS role_assignments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_role_assignments ON role_assignments;
 CREATE POLICY tenant_isolation_role_assignments ON role_assignments USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
-src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT 'system',
-src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT 'system',
+src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT '',
+src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT '',
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
@@ -2310,7 +2310,7 @@ ALTER TABLE IF EXISTS staff_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_staff_profiles ON staff_profiles;
 CREATE POLICY tenant_isolation_staff_profiles ON staff_profiles USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
-src/server/migrations/002_missing_tables.sql-    tenant_id TEXT DEFAULT 'system',
+src/server/migrations/002_missing_tables.sql-    tenant_id TEXT DEFAULT '',
 src/server/migrations/002_missing_tables.sql-    tenant_id TEXT NOT NULL,
 src/server/migrations/002_missing_tables.sql-    tenant_id TEXT NOT NULL,
 src/server/migrations/002_missing_tables.sql-    tenant_id TEXT NOT NULL,
@@ -2566,8 +2566,8 @@ DROP POLICY IF EXISTS tenant_isolation_unified_triage_actions ON unified_triage_
 CREATE POLICY tenant_isolation_unified_triage_actions ON unified_triage_actions USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
-src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT 'system',
-src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT 'system',
+src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT '',
+src/server/migrations/001_initial.sql-    tenant_id TEXT DEFAULT '',
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/migrations/001_initial.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
