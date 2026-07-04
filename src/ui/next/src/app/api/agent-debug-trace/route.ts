@@ -5,6 +5,8 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@localhost:5432/ohc',
 });
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     // 1. Fetch checkpoints from swarm_checkpoints table

@@ -25,24 +25,24 @@ export default function FeedPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
-  useEffect(() => {
-    async function fetchFeed() {
-      try {
-        const res = await fetch('/api/agent-feed');
-        if (!res.ok) {
-          throw new Error('Failed to fetch feed');
-        }
-        const data = await res.json();
-        // Only show pending items on this feed view
-        setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchFeedItems = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/agent-feed');
+      if (!res.ok) {
+        throw new Error('Failed to fetch feed');
       }
+      const data = await res.json();
+      setItems((data.items || []).filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    fetchFeed();
+  useEffect(() => {
+    fetchFeedItems();
 
     let ws: WebSocket;
     let reconnectTimeout: NodeJS.Timeout;

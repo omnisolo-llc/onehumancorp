@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AppShell } from '@/components/AppShell';
+import { AppShell } from '../components/AppShell';
 
 export default function StaffPage() {
   const [shifts, setShifts] = useState([]);
@@ -18,7 +18,7 @@ export default function StaffPage() {
   }, []);
 
   return (
-    <AppShell>
+    <AppShell title="My Shifts & Tasks">
       <div className="max-w-[375px] mx-auto min-h-screen bg-gray-50 pb-20">
         <header className="px-4 py-6 bg-white border-b border-gray-200">
           <h1 className="text-2xl font-bold text-gray-900">My Shifts & Tasks</h1>
