@@ -1159,8 +1159,8 @@ export default function Dashboard() {
             </WithTooltip>
           </div>
         </section>
-      </div>
       </main>
+      </div>
 
     </AppShell>
     </>
