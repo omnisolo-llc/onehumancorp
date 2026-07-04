@@ -52,11 +52,11 @@ export const CFOAgentCard: React.FC = () => {
             Reserved for Taxes
             <span title="Automated 15% withholding rule" className="text-gray-400 cursor-help">ℹ️</span>
           </span>
-          <span className="font-semibold text-red-500">-${data.tax_reserve.toFixed(2)}</span>
+          <span className="font-semibold text-[#FF3B30]">-${data.tax_reserve.toFixed(2)}</span>
         </div>
         <div className="flex justify-between items-center">
           <span>Upcoming Bills (Next 7 Days)</span>
-          <span className="font-semibold text-red-500">-${data.upcoming_liabilities.toFixed(2)}</span>
+          <span className="font-semibold text-[#FF3B30]">-${data.upcoming_liabilities.toFixed(2)}</span>
         </div>
       </div>
     </div>

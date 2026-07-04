@@ -47,7 +47,7 @@ function CustomerMemoryGraphContent() {
   if (error) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-        <div className="text-red-500">{error}</div>
+        <div className="text-[#FF3B30]">{error}</div>
       </div>
     );
   }
