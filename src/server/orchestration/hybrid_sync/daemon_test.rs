@@ -37,6 +37,8 @@ mod tests {
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )").execute(&sqlite_pool).await.unwrap();
 
+        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
+
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
@@ -68,6 +70,8 @@ mod tests {
         .execute(&sqlite_pool)
         .await
         .unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS sub_agent_queue (
@@ -409,6 +413,8 @@ async fn test_hybrid_sync_pos_offline_transactions() {
             )"
         ).execute(&sqlite_pool).await.unwrap();
 
+        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
+
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
@@ -459,6 +465,8 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("CREATE TABLE IF NOT EXISTS pos_offline_transactions (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, client_id TEXT NOT NULL, amount_cents BIGINT NOT NULL, currency TEXT NOT NULL DEFAULT 'USD', payload TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING', device_signature TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
 
         sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status) VALUES ('pos-tx-chaos-1', 'tenant-pos-chaos-test', 'client-1', 1500, 'USD', '{\"test\":\"payload\"}', 'PENDING')").execute(&sqlite_pool).await.unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
 
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pg_pool = match tokio::time::timeout(std::time::Duration::from_millis(50), sqlx::postgres::PgPoolOptions::new().connect(&database_url)).await { Ok(Ok(p)) => p, _ => return, };
@@ -615,6 +623,8 @@ async fn test_hybrid_sync_pos_offline_transactions() {
             _ => return,
         };
 
+        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
+
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS sub_agent_queue (
                 id VARCHAR PRIMARY KEY,
@@ -672,6 +682,8 @@ async fn test_hybrid_sync_pos_offline_transactions() {
                 last_synced_at TEXT
             )").execute(&sqlite_pool).await.unwrap();
 
+        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id TEXT PRIMARY KEY, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, error_message TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.unwrap();
+
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
@@ -699,6 +711,8 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         .execute(&pg_pool)
         .await
         .unwrap();
+
+        sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         // Insert stuck mission
         sqlx::query("INSERT INTO agent_missions (id, status, last_synced_at, tenant_id) VALUES ('stuck_mission_sqlite_cat', 'IN_PROGRESS', datetime('now', '-2 hour'), 'tenant1')")
