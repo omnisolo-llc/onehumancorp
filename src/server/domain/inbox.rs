@@ -32,14 +32,72 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
 
         if let Some((source, sender_id)) = row {
             if source == "whatsapp" {
-                let registry = crate::integrations::registry::IntegrationsRegistry::new();
                 let draft_reply_clone = draft_reply.to_string();
                 let sender_id_clone = sender_id.to_string();
+                let tenant_id_clone = tenant_id.to_string();
+                let pool_clone = pool.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
-                        tracing::error!("Failed to send WhatsApp reply: {}", e);
+                    // Find the best integration id for whatsapp.
+                    let integration_id: Result<String, sqlx::Error> = sqlx::query_scalar(
+                        "SELECT integration_id FROM integration_credentials WHERE tenant_id = $1 AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+                    )
+                    .bind(&tenant_id_clone)
+                    .fetch_optional(&pool_clone)
+                    .await
+                    .map(|opt| opt.unwrap_or_else(|| "whatsapp_cloud_api".to_string()));
+
+                    let id_to_use = integration_id.unwrap_or_else(|_| "whatsapp_cloud_api".to_string());
+
+                    let registry = crate::integrations::registry::IntegrationsRegistry::new();
+
+                    // We need a from_phone if sending via twilio/whatsapp abstraction
+                    let from_number = sqlx::query_scalar::<_, String>(
+                        "SELECT from_phone FROM integration_credentials WHERE tenant_id = $1 AND integration_id = $2 LIMIT 1"
+                    )
+                    .bind(&tenant_id_clone)
+                    .bind(&id_to_use)
+                    .fetch_optional(&pool_clone)
+                    .await
+                    .unwrap_or_default()
+                    .unwrap_or_default();
+
+                    // If not found in DB, fallback to ENV for twilio
+                    let effective_from = if from_number.is_empty() && id_to_use == "twilio" {
+                        std::env::var("TWILIO_FROM_NUMBER").unwrap_or_else(|_| "omni".to_string())
+                    } else if from_number.is_empty() {
+                        "omni".to_string()
                     } else {
-                        tracing::info!("Successfully sent WhatsApp reply to {}", sender_id_clone);
+                        from_number
+                    };
+
+                    // Re-register it in memory just in case (optional, but good practice given how OHC integration registry works)
+                    if id_to_use == "twilio" || id_to_use == "whatsapp" {
+                         let twilio_creds: Result<(String, String), sqlx::Error> = sqlx::query_as(
+                             "SELECT bot_token, api_token FROM integration_credentials WHERE integration_id = $1 AND tenant_id = $2 LIMIT 1"
+                         )
+                         .bind(&id_to_use)
+                         .bind(&tenant_id_clone)
+                         .fetch_one(&pool_clone)
+                         .await;
+
+                         if let Ok((account_sid, auth_token)) = twilio_creds {
+                             let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+                                 integration_id: id_to_use.clone(),
+                                 base_url: "https://api.twilio.com".to_string(),
+                                 bot_token: account_sid,
+                                 chat_id: "".to_string(),
+                                 webhook_url: "".to_string(),
+                                 api_token: auth_token,
+                                 from_phone: effective_from.clone(),
+                             };
+                             let _ = registry.connect(&id_to_use, "https://api.twilio.com", creds);
+                         }
+                    }
+
+                    if let Err(e) = registry.send_whatsapp(&id_to_use, &sender_id_clone, &effective_from, &draft_reply_clone).await {
+                        tracing::error!("Failed to send WhatsApp reply using {}: {}", id_to_use, e);
+                    } else {
+                        tracing::info!("Successfully sent WhatsApp reply to {} using {}", sender_id_clone, id_to_use);
                     }
                 });
             } else if source == "instagram" || source == "facebook" {
