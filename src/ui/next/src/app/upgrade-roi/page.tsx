@@ -25,7 +25,7 @@ export default function UpgradeROIPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
       {/* Header */}
-      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40">
+      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 premium-glass">
         <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Pro Plan ROI Calculator 📈</h1>
         <button
           onClick={() => router.push('/dashboard')}
@@ -37,7 +37,7 @@ export default function UpgradeROIPage() {
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-5xl mx-auto flex flex-col md:flex-row gap-6 md:gap-8 items-start">
         {/* Input Section */}
-        <section className="w-full md:w-1/2 p-6 md:p-8 shadow-md bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl">
+        <section className="w-full md:w-1/2 p-6 md:p-8 shadow-md premium-glass rounded-2xl">
           <div className="mb-6">
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Calculate Your Growth</h2>
              <p className="text-sm text-gray-600">
