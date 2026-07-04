@@ -2823,7 +2823,6 @@
           "step-target-audience",
           "step-domain",
           "step-template",
-          "step-instant",
           "step-chat",
         ];
 
@@ -2986,8 +2985,7 @@
             "step-target-audience",
             "step-domain",
             "step-template",
-            "step-instant",
-            "step-chat",
+          "step-chat",
           ];
           if (state.step < steps.length) {
             goToStep(steps[state.step]);
@@ -3048,8 +3046,7 @@
             "step-target-audience",
             "step-domain",
             "step-template",
-            "step-instant",
-            "step-chat",
+          "step-chat",
           ].indexOf(activeStep.id);
           if (stepIndex !== -1) {
             state.step = stepIndex;
@@ -3100,7 +3097,6 @@
 
         if (
           stepId === "step-initial" ||
-          stepId === "step-instant" ||
           stepId === "step-chat" ||
           stepId === "step-approval"
         ) {
@@ -3310,7 +3306,6 @@
         const stepperIndicator = document.getElementById("stepper-indicator");
         if (
           stepId === "step-initial" ||
-          stepId === "step-instant" ||
           stepId === "step-chat" ||
           stepId === "step-approval"
         ) {
@@ -3418,7 +3413,7 @@
       }
 
       function goToStep(stepId, shouldSave = true) {
-        if (stepId === "step-instant") {
+        if (stepId === "step-initial") {
           const instantBioInputEl = document.getElementById("instant-bio");
           const generateStorefrontBtn = document.getElementById("generate-storefront-btn");
           if (instantBioInputEl && generateStorefrontBtn) {
@@ -4304,7 +4299,7 @@
               if (nextBtn) {
                 nextBtn.click();
               } else if (
-                activeStep.id === "step-instant" ||
+                activeStep.id === "step-initial" ||
                 activeStep.id === "step-template"
               ) {
                 const launchBtn = activeStep.querySelector(
