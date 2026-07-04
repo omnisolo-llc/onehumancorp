@@ -90,7 +90,7 @@ impl Department for CustomerSuccessAgent {
 
                     // We need from_phone. Twilio requires it. Let's get it from the tenant's integration_credentials
                     let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as(
-                        "SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id = 'twilio' AND tenant_id = $1 LIMIT 1"
+                        "SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp' THEN 1 ELSE 2 END LIMIT 1"
                     )
                     .bind(&event.tenant_id)
                     .fetch_one(&pool)
@@ -171,7 +171,7 @@ impl Department for CustomerSuccessAgent {
             tokio::spawn(async move {
                 if source == "whatsapp" && !sender_id.is_empty() {
                     let pool = crate::db::get_pool();
-                    let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id = 'twilio' AND tenant_id = $1 LIMIT 1")
+                    let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp' THEN 1 ELSE 2 END LIMIT 1")
                         .bind(&tenant_id_for_meta)
                         .fetch_one(&pool)
                         .await;
@@ -197,44 +197,26 @@ impl Department for CustomerSuccessAgent {
                     }
                 }
 
-                if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
+                if source == "instagram" && !sender_id.is_empty() {
                     let pool = crate::db::get_pool();
-                    let query = if source == "whatsapp" {
-                        "SELECT id, integration_code FROM tool_integrations WHERE id IN ('whatsapp', 'whatsapp_cloud_api', 'twilio', 'meta') AND tenant_id = $1 ORDER BY CASE WHEN id = 'twilio' THEN 1 ELSE 2 END LIMIT 1"
-                    } else {
-                        "SELECT id, integration_code FROM tool_integrations WHERE id = 'meta' AND tenant_id = $1 LIMIT 1"
-                    };
+                    let query = "SELECT id, integration_code FROM tool_integrations WHERE id = 'meta' AND tenant_id = $1 LIMIT 1";
                     let row: Result<(String, String), sqlx::Error> = sqlx::query_as(query)
                         .bind(&tenant_id_for_meta)
                         .fetch_one(&pool)
                         .await;
 
                     match row {
-                        Ok((found_id, api_token,)) => {
+                        Ok((_found_id, api_token,)) => {
                             let registry = crate::integrations::registry::IntegrationsRegistry::new();
-                            let integration_id = if source == "whatsapp" { found_id.as_str() } else { "meta" };
+                            let integration_id = "meta";
 
-                            let twilio_creds = ::server_ohc::orchestration::ConnectIntegrationRequest { bot_token: api_token.clone(), chat_id: "".to_string(), webhook_url: "".to_string(), api_token: api_token.clone(), from_phone: "".to_string(), ..Default::default() };
-                            if let Err(e) = registry.connect(integration_id, &tenant_id_for_meta, twilio_creds.clone()) {
+                            let meta_creds = ::server_ohc::orchestration::ConnectIntegrationRequest { bot_token: api_token.clone(), chat_id: "".to_string(), webhook_url: "".to_string(), api_token: api_token.clone(), from_phone: "".to_string(), ..Default::default() };
+                            if let Err(e) = registry.connect(integration_id, &tenant_id_for_meta, meta_creds.clone()) {
                                 tracing::warn!("Failed to connect {} integration: {}", integration_id, e);
                             }
 
                             let res = registry.send_message(integration_id, &source, &sender_id, &text).await;
-                            if res.is_err() && (integration_id == "whatsapp" || integration_id == "twilio") {
-                                let twilio_creds2 = ::server_ohc::orchestration::ConnectIntegrationRequest { bot_token: api_token.clone(), chat_id: "".to_string(), webhook_url: "".to_string(), api_token: api_token.clone(), from_phone: "".to_string(), ..Default::default() };
-                                if let Err(e) = registry.connect("twilio", &tenant_id_for_meta, twilio_creds2) {
-                                    tracing::warn!("Failed to connect twilio integration fallback: {}", e);
-                                }
-
-                                let from_phone_query = "SELECT sms_critical_phone FROM settings WHERE tenant_id = $1 LIMIT 1";
-                                let from_phone_row: Result<(String,), sqlx::Error> = sqlx::query_as(from_phone_query).bind(&tenant_id_for_meta).fetch_one(&pool).await;
-                                let from_phone = from_phone_row.map(|(p,)| p).unwrap_or_else(|_| "".to_string());
-
-                                match registry.send_sms("twilio", &format!("whatsapp:{}", sender_id.replace("whatsapp:", "")), &format!("whatsapp:{}", from_phone), &text).await {
-                                    Ok(_) => tracing::info!("Successfully sent {} message via Twilio integration fallback", source),
-                                    Err(e) => tracing::error!("Failed to send {} message via Twilio fallback integration: {}", source, e),
-                                }
-                            } else if let Err(e) = res {
+                            if let Err(e) = res {
                                 tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
                             } else {
                                 tracing::info!("Successfully sent {} message via Meta integration", source);
