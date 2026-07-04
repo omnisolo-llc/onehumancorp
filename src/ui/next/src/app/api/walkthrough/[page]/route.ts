@@ -25,6 +25,6 @@ export async function GET(
     return NextResponse.json(mappedData);
   } catch (error) {
     console.error(`Failed to fetch walkthrough for page ${page}:`, error);
-    return NextResponse.json([], { status: 200 }); // Graceful fallback
+    return NextResponse.json({ error: 'Backend walkthrough service unavailable' }, { status: 502 });
   }
 }
