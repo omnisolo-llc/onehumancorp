@@ -67,11 +67,10 @@ impl<T: DeserializeOwned> OutputParser<T> for AdvancedPydanticOutputParser<T> {
             if let Some(end) = content[start + 7..].rfind("```") {
                 json_str = content[start + 7..start + 7 + end].trim();
             }
-        } else if let Some(start) = content.find("```") {
-            if let Some(end) = content[start + 3..].rfind("```") {
+        } else if let Some(start) = content.find("```")
+            && let Some(end) = content[start + 3..].rfind("```") {
                 json_str = content[start + 3..start + 3 + end].trim();
             }
-        }
 
         if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
             return Ok(parsed);
@@ -127,11 +126,10 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
             if let Some(end) = content[start + 7..].rfind("```") {
                 json_str = content[start + 7..start + 7 + end].trim();
             }
-        } else if let Some(start) = content.find("```") {
-            if let Some(end) = content[start + 3..].rfind("```") {
+        } else if let Some(start) = content.find("```")
+            && let Some(end) = content[start + 3..].rfind("```") {
                 json_str = content[start + 3..start + 3 + end].trim();
             }
-        }
 
         if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
             return Ok(parsed);
