@@ -156,24 +156,8 @@ impl Store {
                 if secret_path.exists() {
                     #[cfg(unix)]
                     {
-                        if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
-                            if sym_meta.file_type().is_symlink() {
-                                tracing::error!("CRITICAL SECURITY ERROR: .ohc_jwt_secret is a symlink. Aborting to prevent TOCTOU vulnerability.");
-                                std::process::exit(1);
-                            }
-                        }
-
-                        use std::os::unix::fs::PermissionsExt;
-                        if let Ok(perms) = std::fs::symlink_metadata(&secret_path).map(|m| m.permissions()) {
-                            if perms.mode() & 0o777 != 0o600 {
-                                tracing::warn!("Insecure permissions on .ohc_jwt_secret. Ignoring it to prevent TOCTOU attacks.");
-                                std::process::exit(1);
-                            }
-                        }
-                    }
-                    #[cfg(unix)]
-                    {
                         use std::os::unix::fs::OpenOptionsExt;
+                        use std::os::unix::fs::PermissionsExt;
                         let mut options = std::fs::OpenOptions::new();
                         options.read(true);
                         #[cfg(target_os = "linux")]
@@ -182,6 +166,13 @@ impl Store {
                         options.custom_flags(0x0100); // O_NOFOLLOW
 
                         if let Ok(mut file) = options.open(&secret_path) {
+                            if let Ok(metadata) = file.metadata() {
+                                let perms = metadata.permissions();
+                                if perms.mode() & 0o777 != 0o600 {
+                                    tracing::warn!("Insecure permissions on .ohc_jwt_secret. Ignoring it to prevent TOCTOU attacks.");
+                                    std::process::exit(1);
+                                }
+                            }
                             use std::io::Read;
                             let mut bytes = Vec::new();
                             if file.read_to_end(&mut bytes).is_ok() && bytes.len() >= 32 {
@@ -204,24 +195,8 @@ impl Store {
                     if secret_path.exists() {
                         #[cfg(unix)]
                         {
-                            if let Ok(sym_meta) = std::fs::symlink_metadata(&secret_path) {
-                                if sym_meta.file_type().is_symlink() {
-                                    tracing::error!("CRITICAL SECURITY ERROR: .ohc_sqlite_key is a symlink. Aborting to prevent TOCTOU vulnerability.");
-                                    std::process::exit(1);
-                                }
-                            }
-
-                            use std::os::unix::fs::PermissionsExt;
-                            if let Ok(perms) = std::fs::symlink_metadata(&secret_path).map(|m| m.permissions()) {
-                                if perms.mode() & 0o777 != 0o600 {
-                                    tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
-                                    std::process::exit(1);
-                                }
-                            }
-                        }
-                        #[cfg(unix)]
-                        {
                             use std::os::unix::fs::OpenOptionsExt;
+                            use std::os::unix::fs::PermissionsExt;
                             let mut options = std::fs::OpenOptions::new();
                             options.read(true);
                         #[cfg(target_os = "linux")]
@@ -230,6 +205,13 @@ impl Store {
                         options.custom_flags(0x0100); // O_NOFOLLOW
 
                             if let Ok(mut file) = options.open(&secret_path) {
+                                if let Ok(metadata) = file.metadata() {
+                                    let perms = metadata.permissions();
+                                    if perms.mode() & 0o777 != 0o600 {
+                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Ignoring it to prevent TOCTOU attacks.");
+                                        std::process::exit(1);
+                                    }
+                                }
                                 use std::io::Read;
                                 let mut bytes = String::new();
                                 if file.read_to_string(&mut bytes).is_ok() && !bytes.trim().is_empty() {
