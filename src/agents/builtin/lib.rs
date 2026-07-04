@@ -49,6 +49,7 @@ pub mod openhands;
 pub mod openhands_runner;
 pub mod prompt_construction;
 pub mod ralph_loop;
+pub mod crewai;
 pub mod ruflo;
 pub mod service;
 

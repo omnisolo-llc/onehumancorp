@@ -23,38 +23,6 @@ test.describe('CrewAI Flow Harness UI', () => {
     const reportOutput = page.getByTestId('crewai-report-output');
     await expect(reportOutput).toBeVisible({ timeout: 60000 });
 
-  test('user handles empty task description gracefully', async ({ page }) => {
-    await page.goto('/crewai');
-    await page.getByTestId('crewai-execute-btn').click();
-    await expect(page.getByTestId('crewai-error')).toBeVisible();
-    await expect(page.getByTestId('crewai-error')).toHaveText('Please enter a task description.');
-  });
-
-  test('user can clear input after execution', async ({ page }) => {
-    await page.goto('/crewai');
-    const taskInput = page.getByTestId('crewai-task-input');
-    await taskInput.fill('Some analysis task.');
-    await taskInput.fill('');
-    await page.getByTestId('crewai-execute-btn').click();
-    await expect(page.getByTestId('crewai-error')).toBeVisible();
-  });
-
-  test('CrewAI UI displays loading state during execution', async ({ page }) => {
-    await page.goto('/crewai');
-    const taskInput = page.getByTestId('crewai-task-input');
-    await taskInput.fill('Long task to check loading.');
-    await page.getByTestId('crewai-execute-btn').click();
-    await expect(page.getByTestId('crewai-execute-btn')).toBeDisabled();
-    // In a real app we might see a spinner or similar, but checking disabled state is good.
-    await expect(page.getByTestId('crewai-report-output')).toBeVisible({ timeout: 60000 });
-  });
-
-  test('CrewAI UI handles backend failure gracefully', async ({ page }) => {
-    // This is hard to trigger cleanly without a real mock, but we can verify the error container exists
-    await page.goto('/crewai');
-    // For now, this is a placeholder if we were to force an error.
-  });
-
     // Verify the report content
     const reportText = await reportOutput.textContent();
     expect(reportText).toContain('[CrewAI Flow Executed]');
@@ -94,35 +62,3 @@ test.describe('CrewAI Flow Harness UI', () => {
     // For now, this is a placeholder if we were to force an error.
   });
 });
-
-  test('user handles empty task description gracefully', async ({ page }) => {
-    await page.goto('/crewai');
-    await page.getByTestId('crewai-execute-btn').click();
-    await expect(page.getByTestId('crewai-error')).toBeVisible();
-    await expect(page.getByTestId('crewai-error')).toHaveText('Please enter a task description.');
-  });
-
-  test('user can clear input after execution', async ({ page }) => {
-    await page.goto('/crewai');
-    const taskInput = page.getByTestId('crewai-task-input');
-    await taskInput.fill('Some analysis task.');
-    await taskInput.fill('');
-    await page.getByTestId('crewai-execute-btn').click();
-    await expect(page.getByTestId('crewai-error')).toBeVisible();
-  });
-
-  test('CrewAI UI displays loading state during execution', async ({ page }) => {
-    await page.goto('/crewai');
-    const taskInput = page.getByTestId('crewai-task-input');
-    await taskInput.fill('Long task to check loading.');
-    await page.getByTestId('crewai-execute-btn').click();
-    await expect(page.getByTestId('crewai-execute-btn')).toBeDisabled();
-    // In a real app we might see a spinner or similar, but checking disabled state is good.
-    await expect(page.getByTestId('crewai-report-output')).toBeVisible({ timeout: 60000 });
-  });
-
-  test('CrewAI UI handles backend failure gracefully', async ({ page }) => {
-    // This is hard to trigger cleanly without a real mock, but we can verify the error container exists
-    await page.goto('/crewai');
-    // For now, this is a placeholder if we were to force an error.
-  });

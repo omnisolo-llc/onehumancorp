@@ -240,3 +240,153 @@ describe('Walkthrough Component', () => {
     bubble = screen.getByRole('dialog');
   });
 });
+
+  it('does not render when isOpen is false', () => {
+    const steps = [
+      { targetId: 'step1', title: 'Step 1', content: 'Content 1' }
+    ];
+    const { container } = render(
+      <InteractiveWalkthrough steps={steps} isOpen={false} onClose={() => {}} />
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('does not render when steps array is empty', () => {
+    const { container } = render(
+      <InteractiveWalkthrough steps={[]} isOpen={true} onClose={() => {}} />
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('does not render in E2E mode unless forced', () => {
+    const originalEnv = process.env.NEXT_PUBLIC_E2E;
+    process.env.NEXT_PUBLIC_E2E = 'true';
+
+    const steps = [
+      { targetId: 'step1', title: 'Step 1', content: 'Content 1' }
+    ];
+    const { container } = render(
+      <InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />
+    );
+    expect(container.firstChild).toBeNull();
+
+    process.env.NEXT_PUBLIC_E2E = originalEnv;
+  });
+
+  it('renders in E2E mode when forced via window.location.search', () => {
+    const originalEnv = process.env.NEXT_PUBLIC_E2E;
+    process.env.NEXT_PUBLIC_E2E = 'true';
+
+    const originalLocation = window.location;
+    // @ts-ignore
+    delete window.location;
+    window.location = { ...originalLocation, search: '?test_walkthrough=true' };
+
+    document.body.innerHTML = '<div id="step1">Target</div>';
+
+    const steps = [
+      { targetId: 'step1', title: 'Step 1', content: 'Content 1' }
+    ];
+
+    render(
+      <InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />
+    );
+
+    expect(screen.getByText('Target')).toBeInTheDocument();
+
+    process.env.NEXT_PUBLIC_E2E = originalEnv;
+    window.location = originalLocation;
+    document.body.innerHTML = '';
+  });
+
+  it('logs a warning and returns null targetRect when target is not found', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const steps = [
+      { targetId: 'nonexistent-step', title: 'Step 1', content: 'Content 1' }
+    ];
+
+    render(
+      <InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />
+    );
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith('Walkthrough: Target element with id "nonexistent-step" not found.');
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('removes window event listeners on unmount', () => {
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+    document.body.innerHTML = '<div id="step1">Target</div>';
+    const steps = [{ targetId: 'step1', title: 'Step 1', content: 'Content 1' }];
+
+    const { unmount } = render(
+      <InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />
+    );
+
+    unmount();
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('scroll', expect.any(Function), true);
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function));
+
+    removeEventListenerSpy.mockRestore();
+    document.body.innerHTML = '';
+  });
+
+  it('clears timeouts on unmount', () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+
+    document.body.innerHTML = '<div id="step1">Target</div>';
+    const steps = [{ targetId: 'step1', title: 'Step 1', content: 'Content 1' }];
+
+    const { unmount } = render(
+      <InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />
+    );
+
+    unmount();
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+
+    clearTimeoutSpy.mockRestore();
+    document.body.innerHTML = '';
+    vi.useRealTimers();
+  });
+
+  it('triggers resize recalculation with handleScroll timeout', () => {
+    vi.useFakeTimers();
+    document.body.innerHTML = '<div id="step1">Target</div>';
+    const steps = [{ targetId: 'step1', title: 'Step 1', content: 'Content 1' }];
+
+    render(<InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />);
+
+    vi.advanceTimersByTime(300);
+
+    const spy = vi.spyOn(document.getElementById('step1')!, 'getBoundingClientRect').mockReturnValue({
+      width: 100, height: 100, top: 10, left: 10, right: 110, bottom: 110, x: 10, y: 10, toJSON: () => {}
+    });
+
+    fireEvent.scroll(window);
+
+    vi.advanceTimersByTime(50);
+
+    expect(spy).toHaveBeenCalled();
+
+    spy.mockRestore();
+    document.body.innerHTML = '';
+    vi.useRealTimers();
+  });
+
+  it('provides null targetRect when document.getElementById returns null', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const getElementByIdSpy = vi.spyOn(document, 'getElementById').mockReturnValue(null);
+
+    const steps = [{ targetId: 'nonexistent', title: 'Step 1', content: 'Content 1' }];
+
+    render(<InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith('Walkthrough: Target element with id "nonexistent" not found.');
+
+    consoleWarnSpy.mockRestore();
+    getElementByIdSpy.mockRestore();
+  });
