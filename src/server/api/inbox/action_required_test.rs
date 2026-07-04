@@ -1,8 +1,8 @@
-use axum::{body::Body, http::{Request, StatusCode}, Router};
+use axum::{body::Body, http::{Request, StatusCode}};
 use std::sync::Arc;
 use tower::ServiceExt;
 
-use crate::{db::{DB, DbStore}, domain::repository::action_required_queue_repo::ActionRequiredQueueRepo};
+use crate::db::{DB, DbStore};
 
 #[tokio::test]
 async fn test_list_pending_drafts_unauthorized() {
