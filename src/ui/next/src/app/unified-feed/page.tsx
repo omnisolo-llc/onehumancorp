@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { enqueueAction } from '../utils/offlineQueue';
 
 interface FeedItemRaw {
   id: string;
@@ -76,16 +77,41 @@ export default function UnifiedFeed() {
     fetchFeed();
   }, []);
 
+  const [isOffline, setIsOffline] = useState(false);
+
+  useEffect(() => {
+    setIsOffline(!navigator.onLine);
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const handleAction = async (itemId: string, action: string) => {
     setProcessingId(itemId);
     try {
-      const res = await fetch(`/api/agent-feed/${itemId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
-      });
-      if (res.ok) {
+      if (isOffline) {
+        // Queue the mutation offline
+        await enqueueAction({
+          id: `feed_${itemId}_${Date.now()}`,
+          type: 'triage_action',
+          payload: { id: itemId, action, tenant_id: localStorage.getItem("tenant_id") || "default" },
+          timestamp: Date.now()
+        });
         setFeedItems(prev => prev.filter(i => i.workItem.id !== itemId));
+      } else {
+        const res = await fetch(`/api/agent-feed/${itemId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+        if (res.ok) {
+          setFeedItems(prev => prev.filter(i => i.workItem.id !== itemId));
+        }
       }
     } catch (e) {
       console.error(e);
@@ -107,6 +133,11 @@ export default function UnifiedFeed() {
 
   return (
     <div className="w-full max-w-[375px] mx-auto min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] flex flex-col text-[#1D1D1F] dark:text-[#F5F5F7]">
+      {isOffline && (
+        <div className="bg-orange-500/90 backdrop-blur-md text-white text-center py-1 text-xs font-semibold">
+          Offline Mode
+        </div>
+      )}
       <header className="bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50 p-4 sticky top-0 z-10 flex justify-between items-center">
         <h1 className="text-xl font-bold tracking-tight">Today</h1>
       </header>
