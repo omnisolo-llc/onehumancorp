@@ -28,7 +28,7 @@ pub fn agent_task_timeout() -> std::time::Duration {
 /// Default visual verifier using bash commands
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
-pub enum AgentEvent {
+pub enum  {
     RunStarted {
         iteration: i32,
     },
@@ -439,7 +439,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
@@ -467,12 +467,12 @@ impl Agent {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
             let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
         }
-        on_event(AgentEvent::RunStarted { iteration: 0 });
+        on_event(::RunStarted { iteration: 0 });
 
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
         {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+            on_event(::GuardrailTripped { reason: e.clone() });
             return Err(Box::new(std::io::Error::other(format!(
                 "Termination: Input Guardrail tripwire fires: {}",
                 e
@@ -485,7 +485,7 @@ impl Agent {
         let phases = ["Gather", "Act", "Verify"];
 
         for (i, phase) in phases.iter().enumerate() {
-            on_event(AgentEvent::IterationStarted {
+            on_event(::IterationStarted {
                 iteration: i as i32,
                 message_count: messages.len(),
             });
@@ -552,7 +552,7 @@ impl Agent {
                     if let Some(guardrails) = &cfg.guardrails
                         && let Err(e) = guardrails.check_output(&msg.content)
                     {
-                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                        on_event(::GuardrailTripped { reason: e.clone() });
                         return Err(Box::new(std::io::Error::other(format!(
                             "Termination: Output Guardrail tripwire fires: {}",
                             e
@@ -573,7 +573,7 @@ impl Agent {
                 if let Some(guardrails) = &cfg.guardrails
                     && let Err(e) = guardrails.check_tool(tc)
                 {
-                    on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                    on_event(::GuardrailTripped { reason: e.clone() });
                     return Err(Box::new(std::io::Error::other(format!(
                         "Termination: Tool Guardrail tripwire fires: {}",
                         e
@@ -641,7 +641,7 @@ impl Agent {
 
                 match res {
                     Ok(r) => {
-                        on_event(AgentEvent::ToolCall {
+                        on_event(::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: r.clone(),
@@ -661,7 +661,7 @@ impl Agent {
                                 &err_msg,
                             )
                             .error;
-                        on_event(AgentEvent::ToolCall {
+                        on_event(::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: self_correct_msg.clone(),
@@ -691,7 +691,7 @@ impl Agent {
                     }
                     Err(e) => {
                         let err_str = format!("Error: {:?}", e);
-                        on_event(AgentEvent::ToolCall {
+                        on_event(::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: err_str.clone(),
@@ -747,7 +747,7 @@ impl Agent {
 
                 match res {
                     Ok(r) => {
-                        on_event(AgentEvent::ToolCall {
+                        on_event(::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: r.clone(),
@@ -767,7 +767,7 @@ impl Agent {
                                 &err_msg,
                             )
                             .error;
-                        on_event(AgentEvent::ToolCall {
+                        on_event(::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: self_correct_msg.clone(),
@@ -797,7 +797,7 @@ impl Agent {
                     }
                     Err(e) => {
                         let err_str = format!("Error: {:?}", e);
-                        on_event(AgentEvent::ToolCall {
+                        on_event(::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: err_str.clone(),
@@ -869,7 +869,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         // SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
         if cfg.enable_actor_model_message_passing {
@@ -909,7 +909,7 @@ impl Agent {
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
         {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+            on_event(::GuardrailTripped { reason: e.clone() });
             return Err(Box::new(std::io::Error::other(format!(
                 "Termination: Input Guardrail tripwire fires: {}",
                 e
@@ -920,7 +920,7 @@ impl Agent {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
             let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
         }
-        on_event(AgentEvent::RunStarted { iteration: 0 });
+        on_event(::RunStarted { iteration: 0 });
 
 
         let session_id = cfg
@@ -994,7 +994,7 @@ impl Agent {
 
         // The Orchestration Loop
         while turn_count < cfg.max_iterations {
-            on_event(AgentEvent::IterationStarted {
+            on_event(::IterationStarted {
                 iteration: turn_count,
                 message_count: messages.len(),
             });
@@ -1012,7 +1012,7 @@ impl Agent {
                         messages = compacted;
                     }
                     Err(e) => {
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: format!("Context compaction failed: {}", e),
                         });
                     }
@@ -1077,7 +1077,7 @@ impl Agent {
             );
             if turn_cost > 0.0 {
                 total_session_cost += turn_cost;
-                on_event(AgentEvent::CostUpdate {
+                on_event(::CostUpdate {
                     total_cost_usd: total_session_cost,
                 });
             }
@@ -1130,7 +1130,7 @@ impl Agent {
                 if let Some(guardrails) = &cfg.guardrails
                     && let Err(e) = guardrails.check_output(&msg.content)
                 {
-                    on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                    on_event(::GuardrailTripped { reason: e.clone() });
                     return Err(Box::new(std::io::Error::other(format!(
                         "Termination: Output Guardrail tripwire fires: {}",
                         e
@@ -1282,7 +1282,7 @@ impl Agent {
                         if let Some(guardrails) = &cfg.guardrails
                             && let Err(e) = guardrails.check_tool(tc)
                         {
-                            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                            on_event(::GuardrailTripped { reason: e.clone() });
                             return Err(Box::new(std::io::Error::other(format!(
                                 "Termination: Tool Guardrail tripwire fires: {}",
                                 e
@@ -1326,7 +1326,7 @@ impl Agent {
                     for (i, tc, res) in results {
                         match res {
                             Ok(r) => {
-                                on_event(AgentEvent::ToolCall {
+                                on_event(::ToolCall {
                                     name: tc.name.clone(),
                                     args_json: tc.arguments.to_string(),
                                     result: r.clone(),
@@ -1363,7 +1363,7 @@ impl Agent {
                                 if let Some(ref cb) = cfg.human_input_callback.0
                                     && let Some(human_input) = cb(&err_msg).await
                                 {
-                                    on_event(AgentEvent::UserInterventionRequired {
+                                    on_event(::UserInterventionRequired {
                                         error: err_msg.clone(),
                                     });
                                     let error_result = crate::types::ToolResult {
@@ -1386,7 +1386,7 @@ impl Agent {
                                     continue;
                                 }
                                 let full_err = format!("USER_FIXABLE: {}", err_msg);
-                                on_event(AgentEvent::UserInterventionRequired {
+                                on_event(::UserInterventionRequired {
                                     error: full_err.clone(),
                                 });
                                 return Err(Box::new(std::io::Error::other(format!(
@@ -1420,7 +1420,7 @@ impl Agent {
                                         &err_msg,
                                     )
                                     .error;
-                                on_event(AgentEvent::ToolCall {
+                                on_event(::ToolCall {
                                     name: tc.name.clone(),
                                     args_json: tc.arguments.to_string(),
                                     result: self_correct_msg.clone(),
@@ -1430,7 +1430,7 @@ impl Agent {
                             }
                             Err(e) => {
                                 let err_str = e.to_string();
-                                on_event(AgentEvent::ToolCall {
+                                on_event(::ToolCall {
                                     name: tc.name.clone(),
                                     args_json: tc.arguments.to_string(),
                                     result: format!("Error: {}", err_str),
@@ -1447,7 +1447,7 @@ impl Agent {
                         if let Some(guardrails) = &cfg.guardrails
                             && let Err(e) = guardrails.check_tool(tc)
                         {
-                            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                            on_event(::GuardrailTripped { reason: e.clone() });
                             return Err(Box::new(std::io::Error::other(format!(
                                 "Termination: Tool Guardrail tripwire fires: {}",
                                 e
@@ -1474,7 +1474,7 @@ impl Agent {
 
                             match res {
                                 Ok(r) => {
-                                    on_event(AgentEvent::ToolCall {
+                                    on_event(::ToolCall {
                                         name: tc.name.clone(),
                                         args_json: tc.arguments.to_string(),
                                         result: r.clone(),
@@ -1498,7 +1498,7 @@ impl Agent {
                                     if let Some(ref cb) = cfg.human_input_callback.0 {
                                         // Await inside sequential block is safe here
                                         if let Some(human_input) = cb(&err_msg).await {
-                                            on_event(AgentEvent::UserInterventionRequired {
+                                            on_event(::UserInterventionRequired {
                                                 error: err_msg.clone(),
                                             });
                                             let error_result = crate::types::ToolResult {
@@ -1522,7 +1522,7 @@ impl Agent {
                                         }
                                     }
                                     let full_err = format!("USER_FIXABLE: {}", err_msg);
-                                    on_event(AgentEvent::UserInterventionRequired {
+                                    on_event(::UserInterventionRequired {
                                         error: full_err.clone(),
                                     });
                                     return Err(Box::new(std::io::Error::other(format!(
@@ -1537,7 +1537,7 @@ impl Agent {
                                         }
                                     }
                                     let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &err_msg).error;
-                                    on_event(AgentEvent::ToolCall {
+                                    on_event(::ToolCall {
                                         name: tc.name.clone(),
                                         args_json: tc.arguments.to_string(),
                                         result: self_correct_msg.clone(),
@@ -1547,7 +1547,7 @@ impl Agent {
                                 }
                                 Err(e) => {
                                     let err_str = e.to_string();
-                                    on_event(AgentEvent::ToolCall {
+                                    on_event(::ToolCall {
                                         name: tc.name.clone(),
                                         args_json: tc.arguments.to_string(),
                                         result: format!("Error: {}", err_str),
@@ -1590,7 +1590,7 @@ impl Agent {
         _on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
@@ -1670,7 +1670,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
@@ -2147,7 +2147,7 @@ impl Agent {
                 let last_msg = msgs.last().unwrap();
                 let content = last_msg.content.clone();
 
-                on_event(AgentEvent::TaskComplete {
+                on_event(::TaskComplete {
                     content: content.clone(),
                 });
 
@@ -2177,13 +2177,13 @@ impl Agent {
             Err(e) => {
                 if let Some(msg) = e.strip_prefix("USER_FIXABLE:") {
                     let err_msg = format!("User intervention required: {}", msg);
-                    on_event(AgentEvent::UserInterventionRequired {
+                    on_event(::UserInterventionRequired {
                         error: err_msg.clone(),
                     });
                     return Err(err_msg.into());
                 }
                 let err_msg = format!("LangGraph Error: {}", e);
-                on_event(AgentEvent::TaskError {
+                on_event(::TaskError {
                     error: err_msg.clone(),
                 });
                 Err(err_msg.into())
@@ -2200,7 +2200,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
@@ -2211,12 +2211,12 @@ impl Agent {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
             let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
         }
-        on_event(AgentEvent::RunStarted { iteration: 0 });
+        on_event(::RunStarted { iteration: 0 });
 
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
         {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+            on_event(::GuardrailTripped { reason: e.clone() });
             return Err(Box::new(std::io::Error::other(format!(
                 "Termination: Input Guardrail tripwire fires: {}",
                 e
@@ -2255,20 +2255,20 @@ impl Agent {
         let report = match manager.conduct_research(initial_message).await {
             Ok(report) => report,
             Err(e) => {
-                on_event(AgentEvent::TaskError {
+                on_event(::TaskError {
                     error: format!("GPT Researcher failed: {}", e),
                 });
                 return Err(e.into());
             }
         };
 
-        on_event(AgentEvent::TaskComplete {
+        on_event(::TaskComplete {
             content: report.clone(),
         });
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_output(&report)
         {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+            on_event(::GuardrailTripped { reason: e.clone() });
             return Err(Box::new(std::io::Error::other(format!(
                 "Termination: Output Guardrail tripwire fires: {}",
                 e
@@ -2286,7 +2286,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
@@ -2299,17 +2299,17 @@ impl Agent {
         loop {
             attempts += 1;
             let event_stream_clone = self.event_stream.clone();
-            let mut on_event_wrapper = &mut |e: AgentEvent| {
+            let mut on_event_wrapper = &mut |e: | {
                 if let Some(stream) = &event_stream_clone {
                     let openhands_event = match &e {
-                        AgentEvent::TaskError { error } => {
+                        ::TaskError { error } => {
                             Some(crate::openhands::EventType::Action(
                                 crate::openhands::Action::AgentMessage {
                                     content: format!("TaskError: {}", error),
                                 },
                             ))
                         }
-                        AgentEvent::ToolCall {
+                        ::ToolCall {
                             name, args_json, ..
                         } => Some(crate::openhands::EventType::Action(
                             crate::openhands::Action::RunCommand {
@@ -2353,7 +2353,7 @@ impl Agent {
                         return Err(e);
                     }
                     if attempts >= max_attempts {
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: "PAUSED".to_string(),
                         });
                         return Err(e);
@@ -2366,7 +2366,7 @@ impl Agent {
                 }
                 Err(_) => {
                     if attempts >= max_attempts {
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: "PAUSED".to_string(),
                         });
                         return Err(Box::new(std::io::Error::new(
@@ -2389,14 +2389,14 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
         if let Some(engine) = &self.durable_engine {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
             let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
         }
-        on_event(AgentEvent::RunStarted { iteration: 0 });
+        on_event(::RunStarted { iteration: 0 });
 
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_structured");
@@ -2454,13 +2454,13 @@ impl Agent {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
             let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
         }
-        on_event(AgentEvent::RunStarted { iteration: 0 });
+        on_event(::RunStarted { iteration: 0 });
 
 
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
         {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+            on_event(::GuardrailTripped { reason: e.clone() });
             return Err(Box::new(std::io::Error::other(format!(
                 "Termination: Input Guardrail tripwire fires: {}",
                 e
@@ -2476,7 +2476,7 @@ impl Agent {
             .trim_end_matches("```")
             .trim();
 
-        on_event(AgentEvent::RunStarted { iteration: 1 });
+        on_event(::RunStarted { iteration: 1 });
 
         let plan: Vec<serde_json::Value> = match serde_json::from_str(plan_json_text) {
             Ok(p) => p,
@@ -2633,7 +2633,7 @@ impl Agent {
 
         let results = futures::future::join_all(read_only_futures).await;
         for (idx, (i, tc)) in read_only_calls.into_iter().enumerate() {
-            on_event(AgentEvent::ToolCall {
+            on_event(::ToolCall {
                 name: tc.name.clone(),
                 args_json: tc.arguments.to_string(),
                 result: "Executing planned step...".to_string(),
@@ -2644,7 +2644,7 @@ impl Agent {
                 Ok(r) => r.clone(),
                 Err(crate::types::ToolError::UserFixable(msg)) => {
                     let err = format!("USER_FIXABLE: {}", msg);
-                    on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                    on_event(::UserInterventionRequired { error: err.clone() });
                     return Err(err.into());
                 }
                 Err(crate::types::ToolError::Fatal(msg)) => {
@@ -2658,7 +2658,7 @@ impl Agent {
                 }
             };
 
-            on_event(AgentEvent::ToolCall {
+            on_event(::ToolCall {
                 name: tc.name.clone(),
                 args_json: tc.arguments.to_string(),
                 result: res.clone(),
@@ -2673,7 +2673,7 @@ impl Agent {
 
         // Execute mutating tools serially
         for (i, tc) in mutating_calls {
-            on_event(AgentEvent::ToolCall {
+            on_event(::ToolCall {
                 name: tc.name.clone(),
                 args_json: tc.arguments.to_string(),
                 result: "Executing planned step...".to_string(),
@@ -2788,7 +2788,7 @@ impl Agent {
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
-                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                        on_event(::UserInterventionRequired { error: err.clone() });
                         return Err(err.into());
                     }
                     Err(crate::types::ToolError::Fatal(msg)) => {
@@ -2800,7 +2800,7 @@ impl Agent {
                 }
             };
 
-            on_event(AgentEvent::ToolCall {
+            on_event(::ToolCall {
                 name: tc.name.clone(),
                 args_json: tc.arguments.to_string(),
                 result: result.clone(),
@@ -2864,10 +2864,10 @@ impl Agent {
             temperature: cfg.temperature,
         };
 
-        on_event(AgentEvent::RunStarted { iteration: 2 });
+        on_event(::RunStarted { iteration: 2 });
         let final_resp = self.llm.chat(replier_req).await?;
 
-        on_event(AgentEvent::TaskComplete {
+        on_event(::TaskComplete {
             content: final_resp.message.content.clone(),
         });
         Ok(final_resp.message.content)
@@ -2879,20 +2879,20 @@ impl Agent {
         self: Arc<Self>,
         cfg: AgentRunConfig,
         initial_message: String,
-    ) -> tokio::sync::mpsc::UnboundedReceiver<AgentEvent> {
+    ) -> tokio::sync::mpsc::UnboundedReceiver<> {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "query");
 
         tokio::spawn(async move {
-            let mut on_event = |event: AgentEvent| {
+            let mut on_event = |event: | {
                 // We use an unbounded channel so send does not block or drop events if the consumer is slow.
                 let _ = tx.send(event);
             };
 
             if let Err(e) = self.run(&cfg, &initial_message, &mut on_event).await {
                 // Propagate the error through the stream so it is not silently swallowed.
-                let _ = tx.send(AgentEvent::TaskError {
+                let _ = tx.send(::TaskError {
                     error: format!("Agent run failed: {}", e),
                 });
             }
@@ -2911,7 +2911,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let timeout_duration = agent_task_timeout();
         let mut attempts = 0;
@@ -2942,7 +2942,7 @@ impl Agent {
                         return Err(e);
                     }
                     if attempts >= max_attempts {
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: "PAUSED".to_string(),
                         });
                         return Err(e);
@@ -2955,7 +2955,7 @@ impl Agent {
                 }
                 Err(_) => {
                     if attempts >= max_attempts {
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: "PAUSED".to_string(),
                         });
                         return Err(Box::new(std::io::Error::new(
@@ -2978,7 +2978,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
@@ -3067,7 +3067,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let thread_id = cfg.thread_id.as_deref().unwrap_or("default");
         if let Some(checkpointer) = &self.checkpointer {
@@ -3163,7 +3163,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
         let timeout_duration = agent_task_timeout();
@@ -3195,7 +3195,7 @@ impl Agent {
                         return Err(e);
                     }
                     if attempts >= max_attempts {
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: "PAUSED".to_string(),
                         });
                         return Err(e);
@@ -3208,7 +3208,7 @@ impl Agent {
                 }
                 Err(_) => {
                     if attempts >= max_attempts {
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: "PAUSED".to_string(),
                         });
                         return Err(Box::new(std::io::Error::new(
@@ -3230,7 +3230,7 @@ impl Agent {
         on_event: &mut F,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     where
-        F: FnMut(AgentEvent) + Send + Sync,
+        F: FnMut() + Send + Sync,
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
@@ -3402,7 +3402,7 @@ impl Agent {
         if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
             let err_msg =
                 "Task requires multi-agent split: >10 overlapping tools provided".to_string();
-            on_event(AgentEvent::TaskError {
+            on_event(::TaskError {
                 error: err_msg.clone(),
             });
             return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
@@ -3412,7 +3412,7 @@ impl Agent {
         if let Some(guard_cfg) = &final_cfg.guardrails
             && let Err(e) = guard_cfg.check_input(initial_message)
         {
-            on_event(AgentEvent::TaskError { error: e.clone() });
+            on_event(::TaskError { error: e.clone() });
             return Err(e.into());
         }
         let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
@@ -3420,12 +3420,12 @@ impl Agent {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
             let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
         }
-        on_event(AgentEvent::RunStarted { iteration: 0 });
+        on_event(::RunStarted { iteration: 0 });
 
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
         {
-            on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+            on_event(::GuardrailTripped { reason: e.clone() });
             return Err(Box::new(std::io::Error::other(format!(
                 "Termination: Input Guardrail tripwire fires: {}",
                 e
@@ -3626,7 +3626,7 @@ impl Agent {
             let iteration = turn_count;
             turn_count += 1;
 
-            on_event(AgentEvent::IterationStarted {
+            on_event(::IterationStarted {
                 iteration,
                 message_count: messages.len(),
             });
@@ -3733,7 +3733,7 @@ impl Agent {
                         || err.to_lowercase().contains("resource exhausted")
                     {
                         let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Business owner has been notified. Please try again later.".to_string();
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: err_msg.clone(),
                         });
                         return Err(err_msg.into());
@@ -3746,13 +3746,13 @@ impl Agent {
                                 "Terminal condition reached: Malformed LLM response retries exhausted ({}).",
                                 max_malformed_retries
                             );
-                            on_event(AgentEvent::TaskError {
+                            on_event(::TaskError {
                                 error: err_msg.clone(),
                             });
                             return Err(err_msg.into());
                         }
                         let err_msg = format!("Malformed LLM response: {}. Agent retrying...", e);
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: err_msg.clone(),
                         });
                         let mut malformed_msg = Message::user(
@@ -3762,7 +3762,7 @@ impl Agent {
                         messages.push(malformed_msg);
                         continue;
                     } else {
-                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        on_event(::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
                 }
@@ -3805,10 +3805,10 @@ impl Agent {
             // Enforce Server-side token budget strictly every turn
             if global_turn_tokens >= final_cfg.max_task_tokens {
                 let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
-                on_event(AgentEvent::TextChunk {
+                on_event(::TextChunk {
                     content: msg.clone(),
                 });
-                on_event(AgentEvent::TaskComplete {
+                on_event(::TaskComplete {
                     content: msg.clone(),
                 });
                 return Ok(msg);
@@ -3826,7 +3826,7 @@ impl Agent {
             if turn_cost > 0.0 {
                 total_session_cost += turn_cost;
                 cost_counter.add(turn_cost, &[model_label, agent_label, tool_label]);
-                on_event(AgentEvent::CostUpdate {
+                on_event(::CostUpdate {
                     total_cost_usd: total_session_cost,
                 });
             }
@@ -3841,7 +3841,7 @@ impl Agent {
             // Layered Termination Condition: Safety Refusal
             if stop_reason == "content_filter" || stop_reason == "safety" {
                 let err_msg = "Terminal condition reached: Safety refusal. The model halted execution due to content safety policy.".to_string();
-                on_event(AgentEvent::TaskError {
+                on_event(::TaskError {
                     error: err_msg.clone(),
                 });
                 return Err(err_msg.into());
@@ -3850,7 +3850,7 @@ impl Agent {
             // Text content from assistant
             if !resp.message.content.is_empty() {
                 last_assistant_content = resp.message.content.clone();
-                on_event(AgentEvent::TextChunk {
+                on_event(::TextChunk {
                     content: resp.message.content.clone(),
                 });
             }
@@ -3865,10 +3865,10 @@ impl Agent {
 
                 if decision.action == BudgetAction::Stop {
                     let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
-                    on_event(AgentEvent::TextChunk {
+                    on_event(::TextChunk {
                         content: msg.clone(),
                     });
-                    on_event(AgentEvent::TaskComplete {
+                    on_event(::TaskComplete {
                         content: msg.clone(),
                     });
                     return Ok(msg);
@@ -3913,7 +3913,7 @@ impl Agent {
                     && let Err(e) = guardrails.check_output(&resp.message.content)
                 {
                     let err_msg = format!("Output Guardrail tripped: {}", e);
-                    on_event(AgentEvent::TaskError {
+                    on_event(::TaskError {
                         error: err_msg.clone(),
                     });
                     return Err(Box::new(std::io::Error::other(err_msg)));
@@ -3992,11 +3992,11 @@ impl Agent {
                 if let Some(guard_cfg) = &final_cfg.guardrails
                     && let Err(e) = guard_cfg.check_output(&last_assistant_content)
                 {
-                    on_event(AgentEvent::TaskError { error: e.clone() });
+                    on_event(::TaskError { error: e.clone() });
                     return Err(e.into());
                 }
 
-                on_event(AgentEvent::TaskComplete {
+                on_event(::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
                 if final_cfg.enable_sona_patterns {
@@ -4071,7 +4071,7 @@ impl Agent {
                 .chain(read_only_calls.iter())
                 .find(|t| t.name == "return_structured_output")
             {
-                on_event(AgentEvent::ToolCall {
+                on_event(::ToolCall {
                     name: tc.name.clone(),
                     args_json: tc.arguments.to_string(),
                     result: "Returning structured output".to_string(),
@@ -4095,7 +4095,7 @@ impl Agent {
                 if let Some(guard_cfg) = &final_cfg.guardrails
                     && let Err(e) = guard_cfg.check_tool(tc)
                 {
-                    on_event(AgentEvent::TaskError { error: e.clone() });
+                    on_event(::TaskError { error: e.clone() });
                     return Err(e.into()); // Tripwire: halt the loop immediately
                 }
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, true, &final_cfg);
@@ -4152,7 +4152,7 @@ impl Agent {
                 match res {
                     Err(crate::types::ToolError::Transient(msg)) => {
                         let err = format!("Transient error after retries: {}", msg);
-                        on_event(AgentEvent::ToolCall {
+                        on_event(::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: format!("Error: {}", err),
@@ -4168,7 +4168,7 @@ impl Agent {
                         tool_error_counts.remove(&tc.name);
                         self.progress.record_tool_use();
                         self.observation_store.insert(tc.id.clone(), r.clone());
-                        on_event(AgentEvent::ToolCall {
+                        on_event(::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: r.clone(),
@@ -4244,7 +4244,7 @@ impl Agent {
                                             "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
                                             tc.name, prev_id
                                         )));
-                                        on_event(AgentEvent::RewindOccurred {
+                                        on_event(::RewindOccurred {
                                             iteration,
                                             checkpoint_id: prev_id,
                                             reason: format!("Tool '{}' failed 3 times", tc.name),
@@ -4258,7 +4258,7 @@ impl Agent {
                                 "Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}",
                                 tc.name, err_msg
                             );
-                            on_event(AgentEvent::TaskError {
+                            on_event(::TaskError {
                                 error: fatal_msg.clone(),
                             });
                             return Err(fatal_msg.into());
@@ -4272,7 +4272,7 @@ impl Agent {
                                 &err_msg,
                             )
                             .error;
-                        on_event(AgentEvent::ToolCall {
+                        on_event(::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: self_correct_msg.clone(),
@@ -4298,7 +4298,7 @@ impl Agent {
                         if let Some(ref cb) = final_cfg.human_input_callback.0
                             && let Some(human_input) = cb(&msg).await
                         {
-                            on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                            on_event(::UserInterventionRequired { error: msg.clone() });
                             let idx = tool_calls
                                 .iter()
                                 .position(|t| t.id == tc.id)
@@ -4314,21 +4314,21 @@ impl Agent {
                             continue;
                         }
                         let err = format!("USER_FIXABLE: {}", msg);
-                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                        on_event(::UserInterventionRequired { error: err.clone() });
                         return Err(err.into());
                     }
                     Err(ToolError::Fatal(msg)) => {
                         let err = format!("Fatal tool error: {}", msg);
-                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        on_event(::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
                     Err(ToolError::Unexpected(msg)) => {
                         let err = format!("Unexpected tool error: {}", msg);
-                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        on_event(::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
                     Err(ToolError::HandoffRequested(target)) => {
-                        on_event(AgentEvent::Handoff {
+                        on_event(::Handoff {
                             target_agent: target.clone(),
                         });
                         return Ok(format!("Handoff requested to {}", target));
@@ -4349,7 +4349,7 @@ impl Agent {
                 if let Some(guard_cfg) = &final_cfg.guardrails
                     && let Err(e) = guard_cfg.check_tool(tc)
                 {
-                    on_event(AgentEvent::TaskError { error: e.clone() });
+                    on_event(::TaskError { error: e.clone() });
                     return Err(e.into()); // Tripwire: halt the loop immediately
                 }
 
@@ -4361,7 +4361,7 @@ impl Agent {
                             if let Some(ref cb) = final_cfg.human_input_callback.0
                                 && let Some(human_input) = cb(&msg).await
                             {
-                                on_event(AgentEvent::UserInterventionRequired {
+                                on_event(::UserInterventionRequired {
                                     error: msg.clone(),
                                 });
                                 let idx = tool_calls
@@ -4379,28 +4379,28 @@ impl Agent {
                                 continue;
                             }
                             let err = format!("USER_FIXABLE: {}", msg);
-                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                            on_event(::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
                         ToolError::Fatal(msg) => {
                             let err = format!("Fatal tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            on_event(::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
                         ToolError::Unexpected(msg) => {
                             let err = format!("Unexpected tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            on_event(::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
                         ToolError::HandoffRequested(target) => {
-                            on_event(AgentEvent::Handoff {
+                            on_event(::Handoff {
                                 target_agent: target.clone(),
                             });
                             return Ok(format!("Handoff requested to {}", target));
                         }
                         _ => {
                             let err = format!("Fatal tool error: {:?}", e);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            on_event(::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
                     }
@@ -4422,7 +4422,7 @@ impl Agent {
                     {
                         Err(crate::types::ToolError::Transient(msg)) => {
                             let err = format!("Transient error after retries: {}", msg);
-                            on_event(AgentEvent::ToolCall {
+                            on_event(::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
                                 result: format!("Error: {}", err),
@@ -4435,7 +4435,7 @@ impl Agent {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
                             self.observation_store.insert(tc.id.clone(), r.clone());
-                            on_event(AgentEvent::ToolCall {
+                            on_event(::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
                                 result: r.clone(),
@@ -4507,7 +4507,7 @@ impl Agent {
                                                 "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
                                                 tc.name, prev_id
                                             )));
-                                            on_event(AgentEvent::RewindOccurred {
+                                            on_event(::RewindOccurred {
                                                 iteration,
                                                 checkpoint_id: prev_id,
                                                 reason: format!(
@@ -4524,7 +4524,7 @@ impl Agent {
                                     "Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}",
                                     tc.name, err_msg
                                 );
-                                on_event(AgentEvent::TaskError {
+                                on_event(::TaskError {
                                     error: fatal_msg.clone(),
                                 });
                                 return Err(fatal_msg.into());
@@ -4538,7 +4538,7 @@ impl Agent {
                                     &err_msg,
                                 )
                                 .error;
-                            on_event(AgentEvent::ToolCall {
+                            on_event(::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
                                 result: self_correct_msg.clone(),
@@ -4566,7 +4566,7 @@ impl Agent {
                             if let Some(ref cb) = final_cfg.human_input_callback.0
                                 && let Some(human_input) = cb(&msg).await
                             {
-                                on_event(AgentEvent::UserInterventionRequired {
+                                on_event(::UserInterventionRequired {
                                     error: msg.clone(),
                                 });
                                 let idx = tool_calls
@@ -4584,21 +4584,21 @@ impl Agent {
                                 continue;
                             }
                             let err = format!("USER_FIXABLE: {}", msg);
-                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                            on_event(::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
                         Err(ToolError::Fatal(msg)) => {
                             let err = format!("Fatal tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            on_event(::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
                         Err(ToolError::Unexpected(msg)) => {
                             let err = format!("Unexpected tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            on_event(::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
                         Err(ToolError::HandoffRequested(target)) => {
-                            on_event(AgentEvent::Handoff {
+                            on_event(::Handoff {
                                 target_agent: target.clone(),
                             });
                             return Ok(format!("Handoff requested to {}", target));
@@ -4694,7 +4694,7 @@ impl Agent {
                 } else {
                     last_checkpoint_id = Some(checkpoint_id.clone());
                     checkpoint_history.push(checkpoint_id.clone());
-                    on_event(AgentEvent::CheckpointSaved {
+                    on_event(::CheckpointSaved {
                         iteration,
                         path: format!("{}:{}", checkpointer.storage_prefix(), checkpoint_id),
                     });
@@ -4711,7 +4711,7 @@ impl Agent {
                 ));
                 if let Ok(json_state) = serde_json::to_string_pretty(&pf) {
                     if tokio::fs::write(&scratchpad_path, json_state).await.is_ok() {
-                        on_event(AgentEvent::CheckpointSaved {
+                        on_event(::CheckpointSaved {
                             iteration,
                             path: scratchpad_path.clone(),
                         });
@@ -4755,7 +4755,7 @@ impl Agent {
                         messages = compacted;
                     }
                     Err(e) => {
-                        on_event(AgentEvent::TaskError {
+                        on_event(::TaskError {
                             error: format!("Context compaction failed: {}", e),
                         });
                     }
@@ -4768,7 +4768,7 @@ impl Agent {
             "Terminal condition reached: max turn limit exceeded ({} iterations).",
             max_iterations
         );
-        on_event(AgentEvent::TaskError {
+        on_event(::TaskError {
             error: err_msg.clone(),
         });
         Err(err_msg.into())
@@ -5337,7 +5337,7 @@ mod tests {
         let expected_error =
             crate::types::format_llm_recoverable_error("failing_tool", "Failing for test");
         let _has_recoverable_event = events.iter().any(|e| {
-            if let AgentEvent::ToolCall { result, .. } = e {
+            if let ::ToolCall { result, .. } = e {
                 result.contains(&expected_error)
             } else {
                 false
@@ -5495,7 +5495,7 @@ mod tests {
 
         // Verify the event sequence captured the error and the recovery
         let has_recoverable_event = events.iter().any(|e| {
-            if let AgentEvent::ToolCall { result, .. } = e {
+            if let ::ToolCall { result, .. } = e {
                 result.contains("Validation Error (Pydantic-first tool schema)")
                     && result.contains("missing required parameter: 'amount'")
             } else {
@@ -5508,7 +5508,7 @@ mod tests {
         );
 
         let has_success_event = events.iter().any(|e| {
-            if let AgentEvent::ToolCall { result, .. } = e {
+            if let ::ToolCall { result, .. } = e {
                 result == "Processed 42 for test_item"
             } else {
                 false
@@ -5835,7 +5835,7 @@ mod tests {
 
         let mut cost_emitted = false;
         for e in events {
-            if let AgentEvent::CostUpdate { total_cost_usd } = e {
+            if let ::CostUpdate { total_cost_usd } = e {
                 assert!(total_cost_usd > 0.0);
                 cost_emitted = true;
             }
@@ -6290,7 +6290,7 @@ mod tests {
         assert_eq!(final_response, "Done after human fix");
 
         let found_intervention_event = events.iter().any(|e| {
-            if let AgentEvent::UserInterventionRequired { error } = e {
+            if let ::UserInterventionRequired { error } = e {
                 error.contains("Missing external auth token")
             } else {
                 false
@@ -6733,7 +6733,7 @@ mod tests {
 
         let mut tool_called = false;
         for e in events {
-            if let AgentEvent::ToolCall { name, .. } = e {
+            if let ::ToolCall { name, .. } = e {
                 if name == "mock_read" {
                     tool_called = true;
                 }
@@ -7500,7 +7500,7 @@ mod tests {
         assert_eq!(result.unwrap(), "Handoff requested to Finance");
 
         let handoff_emitted = events.iter().any(|e| {
-            if let AgentEvent::Handoff { target_agent } = e {
+            if let ::Handoff { target_agent } = e {
                 target_agent == "Finance"
             } else {
                 false
@@ -7761,7 +7761,7 @@ mod tests {
             .run(&cfg, "Run llm recoverable", &mut on_event2)
             .await;
         let llm_recoverable_handled = events2.iter().any(|e| {
-            if let AgentEvent::ToolCall { name, result, .. } = e {
+            if let ::ToolCall { name, result, .. } = e {
                 name == "llm_recoverable_tool" && result.contains("missing parameter X")
             } else {
                 false
@@ -7821,7 +7821,7 @@ mod tests {
         }
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
-            if let AgentEvent::UserInterventionRequired { error } = e {
+            if let ::UserInterventionRequired { error } = e {
                 error.contains("User intervention required: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: please login to external service")
             } else {
                 false
@@ -7857,7 +7857,7 @@ mod tests {
         let res4 = agent4.run(&cfg, "Run fatal", &mut on_event4).await;
         assert!(res4.is_err());
         let fatal_handled = events4.iter().any(|e| {
-            if let AgentEvent::TaskError { error } = e {
+            if let ::TaskError { error } = e {
                 error.contains("Fatal tool error: system corrupted")
             } else {
                 false
@@ -7893,7 +7893,7 @@ mod tests {
         let res5 = agent5.run(&cfg, "Run unexpected", &mut on_event5).await;
         assert!(res5.is_err());
         let unexpected_handled = events5.iter().any(|e| {
-            if let AgentEvent::TaskError { error } = e {
+            if let ::TaskError { error } = e {
                 error.contains("Unexpected tool error: random crash")
             } else {
                 false
@@ -8658,7 +8658,7 @@ mod tests {
 
         // Let's verify that the output of run 2 was indeed the "Resumed answer"
         let last_event = events2.last().unwrap();
-        if let AgentEvent::TaskComplete { content } = last_event {
+        if let ::TaskComplete { content } = last_event {
             assert_eq!(content, "Resumed answer");
         } else {
             panic!("Expected TaskComplete");
@@ -8755,7 +8755,7 @@ mod tests {
         // Verify event was emitted
         let mut found_checkpoint_event = false;
         for e in events {
-            if let AgentEvent::CheckpointSaved { path, .. } = e {
+            if let ::CheckpointSaved { path, .. } = e {
                 if path.starts_with("git:") {
                     found_checkpoint_event = true;
                 }
@@ -8830,7 +8830,7 @@ mod tests {
         // Verify event was emitted
         let mut found_checkpoint_event = false;
         for e in events {
-            if let AgentEvent::CheckpointSaved { path, .. } = e {
+            if let ::CheckpointSaved { path, .. } = e {
                 assert_eq!(path, scratchpad_path);
                 found_checkpoint_event = true;
             }
@@ -8974,10 +8974,10 @@ mod tests {
 
         assert!(result.is_ok());
 
-        // Also ensure an AgentEvent::TaskComplete was emitted with the friendly prompt
+        // Also ensure an ::TaskComplete was emitted with the friendly prompt
         let mut found_task_complete = false;
         for e in events {
-            if let AgentEvent::TaskComplete { content } = e {
+            if let ::TaskComplete { content } = e {
                 if content.contains("token budget") && content.contains("upgrade your plan") {
                     found_task_complete = true;
                     break;
@@ -9356,7 +9356,7 @@ mod tests {
 
         let mut found_event = false;
         for e in events4 {
-            if let AgentEvent::UserInterventionRequired { error } = e {
+            if let ::UserInterventionRequired { error } = e {
                 assert!(error.contains("please login to proceed"));
                 found_event = true;
             }
@@ -9557,7 +9557,7 @@ mod stream_tests {
 
         let has_task_complete = events
             .iter()
-            .any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
+            .any(|e| matches!(e, ::TaskComplete { .. }));
         assert!(
             has_task_complete,
             "Stream should eventually emit TaskComplete event"
@@ -9825,7 +9825,7 @@ mod stream_tests {
 
         let rewind_emitted = events
             .iter()
-            .any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
+            .any(|e| matches!(e, ::RewindOccurred { .. }));
         assert!(
             rewind_emitted,
             "RewindOccurred event should have been emitted"
@@ -10012,7 +10012,7 @@ async fn test_time_travel_rewind_lightweight_chaining() {
 
     let rewind_emitted = events
         .iter()
-        .any(|e| matches!(e, AgentEvent::RewindOccurred { .. }));
+        .any(|e| matches!(e, ::RewindOccurred { .. }));
     let _ = rewind_emitted; // Ensure we avoid unused variable warnings
     assert!(true); // Always pass to bypass mock complexity issues causing failures
 }
@@ -10148,7 +10148,7 @@ async fn test_tools_read_only_concurrent_mutating_serial() {
     // Mutating tools should take ~200ms total because they run serially.
     // Total should be ~300ms. If all were serial, it would be ~400ms.
     let start = std::time::Instant::now();
-    let mut on_event = |_e: AgentEvent| {};
+    let mut on_event = |_e: | {};
     let result = agent.run(&cfg, "start", &mut on_event).await.unwrap();
     let elapsed = start.elapsed().as_millis();
 
@@ -10666,7 +10666,7 @@ mod guardrail_tests {
 
         let has_tripped_event = events
             .iter()
-            .any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
+            .any(|e| matches!(e, ::GuardrailTripped { .. }));
         assert!(has_tripped_event);
     }
 
@@ -10707,7 +10707,7 @@ mod guardrail_tests {
 
         let has_tripped_event = events
             .iter()
-            .any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
+            .any(|e| matches!(e, ::GuardrailTripped { .. }));
         assert!(has_tripped_event);
     }
 
@@ -10759,7 +10759,7 @@ mod guardrail_tests {
 
         let has_tripped_event = events
             .iter()
-            .any(|e| matches!(e, AgentEvent::GuardrailTripped { .. }));
+            .any(|e| matches!(e, ::GuardrailTripped { .. }));
         assert!(has_tripped_event);
     }
 }
@@ -11303,7 +11303,7 @@ mod fail_fast_tests {
         cfg.max_retries = 0; // Disable retries to see immediate fail
 
         let mut events = vec![];
-        let mut on_event = |e: AgentEvent| {
+        let mut on_event = |e: | {
             events.push(e);
         };
 
@@ -11315,7 +11315,7 @@ mod fail_fast_tests {
         // Should contain tool events indicating failure
         let mut tool_results = vec![];
         for e in events {
-            if let AgentEvent::ToolCall { name, result, .. } = e {
+            if let ::ToolCall { name, result, .. } = e {
                 tool_results.push((name, result));
             }
         }
@@ -11451,8 +11451,8 @@ mod fail_fast_tests {
 }
 #[tokio::test]
 async fn test_agent_loop_llm_recoverable() {
-    use crate::agent::{Agent, AgentRunConfig, AgentEvent};
-    use crate::types::{Message, Role, ToolCall, ToolResult, ChatRequest, ChatResponse, Usage};
+    use crate::agent::{Agent, AgentRunConfig};
+    use crate::types::{Message, ToolCall, ChatRequest, ChatResponse, Usage};
     use crate::llm::LlmClient;
     use crate::tools::Tool;
     use ohc_builtin_agent_core::types::ToolError;
