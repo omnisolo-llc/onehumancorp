@@ -8,6 +8,7 @@ function GiveawayEnterContent() {
   const tenant = searchParams.get('tenant') || 'my-store';
   const title = searchParams.get('title') || 'Enter to Win!';
   const description = searchParams.get('description') || 'Enter your email below for a chance to win. Plus, get bonus entries when you share with friends!';
+  const showBranding = searchParams.get('branding') !== 'false';
 
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -122,9 +123,11 @@ function GiveawayEnterContent() {
                   </div>
                 )}
 
+                {showBranding && (
                 <div className="mt-8">
-                  <a href={`/onboarding?ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OHC</a>
+                  <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OHC</a>
                 </div>
+                )}
             </div>
         </div>
       </main>
