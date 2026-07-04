@@ -9,7 +9,7 @@ use server_services_capital::FundingEngine;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use sqlx::PgPool;
-use ::server_utils::cache::HybridCache;
+use server_utils::cache::HybridCache;
 
 pub struct FundingApi {
     engine: Arc<FundingEngine>,

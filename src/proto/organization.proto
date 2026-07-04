@@ -66,3 +66,28 @@ service OrganizationService {
   rpc CreateOrganization(Organization) returns (Organization);
   rpc GetOrganizationChart(Organization) returns (OrganizationChart);
 }
+
+message StorefrontConfig {
+    string id = 1;
+    string tenant_id = 2;
+    string theme_tokens = 3;
+    string layout_structure = 4;
+}
+
+message BookingRule {
+    string id = 1;
+    string tenant_id = 2;
+    bool requires_deposit = 3;
+    int64 deposit_amount = 4;
+}
+
+message ZeroClickStorefrontRequest {
+    string business_description = 1;
+}
+
+message ZeroClickStorefrontResponse {
+    string tenant_id = 1;
+    StorefrontConfig storefront = 2;
+    repeated Product products = 3;
+    BookingRule booking_rule = 4;
+}

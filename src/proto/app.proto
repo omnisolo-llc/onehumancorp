@@ -155,6 +155,7 @@ service DashboardService {
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
+  rpc GenerateZeroClickStorefront(ohc.organization.ZeroClickStorefrontRequest) returns (ohc.organization.ZeroClickStorefrontResponse);
 }
 
 // Onboarding State

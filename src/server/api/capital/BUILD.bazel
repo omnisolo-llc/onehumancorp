@@ -28,5 +28,7 @@ rust_library(
         "@crates//:sqlx",
         "@crates//:tonic",
         "@crates//:tokio",
+        "@crates//:redis",
+        "//src/server/utils:server_utils",
     ],
 )
