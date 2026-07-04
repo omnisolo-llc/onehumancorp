@@ -517,7 +517,28 @@
         currentStepIndex = 0;
     }
 
+    window.startWalkthrough = function(steps) {
+        if (!steps || steps.length === 0) return;
+        currentSteps = steps;
+        currentStepIndex = 0;
 
+        endWalkthrough();
+
+        overlayEl = document.createElement('div');
+        overlayEl.className = 'ohc-walkthrough-overlay';
+
+        highlightEl = document.createElement('div');
+        highlightEl.className = 'ohc-walkthrough-highlight';
+
+        bubbleEl = document.createElement('div');
+        bubbleEl.className = 'ohc-walkthrough-bubble';
+
+        document.body.appendChild(overlayEl);
+        document.body.appendChild(highlightEl);
+        document.body.appendChild(bubbleEl);
+
+        renderStep();
+    };
 
 })();
 </script>
