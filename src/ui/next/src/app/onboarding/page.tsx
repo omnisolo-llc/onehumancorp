@@ -686,18 +686,12 @@ export default function OnboardingWizard() {
           ? localStorage.getItem("user_id") || "test-user"
           : "test-user";
 
-      let combinedInput = bio;
-      if (instantImageUrl) {
-        combinedInput += `
-Image provided: ${instantImageUrl}`;
-      }
-
       // Navigate to the loading state immediately
       updateState({ step: 4 });
       syncStateToBackend({ step: 4 });
 
-      const intakeRes = await fetchWithRetry(
-        `${backendUrl}/api/onboarding/intake`,
+      const startRes = await fetchWithRetry(
+        `${backendUrl}/api/onboarding/start_zero_click`,
         {
           method: "POST",
           headers: {
@@ -706,17 +700,22 @@ Image provided: ${instantImageUrl}`;
             "X-User-ID": userId,
           },
           body: JSON.stringify({
-            description: combinedInput,
-            image_url: instantImageUrl,
+            prompt: bio,
+            image_url: instantImageUrl || undefined,
           }),
         },
       );
-      let intakeData: any = {};
+
+      let result: any = {};
       try {
-        if (!intakeRes.ok) {
-          throw new Error(`Failed to generate storefront: ${intakeRes.status}`);
+        result = await startRes.json();
+        if (!startRes.ok) {
+          throw new Error(
+            result.error ||
+              result.message ||
+              `Failed to generate storefront: ${startRes.status}`,
+          );
         }
-        intakeData = await intakeRes.json();
       } catch (e: unknown) {
         const errorMessage =
           e instanceof Error ? e.message : "Unknown error parsing response";
@@ -724,81 +723,6 @@ Image provided: ${instantImageUrl}`;
         updateState({ step: -1, error: errorMessage });
         syncStateToBackend({ step: -1, error: errorMessage });
         return;
-      }
-
-      updateState({ businessName: intakeData.business_name || "My Business" });
-      updateState({ businessType: intakeData.business_type || "Online Store" });
-      updateState({ businessDescription: bio });
-      updateState({ categories: intakeData.categories || ["physical"] });
-      updateState({
-        firstProductName:
-          intakeData.initial_products?.[0]?.name || "First Product",
-      });
-      updateState({
-        firstProductPrice:
-          typeof intakeData.initial_products?.[0]?.price === "number"
-            ? String(intakeData.initial_products[0].price)
-            : intakeData.initial_products?.[0]?.price || "0.00",
-      });
-      updateState({ location: intakeData.location || "Local" });
-      updateState({ targetAudience: intakeData.target_audience || "General" });
-      updateState({ adminName: intakeData.business_name || "Admin" });
-      updateState({ domainChoice: "subdomain" });
-      updateState({ websiteTemplate: "auto" });
-
-      if (intakeData.initial_products) {
-        localStorage.setItem(
-          "onboarding_initial_products",
-          JSON.stringify(intakeData.initial_products),
-        );
-      }
-
-      const defaultAdminEmail = `admin@${generateSubdomain(intakeData.business_name || "my-business")}`;
-      const defaultAdminPassword = "Password123!";
-
-      const startRes = await fetchWithRetry(
-        `${backendUrl}/api/onboarding/start`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Tenant-ID": tenantId,
-            "X-User-ID": userId,
-          },
-          body: JSON.stringify({
-            business_type: intakeData.business_type || "Online Store",
-            company_name: intakeData.business_name || "My Business",
-            company_description: bio,
-            selling_categories: intakeData.categories || ["physical"],
-            payment_pref: "online",
-            admin_email: defaultAdminEmail,
-            admin_name: intakeData.business_name || "Admin",
-            admin_password: defaultAdminPassword,
-            website_template: "auto",
-            first_product_name:
-              intakeData.initial_products?.[0]?.name || "First Product",
-            first_product_price:
-              typeof intakeData.initial_products?.[0]?.price === "number"
-                ? String(intakeData.initial_products[0].price)
-                : intakeData.initial_products?.[0]?.price || "0.00",
-            domain_choice: "subdomain",
-            price_type: "fixed",
-            location: intakeData.location || "Local",
-            target_audience: intakeData.target_audience || "General",
-            ai_agents: [],
-            ai_auto_respond: true,
-            initial_products: intakeData.initial_products || [],
-          }),
-        },
-      );
-
-      const result = await startRes.json().catch(() => ({}));
-      if (!startRes.ok) {
-        throw new Error(
-          result.error ||
-            result.message ||
-            "Backend connection failed. Please try again.",
-        );
       }
 
       await new Promise((resolve) => setTimeout(resolve, 500));
