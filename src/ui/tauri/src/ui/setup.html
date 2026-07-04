@@ -42,7 +42,7 @@
         max-height: calc(100vh - 40px);
         overflow-y: auto;
       }
-     /* OHC Premium Glassmorphism */
+      /* OHC Premium Glassmorphism */
       .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -52,13 +52,11 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-          border-radius: 16px;
+        .container, .glassmorphism {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
       }
 
@@ -121,21 +119,11 @@
       }
       /* Cleaned up duplicate glassmorphism */
       textarea.glassmorphism, input.glassmorphism, select.glassmorphism, button.glassmorphism {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 8px !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       @media (prefers-color-scheme: dark) {
         textarea.glassmorphism, input.glassmorphism, select.glassmorphism, button.glassmorphism {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 8px !important;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
       }
       button {
@@ -1120,6 +1108,7 @@
       .glassmorphism.container,
       .glassmorphism.card,
       .glassmorphism.panel {
+        border-radius: 16px;
       }
           #instant-bio { min-height: 44px; box-sizing: border-box; }
       .context-card { min-height: 44px; box-sizing: border-box; }
@@ -1785,7 +1774,7 @@
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
         <select
-          id="business-categories"
+          id="business-categories" required
           data-testid="business-categories"
           class="glassmorphism"
         >
@@ -1831,7 +1820,7 @@
         <p>We'll use this to set up your workspace.</p>
         <input
           type="text"
-          id="business-name"
+          id="business-name" required
           data-testid="business-name"
           class="glassmorphism"
           placeholder="e.g. Maya's Custom Cakes"
@@ -2797,6 +2786,9 @@
           state = { ...state, ...parsed };
           if (parsed.businessName && !parsed.business_name) {
             state.business_name = parsed.businessName;
+          }
+          if (parsed.business_name && !parsed.businessName) {
+            state.businessName = parsed.business_name;
           }
         }
 
