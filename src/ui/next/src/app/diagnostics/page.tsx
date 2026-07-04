@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '../components/AppShell';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 
 export default function DiagnosticsPage() {
   const [loading, setLoading] = useState(true);
@@ -117,8 +116,7 @@ export default function DiagnosticsPage() {
             <div id="diagnostics-result" className="text-sm font-semibold text-[#0f766e] dark:text-[#6ac5bd] mt-2 md:mt-0 flex-1 text-center md:text-left">
                 {result}
             </div>
-        </CardContent>
-</Card>
+        </Card>
       </div>
     </AppShell>
   );
