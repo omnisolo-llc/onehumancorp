@@ -2877,6 +2877,13 @@
         }
       });
 
+      inputs.assistant_tone.addEventListener("change", () => {
+        if (inputs.assistant_tone.value) {
+          errors.assistant_tone.style.display = "none";
+          inputs.assistant_tone.classList.remove("invalid-input");
+        }
+      });
+
       inputs.first_offer.addEventListener("input", () => {
         if (inputs.first_offer.value.trim().length > 0) {
           errors.first_offer.style.display = "none";
@@ -3287,6 +3294,15 @@
           state.assistant_name = selected.value;
           document.querySelectorAll('#assistant-team-cards .context-card').forEach((el) => el.classList.remove("selected"));
           selected.closest(".context-card").classList.add("selected");
+          // Clear error if selection made
+          const errorMsg = document.getElementById("assistant-name-error");
+          const inputEl = document.getElementById("assistant-name");
+          if (errorMsg) {
+             errorMsg.style.display = "none";
+          }
+          if (inputEl) {
+             inputEl.classList.remove("invalid-input");
+          }
         }
       }
 
