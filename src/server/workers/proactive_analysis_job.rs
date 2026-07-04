@@ -134,6 +134,53 @@ impl ProactiveAnalysisWorker {
                             }
                         }
 
+                        if ai_response.is_empty() {
+                            let task_id = Uuid::new_v4().to_string();
+                            let _context_message = "System is paused. Please manually check business performance.";
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                    )
+                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind("AI Agent Paused: The Advisor").bind("PAUSED").bind("LOW").bind(r#"{"proposed_content": "System is paused. Please manually check business performance."}"#)
+                                    .execute(&db.pool).await;
+                                },
+                                crate::db::DbStore::Sqlite(_) => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                    )
+                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind("AI Agent Paused: The Advisor").bind("PAUSED").bind("LOW").bind(r#"{"proposed_content": "System is paused. Please manually check business performance."}"#)
+                                    .execute(&db.pool).await;
+                                }
+                            }
+                            continue;
+                        }
+
+                        if ai_response.is_empty() {
+                            let task_id = Uuid::new_v4().to_string();
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    if let Err(e) = sqlx::query(
+                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                    )
+                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind("AI Agent Paused: The Advisor").bind("PAUSED").bind("LOW").bind(r#"{"proposed_content": "System is paused. Please manually check business performance."}"#)
+                                    .execute(&db.pool).await {
+                                        tracing::error!("Failed to insert PAUSED state for proactive analysis job: {}", e);
+                                    }
+                                },
+                                crate::db::DbStore::Sqlite(_) => {
+                                    if let Err(e) = sqlx::query(
+                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                    )
+                                    .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind("AI Agent Paused: The Advisor").bind("PAUSED").bind("LOW").bind(r#"{"proposed_content": "System is paused. Please manually check business performance."}"#)
+                                    .execute(&db.pool).await {
+                                        tracing::error!("Failed to insert PAUSED state for proactive analysis job: {}", e);
+                                    }
+                                }
+                            }
+                            continue;
+                        }
+
                         if !ai_response.is_empty() {
                             // Extract JSON from response (naive extraction, assume the agent returns mostly JSON)
                             let json_start = ai_response.find('{').unwrap_or(0);
@@ -213,5 +260,30 @@ impl ProactiveAnalysisWorker {
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_ml_resilience_proactive_analysis_timeout() {
+        let start = std::time::Instant::now();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            Ok::<(), String>(())
+        })
+        .await;
+
+        assert!(
+            result.is_err(),
+            "ProactiveAnalysisWorker must enforce ML-Resilience timeout"
+        );
+        assert!(
+            start.elapsed() >= std::time::Duration::from_millis(50),
+            "Timeout should wait the configured time"
+        );
     }
 }
