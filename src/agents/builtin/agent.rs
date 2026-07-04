@@ -355,6 +355,8 @@ pub struct Agent {
         Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
     pub sona_matcher: Option<Arc<tokio::sync::Mutex<crate::sona_patterns::PatternMatcher>>>,
     pub skill_trace: Arc<tokio::sync::Mutex<crate::expert_team::SkillTrace>>,
+    // SOTA Harness Patterns (2025-2026): 2. Code-native execution -> preserving execution state
+    pub durable_engine: Option<Arc<crate::durable_execution::DurableExecutionEngine>>,
 }
 #[derive(Clone, Default)]
 pub struct AgentState {
@@ -400,6 +402,7 @@ impl Agent {
             native_env: Arc::new(tokio::sync::RwLock::new(
                 ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new(),
             )),
+            durable_engine: Some(Arc::new(crate::durable_execution::DurableExecutionEngine::new())),
             sona_matcher: None,
             skill_trace: Arc::new(tokio::sync::Mutex::new(
                 crate::expert_team::SkillTrace::new(),
@@ -459,8 +462,13 @@ impl Agent {
             }
         }
         let cfg = &active_cfg_cloned;
-
+        let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
+        if let Some(engine) = &self.durable_engine {
+            let _ = engine.start_or_resume_workflow(&workflow_id).await;
+            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+        }
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
         {
@@ -907,7 +915,13 @@ impl Agent {
                 e
             ))));
         }
+        let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
+        if let Some(engine) = &self.durable_engine {
+            let _ = engine.start_or_resume_workflow(&workflow_id).await;
+            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+        }
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
 
         let session_id = cfg
             .thread_id
@@ -1596,6 +1610,7 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
+            durable_engine: Some(std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new())),
             sona_matcher: self.sona_matcher.clone(),
             skill_trace: self.skill_trace.clone(),
         });
@@ -2191,8 +2206,13 @@ impl Agent {
         active_cfg_cloned.apply_anthropic_gating();
         active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
-
+        let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
+        if let Some(engine) = &self.durable_engine {
+            let _ = engine.start_or_resume_workflow(&workflow_id).await;
+            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+        }
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
         {
@@ -2371,7 +2391,13 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
+        if let Some(engine) = &self.durable_engine {
+            let _ = engine.start_or_resume_workflow(&workflow_id).await;
+            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+        }
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_structured");
 
@@ -2423,8 +2449,13 @@ impl Agent {
             max_tokens: cfg.max_tokens,
             temperature: 0.0, // Planning should be deterministic
         };
-
+        let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
+        if let Some(engine) = &self.durable_engine {
+            let _ = engine.start_or_resume_workflow(&workflow_id).await;
+            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+        }
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
 
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
@@ -2996,6 +3027,7 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
+            durable_engine: Some(std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new())),
             sona_matcher: self.sona_matcher.clone(),
             skill_trace: self.skill_trace.clone(),
         };
@@ -3239,7 +3271,8 @@ impl Agent {
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
                 native_env: self.native_env.clone(),
-                sona_matcher: dynamic_sona_matcher,
+                durable_engine: Some(std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new())),
+            sona_matcher: dynamic_sona_matcher,
                 skill_trace: self.skill_trace.clone(),
             };
             self_with_memory = &owned_agent;
@@ -3382,8 +3415,13 @@ impl Agent {
             on_event(AgentEvent::TaskError { error: e.clone() });
             return Err(e.into());
         }
-
+        let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
+        if let Some(engine) = &self.durable_engine {
+            let _ = engine.start_or_resume_workflow(&workflow_id).await;
+            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+        }
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
         {
