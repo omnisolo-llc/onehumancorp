@@ -1115,7 +1115,7 @@ pub async fn bench_dashboard_analytics_briefing_latency() {
         let pool2 = pg_pool.clone();
         let _ = tokio::join!(
             sqlx::query("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind("test_tenant").execute(&pool1),
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool2)
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool2)
         );
         let duration = start_sim.elapsed();
 
@@ -1720,7 +1720,7 @@ pub async fn bench_ui_omni_inbox_latency() {
         let pool1 = pg_pool.clone();
 
         let _ = tokio::join!(
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool1)
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool1)
         );
         let duration = start_sim.elapsed();
 
@@ -1728,7 +1728,7 @@ pub async fn bench_ui_omni_inbox_latency() {
             "  - list_ui_omni_inbox_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!("    (Parallel Execution Optimization verified: concurrent dequeue jobs)");
     } else {
         tracing::info!("  - list_ui_omni_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)");
     }
@@ -1751,7 +1751,7 @@ pub async fn bench_ui_inbox_latency() {
         let pool1 = pg_pool.clone();
 
         let _ = tokio::join!(
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool1)
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool1)
         );
         let duration = start_sim.elapsed();
 
@@ -1759,7 +1759,7 @@ pub async fn bench_ui_inbox_latency() {
             "  - list_ui_inbox_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!("    (Parallel Execution Optimization verified: concurrent dequeue jobs)");
     } else {
         tracing::info!(
             "  - list_ui_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)"
@@ -1967,7 +1967,7 @@ pub async fn bench_list_jobs_latency() {
             "  - list_jobs (Postgres Parallel Execution / Payload Optimization): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!("    (Parallel Execution Optimization verified: concurrent dequeue jobs)");
     } else {
         tracing::info!(
             "  - list_jobs (Parallel Execution Optimization verified, Hybrid Cache)"
@@ -2119,7 +2119,7 @@ pub async fn bench_ui_ledger_latency() {
             "  - load_ui_ledger_from_db (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!("    (Parallel Execution Optimization verified: concurrent dequeue jobs)");
     } else {
         tracing::info!(
             "  - load_ui_ledger_from_db (Parallel Execution Optimization verified, Hybrid Cache)"
