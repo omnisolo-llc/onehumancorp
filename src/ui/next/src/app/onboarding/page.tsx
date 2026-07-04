@@ -1150,7 +1150,7 @@ export default function OnboardingWizard() {
                     id="chat-image-url"
                     value={chatImageUrl}
                     onChange={(e) => setChatImageUrl(e.target.value)}
-                    className="glassmorphism w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
+                    className="glass-control w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
                     placeholder="Image URL (Optional)"
                     inputMode="url"
                     autoComplete="url"
@@ -1159,7 +1159,7 @@ export default function OnboardingWizard() {
                   <div className="flex gap-2 w-full">
                     <button
                       id="chat-upload-btn"
-                      className="glassmorphism min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
+                      className="glass-control min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
                       onClick={() => {
                         const url = prompt("Enter image URL");
                         if (url) setChatImageUrl(url);
@@ -1197,7 +1197,7 @@ export default function OnboardingWizard() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleSendChatMessage();
                       }}
-                      className="glassmorphism w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none flex-1 transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
+                      className="glass-control w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none flex-1 transition-all duration-[250ms] border border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
                       placeholder="Type a message..."
                       enterKeyHint="send"
                     />
@@ -1265,7 +1265,7 @@ export default function OnboardingWizard() {
                   id="instant-image-url"
                   data-testid="instant-image-url"
                   type="url"
-                  className="glassmorphism min-h-[44px]"
+                  className="glass-control min-h-[44px]"
                   placeholder="Image URL (Optional)"
                   value={instantImageUrl}
                   onChange={(e) =>
