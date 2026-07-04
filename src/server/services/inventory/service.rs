@@ -151,12 +151,16 @@ pub struct CommitResult {
 
 impl InventoryService {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
-        let locker: Box<dyn InventoryLocker> = if let Some(ref client) = redis_client {
-            Box::new(RedisLocker::new(client.clone()))
-        } else {
-            Box::new(MemoryLocker::new())
+
+
+        let locker: Box<dyn InventoryLocker> = match redis_client.clone() {
+            Some(client) => Box::new(RedisLocker::new(client)),
+            None => Box::new(MemoryLocker::new()),
         };
-        Self { locker, redis_client }
+        Self {
+            redis_client,
+            locker,
+        }
     }
 
     // Redis Redlock pattern for distributed lock

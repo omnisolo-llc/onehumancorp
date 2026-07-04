@@ -23,8 +23,10 @@ impl MyPosService {
         for payload in payloads {
             if payload.r#type == "inventory" {
                 if payload.quantity_delta < 0 {
-                    let inventory_service = crate::services::inventory::InventoryService::new(None);
+                    // Try to reserve locally to reflect RedisRedlock behavior and ensure strict tracking
+                    let inventory_service = crate::services::inventory::InventoryService::new(crate::get_redis_client());
                     let _ = inventory_service.commit_inventory(tenant_id, &payload.item_id, -payload.quantity_delta, "").await;
+
                 } else {
                     let _res = sqlx::query(
                         "UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1) WHERE id = $2 AND tenant_id = $3"
