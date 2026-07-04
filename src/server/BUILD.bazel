@@ -355,6 +355,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:booking_reengagement.rs",
     "//src/server/workers:booking_reengagement_job.rs",
     "//src/server/workers:mod.rs",
+        "//src/server/workers:fulfillment_orchestrator.rs",
     "//src/server/workers:agent_action_worker.rs",
     "//src/server/workers:subscription_replenishment_job.rs",
     "//src/server/workers:subscription_replenishment_worker.rs",

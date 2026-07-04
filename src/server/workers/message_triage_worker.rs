@@ -326,56 +326,45 @@ Output JSON format:
                     let st = chrono::DateTime::parse_from_rfc3339(start_time_str).ok().map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(chrono::Utc::now);
                     let et = chrono::DateTime::parse_from_rfc3339(end_time_str).ok().map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(chrono::Utc::now);
 
-                    let customer_id_uuid = customer_id_val.and_then(|v| Uuid::parse_str(v).ok()).unwrap_or_else(Uuid::new_v4);
+                    let cust_id = customer_id_val.unwrap_or("");
 
                     match &self.db.store {
                         crate::db::DbStore::Postgres => {
-                            if let Ok(mut tx) = self.db.pool.begin().await {
-                                let _ = sqlx::query(
-                                    "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW(), NOW())"
-                                )
-                                .bind(&draft_booking_id.to_string())
-                                .bind(&tenant_id)
-                                .bind(customer_id_uuid)
-                                .bind(service_id)
-                                .bind(st)
-                                .bind(et)
-                                .execute(&mut *tx).await;
-
-                                let _ = sqlx::query(
-                                    "UPDATE availability_blocks SET is_available = false WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4"
-                                )
-                                .bind(&tenant_id)
-                                .bind(service_id)
-                                .bind(st)
-                                .bind(et)
-                                .execute(&mut *tx).await;
-
-                                let _ = tx.commit().await;
-                            }
+                            let _ = crate::workers::fulfillment_orchestrator::FulfillmentOrchestrator::process_inquiry_postgres(
+                                &self.db.pool,
+                                &tenant_id,
+                                cust_id,
+                                service_id,
+                                st,
+                                et,
+                                customer_message,
+                                &message_id,
+                                &source,
+                                &sender_id
+                            ).await;
+                            let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
+                                .bind(&job_id)
+                                .execute(&self.db.pool).await;
                         },
                         crate::db::DbStore::Sqlite(sqlite_pool) => {
-                            let _ = sqlx::query(
-                                "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-                            )
-                            .bind(&draft_booking_id.to_string())
-                            .bind(&tenant_id)
-                            .bind(customer_id_uuid.to_string())
-                            .bind(service_id)
-                            .bind(st)
-                            .bind(et)
-                            .execute(&*sqlite_pool).await;
-
-                            let _ = sqlx::query(
-                                "UPDATE availability_blocks SET is_available = false WHERE tenant_id = ? AND service_id = ? AND start_time = ? AND end_time = ?"
-                            )
-                            .bind(&tenant_id)
-                            .bind(service_id)
-                            .bind(st)
-                            .bind(et)
-                            .execute(&*sqlite_pool).await;
+                            let _ = crate::workers::fulfillment_orchestrator::FulfillmentOrchestrator::process_inquiry_sqlite(
+                                &*sqlite_pool,
+                                &tenant_id,
+                                cust_id,
+                                service_id,
+                                st,
+                                et,
+                                customer_message,
+                                &message_id,
+                                &source,
+                                &sender_id
+                            ).await;
+                            let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                                .bind(&job_id)
+                                .execute(&*sqlite_pool).await;
                         }
                     }
+                    return Ok(true);
                 }
             } else if action_type == "Reassign Shift" {
                 if let Ok(_shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {

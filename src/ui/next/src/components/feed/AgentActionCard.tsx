@@ -1221,6 +1221,70 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "fulfillment_draft" ? (
+          <div className="flex flex-col gap-2 p-5 rounded-xl border border-white/40 bg-white/50 backdrop-blur">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Fulfillment Draft: {(approval.proposed_action || approval.context_payload)?.service || 'Service'}</h3>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">${(approval.proposed_action || approval.context_payload)?.price || '0.00'} for {new Date((approval.proposed_action || approval.context_payload)?.start_time || Date.now()).toLocaleDateString()}</p>
+            <div className="my-2 p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+              <span className="block text-sm text-gray-800 dark:text-gray-200">✅ Spot reserved in calendar.</span>
+              {(approval.proposed_action || approval.context_payload)?.is_surge ? <span className="block text-sm text-gray-800 dark:text-gray-200">✅ Surge pricing applied (+15%).</span> : null}
+            </div>
+            <button
+              onClick={() => wrapDecision(approval.id, true)}
+              className="mt-2 w-full min-h-[44px] bg-[#0066FF] hover:bg-blue-600 transition-colors text-white font-medium rounded-[8px]"
+            >
+              Approve & Send
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "fulfillment_draft" ? (
+          <div className="flex flex-col gap-2 p-5 rounded-xl border border-white/40 bg-white/50 backdrop-blur">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Fulfillment Draft: {(approval.proposed_action || approval.context_payload)?.service || 'Service'}</h3>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">${(approval.proposed_action || approval.context_payload)?.price || '0.00'} for {new Date((approval.proposed_action || approval.context_payload)?.start_time || Date.now()).toLocaleDateString()}</p>
+            <div className="my-2 p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+              <span className="block text-sm text-gray-800 dark:text-gray-200">✅ Spot reserved in calendar.</span>
+              {(approval.proposed_action || approval.context_payload)?.is_surge ? <span className="block text-sm text-gray-800 dark:text-gray-200">✅ Surge pricing applied (+15%).</span> : null}
+            </div>
+            <button
+              onClick={() => wrapDecision(approval.id, true)}
+              className="mt-2 w-full min-h-[44px] bg-[#0066FF] hover:bg-blue-600 transition-colors text-white font-medium rounded-[8px]"
+            >
+              Approve & Send
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "fulfillment_draft" ? (
+          <div className="flex flex-col gap-2 p-5 rounded-xl border border-white/40 bg-white/50 backdrop-blur">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Fulfillment Draft: {(approval.proposed_action || approval.context_payload)?.service || 'Service'}</h3>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">${(approval.proposed_action || approval.context_payload)?.price || '0.00'} for {new Date((approval.proposed_action || approval.context_payload)?.start_time || Date.now()).toLocaleDateString()}</p>
+            <div className="my-2 p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+              <span className="block text-sm text-gray-800 dark:text-gray-200">✅ Spot reserved in calendar.</span>
+              {(approval.proposed_action || approval.context_payload)?.is_surge ? <span className="block text-sm text-gray-800 dark:text-gray-200">✅ Surge pricing applied (+15%).</span> : null}
+            </div>
+            <button
+              onClick={() => wrapDecision(approval.id, true)}
+              className="mt-2 w-full min-h-[44px] bg-[#0066FF] hover:bg-blue-600 transition-colors text-white font-medium rounded-[8px]"
+            >
+              Approve & Send
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "fulfillment_draft" ? (
+          <div className="flex flex-col gap-2 p-5 rounded-xl border border-white/40 bg-white/50 backdrop-blur">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Fulfillment Draft: {(approval.proposed_action || approval.context_payload)?.service || 'Service'}</h3>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">${(approval.proposed_action || approval.context_payload)?.price || '0.00'} for {new Date((approval.proposed_action || approval.context_payload)?.start_time || Date.now()).toLocaleDateString()}</p>
+            <div className="my-2 p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+              <span className="block text-sm text-gray-800 dark:text-gray-200">✅ Spot reserved in calendar.</span>
+              {(approval.proposed_action || approval.context_payload)?.is_surge ? <span className="block text-sm text-gray-800 dark:text-gray-200">✅ Surge pricing applied (+15%).</span> : null}
+            </div>
+            <button
+              onClick={() => wrapDecision(approval.id, true)}
+              className="mt-2 w-full min-h-[44px] bg-[#0066FF] hover:bg-blue-600 transition-colors text-white font-medium rounded-[8px]"
+            >
+              Approve & Send
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">

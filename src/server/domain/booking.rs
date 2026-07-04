@@ -89,3 +89,59 @@ pub async fn handle_autonomous_quote_action(tenant_id: &str, payload: &Value, po
 
     Ok(())
 }
+
+pub async fn handle_fulfillment_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
+    tracing::info!("Handling fulfillment action for tenant: {}", tenant_id);
+
+    let service = payload.get("service").and_then(|v| v.as_str()).unwrap_or("Unknown Service");
+    let start_time_str = payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+    let end_time_str = payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+    let price = payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+    let draft_reply = format!("Great! We have reserved your spot for {} at ${:.2}. A deposit link has been sent.", service, price);
+
+    let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str).unwrap_or_default().with_timezone(&chrono::Utc);
+    let end_time = chrono::DateTime::parse_from_rfc3339(end_time_str).unwrap_or_default().with_timezone(&chrono::Utc);
+
+    let booking_id = uuid::Uuid::new_v4().to_string();
+
+    sqlx::query(
+        "INSERT INTO bookings (id, tenant_id, start_time, end_time, status, service_id) VALUES ($1, $2, $3, $4, 'scheduled', $5)"
+    )
+    .bind(&booking_id)
+    .bind(tenant_id)
+    .bind(start_time)
+    .bind(end_time)
+    .bind(service)
+    .execute(pool)
+    .await?;
+
+    let slot_id = uuid::Uuid::new_v4().to_string();
+    sqlx::query(
+        "INSERT INTO booking_slots (id, tenant_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'booked')"
+    )
+    .bind(slot_id)
+    .bind(tenant_id)
+    .bind(service)
+    .bind(start_time)
+    .bind(end_time)
+    .execute(pool)
+    .await?;
+
+    if !message_id.is_empty() {
+        let _ = sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2")
+            .bind(message_id)
+            .bind(tenant_id)
+            .execute(pool)
+            .await;
+
+        let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+            .bind(draft_reply)
+            .bind(message_id)
+            .bind(tenant_id)
+            .execute(pool)
+            .await;
+    }
+
+    Ok(())
+}
