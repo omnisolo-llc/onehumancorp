@@ -101,7 +101,7 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
     ci_specs = sorted(ci_specs)
 
     coverage_attrs = {
-        "name": "playwright_spec_coverage",
+        "name": "playwright_spec_coverage_check_test",
         "srcs": ["//bazel/rules/playwright:playwright_spec_coverage_check.sh"],
         "size": "small",
         "tags": ["playwright"],
@@ -134,5 +134,5 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
     native.test_suite(
         name = "playwright",
         tags = ["manual"],
-        tests = [":playwright_spec_coverage"] + shard_targets,
+        tests = [":playwright_spec_coverage_check_test"] + shard_targets,
     )
