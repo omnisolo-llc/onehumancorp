@@ -6,8 +6,10 @@ export default function PaymentLedger() {
   const [revenue, setRevenue] = useState(0);
   const [amount, setAmount] = useState(50);
   const [status, setStatus] = useState("idle");
+  const [idempotencyKey, setIdempotencyKey] = useState("");
 
   useEffect(() => {
+    setIdempotencyKey(`payment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
     fetchBalance();
   }, []);
 
@@ -28,7 +30,10 @@ export default function PaymentLedger() {
     try {
       const intentRes = await fetch("/api/payments/intent", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey
+        },
         body: JSON.stringify({
           amount: amount,
           currency: "USD",
@@ -43,9 +48,11 @@ export default function PaymentLedger() {
 
       const intentData = await intentRes.json();
 
-      if (intentData.status === "succeeded" || intentData.client_secret) {
+      if (intentData.status === "succeeded" || intentData.client_secret || intentRes.status === 201 || intentRes.status === 200) {
         setStatus("Approved");
         fetchBalance();
+        // Generate new idempotency key for the next payment
+        setIdempotencyKey(`payment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
       } else {
         setStatus("Failed to initialize");
       }

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppShell } from '../components/AppShell';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 
 export default function DiagnosticsPage() {
   const [loading, setLoading] = useState(true);
@@ -111,14 +110,15 @@ export default function DiagnosticsPage() {
 </Card>
 
         <Card className="p-6 flex flex-col md:flex-row items-center gap-4">
+          <CardContent className="w-full flex flex-col md:flex-row items-center gap-4">
             <button onClick={() => setResult('Running diagnostics test result passed')} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-semibold rounded-lg text-sm w-full md:w-auto shadow-sm transition-colors border-none">Run Test</button>
             <button onClick={() => setResult('Diagnostics data refreshed')} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-semibold rounded-lg text-sm w-full md:w-auto shadow-sm transition-colors border-none">Refresh</button>
             <button onClick={() => setResult('Diagnostics report download ready')} className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-800 dark:text-gray-200 font-semibold rounded-lg text-sm w-full md:w-auto shadow-sm transition-colors border border-gray-200 dark:border-zinc-700">Export Report</button>
             <div id="diagnostics-result" className="text-sm font-semibold text-[#0f766e] dark:text-[#6ac5bd] mt-2 md:mt-0 flex-1 text-center md:text-left">
                 {result}
             </div>
-        </CardContent>
-</Card>
+          </CardContent>
+        </Card>
       </div>
     </AppShell>
   );

@@ -1,6 +1,6 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
@@ -30,6 +30,7 @@ pub struct PaymentIntentResponse {
     pub payment_id: String,
     pub idempotency_key: String,
     pub status: String,
+    pub optimal_payment_method: String,
 }
 
 #[derive(Deserialize)]
@@ -73,6 +74,7 @@ pub fn router() -> Router<AppState> {
 
 async fn create_payment_intent(
     State(_state): State<AppState>,
+    headers: HeaderMap,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(payload): Json<CreatePaymentIntentRequest>,
 ) -> impl IntoResponse {
@@ -81,14 +83,26 @@ async fn create_payment_intent(
         return (StatusCode::UNAUTHORIZED, "Missing tenant ID").into_response();
     }
 
-    let payment_id = Uuid::new_v4().to_string();
-    let idempotency_key = Uuid::new_v4().to_string();
+    let idempotency_key = headers
+        .get("idempotency-key")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| Uuid::new_v4().to_string());
 
     let pool = crate::db::get_pool();
-    let res = sqlx::query(
+
+    let optimal_pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method_with_currency(payload.amount, &payload.currency);
+    let optimal_pm_str = format!("{:?}", optimal_pm);
+
+    let payment_id = Uuid::new_v4().to_string();
+
+    let res: Result<(String, String), sqlx::Error> = sqlx::query_as(
         r#"
-        INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, source)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, source, status)
+        VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+        ON CONFLICT (tenant_id, idempotency_key)
+        DO UPDATE SET updated_at = CURRENT_TIMESTAMP
+        RETURNING payment_id, status
         "#
     )
     .bind(&tenant_id)
@@ -97,15 +111,23 @@ async fn create_payment_intent(
     .bind(payload.amount)
     .bind(&payload.currency)
     .bind(&payload.source)
-    .execute(&pool)
+    .fetch_one(&pool)
     .await;
 
     match res {
-        Ok(_) => (StatusCode::CREATED, Json(PaymentIntentResponse {
-            payment_id,
-            idempotency_key,
-            status: "pending".to_string()
-        })).into_response(),
+        Ok((existing_payment_id, existing_status)) => {
+            let status_code = if existing_payment_id == payment_id {
+                StatusCode::CREATED
+            } else {
+                StatusCode::OK
+            };
+            (status_code, Json(PaymentIntentResponse {
+                payment_id: existing_payment_id,
+                idempotency_key,
+                status: existing_status,
+                optimal_payment_method: optimal_pm_str,
+            })).into_response()
+        },
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
     }
 }
