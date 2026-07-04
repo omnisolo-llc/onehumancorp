@@ -5478,26 +5478,15 @@ async fn ui_dashboard_unified_agent_feed_handler(
 
     let cache_key = format!("ui_unified_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-        }
-
+    let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
         let db = db.clone();
         let t = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            let result = fetch_unified_agent_feed_data(&db, &t, mobile_optimized).await;
-            if let Some(c) = UI_UNIFIED_AGENT_FEED_CACHE.get() {
-                c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
-            }
-        });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-    }
+        move || async move {
+            Some(fetch_unified_agent_feed_data(&db, &t, mobile_optimized).await)
+        }
+    }).await;
 
-    let result = fetch_unified_agent_feed_data(&db, &tenant_id, mobile_optimized).await;
-
-    let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
+    let result = items_opt.unwrap_or_else(|| serde_json::json!({}));
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
@@ -5516,29 +5505,18 @@ pub async fn list_ui_priority_tasks_handler(
     let cache_key = format!("ui_priority_tasks:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_PRIORITY_TASKS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if is_stale {
-            let cache_key_bg = cache_key.clone();
-            let db_bg = db.clone();
-            let t_bg = tenant_id.clone();
-            tokio::spawn(async move {
-                if let Ok(tasks) = load_ui_priority_tasks_from_db(&db_bg, &t_bg, mobile_optimized).await {
-                    if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                        c.set(&cache_key_bg, tasks, std::time::Duration::from_secs(10)).await;
-                    }
-                }
-            });
+    let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
+        let db = db.clone();
+        let t = tenant_id.clone();
+        move || async move {
+            load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await.ok()
         }
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-    }
+    }).await;
 
-    match load_ui_priority_tasks_from_db(&db, &tenant_id, mobile_optimized).await {
-        Ok(tasks) => {
-            let _ = cache.set(&cache_key, tasks.clone(), std::time::Duration::from_secs(10)).await;
-            (axum::http::StatusCode::OK, axum::Json(tasks)).into_response()
-        }
-        Err(e) => {
-            tracing::error!("Failed to fetch UI priority tasks: {}", e);
+    match items_opt {
+        Some(tasks) => (axum::http::StatusCode::OK, axum::Json(tasks)).into_response(),
+        None => {
+            tracing::error!("Failed to fetch UI priority tasks");
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
     }
@@ -5556,35 +5534,19 @@ async fn list_ui_orders_handler(
 
     let cache_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-        }
-
+    let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), {
         let db = db.clone();
         let t = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-        tokio::spawn(async move {
-            if let Ok(orders) = load_ui_orders_from_db(&db, &t, mobile_optimized).await {
-                if let Some(c) = UI_ORDERS_CACHE.get() {
-                    c.set(&cache_key_bg, orders, std::time::Duration::from_secs(5)).await;
-                }
-            }
-        });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-    }
+        move || async move {
+            load_ui_orders_from_db(&db, &t, mobile_optimized).await.ok()
+        }
+    }).await;
 
-    let orders = load_ui_orders_from_db(&db, &tenant_id, mobile_optimized).await;
-
-    match orders {
-        Ok(orders) => {
-            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(60)).await;
-            (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
-        },
-        Err(e) => {
+    match items_opt {
+        Some(orders) => (axum::http::StatusCode::OK, axum::Json(orders)).into_response(),
+        None => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch UI orders");
-            tracing::error!("Failed to fetch UI orders: {}", e);
+            tracing::error!("Failed to fetch UI orders");
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
     }
