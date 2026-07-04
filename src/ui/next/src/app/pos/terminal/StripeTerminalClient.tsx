@@ -25,8 +25,6 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const [pendingReconciliation, setPendingReconciliation] = useState<any[]>([]);
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
 
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-
 
   useEffect(() => {
     async function initTerminal() {
@@ -58,73 +56,6 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
       setStatus('Terminal initialized. Ready to discover readers.');
     }
     initTerminal();
-
-
-  const startTapToPay = async () => {
-    try {
-      setStatus('Initializing Tap to Pay...');
-      setReserving(true);
-
-      const sessionRes = await fetch('/api/v1/checkout/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenant_id: tenantId,
-          type: 'IN_PERSON',
-          amount_cents: amount,
-          cart_payload: cart,
-          device_id: connectedReader?.id
-        })
-      });
-      const sessionData = await sessionRes.json();
-
-      if (!sessionData.success) {
-        setStatus('Failed to start checkout session.');
-        setReserving(false);
-        return;
-      }
-
-      if (!connectedReader) {
-        const discoverResult = await terminal.discoverReaders({ simulated: true });
-        if (discoverResult.error || !discoverResult.discoveredReaders || discoverResult.discoveredReaders.length === 0) {
-          setStatus('Failed to start Tap to Pay reader.');
-          setReserving(false);
-          return;
-        }
-        await terminal.connectReader(discoverResult.discoveredReaders[0]);
-      }
-
-      setStatus('Creating payment intent...');
-      const intentRes = await fetch('/api/v1/payments/terminal/intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount_cents: amount, currency: 'usd' })
-      });
-      const intentData = await intentRes.json();
-
-      setStatus('Collecting payment method...');
-      const collectResult = await terminal.collectPaymentMethod(intentData.client_secret);
-      if (collectResult.error) {
-        setStatus('Payment collection failed.');
-        setReserving(false);
-        return;
-      }
-
-      setStatus('Processing payment...');
-      const processResult = await terminal.processPayment(collectResult.paymentIntent);
-      if (processResult.error) {
-        setStatus('Payment processing failed.');
-        setReserving(false);
-        return;
-      }
-
-      if (onSuccess) onSuccess();
-    } catch(e: any) {
-      setStatus('Error: ' + e.message);
-    } finally {
-      setReserving(false);
-    }
-  };
 
 
   return (
@@ -211,15 +142,45 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
           {selectedMethod === 'tap' && connectedReader && (
             <div className="mt-4">
-              <button onClick={processPayment} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
-                {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
+              <button onClick={async () => {
+                setStatus('Initializing Tap to Pay...');
+                setReserving(true);
+                try {
+                  const sessionRes = await fetch('/api/v1/checkout/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
+                  });
+                  await processPayment();
+                } catch(e: any) {
+                  setStatus('Error: ' + e.message);
+                } finally {
+                  setReserving(false);
+                }
+              }} disabled={reserving || (typeof window !== 'undefined' && !navigator.onLine)} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving || (typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+                {reserving ? 'Processing...' : `Confirm & Tap ${(amount / 100).toFixed(2)}`}
               </button>
             </div>
           )}
 
           {selectedMethod === 'cash' && (
             <div className="mt-4">
-               <button id="cash-btn-offline" onClick={processCashSale} disabled={reserving} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+               <button id="cash-btn-offline" onClick={async () => {
+                 setStatus('Recording...');
+                 setReserving(true);
+                 try {
+                   await fetch('/api/v1/checkout/session', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
+                   });
+                   await processCashSale();
+                 } catch(e: any) {
+                   setStatus('Error: ' + e.message);
+                 } finally {
+                   setReserving(false);
+                 }
+               }} disabled={reserving} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
                  {reserving ? 'Processing...' : `Record Offline Cash Sale $${(amount / 100).toFixed(2)}`}
                </button>
             </div>
@@ -238,7 +199,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                    });
                    if (res.ok) {
                      setStatus('Link Sent Successfully');
-                     if (onSuccess) onSuccess();
+                     setTimeout(() => { if (onSuccess) onSuccess(); }, 1500);
                    } else {
                      setStatus('Failed to send link');
                    }
