@@ -302,7 +302,6 @@
           const data = await response.json();
           cartCount = data.count || 0;
         } else {
-          // No mocked fallbacks
           cartCount = 0;
         }
       } catch (e) {
@@ -378,12 +377,7 @@
             alert("Failed to activate trial.");
         }
       } catch (e) {
-        // Fallback for tests
-        alert("Your 7-day Pro trial has been activated.");
-        hasPro = true;
-        localStorage.setItem('has_pro', 'true');
-        document.getElementById('paywall-modal').classList.remove('active');
-        generateCampaign();
+        alert("Failed to activate trial due to a network error.");
       }
     });
 
