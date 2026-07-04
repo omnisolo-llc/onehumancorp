@@ -94,7 +94,7 @@ function BookingForm() {
     if (checkoutUrl) {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center" data-testid="booking-checkout-container">
+          <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-xl max-w-md w-full p-8 text-center" data-testid="booking-checkout-container">
             <div className="w-16 h-16 bg-blue-100 text-[#0071E3] rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -102,7 +102,7 @@ function BookingForm() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Almost there!</h2>
             <p className="text-gray-600 mb-8">Please complete your deposit to secure your time slot.</p>
-            <a href={checkoutUrl} className="w-full inline-block bg-[#0071E3] text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors" data-testid="pay-deposit-btn">
+            <a href={checkoutUrl} className="w-full inline-block bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] text-[#1D1D1F]  font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition-colors" data-testid="pay-deposit-btn">
               Pay Deposit
             </a>
           </div>
@@ -112,7 +112,7 @@ function BookingForm() {
 
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
-        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center" data-testid="booking-success-container">
+        <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-xl max-w-md w-full p-8 text-center" data-testid="booking-success-container">
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -127,8 +127,8 @@ function BookingForm() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-inter">
-      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden">
-        <div className="bg-[#0071E3] px-8 py-10 text-white text-center">
+      <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] rounded-2xl shadow-xl max-w-lg w-full overflow-hidden">
+        <div className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] text-[#1D1D1F] px-8 py-10  text-center">
           <h1 className="text-3xl font-bold font-outfit tracking-tight mb-2">Book an Appointment</h1>
           <p className="text-blue-100 font-medium">Select a time that works for you.</p>
         </div>
@@ -188,8 +188,8 @@ function BookingForm() {
                           onClick={() => setSelectedSlot(slot.start_time)}
                           className={`py-2 text-sm font-medium rounded-lg border transition-all ${
                             selectedSlot === slot.start_time
-                              ? 'bg-[#0071E3] border-[#0071E3] text-white shadow-md transform scale-[1.02]'
-                              : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                              ? 'bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] text-[#1D1D1F] border-[#0071E3]  shadow-md transform scale-[1.02]'
+                              : 'bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
                           }`}
                         >
                           {timeString}
@@ -220,7 +220,7 @@ function BookingForm() {
 
           <button
             type="submit"
-            className="w-full bg-gray-900 hover:bg-black text-white font-semibold py-3.5 px-6 rounded-xl transition-all transform active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
+            className="w-full bg-gray-900 hover:bg-black  font-semibold py-3.5 px-6 rounded-xl transition-all transform active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
           >
             <span>Confirm Booking</span>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
