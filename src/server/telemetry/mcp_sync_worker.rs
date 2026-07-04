@@ -24,14 +24,20 @@ impl McpSyncWorker {
     pub async fn run(&self) {
         info!("Starting McpSyncWorker...");
         loop {
-            if let Err(e) = self.sync_metrics().await {
-                warn!("McpSyncWorker error: {}", e);
+            if ::server_config::get().telemetry_enabled {
+                if let Err(e) = self.sync_metrics().await {
+                    warn!("McpSyncWorker error: {}", e);
+                }
             }
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
 
     pub async fn sync_metrics(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if !::server_config::get().telemetry_enabled {
+            return Ok(());
+        }
+
         let rows = sqlx::query("SELECT id, metric_name, metric_type, value, labels_json, timestamp FROM telemetry_buffer WHERE sync_status = 'pending'")
             .fetch_all(&self.sqlite_pool)
             .await?;

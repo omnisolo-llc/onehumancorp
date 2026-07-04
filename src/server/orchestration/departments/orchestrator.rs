@@ -395,7 +395,7 @@ pub async fn execute_action(
         let cost = 1;
         let within_budget = self.check_ai_budget(&tenant_id, cost).await.unwrap_or(true);
         if !within_budget {
-            tracing::info!("💰 Miser telemetry: Tenant {} soft limit reached. Action allowed. Please upgrade your plan.", tenant_id);
+            tracing::info!("💰 Miser telemetry: Tenant {} soft limit reached. Action allowed. Please upgrade your plan.", tenant_id); // pii-safe
         }
 
         match risk {
@@ -1143,10 +1143,10 @@ pub async fn execute_action(
 
                         match stripe.create_draft_invoice(&customer_id_to_use, amount_cents, &description).await {
                             Ok(draft_invoice) => {
-                                tracing::info!("Created draft invoice in Stripe: {}", draft_invoice.id);
+                                tracing::info!("Created draft invoice in Stripe: {}", draft_invoice.id); // pii-safe
                                 match stripe.finalize_and_send_invoice(&draft_invoice.id).await {
                                     Ok(sent_invoice) => {
-                                        tracing::info!("Finalized and sent invoice via Stripe: {}", sent_invoice.id);
+                                        tracing::info!("Finalized and sent invoice via Stripe: {}", sent_invoice.id); // pii-safe
 
                                         // Record the sent invoice in the database
                                         match &self.db.store {
@@ -1181,12 +1181,12 @@ pub async fn execute_action(
                                         }
                                     },
                                     Err(e) => {
-                                        tracing::error!("Failed to finalize and send invoice via Stripe: {}", e);
+                                        tracing::error!("Failed to finalize and send invoice via Stripe: {}", e); // pii-safe
                                     }
                                 }
                             },
                             Err(e) => {
-                                tracing::error!("Failed to create draft invoice in Stripe: {}", e);
+                                tracing::error!("Failed to create draft invoice in Stripe: {}", e); // pii-safe
                             }
                         }
                     }
