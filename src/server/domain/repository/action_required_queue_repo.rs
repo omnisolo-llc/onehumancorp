@@ -71,4 +71,24 @@ impl ActionRequiredQueueRepo {
 
         Ok(())
     }
+
+    pub async fn update_draft_response(&self, draft_id: Uuid, tenant_id: Uuid, new_response: &str) -> Result<(), sqlx::Error> {
+        // Multi-tenant isolation: we must ensure this draft belongs to a work_item that belongs to this tenant
+        sqlx::query(
+            r#"
+            UPDATE agent_draft
+            SET response = $1, updated_at = NOW()
+            WHERE id = $2 AND work_item_id IN (
+                SELECT id FROM work_item WHERE tenant_id = $3
+            )
+            "#
+        )
+        .bind(new_response)
+        .bind(draft_id)
+        .bind(tenant_id)
+        .execute(&self.db.pool)
+        .await?;
+
+        Ok(())
+    }
 }

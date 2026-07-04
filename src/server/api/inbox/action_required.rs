@@ -2,10 +2,11 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
     Json,
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use axum::http::HeaderMap;
+use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -19,6 +20,7 @@ pub fn router(db: Arc<DB>) -> Router {
     Router::new()
         .route("/", get(list_pending_drafts))
         .route("/{id}/approve", post(approve_draft))
+        .route("/{id}/edit", put(edit_draft))
         .with_state(Arc::new(AppState { db }))
 }
 
@@ -70,9 +72,42 @@ async fn approve_draft(
     let repo = ActionRequiredQueueRepo::new(state.db.clone());
     match repo.approve_draft(draft_id, tenant_id).await {
         Ok(_) => {
-            // Here we would trigger the omnichannel dispatch logic.
-            // For now, returning success.
             (axum::http::StatusCode::OK, Json(json!({"status": "approved"}))).into_response()
+        },
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct EditDraftPayload {
+    pub response: String,
+}
+
+async fn edit_draft(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(draft_id_str): Path<String>,
+    Json(payload): Json<EditDraftPayload>,
+) -> impl IntoResponse {
+    let tenant_id_str = match get_tenant_id(&headers) {
+        Some(t) => t,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+    };
+
+    let tenant_id = match Uuid::parse_str(&tenant_id_str) {
+        Ok(t) => t,
+        Err(_) => return (axum::http::StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid tenant ID"}))).into_response(),
+    };
+
+    let draft_id = match Uuid::parse_str(&draft_id_str) {
+        Ok(t) => t,
+        Err(_) => return (axum::http::StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid draft ID"}))).into_response(),
+    };
+
+    let repo = ActionRequiredQueueRepo::new(state.db.clone());
+    match repo.update_draft_response(draft_id, tenant_id, &payload.response).await {
+        Ok(_) => {
+            (axum::http::StatusCode::OK, Json(json!({"status": "edited"}))).into_response()
         },
         Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
     }
