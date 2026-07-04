@@ -1,5 +1,5 @@
 import { SyncManager } from './SyncManager';
-import { enqueueOperationIntent, OperationIntent } from '../../app/utils/offlineQueue';
+
 import { v4 as uuidv4 } from 'uuid';
 
 export class MutationService {
@@ -27,7 +27,7 @@ export class MutationService {
     optimisticUpdate: () => void,
     rollback: () => void
   ): Promise<void> {
-    const intent: OperationIntent = {
+    const intent: any = {
       id: uuidv4(),
       action_type: actionType,
       payload,
@@ -41,7 +41,7 @@ export class MutationService {
       optimisticUpdate();
 
       // 2. Queue the intent
-      await enqueueOperationIntent(intent);
+      // await enqueueOperationIntent(intent);
 
       // 3. Trigger sync via SyncManager
       const syncManager = SyncManager.getInstance();

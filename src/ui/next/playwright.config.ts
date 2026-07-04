@@ -2,6 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
 
 export default defineConfig({
+  use: {
+    ...devices['Desktop Chrome'],
+    channel: 'chrome',
+  },
   testDir: './src/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

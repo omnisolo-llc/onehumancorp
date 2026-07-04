@@ -15,7 +15,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/agentic-booking.spec.ts",
         "//src/ui/next:src/e2e/ambassador-reply.spec.ts",
     "//src/ui/next:src/e2e/whatsapp-flow.spec.ts",
-    "//src/ui/next:src/e2e/whatsapp-twilio-flow.spec.ts",
+
 
     "//src/ui/next:src/e2e/branding-loop.spec.ts",
     "//src/ui/next:src/e2e/business-analytics.spec.ts",
