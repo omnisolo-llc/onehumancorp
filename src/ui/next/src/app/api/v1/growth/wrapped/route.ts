@@ -21,7 +21,7 @@ export async function GET(request: Request) {
         return NextResponse.json(data);
       }
     } catch (err) {
-      console.warn("Backend fetch failed for wrapped data, using fallback", err);
+      console.warn("Backend fetch failed for wrapped data, failing", err);
     }
 
     return NextResponse.json({ error: 'Backend wrapped service unavailable' }, { status: 502 });

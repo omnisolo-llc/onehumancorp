@@ -230,7 +230,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     const businessNameInput = page.getByPlaceholder(/Maya's Custom Cake/i);
     await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
-    await expect(businessNameInput).toHaveClass(/border-\[#FF3B30\]/); // Note: We verify the visual class directly here
+    await expect(businessNameInput).toHaveClass(/.*border-\[#FF3B30\].*/); // Note: We verify the visual class directly here
 
     // Proceed to Step 2
     await businessNameInput.fill('Valid Business Name');
@@ -243,7 +243,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     const whatYouSellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
     await expect(page.getByText('Please tell us what you sell.')).toBeVisible();
-    await expect(whatYouSellInput).toHaveClass(/border-\[#FF3B30\]/);
+    await expect(whatYouSellInput).toHaveClass(/.*border-\[#FF3B30\].*/);
 
     // Proceed to Step 3
     await whatYouSellInput.fill('Valid products');
@@ -256,7 +256,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     const locationInput = page.getByPlaceholder(/Portland, OR/i);
     await expect(page.getByText('Please tell us your location.')).toBeVisible();
-    await expect(locationInput).toHaveClass(/border-\[#FF3B30\]/);
+    await expect(locationInput).toHaveClass(/.*border-\[#FF3B30\].*/);
 
     // Proceed to Step 4
     await locationInput.fill('Valid Location');
@@ -269,7 +269,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     const audienceInput = page.getByPlaceholder(/Local families, Tech startups/i);
     await expect(page.getByText('Please tell us your target audience.')).toBeVisible();
-    await expect(audienceInput).toHaveClass(/border-\[#FF3B30\]/);
+    await expect(audienceInput).toHaveClass(/.*border-\[#FF3B30\].*/);
   });
 
   test('User can use Instant Build to launch storefront quickly', async ({ page }) => {

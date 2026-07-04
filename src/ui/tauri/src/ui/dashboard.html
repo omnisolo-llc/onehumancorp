@@ -729,6 +729,31 @@
         <p id="advanced-automations-status" style="display: none; color: #34C759; font-weight: 600; margin-top: 12px;">✅ Enabled</p>
       </div>
 
+      <!-- Agent Success Viral Loop Modal -->
+      <div id="agent-success-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);">
+        <div style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
+          <div style="font-size: 40px; margin-bottom: 16px;">✨</div>
+          <h2 id="agent-success-title" style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Action Completed!</h2>
+          <p id="agent-success-desc" style="color: #86868b; margin-bottom: 24px;">The agent has successfully executed your request.</p>
+          <div id="agent-success-upsell-container">
+            <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 16px; color: #0066FF;">Want 7 Days of Pro for Free?</h3>
+                <p style="margin: 0; font-size: 13px; color: #1D1D1F;">Share your AI success on X to unlock advanced analytics and cross-selling features instantly.</p>
+            </div>
+            <div class="paywall-actions" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
+              <button id="agent-success-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; width: 100%;">
+                Share on X to Unlock
+              </button>
+              <button id="agent-success-close-btn" style="background: none; border: none; color: #86868b; font-weight: 500; cursor: pointer; padding: 8px;">
+                Dismiss
+              </button>
+            </div>
+            <p id="agent-success-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500;">Verifying...</p>
+          </div>
+        </div>
+      </div>
+
+
       <!-- Soft Paywall Modal -->
       <div id="soft-paywall-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);">
         <div style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
@@ -890,7 +915,11 @@
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
 
+
+        <a href="weekly-snapshot-share.html" id="weekly-snapshot-share-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Weekly Snapshot Share 📸</a>
+
         <a href="ai-support-widget-builder.html" id="ai-support-widget-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">AI Support Widget Builder 💬</a>
+
         <a href="reputation-engine.html" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Reputation & Referral Engine 🚀</a>
 <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
         <a href="viral-mystery-offer-generator.html" id="mystery-offer-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Mystery Offer Generator 🎁</a>
@@ -1264,6 +1293,84 @@
               };
             }, 800);
           });
+        }
+
+
+        // Agent Success Viral Loop Logic
+        const agentSuccessModal = document.getElementById('agent-success-modal');
+        const agentSuccessCloseBtn = document.getElementById('agent-success-close-btn');
+        const agentSuccessShareBtn = document.getElementById('agent-success-share-btn');
+        const agentSuccessStatus = document.getElementById('agent-success-status');
+        const agentSuccessTitle = document.getElementById('agent-success-title');
+        const agentSuccessDesc = document.getElementById('agent-success-desc');
+        const agentSuccessUpsellContainer = document.getElementById('agent-success-upsell-container');
+
+        if (agentSuccessCloseBtn) {
+            agentSuccessCloseBtn.addEventListener('click', () => {
+                agentSuccessModal.style.display = 'none';
+            });
+        }
+
+        if (agentSuccessShareBtn) {
+            agentSuccessShareBtn.addEventListener('click', async () => {
+                agentSuccessShareBtn.innerText = 'Verifying...';
+                agentSuccessShareBtn.disabled = true;
+                agentSuccessShareBtn.style.opacity = '0.7';
+
+                setTimeout(() => {
+                    agentSuccessShareBtn.innerText = 'Copy Link';
+                    agentSuccessShareBtn.disabled = false;
+                    agentSuccessShareBtn.style.opacity = '1';
+
+                    agentSuccessShareBtn.onclick = () => {
+                        const tenantId = localStorage.getItem("tenant_id") || "DEFAULT";
+                        const link = `${window.location.origin}/setup.html?ref=${tenantId}&source=agent_success_share`;
+                        navigator.clipboard.writeText(link).then(() => {
+                            agentSuccessShareBtn.innerText = 'Copied Link!';
+                            agentSuccessShareBtn.style.background = '#34C759';
+
+                            setTimeout(async () => {
+                                try {
+                                    let url = '/api/v1/growth/trial-extension/claim';
+                                    if (window.location.protocol === 'file:') {
+                                        url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+                                    }
+                                    const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store';
+                                    const res = await fetch(url, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ tenant_id: tenant })
+                                    });
+
+                                    if (res.ok) {
+                                        agentSuccessStatus.style.display = 'block';
+                                        agentSuccessStatus.style.color = '#34C759';
+                                        agentSuccessStatus.innerText = 'Pro Trial Activated! 🎉';
+                                        localStorage.setItem('has_pro', 'true');
+                                        setTimeout(() => {
+                                            agentSuccessModal.style.display = 'none';
+                                            // Reset for next time
+                                            agentSuccessStatus.style.display = 'none';
+                                            agentSuccessShareBtn.innerText = 'Share on X to Unlock';
+                                            agentSuccessShareBtn.style.background = '#1DA1F2';
+                                            // Force reload window to apply pro state everywhere
+                                            window.location.reload();
+                                        }, 1500);
+                                    } else {
+                                        agentSuccessStatus.style.display = 'block';
+                                        agentSuccessStatus.style.color = '#FF3B30';
+                                        agentSuccessStatus.innerText = 'Failed to activate trial.';
+                                    }
+                                } catch (e) {
+                                    agentSuccessStatus.style.display = 'block';
+                                    agentSuccessStatus.style.color = '#FF3B30';
+                                    agentSuccessStatus.innerText = 'Network error.';
+                                }
+                            }, 500);
+                        });
+                    };
+                }, 800);
+            });
         }
 
         // Soft Paywall Logic
@@ -2510,8 +2617,29 @@ window.handleTriageAction = async function(id, state) {
 
           if (!res.ok) throw new Error("Update failed");
 
-          window.showStatus('Approving...', true);
-          window.showStatus((state === 'APPROVED' || state === true) ? 'Approved!' : 'Dismissed.', true);
+          // window.showStatus('Approving...', true);
+          // window.showStatus((state === 'APPROVED' || state === true) ? 'Approved!' : 'Dismissed.', true);
+
+          if (state === 'APPROVED' || state === true) {
+              const isPro = localStorage.getItem('has_pro') === 'true';
+              if (agentSuccessModal) {
+                  agentSuccessTitle.innerText = "Agent Action Executed ✨";
+                  agentSuccessDesc.innerText = "Your AI teammate successfully completed the task.";
+
+                  if (isPro) {
+                      agentSuccessUpsellContainer.style.display = 'none';
+                      if (window.showStatus) window.showStatus("Approved!", true);
+                  } else {
+                      agentSuccessUpsellContainer.style.display = 'block';
+                      agentSuccessModal.style.display = 'flex';
+                  }
+              } else if (window.showStatus) {
+                  window.showStatus("Approved!", true);
+              }
+          } else if (window.showStatus) {
+              window.showStatus("Dismissed.", true);
+          }
+
           loadUnifiedFeed();
         } catch (err) {
           console.error(err);
