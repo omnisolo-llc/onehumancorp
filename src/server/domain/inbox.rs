@@ -32,16 +32,37 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
 
         if let Some((source, sender_id)) = row {
             if source == "whatsapp" {
-                let registry = crate::integrations::registry::IntegrationsRegistry::new();
-                let draft_reply_clone = draft_reply.to_string();
-                let sender_id_clone = sender_id.to_string();
-                tokio::spawn(async move {
-                    if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
-                        tracing::error!("Failed to send WhatsApp reply: {}", e);
+                let creds: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as(
+                    "SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE tenant_id = $1 AND integration_id IN ('whatsapp', 'twilio', 'whatsapp_cloud_api') LIMIT 1"
+                )
+                .bind(tenant_id)
+                .fetch_optional(pool)
+                .await
+                .map(|opt| opt.unwrap_or(("whatsapp_cloud_api".to_string(), "".to_string(), "".to_string(), "omni".to_string())));
+
+                if let Ok((integration_id, bot_token, api_token, from_phone)) = creds {
+                    let draft_reply_clone = draft_reply.to_string();
+                    let sender_id_clone = sender_id.to_string();
+                    if integration_id == "whatsapp" || integration_id == "twilio" {
+                        let provider = crate::integrations::twilio::provider::TwilioProvider::new(bot_token, api_token);
+                        tokio::spawn(async move {
+                            if let Err(e) = provider.send_whatsapp(&sender_id_clone, &from_phone, &draft_reply_clone).await {
+                                tracing::error!("Failed to send Twilio WhatsApp reply: {}", e);
+                            } else {
+                                tracing::info!("Successfully sent Twilio WhatsApp reply to {}", sender_id_clone);
+                            }
+                        });
                     } else {
-                        tracing::info!("Successfully sent WhatsApp reply to {}", sender_id_clone);
+                        let provider = crate::integrations::meta::provider::MetaProvider::new(api_token);
+                        tokio::spawn(async move {
+                            if let Err(e) = provider.send_message("whatsapp", &sender_id_clone, &draft_reply_clone).await {
+                                tracing::error!("Failed to send Meta WhatsApp reply: {}", e);
+                            } else {
+                                tracing::info!("Successfully sent Meta WhatsApp reply to {}", sender_id_clone);
+                            }
+                        });
                     }
-                });
+                }
             } else if source == "instagram" || source == "facebook" {
                 let meta_creds: Result<String, sqlx::Error> = sqlx::query_scalar(
                     "SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1"
