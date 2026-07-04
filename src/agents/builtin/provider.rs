@@ -520,6 +520,7 @@ impl Provider for MiniMaxiProvider {
             "AUDIT_MANAGER".to_string(),
             "PAYROLL_MANAGER".to_string(),
             "AI_NEWS_COLLECTOR".to_string(),
+            "ANALYST_AGENT".to_string(),
         ]
     }
     fn authenticate(&self, creds: Credentials) -> Result<(), String> {
@@ -594,6 +595,7 @@ impl Provider for BuiltinProvider {
             "AUDIT_MANAGER".to_string(),
             "PAYROLL_MANAGER".to_string(),
             "AI_NEWS_COLLECTOR".to_string(),
+            "ANALYST_AGENT".to_string(),
         ]
     }
     fn authenticate(&self, _creds: Credentials) -> Result<(), String> {
