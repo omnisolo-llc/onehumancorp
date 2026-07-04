@@ -366,6 +366,14 @@
                 <span style="color: #86868b;">Outbound API Calls</span>
                 <span id="cost-dashboard-api" style="font-weight: 500;">-</span>
             </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">Cache Hit Rate</span>
+                <span id="cost-dashboard-cache-hit-rate" style="font-weight: 500;">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">Cost per 1k Tokens</span>
+                <span id="cost-dashboard-cost-per-1k" style="font-weight: 500;">-</span>
+            </div>
 
             <h3 style="margin-top: 24px; font-weight: 600; margin-bottom: 12px; font-size: 16px;">7-Day Trend</h3>
             <div id="cost-dashboard-trend" style="font-size: 14px; font-weight: 500; color: #86868b; margin-bottom: 8px;">Trend: --</div>
@@ -559,6 +567,8 @@
                 document.getElementById('cost-dashboard-network').innerText = formatCents(costData.network_cost || 0);
                 document.getElementById('cost-dashboard-email').innerText = formatCents(costData.email_cost || 0);
                 document.getElementById('cost-dashboard-api').innerText = formatCents(costData.api_cost || 0);
+                document.getElementById('cost-dashboard-cache-hit-rate').innerText = (costData.cache_hit_rate || 0).toFixed(2) + '%';
+                document.getElementById('cost-dashboard-cost-per-1k').innerText = '$' + (costData.cost_per_1k_tokens || 0).toFixed(4);
 
                 if (costData.agent_costs && costData.agent_costs.length > 0) {
                     const agentList = document.getElementById('cost-dashboard-agent-costs');

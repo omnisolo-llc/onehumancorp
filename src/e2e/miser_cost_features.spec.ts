@@ -158,5 +158,9 @@ test.describe('Miser Cost Features E2E', () => {
 
     // The threshold should trigger given a $2,000 spend on the Starter plan.
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    // Assert that the Soft Limit Approaching alert text is actually visible
+    await expect(page.locator('#budget-health-alert-text')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#budget-health-alert-text')).toContainText('Soft Limit Approaching');
   });
 });
