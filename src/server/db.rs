@@ -1323,7 +1323,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     );
                                         CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL DEFAULT 'system',
+                        tenant_id TEXT NOT NULL DEFAULT '',
                         entity_id TEXT NOT NULL,
                         entity_type TEXT NOT NULL,
                         from_state TEXT NOT NULL,
@@ -1414,7 +1414,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        tenant_id TEXT NOT NULL DEFAULT 'system',
+                        tenant_id TEXT NOT NULL DEFAULT '',
                         cloud_mission_id TEXT,
                         sync_error TEXT,
                         last_synced_at TIMESTAMP,

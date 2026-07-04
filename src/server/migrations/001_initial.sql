@@ -32,13 +32,13 @@ CREATE TABLE IF NOT EXISTS roles (
     id TEXT PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     permissions TEXT[] DEFAULT '{}',
-    tenant_id TEXT DEFAULT 'system',
+    tenant_id TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS revoked_tokens (
     jti TEXT PRIMARY KEY,
-    tenant_id TEXT DEFAULT 'system',
+    tenant_id TEXT DEFAULT '',
     expires_at TIMESTAMPTZ NOT NULL
 );
 
