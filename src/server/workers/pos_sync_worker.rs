@@ -10,8 +10,11 @@ impl PosSyncWorker {
     pub fn new(db: Arc<DB>) -> Self {
         Self { db }
     }
+}
 
-    pub async fn handle(&self, job: crate::queue::Job) -> Result<Result<(), String>, String> {
+#[async_trait::async_trait]
+impl crate::queue::TaskJobHandler for PosSyncWorker {
+    async fn handle(&self, job: crate::queue::Job) -> Result<(), String> {
         let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap();
         let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str())
             .or_else(|| payload.get("pos_transaction_id").and_then(|v| v.as_str()))
@@ -98,7 +101,7 @@ impl PosSyncWorker {
             .await;
 
             tx.commit().await.unwrap();
-            return Ok(Ok(()));
+            return Ok(());
         }
 
         sqlx::query("UPDATE pos_offline_transactions SET status = 'RESOLVED', _sync_status = 'synced' WHERE id = $1")
@@ -139,7 +142,7 @@ impl PosSyncWorker {
                 .unwrap();
 
             tx.commit().await.unwrap();
-            return Ok(Ok(()));
+            return Ok(());
         }
 
         if let Some(mutation) = payload.get("mutation") {
@@ -567,7 +570,7 @@ impl PosSyncWorker {
 
         tx.commit().await.unwrap();
 
-        Ok(Ok(()))
+        Ok(())
     }
 }
 

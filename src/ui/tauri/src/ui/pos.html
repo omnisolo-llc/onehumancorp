@@ -372,7 +372,7 @@
       <div id="network-status-indicator" class="hidden fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none" style="display: none;">
         <div class="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] px-4 py-1.5 rounded-full shadow border border-white/40 dark:border-white/10 flex items-center gap-2 pointer-events-auto">
           <div id="network-status-dot" class="w-2 h-2 rounded-full bg-yellow-400"></div>
-          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Syncing Paused</span>
+          <span id="network-status-text" class="text-sm font-semibold text-gray-800">Offline - Cash & Saved Cards Only</span>
         </div>
       </div>
       <div id="queue-dashboard" class="hidden" style="display: none; background-color: #fef08a; color: #854d0e; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">0 Payments Pending Sync</div>
@@ -1637,7 +1637,7 @@ initWalkthrough();
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
             if (dot) dot.className = "w-2 h-2 rounded-full bg-yellow-400";
-            if (text) text.innerText = "Syncing Paused";
+            if (text) text.innerText = "Offline - Cash & Saved Cards Only";
         } else if (queue.length > 0) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
