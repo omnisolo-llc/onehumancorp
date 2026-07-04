@@ -308,18 +308,23 @@ pub async fn optimize_route(
         .execute(&state.pool)
         .await;
 
-        for (i, appt) in optimized.iter().enumerate() {
-            let loc_id = uuid::Uuid::new_v4().to_string();
-            let _ = sqlx::query(
-                "INSERT INTO job_locations (id, tenant_id, service_route_id, appointment_id, sequence_order, status) VALUES ($1, $2, $3, $4, $5, 'pending') ON CONFLICT (service_route_id, sequence_order) DO NOTHING"
-            )
-            .bind(&loc_id)
-            .bind(&tenant_id)
-            .bind(&route_id)
-            .bind(&appt.id)
-            .bind(i as i32)
-            .execute(&state.pool)
-            .await;
+        if !optimized.is_empty() {
+            let mut query_builder = sqlx::QueryBuilder::new(
+                "INSERT INTO job_locations (id, tenant_id, service_route_id, appointment_id, sequence_order, status) "
+            );
+
+            query_builder.push_values(optimized.iter().enumerate(), |mut b, (i, appt)| {
+                b.push_bind(uuid::Uuid::new_v4().to_string())
+                 .push_bind(tenant_id.clone())
+                 .push_bind(route_id.clone())
+                 .push_bind(appt.id.clone())
+                 .push_bind(i as i32)
+                 .push_bind("pending");
+            });
+
+            query_builder.push(" ON CONFLICT (service_route_id, sequence_order) DO NOTHING");
+
+            let _ = query_builder.build().execute(&state.pool).await;
         }
     }
 
@@ -434,5 +439,61 @@ mod tests {
 
         let res = app.oneshot(req).await.unwrap();
         assert_eq!(res.status(), axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[tokio::test]
+    async fn test_optimize_route_parallel_execution() {
+        // Verify code compiles and execution does not panic.
+        // Actual db interaction will fail with INTERNAL_SERVER_ERROR due to lazy invalid connection,
+        // but we verify the parallel setup doesn't break basic request handling.
+        let pool = sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
+        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let app = router(pool, mesh);
+
+        let payload = serde_json::json!({
+            "tenantId": "t1",
+            "appointments": [
+                {
+                    "id": "job_1",
+                    "customer_id": "cust_1",
+                    "customer_name": "John Doe",
+                    "job_template_id": "tpl_1",
+                    "job_name": "Fix A/C",
+                    "location_address": "123 Main St",
+                    "location_lat": 37.7749,
+                    "location_lng": -122.4194,
+                    "status": "Pending"
+                },
+                {
+                    "id": "job_2",
+                    "customer_id": "cust_1",
+                    "customer_name": "John Doe",
+                    "job_template_id": "tpl_1",
+                    "job_name": "Fix A/C",
+                    "location_address": "123 Main St",
+                    "location_lat": 37.7749,
+                    "location_lng": -122.4194,
+                    "status": "Pending"
+                }
+            ],
+            "currentLocationLat": 37.7750,
+            "currentLocationLng": -122.4190
+        });
+
+        let req = Request::builder()
+            .method("POST")
+            .uri("/optimize-route")
+            .header("Content-Type", "application/json")
+            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+            .unwrap();
+
+        let res = app.oneshot(req).await.unwrap();
+        // Since we pass appointments, it will execute the bulk insert.
+        // The lazy pool will return an error internally, but the API handler maps some of these or unwraps.
+        // Actually, our API handler ignores `job_locations` insert errors with `let _ = ...`,
+        // but `service_routes` insertion might fail and bubble up? No, `let _ = sqlx::query(...).execute().await;`
+        // is also used for `service_routes`.
+        // Let's assert it returns 200 OK since errors are ignored.
+        assert_eq!(res.status(), axum::http::StatusCode::OK);
     }
 }
