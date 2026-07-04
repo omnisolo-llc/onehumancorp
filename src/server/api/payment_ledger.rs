@@ -23,6 +23,7 @@ pub struct CreatePaymentIntentRequest {
     pub amount: f64,
     pub currency: String,
     pub source: String,
+    pub idempotency_key: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -81,10 +82,29 @@ async fn create_payment_intent(
         return (StatusCode::UNAUTHORIZED, "Missing tenant ID").into_response();
     }
 
-    let payment_id = Uuid::new_v4().to_string();
-    let idempotency_key = Uuid::new_v4().to_string();
+    let idempotency_key = payload.idempotency_key.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
 
     let pool = crate::db::get_pool();
+
+    // Check for existing intent with the same idempotency key
+    let existing: Option<(String, String)> = sqlx::query_as(
+        "SELECT payment_id, status FROM payment_intents WHERE tenant_id = $1 AND idempotency_key = $2"
+    )
+    .bind(&tenant_id)
+    .bind(&idempotency_key)
+    .fetch_optional(&pool)
+    .await.unwrap_or(None);
+
+    if let Some((existing_payment_id, existing_status)) = existing {
+        return (StatusCode::OK, Json(PaymentIntentResponse {
+            payment_id: existing_payment_id,
+            idempotency_key,
+            status: existing_status,
+        })).into_response();
+    }
+
+    let payment_id = Uuid::new_v4().to_string();
+
     let res = sqlx::query(
         r#"
         INSERT INTO payment_intents (tenant_id, payment_id, idempotency_key, amount, currency, source)
