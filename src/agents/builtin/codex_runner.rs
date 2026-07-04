@@ -838,6 +838,87 @@ impl AppServer {
                 r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#
                     .to_string()
             })
+
+        } else if req.method == "run_crewai" {
+            let task_description = req
+                .params
+                .get("task_description")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            let researcher_role = crate::crewai::Role::new(
+                "Researcher",
+                "Analyze the request and provide deep insights.",
+                "You are an expert analyst who goes deep into data."
+            );
+
+            let writer_role = crate::crewai::Role::new(
+                "Writer",
+                "Take research and write a final report.",
+                "You are an expert writer."
+            );
+
+            let task1 = crate::crewai::Task::new(
+                "research",
+                &task_description,
+                "Detailed research points.",
+                researcher_role,
+                vec![]
+            );
+
+            let task2 = crate::crewai::Task::new(
+                "write",
+                "Write the final report based on the research.",
+                "Final JSON Report generated successfully.",
+                writer_role,
+                vec!["research".to_string()]
+            );
+
+            let crew = crate::crewai::Crew::new(
+                vec![task1, task2],
+                self.runner.core.agent.clone(),
+                self.runner.core.runtime_config.clone()
+            );
+
+            let flow = crate::crewai::Flow::new(crew);
+
+            match flow.execute().await {
+                Ok(results) => {
+                    let mut final_report = format!("[CrewAI Flow Executed]\n\nTask: {}\n\n", task_description);
+                    if let Some(r) = results.get("research") {
+                        final_report.push_str(&format!("Researcher Output: {}\n", r));
+                    }
+                    if let Some(w) = results.get("write") {
+                        final_report.push_str(&format!("Writer Output: {}\n", w));
+                    }
+
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id.clone(),
+                        result: Some(serde_json::json!({
+                            "status": "success",
+                            "report": final_report
+                        })),
+                        error: None,
+                        meta: None,
+                    };
+                    serde_json::to_string(&resp).unwrap_or_default()
+                }
+                Err(e) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id.clone(),
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32000,
+                            message: e,
+                        }),
+                        meta: None,
+                    };
+                    serde_json::to_string(&resp).unwrap_or_default()
+                }
+            }
         } else if req.method == "run_actor_model" {
             let initial_message = req
                 .params
@@ -1255,6 +1336,21 @@ mod tests {
         assert_eq!(outputs.len(), 2);
         assert_eq!(outputs[0].as_str().unwrap(), "default output");
         assert_eq!(outputs[1].as_str().unwrap(), "default output");
+
+
+        // Test run_crewai method
+        let req_json_crewai = r#"{"jsonrpc": "2.0", "id": "3b", "method": "run_crewai", "params": {"task_description": "test task for crewai"}}"#;
+        let resp_json_crewai = app_server.handle_request(req_json_crewai).await;
+        let resp_crewai: JsonRpcResponse = serde_json::from_str(&resp_json_crewai).unwrap();
+        assert!(resp_crewai.error.is_none());
+        assert!(resp_crewai
+            .result
+            .unwrap()
+            .get("report")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .contains("[CrewAI Flow Executed]"));
 
         // Test run_ralph_loop method
         let req_json_ralph = r#"{"jsonrpc": "2.0", "id": "3", "method": "run_ralph_loop", "params": {"task": "test task", "progress_file": ".test_ralph_progress.json"}}"#;

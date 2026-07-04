@@ -1,21 +1,45 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
+  const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
+
   try {
     const body = await request.json();
     const { task_description } = body;
 
-    // Simulate backend call to the Rust CrewAI module
-    // In a real implementation this would make a gRPC or HTTP call to the ohc_builtin_agent
+    if (!task_description) {
+      return NextResponse.json({ error: 'task_description is required' }, { status: 400 });
+    }
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const rpcRequest = {
+      jsonrpc: "2.0",
+      id: "crewai-1",
+      method: "run_crewai",
+      params: { task_description }
+    };
+
+    const startTime = Date.now();
+
+    const backendRes = await fetch(`${agentUrl}/rpc`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rpcRequest),
+      signal: AbortSignal.timeout(60000)
+    });
+
+    const execution_time_ms = Date.now() - startTime;
+    const backendData = await backendRes.json();
+
+    if (backendData.error) {
+       return NextResponse.json({ error: backendData.error.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       status: 'success',
-      report: `[CrewAI Flow Executed]\n\nTask: ${task_description}\n\nResearcher Output: Analysis complete.\nWriter Output: Final JSON Report generated successfully.`,
-      execution_time_ms: 1500,
+      report: backendData.result?.report || "Executed successfully with empty output.",
+      execution_time_ms,
     });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to execute CrewAI workflow' }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: `Failed to execute CrewAI workflow: ${error.message}` }, { status: 500 });
   }
 }
