@@ -299,12 +299,12 @@ Output JSON format:
             let omni_result = omni_result_res.unwrap();
 
             let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
-            let action_payload_str = omni_result.final_draft;
+            let action_payload_str = extracted.get("action_payload").and_then(|v| v.as_str()).unwrap_or(omni_result.final_draft.as_str()).to_string();
             let action_payload = action_payload_str.as_str();
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
             let mut event_source = source.to_string();
-            if feature_type == "instagram_dm" || source.to_lowercase().contains("instagram") {
+            if action_type == "Reassign Shift" { event_source = "shift_reassignment".to_string(); } else if feature_type == "instagram_dm" || source.to_lowercase().contains("instagram") {
                 event_source = "instagram_dm".to_string();
             }
 
@@ -553,7 +553,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if action_type == "Reassign Shift" { "shift_reassignment" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" }
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
@@ -681,7 +681,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "quote_id": quote_id_opt,
                         "booking_id": booking_id_opt,
-                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" }
+                        "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if action_type == "Reassign Shift" { "shift_reassignment" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" }
                     }).to_string())
                     .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
