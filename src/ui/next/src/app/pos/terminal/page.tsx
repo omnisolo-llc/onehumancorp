@@ -26,6 +26,7 @@ export default function POSTerminal() {
   const [isOffline, setIsOffline] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
@@ -34,6 +35,7 @@ export default function POSTerminal() {
   useEffect(() => {
     const checkQueue = async () => {
       const qLen = await SyncManager.getInstance().getQueueLength();
+      setPendingSyncCount(qLen);
       if (navigator.onLine && qLen > 0) {
         setSyncing(true);
       } else {
@@ -536,7 +538,7 @@ export default function POSTerminal() {
         {isOffline && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg text-gray-900 px-6 py-3 rounded-full font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
             <svg className="w-5 h-5 text-[#FF9500]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-            <span>{t('Offline Mode')}</span>
+            <span>{t('Offline Mode')}{pendingSyncCount > 0 ? ` - ${pendingSyncCount} Pending` : ''}</span>
           </div>
         )}
         {syncing && !isOffline && (
