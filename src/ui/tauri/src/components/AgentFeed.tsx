@@ -49,7 +49,7 @@ export const AgentFeed: React.FC = () => {
     };
 
     if (loading) return <div className="p-4 text-center">Loading feed...</div>;
-    if (error) return <div className="p-4 text-center text-red-500">{error}</div>;
+    if (error) return <div className="p-4 text-center text-[#FF3B30]">{error}</div>;
     if (drafts.length === 0) return <div className="p-4 text-center text-gray-500">No pending actions!</div>;
 
     return (

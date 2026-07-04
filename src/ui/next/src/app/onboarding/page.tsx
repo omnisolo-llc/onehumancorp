@@ -1056,7 +1056,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 0 && (
-            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full backdrop-blur-[40px] backdrop-saturate-[250%] bg-[rgba(255,255,255,0.7)] dark:bg-[rgba(22,22,26,0.8)] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-2xl border border-white/20 p-4">
+            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full backdrop-blur-[40px] backdrop-saturate-[250%] bg-[rgba(255,255,255,0.7)] dark:bg-[rgba(22,22,26,0.8)] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-[16px] border border-white/20 p-4">
               <button
                 onClick={() => {
                   updateState({ step: -2 });
@@ -2031,7 +2031,7 @@ export default function OnboardingWizard() {
                           onClick={() =>
                             updateState({ websiteTemplate: template })
                           }
-                          className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-white/50 dark:border-[rgba(255,255,255,0.1)] glassmorphism hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white"}`}
+                          className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-white/20 dark:border-[rgba(255,255,255,0.1)] glassmorphism hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white"}`}
                         >
                           <div className="font-semibold text-sm">
                             {template}
@@ -2042,14 +2042,14 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/50 dark:border-[rgba(255,255,255,0.1)]">
+                <div className="pt-2 border-t border-white/20 dark:border-[rgba(255,255,255,0.1)]">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                     Web Address
                   </label>
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => updateState({ domainChoice: "subdomain" })}
-                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === "subdomain" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-white/50 dark:border-[rgba(255,255,255,0.1)] glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
+                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === "subdomain" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-white/20 dark:border-[rgba(255,255,255,0.1)] glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
                     >
                       <span className="font-semibold text-sm mb-1">
                         Free Subdomain
@@ -2060,7 +2060,7 @@ export default function OnboardingWizard() {
                     </div>
                     <div
                       onClick={() => updateState({ domainChoice: "custom" })}
-                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === "custom" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-white/50 dark:border-[rgba(255,255,255,0.1)] glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
+                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === "custom" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-white/20 dark:border-[rgba(255,255,255,0.1)] glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
                     >
                       <span className="font-semibold text-sm mb-1">
                         Custom Domain
@@ -2072,7 +2072,7 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/50 dark:border-[rgba(255,255,255,0.1)]">
+                <div className="pt-2 border-t border-white/20 dark:border-[rgba(255,255,255,0.1)]">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                     Account Setup
                   </label>
@@ -2194,7 +2194,7 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-white/50 dark:border-[rgba(255,255,255,0.1)]">
+                <div className="pt-2 border-t border-white/20 dark:border-[rgba(255,255,255,0.1)]">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                     Auto-Configured AI Departments
                   </label>
@@ -2209,7 +2209,7 @@ export default function OnboardingWizard() {
                         <div
                           key={agent.id}
                           onClick={() => handleAgentToggle(agent.id)}
-                          className={`cursor-pointer p-3 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[12px] border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_2px_8px_rgba(0,102,255,0.15)]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glassmorphism hover:border-gray-400 dark:hover:border-gray-500"}`}
+                          className={`cursor-pointer p-3 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_2px_8px_rgba(0,102,255,0.15)]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glassmorphism hover:border-gray-400 dark:hover:border-gray-500"}`}
                         >
                           <div
                             className={`flex items-center justify-center w-10 h-10 rounded-full text-lg ${isActive ? "bg-[#0066FF]/20" : "bg-gray-100 dark:bg-gray-800"}`}
