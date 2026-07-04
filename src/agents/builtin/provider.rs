@@ -614,7 +614,7 @@ impl Provider for BuiltinProvider {
         // Advanced GRPC Dispatch Support
         let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_default();
         if !address.is_empty() {
-            tracing::debug!("Dispatching via gRPC to {}", address);
+            tracing::debug!("Dispatching via gRPC to {}", address); // pii-safe
             // This is handled by orchestrator at runtime via OHC_AGENT_ADDRESS
             // It overrides local builtin tools loop with a remote node.
         }
