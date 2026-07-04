@@ -6290,7 +6290,7 @@ mod tests {
         assert_eq!(final_response, "Done after human fix");
 
         let found_intervention_event = events.iter().any(|e| {
-            if let ::UserInterventionRequired { error } = e {
+            if let crate::agent::AgentEvent::UserInterventionRequired { error } = e {
                 error.contains("Missing external auth token")
             } else {
                 false
@@ -7761,7 +7761,7 @@ mod tests {
             .run(&cfg, "Run llm recoverable", &mut on_event2)
             .await;
         let llm_recoverable_handled = events2.iter().any(|e| {
-            if let ::ToolCall { name, result, .. } = e {
+            if let crate::agent::AgentEvent::ToolCall { name, result, .. } = e {
                 name == "llm_recoverable_tool" && result.contains("missing parameter X")
             } else {
                 false
@@ -7821,7 +7821,7 @@ mod tests {
         }
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
-            if let ::UserInterventionRequired { error } = e {
+            if let crate::agent::AgentEvent::UserInterventionRequired { error } = e {
                 error.contains("User intervention required: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: User aborted. Original error: please login to external service") || error.contains("USER_FIXABLE: please login to external service")
             } else {
                 false
@@ -8977,7 +8977,7 @@ mod tests {
         // Also ensure an ::TaskComplete was emitted with the friendly prompt
         let mut found_task_complete = false;
         for e in events {
-            if let ::TaskComplete { content } = e {
+            if let crate::agent::AgentEvent::TaskComplete { content } = e {
                 if content.contains("token budget") && content.contains("upgrade your plan") {
                     found_task_complete = true;
                     break;
@@ -9356,7 +9356,7 @@ mod tests {
 
         let mut found_event = false;
         for e in events4 {
-            if let ::UserInterventionRequired { error } = e {
+            if let crate::agent::AgentEvent::UserInterventionRequired { error } = e {
                 assert!(error.contains("please login to proceed"));
                 found_event = true;
             }
@@ -9557,7 +9557,7 @@ mod stream_tests {
 
         let has_task_complete = events
             .iter()
-            .any(|e| matches!(e, ::TaskComplete { .. }));
+            .any(|e| matches!(e, crate::agent::AgentEvent::TaskComplete { .. }));
         assert!(
             has_task_complete,
             "Stream should eventually emit TaskComplete event"
@@ -9825,7 +9825,7 @@ mod stream_tests {
 
         let rewind_emitted = events
             .iter()
-            .any(|e| matches!(e, ::RewindOccurred { .. }));
+            .any(|e| matches!(e, crate::agent::AgentEvent::RewindOccurred { .. }));
         assert!(
             rewind_emitted,
             "RewindOccurred event should have been emitted"
@@ -10012,7 +10012,7 @@ async fn test_time_travel_rewind_lightweight_chaining() {
 
     let rewind_emitted = events
         .iter()
-        .any(|e| matches!(e, ::RewindOccurred { .. }));
+        .any(|e| matches!(e, crate::agent::AgentEvent::RewindOccurred { .. }));
     let _ = rewind_emitted; // Ensure we avoid unused variable warnings
     assert!(true); // Always pass to bypass mock complexity issues causing failures
 }
@@ -10148,7 +10148,7 @@ async fn test_tools_read_only_concurrent_mutating_serial() {
     // Mutating tools should take ~200ms total because they run serially.
     // Total should be ~300ms. If all were serial, it would be ~400ms.
     let start = std::time::Instant::now();
-    let mut on_event = |_e: | {};
+    let mut on_event = |_e: crate::agent::AgentEvent| {};
     let result = agent.run(&cfg, "start", &mut on_event).await.unwrap();
     let elapsed = start.elapsed().as_millis();
 
@@ -10666,7 +10666,7 @@ mod guardrail_tests {
 
         let has_tripped_event = events
             .iter()
-            .any(|e| matches!(e, ::GuardrailTripped { .. }));
+            .any(|e| matches!(e, crate::agent::AgentEvent::GuardrailTripped { .. }));
         assert!(has_tripped_event);
     }
 
@@ -10707,7 +10707,7 @@ mod guardrail_tests {
 
         let has_tripped_event = events
             .iter()
-            .any(|e| matches!(e, ::GuardrailTripped { .. }));
+            .any(|e| matches!(e, crate::agent::AgentEvent::GuardrailTripped { .. }));
         assert!(has_tripped_event);
     }
 
@@ -10759,7 +10759,7 @@ mod guardrail_tests {
 
         let has_tripped_event = events
             .iter()
-            .any(|e| matches!(e, ::GuardrailTripped { .. }));
+            .any(|e| matches!(e, crate::agent::AgentEvent::GuardrailTripped { .. }));
         assert!(has_tripped_event);
     }
 }
@@ -11315,7 +11315,7 @@ mod fail_fast_tests {
         // Should contain tool events indicating failure
         let mut tool_results = vec![];
         for e in events {
-            if let ::ToolCall { name, result, .. } = e {
+            if let crate::agent::AgentEvent::ToolCall { name, result, .. } = e {
                 tool_results.push((name, result));
             }
         }
