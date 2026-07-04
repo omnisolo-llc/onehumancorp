@@ -137,7 +137,7 @@ async fn test_create_payment_intent_authenticated() {
                 .uri("/intent")
                 .method("POST")
                 .header("Content-Type", "application/json")
-                .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd", "product_id": "prod_1", "quantity": 1, "order_id": "ord_1"}"#))
+                .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd", "product_id": "prod_1", "quantity": 1, "order_id": "ord_1", "idempotency_key": "idem-key-1"}"#))
                 .unwrap(),
         )
         .await
@@ -260,7 +260,7 @@ async fn test_create_payment_intent_authenticated_via_router() {
         .uri("/intent")
         .method("POST")
         .header("Content-Type", "application/json")
-        .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd", "product_id": "prod_2", "quantity": 2, "order_id": "ord_2"}"#))
+        .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd", "product_id": "prod_2", "quantity": 2, "order_id": "ord_2", "idempotency_key": "idem-key-2"}"#))
         .unwrap();
 
     req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
