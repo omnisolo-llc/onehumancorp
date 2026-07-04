@@ -675,7 +675,7 @@ pub async fn create_payment_intent_handler(
     .fetch_optional(&pool)
     .await.unwrap_or(None);
 
-    if let Some((stripe_id,)) = existing {
+    if let Some((_stripe_id,)) = existing {
         // Return existing client secret from stripe - though we might not have it in db, we can re-construct or just return a generic success since it's idempotent.
         // Actually Stripe's idempotency will return the exact same response anyway if we just pass the idempotency key down.
         // Let's just let Stripe handle the idempotency by passing the key, but we need to make sure we don't crash on DB unique constraint if it already exists.
