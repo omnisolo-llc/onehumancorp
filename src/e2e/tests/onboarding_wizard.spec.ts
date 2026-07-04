@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard Flow', () => {
 
-
   test.beforeEach(async ({ page }) => {
     const fs = require('fs');
     const path = require('path');
@@ -100,4 +99,62 @@ test.describe('Onboarding Wizard Flow', () => {
     const storedData = await page.evaluate(() => window.localStorage.getItem('onboardingState'));
     expect(storedData).toContain('Storefront');
   });
+
+  test('Assistant step validation error disappears upon selection', async ({ page }) => {
+    await expect(page.locator('body')).toContainText('Tell us about your business');
+
+    await page.getByTestId('next-step-btn').first().click();
+    await page.getByTestId('context-storefront').click();
+    await page.getByTestId('next-step-btn').nth(1).click();
+    await page.locator('#business-categories').selectOption('Other');
+    await page.getByTestId('next-step-btn').nth(2).click();
+    await page.locator('#business-name').fill('My Awesome Business');
+    await page.getByTestId('next-step-btn').nth(3).click();
+
+    await expect(page.locator('body')).toContainText('Set up your Assistant');
+
+    // Click Next without selecting an assistant to trigger error
+    await page.getByTestId('next-step-btn').nth(4).click();
+
+    // Expect error to be visible
+    const errorMsg = page.locator('#assistant-name-error');
+    await expect(errorMsg).toBeVisible();
+
+    // Select an assistant
+    await page.getByTestId('team-support').click();
+
+    // The error should disappear immediately
+    await expect(errorMsg).toBeHidden();
+  });
+
+  test('Assistant tone validation error disappears upon selection', async ({ page }) => {
+    await expect(page.locator('body')).toContainText('Tell us about your business');
+
+    await page.getByTestId('next-step-btn').first().click();
+    await page.getByTestId('context-storefront').click();
+    await page.getByTestId('next-step-btn').nth(1).click();
+    await page.locator('#business-categories').selectOption('Other');
+    await page.getByTestId('next-step-btn').nth(2).click();
+    await page.locator('#business-name').fill('My Awesome Business');
+    await page.getByTestId('next-step-btn').nth(3).click();
+
+    await expect(page.locator('body')).toContainText('Set up your Assistant');
+
+    // Select an assistant so only tone is missing
+    await page.getByTestId('team-support').click();
+
+    // Click Next to trigger tone error
+    await page.getByTestId('next-step-btn').nth(4).click();
+
+    // Expect error to be visible
+    const errorMsg = page.locator('#tone-error');
+    await expect(errorMsg).toBeVisible();
+
+    // Select a tone
+    await page.locator('#assistant-tone').selectOption('Professional');
+
+    // The error should disappear immediately
+    await expect(errorMsg).toBeHidden();
+  });
+
 });
