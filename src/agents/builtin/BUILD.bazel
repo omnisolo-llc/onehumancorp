@@ -60,6 +60,7 @@ rust_library(
         "claude_subagents.rs",
         "codex_runner.rs",
         "compaction.rs",
+        "durable_execution.rs",
         "consolidation_worker.rs",
         "departments.rs",
         "gpt_researcher.rs",
