@@ -195,7 +195,7 @@ impl ClaudeSubagentSpawner {
         let max_retries = 3;
 
         let start_time = std::time::Instant::now();
-        let raw_output = loop {
+        let raw_output: String = loop {
             match Box::pin(self.subagent.run(config, task, &mut on_event)).await {
                 Ok(res) => break res,
                 Err(e) => {
