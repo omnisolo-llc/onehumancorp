@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package ohc.mesh;
+
+message ReserveResourceRequest {
+  string tenant_id = 1;
+  string resource_id = 2;
+  int32 quantity = 3;
+  int32 ttl_seconds = 4;
+}
+
+message ReserveResourceResponse {
+  bool success = 1;
+  string lock_id = 2;
+  string error_message = 3;
+}
+
+message CommitReservationRequest {
+  string tenant_id = 1;
+  string resource_id = 2;
+  int32 quantity = 3;
+  string lock_id = 4;
+}
+
+message CommitReservationResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message ResourceHold {
+  string id = 1;
+  string tenant_id = 2;
+  string resource_id = 3;
+  int32 quantity = 4;
+  int64 expires_at_unix = 5;
+  string status = 6;
+}
+
+service UnifiedMeshService {
+  rpc ReserveResource(ReserveResourceRequest) returns (ReserveResourceResponse);
+  rpc CommitReservation(CommitReservationRequest) returns (CommitReservationResponse);
+}
