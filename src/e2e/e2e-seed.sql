@@ -712,3 +712,6 @@ INSERT INTO builder_sites (id, tenant_id, domain, published_at)
 VALUES
   ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'edge-e2e.ohc.store', CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO NOTHING;
+
+-- Seed tooltips
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('dashboard-walkthrough-btn', 'e2e-tenant', 'Take a tour of the dashboard') ON CONFLICT DO NOTHING;
