@@ -34,6 +34,7 @@ test.describe('Premium Aesthetics Verification', () => {
     expect(styles.backgroundColor).toMatch(/rgba?\(\d+,\s*\d+,\s*\d+(?:,\s*[0-9.]+)?\)|rgb\(\d+,\s*\d+,\s*\d+\)/);
     expect(styles.backdropFilter).toMatch(/blur\(30px\)\s+saturate\((?:210%|2\.1)\)/);
     expect(styles.border).toBeDefined();
+    expect(styles.borderRadius).toBe("16px");
   });
 
   test('Verify glassmorphism effect on Invoice Generator Page', async ({ page }) => {
@@ -57,9 +58,10 @@ test.describe('Premium Aesthetics Verification', () => {
     expect(styles.backgroundColor).toMatch(/rgba?\(\d+,\s*\d+,\s*\d+(?:,\s*[0-9.]+)?\)|rgb\(\d+,\s*\d+,\s*\d+\)/);
     expect(styles.backdropFilter).toMatch(/blur\(30px\)\s+saturate\((?:210%|2\.1)\)/);
     expect(styles.border).toBeDefined();
+    expect(styles.borderRadius).toBe("16px");
   });
 
-  test('Verify glassmorphism effect on Setup Wizard', async ({ page }) => {
+  test('Verify glassmorphism and control aesthetics on Setup Wizard', async ({ page }) => {
     await page.goto('/onboarding');
     await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
@@ -82,6 +84,18 @@ test.describe('Premium Aesthetics Verification', () => {
     expect(styles.backgroundColor).toMatch(/rgba?\(\d+,\s*\d+,\s*\d+(?:,\s*[0-9.]+)?\)|rgb\(\d+,\s*\d+,\s*\d+\)/);
     expect(styles.backdropFilter).toMatch(/blur\(30px\)\s+saturate\((?:210%|2\.1)\)/);
     expect(styles.border).toBeDefined();
+    expect(styles.borderRadius).toBe("16px");
+
+    // Verify control styling with 8px border-radius
+    const glassControl = page.locator(".glass-control").first();
+    await expect(glassControl).toBeVisible();
+    const controlStyles = await glassControl.evaluate((el) => {
+      const computed = window.getComputedStyle(el);
+      return {
+        borderRadius: computed.borderRadius,
+      };
+    });
+    expect(controlStyles.borderRadius).toBe("8px");
   });
 
   test('Verify transparent class on Dashboard', async ({ page }) => {
