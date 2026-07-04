@@ -118,6 +118,7 @@ Message from {}: '{}'
 Source: {}
 
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
+If the customer asks for product availability (e.g. cakes), auto-detect inventory mentions and propose inventory reductions by adding '[Send & Deduct Inventory]' at the end of the action_payload reply text.
 If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
 If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
 You have access to the following Staff Availability Data (Simulated):

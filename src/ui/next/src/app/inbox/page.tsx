@@ -135,6 +135,7 @@ function InboxWorkspace({
 
 
   const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
+  const unreadLeadsCount = messages.filter((message) => (message.status || "").toLowerCase() === "unread").length;
 
   async function handleDraftQuoteWithAI(message: Message) {
     try {
@@ -218,6 +219,13 @@ function InboxWorkspace({
               </div>
             </div>
             <div id="messages-list" className="app-list p-2">
+              {unreadLeadsCount > 0 && (
+                <div className="app-card daily-summary mb-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 p-4 rounded-xl">
+                  <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                    ✨ You have {unreadLeadsCount} unread {unreadLeadsCount === 1 ? 'lead' : 'leads'}.
+                  </div>
+                </div>
+              )}
               {messages.length === 0 ? (
                 <div className="app-empty">No inbox messages found for this tenant.</div>
               ) : messages.map((message) => (
@@ -326,6 +334,19 @@ function InboxWorkspace({
                            buttonText = "✨ Approve & Send Draft";
                         }
                       }
+
+                      const isInventoryDeduction = selected.draft_reply?.includes("[Send & Deduct Inventory]");
+                      if (isInventoryDeduction) {
+                        return (
+                          <button
+                            className="app-button primary w-full min-h-[44px] min-w-[44px] backdrop-filter bg-white/10 glassmorphism shadow-lg bg-gradient-to-r from-green-500/80 to-emerald-600/80 text-white font-bold border border-white/20"
+                            onClick={() => handleApproveAndSend(selected.id)}
+                          >
+                            ✨ Approve & Send (Deduct Inventory)
+                          </button>
+                        );
+                      }
+
                       return (
                         <button
                           className="app-button primary w-full min-h-[44px] min-w-[44px] backdrop-filter bg-white/10"
