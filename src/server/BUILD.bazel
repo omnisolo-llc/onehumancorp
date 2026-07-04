@@ -365,6 +365,10 @@ SERVER_RS_SRCS = [
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",
     "//src/server/voice:router.rs",
+    "//src/server/domain:storefront.rs",
+    "//src/server/services/storefront:mod.rs",
+    "//src/server/services/storefront:service.rs",
+    "//src/server/api:storefront.rs",
 ]
 
 # build_script removed as protos are now built with Bazel rules

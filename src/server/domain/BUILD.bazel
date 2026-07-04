@@ -55,6 +55,7 @@ rust_library(
         "//src/server/domain/repository:agent_feed_repo.rs",
         "//src/server/domain/repository:omnichannel_repo.rs",
         "//src/server/domain/repository:action_required_queue_repo.rs",
+        "storefront.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -164,3 +165,4 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+exports_files(["storefront.rs"])

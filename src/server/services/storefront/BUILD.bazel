@@ -1,0 +1,11 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_services_storefront",
+    srcs = glob(["*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/domain:server_domain",
+    ],
+)
+exports_files(["mod.rs", "service.rs"])

@@ -133,6 +133,7 @@ rust_library(
         "//src/server/api/booking:available_slots.rs",
         "//src/server/api/booking:create_service.rs",
         "//src/server/api/booking:proposed.rs",
+        "storefront.rs",
     ],
     compile_data = [
         "//:CHANGELOG.md",
@@ -248,3 +249,4 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+exports_files(["storefront.rs"])

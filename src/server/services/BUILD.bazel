@@ -108,6 +108,8 @@ rust_library(
             "//src/server/services/ledger:mod.rs",
         "//src/server/services/ledger:service.rs",
         "//src/server/services/ledger:service_test.rs",
+        "//src/server/services/storefront:mod.rs",
+        "//src/server/services/storefront:service.rs",
 ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

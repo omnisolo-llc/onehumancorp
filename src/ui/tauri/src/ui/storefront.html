@@ -126,6 +126,7 @@
     </div>
 
     <script>
+
         document.addEventListener('DOMContentLoaded', async () => {
             const tenantId = localStorage.getItem('tenant_id') || 'default';
             const copyBtn = document.getElementById('copy-link-btn');
@@ -136,45 +137,89 @@
             const iframe = document.getElementById('storefront-iframe');
             const loading = document.getElementById('loading-state');
 
-            try {
-                // Fetch products to get a valid product ID
-                const res = await fetch('/api/v1/products', {
-                    headers: { 'x-tenant-id': tenantId }
-                });
+            const createBtn = document.createElement('button');
+            createBtn.id = 'create-storefront-btn';
+            createBtn.innerText = 'Create Storefront';
+            createBtn.className = 'btn';
+            document.querySelector('.header').appendChild(createBtn);
 
-                let productId = '00000000-0000-0000-0000-000000000000';
+            const publishBtn = document.createElement('button');
+            publishBtn.id = 'publish-btn';
+            publishBtn.innerText = 'Publish';
+            publishBtn.className = 'btn';
+            publishBtn.style.display = 'none';
+            document.querySelector('.header').appendChild(publishBtn);
 
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.products && data.products.length > 0) {
-                        productId = data.products[0].id;
+            createBtn.addEventListener('click', async () => {
+                loading.innerText = 'Marketing Agent is generating site structure...';
+                createBtn.disabled = true;
+
+                // Simulate Agent generating
+                setTimeout(async () => {
+                   try {
+                       const res = await fetch(`/api/v1/storefront/${tenantId}/draft`, { method: 'POST' });
+                       if (res.ok) {
+                           loading.style.display = 'none';
+                           iframe.style.display = 'block';
+                           publishBtn.style.display = 'inline-block';
+                           createBtn.style.display = 'none';
+                           const storefrontUrl = `http://127.0.0.1:18789/api/v1/storefront/${tenantId}/0`;
+                           iframe.src = storefrontUrl;
+                       }
+                   } catch(e) {
+                       loading.innerText = 'Failed to generate';
+                   }
+                }, 100);
+            });
+
+            publishBtn.addEventListener('click', async () => {
+                loading.innerText = 'Publishing...';
+                loading.style.display = 'flex';
+                iframe.style.display = 'none';
+                publishBtn.disabled = true;
+                try {
+                    const res = await fetch(`/api/v1/storefront/${tenantId}/publish`, { method: 'POST' });
+                    if (res.ok) {
+                       loading.innerText = 'Published Successfully! Cache warming...';
+                       setTimeout(() => {
+                           loading.style.display = 'none';
+                           iframe.style.display = 'block';
+                           copyBtn.style.display = 'inline-block';
+                           publishBtn.style.display = 'none';
+                       }, 500);
                     }
+                } catch(e) {
+                   loading.innerText = 'Publishing failed';
                 }
+            });
 
-                const storefrontUrl = `http://127.0.0.1:18789/api/v1/storefront/${tenantId}/${productId}`;
+            try {
+                // Initial check if storefront is active
+                const checkRes = await fetch(`/api/v1/storefront/${tenantId}/0`);
+                if (checkRes.ok) {
+                   loading.style.display = 'none';
+                   iframe.style.display = 'block';
+                   const storefrontUrl = `http://127.0.0.1:18789/api/v1/storefront/${tenantId}/0`;
+                   iframe.src = storefrontUrl;
+                   copyBtn.style.display = 'inline-block';
+                   createBtn.style.display = 'none';
+                } else {
+                   loading.innerText = 'No Storefront Found. Click "Create Storefront" to begin.';
+                }
+            } catch(e) {}
 
-                iframe.src = storefrontUrl;
-                iframe.onload = () => {
-                    loading.style.display = 'none';
-                    iframe.style.display = 'block';
-                    copyBtn.style.display = 'block';
-                };
-
-                copyBtn.addEventListener('click', () => {
-                    navigator.clipboard.writeText(storefrontUrl).then(() => {
-                        const originalText = copyBtn.innerText;
-                        copyBtn.innerText = 'Copied!';
-                        setTimeout(() => {
-                            copyBtn.innerText = originalText;
-                        }, 2000);
-                    });
+            copyBtn.addEventListener('click', () => {
+                const storefrontUrl = `http://127.0.0.1:18789/api/v1/storefront/${tenantId}/0`;
+                navigator.clipboard.writeText(storefrontUrl).then(() => {
+                    const originalText = copyBtn.innerText;
+                    copyBtn.innerText = 'Copied!';
+                    setTimeout(() => {
+                        copyBtn.innerText = originalText;
+                    }, 2000);
                 });
-
-            } catch (err) {
-                console.error("Failed to load storefront preview", err);
-                loading.innerText = "Failed to load storefront preview.";
-            }
+            });
         });
+
     </script>
 </body>
 </html>

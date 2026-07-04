@@ -339,6 +339,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
+    pub mod storefront;
 
     #[cfg(ohc_bazel)]
     pub use ::server_services_b2b as b2b;
