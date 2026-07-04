@@ -941,3 +941,106 @@ mod tests {
         assert_eq!(response_dup.status(), StatusCode::OK); // Dup gets skipped but doesn't fail
     }
 }
+
+#[derive(serde::Deserialize, Debug, Clone, serde::Serialize)]
+pub struct OperationIntent {
+    pub id: String,
+    pub action_type: String,
+    pub payload: serde_json::Value,
+    pub timestamp: Option<String>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+pub struct OperationIntentRequest {
+    pub intents: Vec<OperationIntent>,
+}
+
+#[derive(serde::Serialize)]
+pub struct OperationIntentResponse {
+    pub success: bool,
+    pub applied_count: i32,
+    pub conflict_count: i32,
+    pub failed_count: i32,
+}
+
+pub async fn operation_intents_handler(
+    axum::extract::State(db): axum::extract::State<sqlx::PgPool>,
+    headers: axum::http::HeaderMap,
+    axum::Json(payload): axum::Json<OperationIntentRequest>,
+) -> impl axum::response::IntoResponse {
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+
+    if tenant_id.is_empty() {
+        return (
+            axum::http::StatusCode::UNAUTHORIZED,
+            axum::Json(OperationIntentResponse { success: false, applied_count: 0, conflict_count: 0, failed_count: 0 }),
+        ).into_response();
+    }
+
+    let mut applied_count = 0;
+    let mut conflict_count = 0;
+    let mut failed_count = 0;
+
+    for intent in &payload.intents {
+        let mut tx = match db.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                tracing::error!("Failed to begin transaction: {}", e);
+                failed_count += 1;
+                continue;
+            }
+        };
+
+        // Check idempotency (does the event id already exist?)
+        let exists: Result<(i64,), sqlx::Error> = sqlx::query_as(
+            "SELECT COUNT(*) FROM operation_intents WHERE id = $1 AND tenant_id = $2"
+        )
+        .bind(&intent.id)
+        .bind(&tenant_id)
+        .fetch_one(&mut *tx)
+        .await;
+
+        if let Ok((count,)) = exists {
+            if count > 0 {
+                // Already processed
+                let _ = tx.rollback().await;
+                applied_count += 1; // It was previously applied (idempotency)
+                continue;
+            }
+        }
+
+        // Insert into operation_intents
+        let insert_res = sqlx::query(
+            "INSERT INTO operation_intents (id, tenant_id, action_type, payload, status)
+             VALUES ($1, $2, $3, $4, 'SYNCED')"
+        )
+        .bind(&intent.id)
+        .bind(&tenant_id)
+        .bind(&intent.action_type)
+        .bind(&intent.payload)
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = insert_res {
+            tracing::error!("Failed to insert operation intent: {}", e);
+            let _ = tx.rollback().await;
+            failed_count += 1;
+            continue;
+        }
+
+        if let Err(e) = tx.commit().await {
+            tracing::error!("Failed to commit transaction: {}", e);
+            failed_count += 1;
+            continue;
+        }
+
+        // For now, assume it's applied successfully if there is no specific conflict logic mapped.
+        applied_count += 1;
+    }
+
+    (
+        axum::http::StatusCode::OK,
+        axum::Json(OperationIntentResponse { success: true, applied_count, conflict_count, failed_count }),
+    ).into_response()
+}
