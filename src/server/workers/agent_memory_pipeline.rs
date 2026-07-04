@@ -258,6 +258,7 @@ impl AgentMemoryPipeline {
 }
 
 #[cfg(test)]
+#[allow(unused_imports, dead_code)]
 mod tests {
     // use super::*
     use super::*;
