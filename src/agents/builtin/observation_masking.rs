@@ -176,7 +176,8 @@ impl JetBrainsObservationMasker {
                             && (!tr.content.starts_with("{\"_masked_observation\"")
                                 && !tr
                                     .content
-                                    .starts_with("{\"_masked_observation\": \"[Observation Masked"))
+                                    .starts_with("{\"_masked_observation\": \"[Observation Masked")
+                                && !tr.content.starts_with("[{\n  \"_masked_observation\""))
                         {
                             let bytes = tr.content.len();
                             if bytes > self.size_limit {
@@ -235,9 +236,9 @@ impl JetBrainsObservationMasker {
                                                 bytes, tr.tool_call_id
                                             );
                                             if is_array {
-                                                tr.content = serde_json::json!([{ "_masked_observation": raw_msg }]).to_string();
+                                                tr.content = serde_json::to_string(&serde_json::json!([{ "_masked_observation": raw_msg }])).unwrap();
                                             } else {
-                                                tr.content = serde_json::json!({ "_masked_observation": raw_msg }).to_string();
+                                                tr.content = serde_json::to_string(&serde_json::json!({ "_masked_observation": raw_msg })).unwrap();
                                             }
                                             modification_successful = true;
                                         }
