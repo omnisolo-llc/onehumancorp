@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Viral Certificate Generator | OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+        --bg-color: #f5f5f7;
+        --text-color: #1d1d1f;
+        --card-bg: rgba(255, 255, 255, 0.65);
+        --card-border: rgba(255, 255, 255, 0.4);
+        --primary: #0066FF;
+        --primary-hover: #0052cc;
+        --input-bg: rgba(255, 255, 255, 0.65);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --bg-color: #16161a;
+            --text-color: #f5f5f7;
+            --card-bg: rgba(22, 22, 26, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(32, 32, 36, 0.8);
+        }
+    }
+
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .glassmorphism {
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid var(--card-border);
+      margin-bottom: 20px;
+    }
+
+    .header-area {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .back-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      font-family: "Inter", sans-serif;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s, transform 0.1s;
+      font-family: "Outfit", sans-serif;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .result-area {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .code-block {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      border: 1px solid var(--card-border);
+      color: var(--text-color);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+        }
+    }
+
+    .copy-btn {
+      margin-top: 10px;
+      background-color: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .copy-btn:hover {
+      background-color: rgba(0, 102, 255, 0.1);
+    }
+
+    .preview-container {
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      height: 400px;
+      width: 100%;
+      background: #fff;
+    }
+
+    .preview-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .grid-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-area glassmorphism">
+      <h1>Viral Certificate Generator 🎓</h1>
+      <a href="/dashboard.html" class="back-link">← Back to Dashboard</a>
+    </div>
+
+    <div class="grid-container">
+        <div class="glassmorphism">
+            <div class="form-group">
+                <label for="tenant">Tenant / Business ID</label>
+                <input type="text" id="tenant" value="e2e-tenant">
+            </div>
+
+            <div class="form-group">
+                <label for="cert-title">Certificate Title</label>
+                <input type="text" id="cert-title" value="Certificate of Completion">
+            </div>
+
+            <div class="form-group">
+                <label for="recipient">Recipient Name</label>
+                <input type="text" id="recipient" value="Jane Doe">
+            </div>
+
+            <div class="form-group">
+                <label for="course-name">Course/Item Name</label>
+                <input type="text" id="course-name" value="Advanced Baking Masterclass">
+            </div>
+
+            <div class="form-group">
+                <label for="theme">Theme</label>
+                <select id="theme">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="gold">Gold Premium</option>
+                </select>
+            </div>
+
+            <button id="generate-btn">Generate Widget</button>
+
+            <div class="result-area" id="result-area">
+                <label>Embed Code (Copy and paste into your website)</label>
+                <div class="code-block" id="embed-code"></div>
+                <button class="copy-btn" id="copy-btn">Copy Code</button>
+            </div>
+        </div>
+
+        <div class="glassmorphism">
+            <label>Live Preview</label>
+            <div class="preview-container">
+                <iframe id="preview-frame" class="preview-iframe" src="/api/v1/growth/certificate/embed?tenant=e2e-tenant&title=Certificate%20of%20Completion&recipient=Jane%20Doe&course=Advanced%20Baking%20Masterclass&theme=light"></iframe>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    function updatePreview() {
+        const tenant = encodeURIComponent(document.getElementById('tenant').value || 'demo');
+        const title = encodeURIComponent(document.getElementById('cert-title').value || 'Certificate');
+        const recipient = encodeURIComponent(document.getElementById('recipient').value || 'Student');
+        const course = encodeURIComponent(document.getElementById('course-name').value || 'Course');
+        const theme = encodeURIComponent(document.getElementById('theme').value || 'light');
+
+        const baseUrl = window.location.origin;
+        let url = `${baseUrl}/api/v1/growth/certificate/embed?tenant=${tenant}&title=${title}&recipient=${recipient}&course=${course}&theme=${theme}`;
+
+        // For local Tauri dev proxy fallback if needed
+        if (window.__TAURI__ && window.__TAURI__.core && !url.includes('127.0.0.1')) {
+            url = `http://127.0.0.1:18789/api/v1/growth/certificate/embed?tenant=${tenant}&title=${title}&recipient=${recipient}&course=${course}&theme=${theme}`;
+        }
+
+        document.getElementById('preview-frame').src = url;
+    }
+
+    const inputs = ['tenant', 'cert-title', 'recipient', 'course-name', 'theme'];
+    inputs.forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            // Debounce slightly in a real app, but for simplicity:
+            setTimeout(updatePreview, 300);
+        });
+    });
+
+    document.getElementById('generate-btn').addEventListener('click', () => {
+        const tenant = encodeURIComponent(document.getElementById('tenant').value || 'demo');
+        const title = encodeURIComponent(document.getElementById('cert-title').value || 'Certificate');
+        const recipient = encodeURIComponent(document.getElementById('recipient').value || 'Student');
+        const course = encodeURIComponent(document.getElementById('course-name').value || 'Course');
+        const theme = encodeURIComponent(document.getElementById('theme').value || 'light');
+
+        const baseUrl = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') ? 'https://ohc.app' : window.location.origin;
+        const embedUrl = `${baseUrl}/api/v1/growth/certificate/embed?tenant=${tenant}&title=${title}&recipient=${recipient}&course=${course}&theme=${theme}`;
+
+        const embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" style="border: 1px solid #ccc; border-radius: 12px; overflow: hidden;"></iframe>`;
+
+        document.getElementById('embed-code').innerText = embedCode;
+        document.getElementById('result-area').style.display = 'block';
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+        const text = document.getElementById('embed-code').innerText;
+        try {
+            await navigator.clipboard.writeText(text);
+            const btn = document.getElementById('copy-btn');
+            btn.innerText = 'Copied!';
+            setTimeout(() => { btn.innerText = 'Copy Code'; }, 2000);
+        } catch (err) {
+            console.error('Failed to copy', err);
+        }
+    });
+
+    // Initial tenant populate if available
+    const savedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+    if (savedTenant) {
+        document.getElementById('tenant').value = savedTenant;
+        updatePreview();
+    }
+  </script>
+</body>
+</html>
