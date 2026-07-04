@@ -484,6 +484,43 @@ impl VectorRepository {
                         }
                         let _ = q.execute(pool).await;
                     }
+                } else {
+                    let rows = sqlx::query(
+                        "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                         FROM consolidated_memory \
+                         WHERE tenant_id = ?"
+                    )
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                    let mut all_records = Vec::new();
+                    for row in rows {
+                        if let Ok(record) = Self::parse_record_row(&row) {
+                            all_records.push(record);
+                        }
+                    }
+
+                    all_records.sort_by(|a, b| {
+                        let sim_a = Self::cosine_similarity(&a.embedding, query_embedding);
+                        let sim_b = Self::cosine_similarity(&b.embedding, query_embedding);
+                        sim_b.partial_cmp(&sim_a).unwrap_or(std::cmp::Ordering::Equal)
+                    });
+
+                    results = all_records.into_iter().take(limit as usize).collect();
+
+                    let ids_to_update: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
+                    if !ids_to_update.is_empty() {
+                        for id in ids_to_update {
+                            let _ = sqlx::query(
+                                "UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id = ?"
+                            )
+                            .bind(&id)
+                            .execute(pool)
+                            .await;
+                        }
+                    }
                 }
             }
         }
@@ -664,6 +701,24 @@ impl VectorRepository {
         } else {
             (b, a)
         }
+    }
+
+    pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+        if a.is_empty() || b.is_empty() || a.len() != b.len() {
+            return 0.0;
+        }
+        let mut dot_product = 0.0;
+        let mut norm_a = 0.0;
+        let mut norm_b = 0.0;
+        for (v1, v2) in a.iter().zip(b.iter()) {
+            dot_product += v1 * v2;
+            norm_a += v1 * v1;
+            norm_b += v2 * v2;
+        }
+        if norm_a == 0.0 || norm_b == 0.0 {
+            return 0.0;
+        }
+        dot_product / (norm_a.sqrt() * norm_b.sqrt())
     }
 
     fn parse_conflict_row<R>(row: &R) -> Result<(EmbeddingRecord, EmbeddingRecord), String>
@@ -930,13 +985,7 @@ impl VectorRepository {
                                 let a = &records[i];
                                 let b = &records[j];
 
-                                // Both vectors are already L2-normalized, so dot product is the cosine similarity
-                                let similarity: f32 = a
-                                    .embedding
-                                    .iter()
-                                    .zip(b.embedding.iter())
-                                    .map(|(x, y)| x * y)
-                                    .sum();
+                                let similarity = Self::cosine_similarity(&a.embedding, &b.embedding);
                                 let distance = 1.0 - similarity;
 
                                 if distance < 0.05 {
