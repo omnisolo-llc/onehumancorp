@@ -24,7 +24,7 @@ describe('POST /api/v1/growth/campaign/generate-customer-referral', () => {
         expect(data.message).toBe('Backend Success');
     });
 
-    it('returns fallback message on backend failure', async () => {
+    it('fails closed on backend failure', async () => {
         (global.fetch as any).mockResolvedValueOnce({
             ok: false,
         });
@@ -38,7 +38,7 @@ describe('POST /api/v1/growth/campaign/generate-customer-referral', () => {
         expect(res.status).toBe(502);
     });
 
-    it('returns fallback message on fetch error', async () => {
+    it('fails closed on fetch error', async () => {
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
