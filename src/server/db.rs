@@ -340,7 +340,13 @@ impl DB {
                         #[cfg(unix)]
                         {
                             use std::os::unix::fs::OpenOptionsExt;
-                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                            let mut file_opts = std::fs::OpenOptions::new();
+                            file_opts.write(true).create(true).mode(0o600);
+                            #[cfg(target_os = "linux")]
+                            file_opts.custom_flags(0x00020000);
+                            #[cfg(target_os = "macos")]
+                            file_opts.custom_flags(0x0100);
+                            let _ = file_opts.open(&db_path);
                         }
                         #[cfg(not(unix))]
                         {
@@ -3421,7 +3427,13 @@ mod security_tests_final {
                         #[cfg(unix)]
                         {
                             use std::os::unix::fs::OpenOptionsExt;
-                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                            let mut file_opts = std::fs::OpenOptions::new();
+                            file_opts.write(true).create(true).mode(0o600);
+                            #[cfg(target_os = "linux")]
+                            file_opts.custom_flags(0x00020000);
+                            #[cfg(target_os = "macos")]
+                            file_opts.custom_flags(0x0100);
+                            let _ = file_opts.open(&db_path);
                         }
                         #[cfg(not(unix))]
                         {
