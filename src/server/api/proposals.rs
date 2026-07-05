@@ -38,6 +38,16 @@ pub struct ProposalLineItem {
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+pub struct RateCard {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub rules: serde_json::Value,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
 #[derive(Deserialize)]
 pub struct DraftAgentRequest {
     pub inquiry: String,
@@ -106,7 +116,25 @@ async fn draft_agent(
     Json(payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
     let llm = Arc::new(AdapterLlm {});
-    let system_prompt = "You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.".to_string();
+
+    let rate_cards_res = sqlx::query_as::<_, RateCard>(
+        "SELECT * FROM rate_cards WHERE tenant_id = $1"
+    )
+    .bind(&payload.tenant_id)
+    .fetch_all(&pool)
+    .await;
+
+    let mut rules_context = String::new();
+    if let Ok(rate_cards) = rate_cards_res {
+        if !rate_cards.is_empty() {
+            rules_context.push_str(" Apply the following pricing rules and heuristics from the internal rate card:\n");
+            for rc in rate_cards {
+                rules_context.push_str(&format!("Rate Card '{}': {}\n", rc.name, rc.rules.to_string()));
+            }
+        }
+    }
+
+    let system_prompt = format!("You are an expert quoting AI. Given a customer inquiry, generate a JSON array of line items representing a proposal for the requested work. Each object must have: 'description' (string), 'unit_price_cents' (integer), 'quantity' (integer), 'is_optional' (boolean). Return ONLY the raw JSON array.{}", rules_context);
 
     let req = ChatRequest {
         model: "default-model".to_string(),

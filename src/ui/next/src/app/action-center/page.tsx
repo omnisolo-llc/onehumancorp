@@ -37,7 +37,7 @@ export default function ActionCenterPage() {
         const data = await response.json();
         // Filter for Business Advisory ("The Advisor") recommendations
         const advisoryApprovals = (data.pending_approvals || []).filter(
-          (a: ApprovalRequest) => a.department === 'business_advisory' || a.department === 'The Advisor' || a.department === 'operations' || a.department === 'Operations'
+          (a: ApprovalRequest) => a.department === 'business_advisory' || a.department === 'The Advisor' || a.department === 'operations' || a.department === 'Operations' || a.department === 'The Negotiator' || a.department === 'sales' || a.department === 'Sales'
         );
         setApprovals(advisoryApprovals);
       }
@@ -225,6 +225,14 @@ export default function ActionCenterPage() {
                         <p><strong>Action:</strong> {payload.context.actionable_suggestion}</p>
                       </div>
                     )}
+                    {payload?.context?.custom_quote && (
+                       <div className="mt-3 p-3 bg-white rounded-xl border border-gray-100 text-sm text-gray-700 shadow-sm">
+                          <p><strong>Quote ID:</strong> {payload.context.quote_id}</p>
+                          <p><strong>Total Amount:</strong> ${payload.context.total_amount}</p>
+                          <p><strong>Customer:</strong> {payload.context.customer_name || 'N/A'}</p>
+                          <div className="mt-2 text-blue-600"><a href={`/proposals/${payload.context.quote_id}`}>Review Line Items</a></div>
+                       </div>
+                    )}
                     {payload?.context?.smart_pricing && (
                        <div className="mt-3 p-3 bg-white rounded-xl border border-gray-100 text-sm text-gray-700 shadow-sm">
                           <p><strong>Product:</strong> {payload.context.product_name}</p>
@@ -245,7 +253,7 @@ export default function ActionCenterPage() {
                       onClick={() => handleApprove(approval.id)}
                       className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px]"
                     >
-                      Approve & Send
+                      {payload?.context?.custom_quote ? 'Send Quote' : 'Approve & Send'}
                     </button>
                   </div>
                 </div>
