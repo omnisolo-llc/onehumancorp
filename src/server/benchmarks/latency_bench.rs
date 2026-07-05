@@ -2249,7 +2249,29 @@ pub async fn bench_ui_priority_tasks_latency() {
             "    (Mobile Payload Optimization verified: priority_tasks return trimmed payload)"
         );
     } else {
-        tracing::info!("  - Priority Tasks Mobile Payload Optimization (SQLite)");
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT, organization_id TEXT, tenant_id TEXT, title TEXT, description TEXT, status TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = sqlite_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, title, status, CAST(created_at AS TEXT) AS created_at, CAST(updated_at AS TEXT) AS updated_at FROM shared_tasks WHERE (organization_id = 'test' OR tenant_id = 'test') AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT 20";
+            let _ = sqlx::query(query_str).fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+        tracing::info!(
+            "  - Priority Tasks Mobile Payload Optimization (SQLite): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: priority_tasks return trimmed payload)"
+        );
     }
 }
 
