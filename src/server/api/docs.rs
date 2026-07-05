@@ -80,6 +80,15 @@ pub async fn get_tooltips(headers: axum::http::HeaderMap) -> Json<std::collectio
             tooltips.insert(id, text);
         }
     }
+
+    if tooltips.is_empty() {
+        tooltips.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
+        tooltips.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
+        tooltips.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
+        tooltips.insert("generate-link-btn".to_string(), "Click here to share access with a team member.".to_string());
+        tooltips.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
+    }
+
     Json(tooltips)
 }
 

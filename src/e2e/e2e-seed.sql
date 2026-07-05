@@ -715,3 +715,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Seed tooltips
 INSERT INTO tooltips (id, tenant_id, text) VALUES ('dashboard-walkthrough-btn', 'e2e-tenant', 'Take a tour of the dashboard') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('api-docs-tooltip', 'e2e-tenant', 'Direct API access is only for custom integrations.') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('kairos-nav-link-tooltip', 'e2e-tenant', 'Click here to see what your AI helpers are working on and how they plan.') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('generate-link-btn', 'e2e-tenant', 'Click here to share access with a team member.') ON CONFLICT DO NOTHING;
+INSERT INTO tooltips (id, tenant_id, text) VALUES ('ask-ai-tooltip', 'e2e-tenant', 'Open AI Help Chat to get answers instantly.') ON CONFLICT DO NOTHING;
