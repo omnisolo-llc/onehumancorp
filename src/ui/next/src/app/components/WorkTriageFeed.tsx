@@ -90,7 +90,7 @@ export function WorkTriageFeed({
 
   return (
     <div
-      className="w-full max-w-[375px] sm:max-w-full mx-auto"
+      className="w-full max-w-[375px] mx-auto"
       data-testid="work-triage-feed"
     >
       {items

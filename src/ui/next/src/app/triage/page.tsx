@@ -225,7 +225,7 @@ export default function TriagePage() {
               }
             }}
             data-testid="simulate-missed-lead-btn"
-            className="text-xs bg-[#0066FF]/10 text-[#0066FF] dark:text-[#3388FF] px-3 py-1.5 rounded-full font-medium hover:bg-[#0066FF]/20 transition-colors flex items-center gap-1 shadow-sm border border-[#0066FF]/20 min-h-[44px]"
+            className="text-xs bg-[#0066FF]/10 text-[#0066FF] dark:text-[#3388FF] px-3 py-1.5 rounded-full font-medium hover:bg-[#0066FF]/20 transition-colors flex items-center gap-1 shadow-sm border border-[#0066FF]/20 min-h-[44px] min-w-[44px]"
           >
             <span>📱</span> Simulate Missed Call
           </button>
