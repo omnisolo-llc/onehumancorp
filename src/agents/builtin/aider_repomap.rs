@@ -246,9 +246,7 @@ mod tests {
             "└── main.ts",
             "    ├── export interface Config {}",
             "    ├── class App {}",
-            "    └── function start() {
-  // Implementation pending
-}",
+            "    └── function start() {",
         ];
 
         let actual_lines: Vec<&str> = output.lines().map(|l| l.trim_end()).collect();
