@@ -59,18 +59,49 @@ impl JetBrainsObservationMasker {
             Value::String(s) => {
                 let bytes = s.len();
                 if bytes > size_limit {
-                    let preview_chars = std::cmp::max(10, size_limit / 4);
-                    let char_count = s.chars().count();
-                    if char_count > preview_chars * 2 {
-                        let start_preview: String = s.chars().take(preview_chars).collect();
-                        let end_preview: String =
-                            s.chars().skip(char_count - preview_chars).collect();
-                        *s = format!(
-                            "[Masked string: {} bytes. Preview: {}...{}]",
-                            bytes, start_preview, end_preview
-                        );
+                    let line_count = s.lines().count();
+                    if line_count > 10 {
+                        let keep_lines = 5;
+                        let lines: Vec<&str> = s.lines().collect();
+                        let start_preview = lines[0..keep_lines].join("\n");
+                        let end_preview = lines[line_count - keep_lines..line_count].join("\n");
+                        let masked_lines = line_count - (keep_lines * 2);
+
+                        // Enforce size_limit so we don't blow up the context window if lines are extremely long
+                        if start_preview.len() + end_preview.len() <= size_limit {
+                            *s = format!(
+                                "{}\n[... {} lines masked ...]\n{}",
+                                start_preview, masked_lines, end_preview
+                            );
+                        } else {
+                            let preview_chars = std::cmp::max(10, size_limit / 4);
+                            let char_count = s.chars().count();
+                            if char_count > preview_chars * 2 {
+                                let start_preview: String = s.chars().take(preview_chars).collect();
+                                let end_preview: String =
+                                    s.chars().skip(char_count - preview_chars).collect();
+                                *s = format!(
+                                    "[Masked string: {} bytes. Preview: {}...{}]",
+                                    bytes, start_preview, end_preview
+                                );
+                            } else {
+                                *s = format!("[Masked string: {} bytes]", bytes);
+                            }
+                        }
                     } else {
-                        *s = format!("[Masked string: {} bytes]", bytes);
+                        let preview_chars = std::cmp::max(10, size_limit / 4);
+                        let char_count = s.chars().count();
+                        if char_count > preview_chars * 2 {
+                            let start_preview: String = s.chars().take(preview_chars).collect();
+                            let end_preview: String =
+                                s.chars().skip(char_count - preview_chars).collect();
+                            *s = format!(
+                                "[Masked string: {} bytes. Preview: {}...{}]",
+                                bytes, start_preview, end_preview
+                            );
+                        } else {
+                            *s = format!("[Masked string: {} bytes]", bytes);
+                        }
                     }
                     modified = true;
                 }
@@ -723,5 +754,43 @@ mod additional_tests {
             masked_content.contains("[Masked array: 1 elements truncated due to depth limit]")
                 || masked_content.contains("[Observation Masked")
         );
+    }
+}
+
+#[cfg(test)]
+mod tests2 {
+    use super::*;
+
+    #[test]
+    fn test_mask_multiline_string() {
+        let mut obj = serde_json::Map::new();
+        let long_string = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\nLine 11\nLine 12\nLine 13\nLine 14\nLine 15";
+        obj.insert("output".to_string(), Value::String(long_string.to_string()));
+
+        let mut val = Value::Object(obj);
+        JetBrainsObservationMasker::mask_json_value(&mut val, 200, 10, 0);
+
+        let s = val.get("output").unwrap().as_str().unwrap();
+        assert!(s.contains("Line 1"));
+        assert!(s.contains("Line 5"));
+        assert!(s.contains("[... 5 lines masked ...]"));
+        assert!(s.contains("Line 11"));
+        assert!(s.contains("Line 15"));
+        assert!(!s.contains("Line 8"));
+    }
+
+    #[test]
+    fn test_mask_multiline_string_size_limit_fallback() {
+        let mut obj = serde_json::Map::new();
+        let long_string = "Line 1 with lots of data data data data data data data data data data\nLine 2 with lots of data data data data data data data data data data\nLine 3 with lots of data data data data data data data data data data\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\nLine 11\nLine 12\nLine 13\nLine 14\nLine 15";
+        obj.insert("output".to_string(), Value::String(long_string.to_string()));
+
+        let mut val = Value::Object(obj);
+        // Extremely small size limit so the line-based approach gets aborted and it falls back to raw char truncation
+        JetBrainsObservationMasker::mask_json_value(&mut val, 20, 10, 0);
+
+        let s = val.get("output").unwrap().as_str().unwrap();
+        assert!(s.contains("[Masked string:"));
+        assert!(!s.contains("[... 5 lines masked ...]"));
     }
 }
