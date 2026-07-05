@@ -52,6 +52,9 @@ test.describe('Mobile POS Optimistic Inventory Sync', () => {
     await page.context().setOffline(true);
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
+    // Verify offline pill appears
+    await expect(page.locator('text=Offline - Cash & Saved Cards Only')).toBeVisible({ timeout: 5000 });
+
     // Click charge (simulates tap to pay when offline)
     await chargeBtn.click();
 
@@ -71,5 +74,9 @@ test.describe('Mobile POS Optimistic Inventory Sync', () => {
     // Restore network
     await page.context().setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
+
+    // Verify offline pill disappears (or changes to syncing state before disappearing)
+    // Here we just verify it doesn't say offline cash only anymore eventually.
+    await expect(page.locator('text=Offline - Cash & Saved Cards Only')).toBeHidden({ timeout: 10000 });
   });
 });
