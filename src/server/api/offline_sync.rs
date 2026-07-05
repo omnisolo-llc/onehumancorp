@@ -240,6 +240,20 @@ pub async fn offline_sync_handler(
                         .execute(&mut *db_tx)
                         .await;
 
+                    if let Some(client) = crate::get_redis_client() {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let invalidation_topic = "cache_invalidation_events";
+                            let invalidation_payload = serde_json::json!({
+                                "event": "inventory.updated",
+                                "tags": [
+                                    format!("tenant-id:{}", tenant_id_clone),
+                                    format!("entity:product:{}", mutation.product_id)
+                                ]
+                            }).to_string();
+                            let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                        }
+                    }
+
                     if is_conflict {
                         let ai_task_id = uuid::Uuid::new_v4().to_string();
                         let ai_payload = serde_json::json!({
