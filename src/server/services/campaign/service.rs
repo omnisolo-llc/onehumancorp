@@ -18,7 +18,7 @@ use ::server_ohc::campaign::{
     SocialPostProposal as ProtoSocialPostProposal,
 };
 
-use crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository;
+use crate::domain::repository::SocialPostProposalRepository;
 use crate::domain::repository::models::SocialPostProposal;
 
 pub struct MyCampaignService {
@@ -644,8 +644,8 @@ mod tests {
     #[ignore = "requires local Postgres"]
     async fn test_create_draft_campaign() {
         let (pool, tenant_id) = setup_db().await;
-        let repo = Arc::new(CampaignRepository::new(pool));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
+        let repo = Arc::new(CampaignRepository::new(pool.clone()));
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
@@ -670,8 +670,8 @@ mod tests {
     #[ignore = "requires local Postgres"]
     async fn test_add_asset_to_campaign() {
         let (pool, tenant_id) = setup_db().await;
-        let repo = Arc::new(CampaignRepository::new(pool));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
+        let repo = Arc::new(CampaignRepository::new(pool.clone()));
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
@@ -710,8 +710,8 @@ mod tests {
     #[ignore = "requires local Postgres"]
     async fn test_launch_campaign_requires_asset() {
         let (pool, tenant_id) = setup_db().await;
-        let repo = Arc::new(CampaignRepository::new(pool));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
+        let repo = Arc::new(CampaignRepository::new(pool.clone()));
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
@@ -755,7 +755,7 @@ mod tests {
                 metrics_sent: 1,
             }]),
         };
-        let service = MyCampaignService::with_activation_dispatcher(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())), Arc::new(dispatcher));
+        let service = MyCampaignService::with_activation_dispatcher(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())), Arc::new(dispatcher));
 
         // 1. Create Draft
         let mut req = Request::new(CreateDraftRequest {
@@ -818,7 +818,7 @@ mod tests {
     async fn test_launch_campaign_requires_third_party_activation_dispatch() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
@@ -875,7 +875,7 @@ mod tests {
         let (_, tenant_2) = setup_db().await; // Setup second tenant, using same DB structure
 
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_1.clone(),
