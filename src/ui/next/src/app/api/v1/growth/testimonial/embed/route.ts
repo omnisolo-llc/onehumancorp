@@ -16,6 +16,7 @@ export async function GET(request: Request) {
   const reviewText = searchParams.get('reviewText') || 'This is the best service I have ever used. Highly recommended!';
   const rating = searchParams.get('rating') || '5';
   const theme = searchParams.get('theme') || 'light';
+  const branding = searchParams.get('branding') !== 'false';
 
   const numRating = Math.max(1, Math.min(5, parseInt(rating, 10) || 5));
   const stars = '★'.repeat(numRating) + '☆'.repeat(5 - numRating);
@@ -58,9 +59,11 @@ export async function GET(request: Request) {
         <div class="stars">${escapeHtml(stars)}</div>
         <div class="review">"${escapeHtml(reviewText)}"</div>
         <div class="author">${escapeHtml(authorName)}</div>
+        ${branding ? `
         <div class="footer">
-          <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank">⚡ Powered by OHC</a>
+          <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}&source=testimonial_widget" target="_blank">⚡ Powered by OHC</a>
         </div>
+        ` : ''}
       </div>
     </body>
     </html>
