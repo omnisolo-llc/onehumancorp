@@ -371,6 +371,8 @@ where
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
         .route("/unboxing-share/generate", post(handle_unboxing_share_generate))
         .route("/waitlist/embed", get(handle_waitlist_embed))
+        .route("/countdown/generate", post(handle_countdown_generate))
+        .route("/countdown/embed", get(handle_countdown_embed))
         .route("/birthday-club/embed", get(handle_birthday_club_embed))
         .route("/birthday-club/capture", post(handle_birthday_club_capture))
 
@@ -5493,4 +5495,115 @@ pub async fn handle_birthday_club_capture(
         "success": true,
         "message": "Birthday club registration captured successfully"
     })))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CountdownGenerateRequest {
+    pub tenant_id: String,
+    pub title: String,
+    pub launch_time: String,
+}
+
+async fn handle_countdown_generate(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<CountdownGenerateRequest>,
+) -> impl IntoResponse {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.countdown_widget_generated",
+        "tenant_id": req.tenant_id,
+        "title": req.title
+    }));
+    state.hub.append_recent_event(msg);
+    Json(serde_json::json!({ "success": true }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CountdownEmbedQuery {
+    pub tenant: Option<String>,
+    pub title: Option<String>,
+    pub time: Option<String>,
+    pub branding: Option<String>,
+}
+
+async fn handle_countdown_embed(
+    axum::extract::Query(query): axum::extract::Query<CountdownEmbedQuery>,
+) -> impl IntoResponse {
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let title = escape_html(query.title.as_deref().unwrap_or("Product Drop"));
+    let time = escape_html(query.time.as_deref().unwrap_or(""));
+    let branding = query.branding.as_deref().unwrap_or("true") == "true";
+
+    let branding_html = if branding {
+        format!(
+            r#"<div style="margin-top: 16px; font-size: 12px; font-weight: 600; text-align: center;">
+                <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=countdown_embed" target="_blank" rel="noopener noreferrer" style="color: #86868b; text-decoration: none;">⚡ Powered by OHC</a>
+            </div>"#,
+            tenant
+        )
+    } else {
+        "".to_string()
+    };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0; padding: 24px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.65);
+    }}
+    .widget-container {{
+      max-width: 400px;
+      margin: 0 auto;
+    }}
+    h2 {{ margin: 0 0 8px 0; font-size: 20px; color: #1d1d1f; }}
+    .timer {{ font-size: 32px; font-weight: 800; color: #0066FF; letter-spacing: 2px; margin: 16px 0; }}
+    p {{ margin: 0 0 16px 0; font-size: 14px; color: #86868b; }}
+    .share-btn {{
+      background: #1d1d1f; color: #fff; border: none; padding: 10px 20px; border-radius: 20px; font-weight: 600; cursor: pointer;
+    }}
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <h2>{}</h2>
+    <div class="timer" id="timer">00:00:00:00</div>
+    <p>Share this link to get 1-hour early access!</p>
+    <button class="share-btn">Share to Unlock Early Access</button>
+    {}
+  </div>
+  <script>
+    setInterval(() => {{
+      const target = new Date("{}").getTime();
+      const now = new Date().getTime();
+      const diff = target - now;
+      if (diff > 0) {{
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        document.getElementById('timer').innerText = `${{d.toString().padStart(2, '0')}}:${{h.toString().padStart(2, '0')}}:${{m.toString().padStart(2, '0')}}:${{s.toString().padStart(2, '0')}}`;
+      }} else {{
+        document.getElementById('timer').innerText = "00:00:00:00";
+      }}
+    }}, 1000);
+  </script>
+</body>
+</html>"#,
+        title, branding_html, time
+    );
+
+    axum::response::Html(html)
 }
