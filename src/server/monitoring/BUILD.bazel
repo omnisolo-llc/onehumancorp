@@ -15,3 +15,8 @@ rust_library(
     edition = "2024",
     visibility = ["//visibility:public"],
 )
+
+rust_test(
+    name = "server_monitoring_test",
+    crate = ":server_monitoring",
+)
