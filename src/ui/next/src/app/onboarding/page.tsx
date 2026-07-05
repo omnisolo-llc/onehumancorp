@@ -939,8 +939,7 @@ export default function OnboardingWizard() {
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
             {showIntroBack ? (
-              <button
-                type="button"
+              <button type="button"
                 onClick={handleBackToIntro}
                 className="setup-nav-button min-h-[44px]"
               >
@@ -957,8 +956,7 @@ export default function OnboardingWizard() {
                 Your business, live in minutes.
               </p>
             </div>
-            <button
-              type="button"
+            <button type="button"
               onClick={handleSkipSetup}
               className="setup-nav-button min-h-[44px]"
             >
@@ -1020,7 +1018,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="flex flex-col gap-4 w-full">
-                <button
+                <button type="button"
                   className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[8px] min-h-[44px]"
                   onClick={() => {
                     updateState({ step: 1 });
@@ -1029,8 +1027,7 @@ export default function OnboardingWizard() {
                 >
                   Start My Business
                 </button>
-                <button
-                  type="button"
+                <button type="button"
                   className="flex items-center justify-center w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
                   onClick={() => {
                     updateState({ step: -1 });
@@ -1041,8 +1038,7 @@ export default function OnboardingWizard() {
                     <SetupIcon name="sparkles" /> Instant Build
                   </span>
                 </button>
-                <button
-                  type="button"
+                <button type="button"
                   className="w-full glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
                   onClick={() => {
                     updateState({ step: 0 });
@@ -1057,7 +1053,7 @@ export default function OnboardingWizard() {
 
           {step === 0 && (
             <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full backdrop-blur-[40px] backdrop-saturate-[250%] bg-[rgba(255,255,255,0.7)] dark:bg-[rgba(22,22,26,0.8)] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-[16px] border border-white/20 p-4">
-              <button
+              <button type="button"
                 onClick={() => {
                   updateState({ step: -2 });
                   syncStateToBackend({ step: -2 });
@@ -1157,7 +1153,7 @@ export default function OnboardingWizard() {
                     enterKeyHint="next"
                   />
                   <div className="flex gap-2 w-full">
-                    <button
+                    <button type="button"
                       id="chat-upload-btn"
                       className="glass-control min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
                       onClick={() => {
@@ -1201,7 +1197,7 @@ export default function OnboardingWizard() {
                       placeholder="Type a message..."
                       enterKeyHint="send"
                     />
-                    <button
+                    <button type="button"
                       id="chat-send-btn"
                       onClick={handleSendChatMessage}
                       disabled={isLoading}
@@ -1217,7 +1213,7 @@ export default function OnboardingWizard() {
 
           {step === -1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button
+              <button type="button"
                 onClick={() => {
                   updateState({ step: -2 });
                   syncStateToBackend({ step: -2 });
@@ -1276,7 +1272,7 @@ export default function OnboardingWizard() {
                 />
 
                 <div className="mt-4">
-                  <button
+                  <button type="button"
                     id="generate-storefront-btn"
                     onClick={handleInstantBuild}
                     disabled={!bio.trim() || isLoading}
@@ -1311,7 +1307,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button
+                  <button type="button"
                     onClick={() => {
                       updateState({ step: -2 });
                       syncStateToBackend({ step: -2 });
@@ -1341,7 +1337,7 @@ export default function OnboardingWizard() {
                       Our AI will instantly generate your storefront, products,
                       and back-office agents.
                     </p>
-                    <button
+                    <button type="button"
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                     >
@@ -1402,7 +1398,7 @@ export default function OnboardingWizard() {
                     </p>
                   )}
                   <div className="mt-auto pt-6">
-                    <button
+                    <button type="button"
                       onClick={() => {
                         if (String(businessName || "").trim().length < 3) {
                           setValidationError(
@@ -1425,7 +1421,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 2 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button
+                  <button type="button"
                     onClick={() => {
                       updateState({ chatStep: 1 });
                       syncStateToBackend({ chatStep: 1 });
@@ -1454,7 +1450,7 @@ export default function OnboardingWizard() {
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       Tell us a bit about your products or services.
                     </p>
-                    <button
+                    <button type="button"
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                     >
@@ -1509,7 +1505,7 @@ export default function OnboardingWizard() {
                     </p>
                   )}
                   <div className="mt-auto pt-6">
-                    <button
+                    <button type="button"
                       onClick={() => {
                         if (!whatYouSell.trim()) {
                           setValidationError("Please tell us what you sell.");
@@ -1530,7 +1526,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 3 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button
+                  <button type="button"
                     onClick={() => {
                       updateState({ chatStep: 2 });
                       syncStateToBackend({ chatStep: 2 });
@@ -1559,7 +1555,7 @@ export default function OnboardingWizard() {
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       This helps us set up your shipping and tax settings.
                     </p>
-                    <button
+                    <button type="button"
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                     >
@@ -1610,7 +1606,7 @@ export default function OnboardingWizard() {
                     </p>
                   )}
                   <div className="mt-auto pt-6">
-                    <button
+                    <button type="button"
                       onClick={() => {
                         if (!location.trim()) {
                           setValidationError("Please tell us your location.");
@@ -1631,7 +1627,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 4 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-                  <button
+                  <button type="button"
                     onClick={() => {
                       updateState({ chatStep: 3 });
                       syncStateToBackend({ chatStep: 3 });
@@ -1661,7 +1657,7 @@ export default function OnboardingWizard() {
                       This helps our AI generate the perfect storefront copy and
                       select the best tools for your business.
                     </p>
-                    <button
+                    <button type="button"
                       onClick={() => handleSaveDraft()}
                       className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                     >
@@ -1711,7 +1707,7 @@ export default function OnboardingWizard() {
                     </p>
                   )}
                   <div className="mt-auto pt-6">
-                    <button
+                    <button type="button"
                       onClick={() => {
                         if (!targetAudience.trim()) {
                           setValidationError(
@@ -1764,7 +1760,7 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button
+              <button type="button"
                 onClick={() => {
                   updateState({ step: 1 });
                   updateState({ chatStep: 4 });
@@ -1794,7 +1790,7 @@ export default function OnboardingWizard() {
                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
-                <button
+                <button type="button"
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                 >
@@ -1931,7 +1927,7 @@ export default function OnboardingWizard() {
                 </p>
               )}
               <div className="mt-auto pt-6">
-                <button
+                <button type="button"
                   onClick={() => {
                     let hasError = false;
                     const newErrors: Record<string, string> = {
@@ -1974,7 +1970,7 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button
+              <button type="button"
                 onClick={() => {
                   updateState({ step: 2 });
                   syncStateToBackend({ step: 2 });
@@ -2004,7 +2000,7 @@ export default function OnboardingWizard() {
                   Pick your storefront vibe. We'll automatically assign the best
                   AI agents to manage it.
                 </p>
-                <button
+                <button type="button"
                   onClick={() => handleSaveDraft()}
                   className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center min-h-[44px] min-w-[44px] p-2"
                 >
@@ -2278,7 +2274,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div className="mt-auto pt-6">
-                <button
+                <button type="button"
                   onClick={() => handleStartOnboarding()}
                   disabled={isLoading}
                   className="w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
