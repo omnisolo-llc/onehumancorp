@@ -818,6 +818,19 @@ pub async fn stripe_webhook_handler(
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
+                if let Some(client) = crate::get_redis_client() {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let invalidation_topic = "cache_invalidation_events";
+                        let invalidation_payload = serde_json::json!({
+                            "event": "tenant.updated",
+                            "tags": [
+                                format!("tenant-id:{}", tenant_id)
+                            ]
+                        }).to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                    }
+                }
+
                 StatusCode::OK.into_response()
             } else {
                 StatusCode::BAD_REQUEST.into_response()
@@ -859,6 +872,19 @@ pub async fn stripe_webhook_handler(
 
                 if let Err(_e) = res {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+
+                if let Some(client) = crate::get_redis_client() {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let invalidation_topic = "cache_invalidation_events";
+                        let invalidation_payload = serde_json::json!({
+                            "event": "tenant.updated",
+                            "tags": [
+                                format!("tenant-id:{}", tenant_id)
+                            ]
+                        }).to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                    }
                 }
 
                 StatusCode::OK.into_response()

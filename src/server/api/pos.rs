@@ -88,6 +88,21 @@ async fn post_inventory_handler(
                     .bind(tenant_id)
                     .execute(&pool)
                     .await;
+
+                if let Some(client) = crate::get_redis_client() {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let invalidation_topic = "cache_invalidation_events";
+                        let invalidation_payload = serde_json::json!({
+                            "event": "product.updated",
+                            "tags": [
+                                format!("tenant-id:{}", tenant_id),
+                                format!("entity:product:{}", item_id)
+                            ]
+                        }).to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                    }
+                }
+
                 let edge_cache = crate::builder::edge::get_edge_cache();
                 edge_cache.invalidate_by_tag(&format!("entity:product:{}", item_id)).await;
                 edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;

@@ -600,6 +600,18 @@ async fn handle_trial_extension_claim(
     {
         Ok(result) => {
             if result.rows_affected() > 0 {
+                if let Some(client) = crate::get_redis_client() {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let invalidation_topic = "cache_invalidation_events";
+                        let invalidation_payload = serde_json::json!({
+                            "event": "tenant.updated",
+                            "tags": [
+                                format!("tenant-id:{}", parsed_uuid)
+                            ]
+                        }).to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                    }
+                }
                 Ok(Json(TrialExtensionClaimResponse {
                     success: true,
                     message: "Trial successfully extended to pro".to_string(),
