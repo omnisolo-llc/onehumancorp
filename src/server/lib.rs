@@ -6717,6 +6717,9 @@ async fn create_ui_bom_item_handler(
         .route("/onboarding", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/setup.html"))
         }))
+        .route("/zero-click-builder.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/zero-click-builder.html"))
+        }))
         .route("/chaos-report", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
         }))
