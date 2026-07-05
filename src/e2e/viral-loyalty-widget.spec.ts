@@ -1,22 +1,9 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
-import * as fs from 'fs';
-import * as path from 'path';
+import { test, expect } from './fixtures';
 
-test.describe('Viral Loyalty Widget', () => {
+test.describe('Viral Loyalty Widget (Duplicate file, kept for legacy reasons, using real backend)', () => {
   test('should load the widget and generate a loyalty program', async ({ page }) => {
-    // We mock the backend response here specifically because this is a static UI page
-    // in the tauri bundle that simulates growth mechanics.
-    await page.route('**/api/v1/growth/referrals/generate', async route => {
-      await route.fulfill({ json: { referral_link: 'http://example.com/ref/12345' } });
-    });
-
-    const fileContent = fs.readFileSync(path.resolve(__dirname, '../ui/tauri/src/ui/viral-loyalty-widget.html'), 'utf8');
-    await page.route('http://example.com/ui/viral-loyalty-widget.html', async route => {
-      await route.fulfill({ contentType: 'text/html', body: fileContent });
-    });
-
-    await page.goto('http://example.com/ui/viral-loyalty-widget.html');
+    // Navigate to the actual served page rather than mocking HTML and routing
+    await page.goto('/ui/viral-loyalty-widget.html');
 
     // Wait for main elements
     await expect(page.locator('h1')).toHaveText('Viral Loyalty Widget Generator');
@@ -44,6 +31,6 @@ test.describe('Viral Loyalty Widget', () => {
 
     // Check share link generated correctly
     const shareLink = page.locator('#share-link');
-    await expect(shareLink).toHaveValue(/loyalty\/join\?ref=12345/);
+    await expect(shareLink).toHaveValue(/loyalty\/join\?ref=/);
   });
 });
