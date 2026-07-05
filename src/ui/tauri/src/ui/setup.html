@@ -120,6 +120,7 @@
       /* Cleaned up duplicate glassmorphism */
       textarea.glassmorphism, input.glassmorphism, select.glassmorphism, button.glassmorphism {
         border-radius: 8px !important;
+        min-height: 44px;
       }
       @media (prefers-color-scheme: dark) {
         textarea.glassmorphism, input.glassmorphism, select.glassmorphism, button.glassmorphism {
@@ -3062,7 +3063,7 @@
                 ? "http://127.0.0.1:18789"
                 : "";
             try {
-              const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
+              await fetch(`${backendUrl}/api/onboarding/draft`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -3071,15 +3072,15 @@
                 },
                 body: JSON.stringify(state),
               });
-              if (!res.ok) {
-                console.warn("Failed to sync onboarding state with backend", res.status);
-              }
             } catch (err) {
-              console.warn("Network error syncing onboarding state, offline fallback active", err);
+              console.warn("Network error syncing onboarding state, offline fallback active");
             }
           }
         }, 1000);
       }
+      window.addEventListener('online', () => {
+          saveCurrentState();
+      });
 
       function validateStep(stepId) {
         let isValid = true;
@@ -4034,8 +4035,8 @@
                 }, 3000);
               })
               .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
+                console.warn("Failed to sync onboarding draft with backend (Offline fallback enabled).", err);
+                e.target.innerText = "Saved Locally!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
                   e.target.disabled = false;
@@ -4063,8 +4064,8 @@
                 }
               })
               .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
+                console.warn("Failed to sync onboarding draft with backend (Offline fallback enabled).", err);
+                e.target.innerText = "Saved Locally!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
                   e.target.disabled = false;
