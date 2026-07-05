@@ -144,10 +144,17 @@ where
             }
         };
 
+        {
+            let val = rx.borrow().clone();
+            if val.is_some() {
+                return val;
+            }
+        }
+
         if rx.changed().await.is_ok() {
             rx.borrow().clone()
         } else {
-            None
+            rx.borrow().clone()
         }
     }
 
@@ -203,10 +210,17 @@ where
             }
         };
 
+        {
+            let val = rx.borrow().clone();
+            if val.is_some() {
+                return val;
+            }
+        }
+
         if rx.changed().await.is_ok() {
             rx.borrow().clone()
         } else {
-            None
+            rx.borrow().clone()
         }
     }
 
