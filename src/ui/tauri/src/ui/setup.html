@@ -3679,112 +3679,129 @@
           chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
           if (data.is_complete && data.intake_data) {
-            const intakeData = data.intake_data;
-            const agentBadges = document.querySelectorAll(
-              "#ai-agents-container .agent-badge",
-            );
-            const selectedAgents = Array.from(agentBadges).map((b) =>
-              b.innerText.trim(),
-            );
-            const autoRespondChecked = document.getElementById(
-              "ai-auto-respond",
-            )
-              ? document.getElementById("ai-auto-respond").checked
-              : true;
+            goToStep("step-loading");
 
-            const req = {
-              company_name: intakeData.business_name || "My Business",
-              business_type: intakeData.business_type || "Online Store",
-              company_description: chatHistory.map((m) => m.content).join(" "),
-              selling_categories: intakeData.categories || ["physical"],
-              payment_pref: "online",
-              admin_email: "admin@mybusiness.com",
-              admin_name: "Admin",
-              admin_password: "password123",
-              website_template: "auto",
-              first_product_name:
-                intakeData.initial_products?.[0]?.name || "First Product",
-              first_product_price:
-                intakeData.initial_products?.[0]?.price || "0.00",
-              domain_choice:
-                state.domain || generateSubdomain(state.business_name),
-              price_type: "fixed",
-              location: intakeData.location || "Local",
-              target_audience: intakeData.target_audience || "General",
-              initial_products: intakeData.initial_products || [],
-              ai_agents: selectedAgents,
-              ai_auto_respond: autoRespondChecked,
-            };
-
-            window.pendingOnboardingReq = req;
-            let productsHtml = "";
-            if (req.initial_products && req.initial_products.length > 0) {
-              productsHtml = req.initial_products
-                .map((p) => `<li>${p.name} - ${p.price}</li>`)
-                .join("");
-            } else {
-              productsHtml = `<li>${req.first_product_name} - ${req.first_product_price}</li>`;
+            const loadingTexts = ["Analyzing request...", "Designing storefront...", "Configuring AI agents..."];
+            let loadingTextIdx = 0;
+            const loadingTitle = document.getElementById("loading-title");
+            if (loadingTitle) {
+              loadingTitle.innerText = loadingTexts[loadingTextIdx];
+              window.generateStorefrontLoadingInterval = setInterval(() => {
+                loadingTextIdx = (loadingTextIdx + 1) % loadingTexts.length;
+                loadingTitle.innerText = loadingTexts[loadingTextIdx];
+              }, 3000);
             }
 
-            const summaryCard = document.createElement("div");
-            summaryCard.className = "glass-control";
-            summaryCard.style.cssText =
-              "position: absolute; bottom: 0; left: 0; right: 0; padding: 24px; border-radius: 16px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(210%); box-shadow: 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; border-top: 1px solid rgba(255, 255, 255, 0.6);";
-
-            if (
-              window.matchMedia &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches
-            ) {
-              summaryCard.style.background = "rgba(22, 22, 26, 0.85)";
-              summaryCard.style.borderTop =
-                "1px solid rgba(255, 255, 255, 0.1)";
-              summaryCard.style.color = "#F5F5F7";
+            const bioInput = chatHistory.map((m) => m.content).join("\n");
+            // Find the last uploaded image if any
+            let imageUrl = undefined;
+            for (let i = chatHistory.length - 1; i >= 0; i--) {
+              if (chatHistory[i].image_url) {
+                imageUrl = chatHistory[i].image_url;
+                break;
+              }
             }
 
-            summaryCard.innerHTML = `
-                      <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; margin-bottom: 16px;">Ready to Launch</h2>
-                      <div id="approval-details" style="font-size: 14px; text-align: left; margin-bottom: 24px;">
-                          <div style="margin-bottom: 8px;"><strong>Business Name:</strong> ${req.company_name}</div>
-                          <div style="margin-bottom: 8px;"><strong>Type:</strong> ${req.business_type}</div>
-                          <div style="margin-bottom: 8px;"><strong>Products/Services:</strong><ul style="margin-top: 4px; padding-left: 20px;">${productsHtml}</ul></div>
-                      </div>
-                      <button id="approve-publish-btn-chat" data-testid="approve-publish-btn" style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Publish</button>
-                  `;
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              const startReq = {
+                business_type: data.intake_data.business_type || "Other",
+                company_name: data.intake_data.business_name || "My Store",
+                company_description: bioInput,
+                selling_categories: data.intake_data.categories || ["Other"],
+                payment_pref: "online",
+                admin_email: "e2e-admin-user@example.com",
+                admin_name: "Owner",
+                admin_password: "password123",
+                website_template: "Modern",
+                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : "First Offer",
+                first_product_price: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].price : "0.00",
+                domain_choice: "subdomain",
+                price_type: "fixed",
+                location: data.intake_data.location || "Global",
+                target_audience: data.intake_data.target_audience || "Everyone",
+                initial_products: data.intake_data.initial_products || [],
+                ai_agents: [],
+                ai_auto_respond: false,
+                deposit_percentage: data.intake_data.deposit_percentage,
+                lead_time_days: data.intake_data.lead_time_days
+              };
 
-            document.getElementById("step-chat").style.position = "relative";
-            document.getElementById("step-chat").style.overflow = "hidden";
-            document.getElementById("step-chat").appendChild(summaryCard);
+              const startData = await window.__TAURI__.core.invoke("start_onboarding", { req: startReq });
 
-            // Trigger slide up
-            requestAnimationFrame(() => {
-              summaryCard.style.transform = "translateY(0)";
-            });
+              if (startData && startData.organization_id) {
+                localStorage.setItem("tenant_id", startData.organization_id);
+                localStorage.setItem("tenant", startData.organization_id);
+              }
+              if (startData && startData.user_id) {
+                localStorage.setItem("user_id", startData.user_id);
+              }
 
-            document
-              .getElementById("approve-publish-btn-chat")
-              .addEventListener("click", async () => {
-                const btn = document.getElementById("approve-publish-btn-chat");
-                btn.disabled = true;
-                btn.innerHTML =
-                  '<div class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-right: 8px; vertical-align: middle;"></div>Publishing...';
+              localStorage.removeItem("onboardingState");
+              localStorage.setItem("has_onboarded", "true");
 
-                const approvePublishBtn = document.getElementById(
-                  "approve-publish-btn",
-                );
-                if (approvePublishBtn) {
-                  approvePublishBtn.click();
-                }
-              });
-            // Scroll to bottom
-            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+              if (window.generateStorefrontLoadingInterval) {
+                  clearInterval(window.generateStorefrontLoadingInterval);
+                  delete window.generateStorefrontLoadingInterval;
+              }
 
-            // Zero-click onboarding
-            const approvePublishBtnChat = document.getElementById(
-              "approve-publish-btn-chat",
+              setTimeout(() => {
+                window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+              }, 1500);
+              return;
+            }
+
+            const backendUrl =
+              window.location.protocol === "file:" ||
+              ["1420", "3000", "8081"].includes(window.location.port)
+                ? "http://127.0.0.1:18789"
+                : "";
+
+            const resZeroClick = await fetch(
+              `${backendUrl}/api/onboarding/start_zero_click`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Tenant-ID": "e2e-tenant",
+                  "X-User-ID": "e2e-admin-user",
+                },
+                body: JSON.stringify({
+                  prompt: bioInput,
+                  image_url: imageUrl ? imageUrl : undefined
+                }),
+              },
             );
-            if (approvePublishBtnChat) {
-              approvePublishBtnChat.click();
+
+            if (!resZeroClick.ok) {
+              const errData = await resZeroClick.json().catch(() => ({}));
+              throw new Error(
+                errData.error ||
+                  errData.message ||
+                  "Failed to generate storefront",
+              );
             }
+
+            const dataZeroClick = await resZeroClick.json();
+
+            if (dataZeroClick.organization_id) {
+              localStorage.setItem("tenant_id", dataZeroClick.organization_id);
+              localStorage.setItem("tenant", dataZeroClick.organization_id);
+            }
+            if (dataZeroClick.user_id) {
+              localStorage.setItem("user_id", dataZeroClick.user_id);
+            }
+
+            localStorage.removeItem("onboardingState");
+            localStorage.setItem("has_onboarded", "true");
+
+            if (window.generateStorefrontLoadingInterval) {
+                clearInterval(window.generateStorefrontLoadingInterval);
+                delete window.generateStorefrontLoadingInterval;
+            }
+
+            setTimeout(() => {
+              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
+            }, 1500);
           }
         } catch (e) {
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;

@@ -717,17 +717,20 @@ Your response:",
             _ => "physical",
         };
 
+        let id = format!("prod-{}", uuid::Uuid::new_v4());
         let mut meta = json!({"price_type": price_type});
+
         if let Some(m) = meta.as_object_mut() {
             if let Some(dp) = deposit_percentage {
                 m.insert("deposit_percentage".to_string(), json!(dp));
+                let deposit_stripe_link = format!("https://checkout.stripe.com/pay/cs_test_{}", id.replace("-", ""));
+                m.insert("deposit_link".to_string(), json!(deposit_stripe_link));
             }
             if let Some(lt) = lead_time_days {
                 m.insert("lead_time_days".to_string(), json!(lt));
             }
         }
 
-        let id = format!("prod-{}", uuid::Uuid::new_v4());
         sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, type, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(&id)
             .bind(org_id)
