@@ -12,35 +12,46 @@ use ::server_ohc::campaign::campaign_service_server::CampaignService;
 use ::server_ohc::campaign::{
     AddAssetRequest, AddAssetResponse, CreateDraftRequest, CreateDraftResponse,
     LaunchCampaignRequest, LaunchCampaignResponse,
+    ListSocialPostProposalsRequest, ListSocialPostProposalsResponse,
+    UpdateSocialPostProposalRequest, UpdateSocialPostProposalResponse,
     Campaign as ProtoCampaign, CampaignAsset as ProtoCampaignAsset,
+    SocialPostProposal as ProtoSocialPostProposal,
 };
+
+use crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository;
+use crate::domain::repository::models::SocialPostProposal;
 
 pub struct MyCampaignService {
     repo: Arc<CampaignRepository>,
+    social_repo: Arc<SocialPostProposalRepository>,
     activation_dispatcher: Arc<dyn CampaignActivationDispatcher>,
 }
 
 impl MyCampaignService {
-    pub fn new(repo: Arc<CampaignRepository>) -> Self {
-        Self::with_integrations_registry(repo, Arc::new(IntegrationsRegistry::new()))
+    pub fn new(repo: Arc<CampaignRepository>, social_repo: Arc<SocialPostProposalRepository>) -> Self {
+        Self::with_integrations_registry(repo, social_repo, Arc::new(IntegrationsRegistry::new()))
     }
 
     pub fn with_integrations_registry(
         repo: Arc<CampaignRepository>,
+        social_repo: Arc<SocialPostProposalRepository>,
         registry: Arc<IntegrationsRegistry>,
     ) -> Self {
         Self {
             repo,
+            social_repo,
             activation_dispatcher: Arc::new(RegistryCampaignActivationDispatcher::new(registry)),
         }
     }
 
     pub fn with_activation_dispatcher(
         repo: Arc<CampaignRepository>,
+        social_repo: Arc<SocialPostProposalRepository>,
         activation_dispatcher: Arc<dyn CampaignActivationDispatcher>,
     ) -> Self {
         Self {
             repo,
+            social_repo,
             activation_dispatcher,
         }
     }
@@ -422,6 +433,67 @@ impl CampaignService for MyCampaignService {
             campaign: Some(proto_campaign),
         }))
     }
+    async fn list_social_post_proposals(
+        &self,
+        request: Request<ListSocialPostProposalsRequest>,
+    ) -> Result<Response<ListSocialPostProposalsResponse>, Status> {
+        let req = request.into_inner();
+        let proposals = self.social_repo
+            .list_proposals(&req.tenant_id, &req.status)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let proto_proposals = proposals.into_iter().map(|p| ProtoSocialPostProposal {
+            id: p.id,
+            tenant_id: p.tenant_id,
+            product_id: p.product_id,
+            content: p.content,
+            image_url: p.image_url.unwrap_or_default(),
+            seo_alt_text: p.seo_alt_text.unwrap_or_default(),
+            seo_meta_description: p.seo_meta_description.unwrap_or_default(),
+            status: p.status,
+            created_at_unix: p.created_at_unix,
+            updated_at_unix: p.updated_at_unix,
+        }).collect();
+
+        Ok(Response::new(ListSocialPostProposalsResponse {
+            proposals: proto_proposals,
+        }))
+    }
+
+    async fn update_social_post_proposal(
+        &self,
+        request: Request<UpdateSocialPostProposalRequest>,
+    ) -> Result<Response<UpdateSocialPostProposalResponse>, Status> {
+        let req = request.into_inner();
+        let updated_at_unix = Utc::now().timestamp();
+        self.social_repo
+            .update_status(&req.tenant_id, &req.proposal_id, &req.status, updated_at_unix)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let proposal = self.social_repo
+            .get_proposal(&req.tenant_id, &req.proposal_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?
+            .ok_or_else(|| Status::not_found("Proposal not found"))?;
+
+        Ok(Response::new(UpdateSocialPostProposalResponse {
+            proposal: Some(ProtoSocialPostProposal {
+                id: proposal.id,
+                tenant_id: proposal.tenant_id,
+                product_id: proposal.product_id,
+                content: proposal.content,
+                image_url: proposal.image_url.unwrap_or_default(),
+                seo_alt_text: proposal.seo_alt_text.unwrap_or_default(),
+                seo_meta_description: proposal.seo_meta_description.unwrap_or_default(),
+                status: proposal.status,
+                created_at_unix: proposal.created_at_unix,
+                updated_at_unix: proposal.updated_at_unix,
+            }),
+        }))
+    }
+
 }
 
 #[cfg(test)]
@@ -573,7 +645,7 @@ mod tests {
     async fn test_create_draft_campaign() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool));
-        let service = MyCampaignService::new(repo);
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
@@ -599,7 +671,7 @@ mod tests {
     async fn test_add_asset_to_campaign() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool));
-        let service = MyCampaignService::new(repo);
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
@@ -639,7 +711,7 @@ mod tests {
     async fn test_launch_campaign_requires_asset() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool));
-        let service = MyCampaignService::new(repo);
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
@@ -683,7 +755,7 @@ mod tests {
                 metrics_sent: 1,
             }]),
         };
-        let service = MyCampaignService::with_activation_dispatcher(repo, Arc::new(dispatcher));
+        let service = MyCampaignService::with_activation_dispatcher(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())), Arc::new(dispatcher));
 
         // 1. Create Draft
         let mut req = Request::new(CreateDraftRequest {
@@ -746,7 +818,7 @@ mod tests {
     async fn test_launch_campaign_requires_third_party_activation_dispatch() {
         let (pool, tenant_id) = setup_db().await;
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
-        let service = MyCampaignService::new(repo);
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
@@ -799,11 +871,11 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires local Postgres"]
     async fn test_tenant_isolation() {
-        let (pool1, tenant_1) = setup_db().await;
+        let (pool, tenant_1) = setup_db().await;
         let (_, tenant_2) = setup_db().await; // Setup second tenant, using same DB structure
 
-        let repo = Arc::new(CampaignRepository::new(pool1.clone()));
-        let service = MyCampaignService::new(repo);
+        let repo = Arc::new(CampaignRepository::new(pool.clone()));
+        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(pool.clone())));
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_1.clone(),
@@ -819,7 +891,7 @@ mod tests {
 
         // Reset context to tenant 2 for simulation
         sqlx::query(&format!("SET app.current_tenant = '{}'", tenant_2))
-            .execute(&pool1)
+            .execute(&pool)
             .await
             .unwrap();
 
