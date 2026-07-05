@@ -115,6 +115,12 @@ pub async fn report_cost_handler(
     if req.metric_name == "ohc_llm_cost_total_cents" {
         let agent_id = req.labels.get("agent_id").map(|s| s.as_str()).unwrap_or("unknown_agent");
         hub.get_cost_auditor().record_manual_cost(agent_id, &tenant_id, req.value);
+        let cache_key = format!("cost_dashboard:{}", tenant_id);
+        tokio::spawn(async move {
+            if let Some(cache) = COST_DASHBOARD_CACHE.get() {
+                cache.invalidate(&cache_key).await;
+            }
+        });
     }
 
     let pool = crate::db::get_pool();
@@ -604,7 +610,7 @@ pub async fn cost_dashboard_handler(
     let budget_limit = tier.base_price();
     let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
 
-    let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+    let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit).with_alert_threshold(80.0);
     let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
 

@@ -1373,7 +1373,7 @@ impl HubService for MyHubService {
         let budget_limit = tier.base_price();
         let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
 
-        let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
+        let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit).with_alert_threshold(80.0);
         let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
         let response = ::server_ohc::orchestration::CostDashboardResponse {
