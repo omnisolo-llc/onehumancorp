@@ -11,7 +11,7 @@ use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use crate::orchestration::router::{SemanticRouter};
 use ::server_common::Claims;
-use axum::extract::Multipart;
+use axum::extract::multipart::Multipart;
 
 #[derive(Deserialize)]
 pub struct VoiceCommandRequest {
