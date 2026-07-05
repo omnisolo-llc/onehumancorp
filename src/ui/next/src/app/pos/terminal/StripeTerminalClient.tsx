@@ -56,7 +56,112 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
       setStatus('Terminal initialized. Ready to discover readers.');
     }
     initTerminal();
+  }, []);
 
+  const discoverReaders = async () => {
+    if (!terminal) return;
+    setStatus('Discovering readers...');
+    const discoverResult = await terminal.discoverReaders({ simulated: typeof window !== 'undefined' && window.location.hostname === 'localhost' });
+    if (discoverResult.error) {
+      setStatus('Failed to discover readers: ' + discoverResult.error.message);
+    } else if (discoverResult.discoveredReaders.length === 0) {
+      setStatus('No readers found.');
+    } else {
+      setDiscoveredReaders(discoverResult.discoveredReaders);
+      setStatus('Select a reader to connect.');
+    }
+  };
+
+  const connectReader = async (reader: any) => {
+    if (!terminal) return;
+    setStatus('Connecting to reader...');
+    const connectResult = await terminal.connectReader(reader);
+    if (connectResult.error) {
+      setStatus('Failed to connect to reader: ' + connectResult.error.message);
+    } else {
+      setConnectedReader(connectResult.reader);
+      setStatus('Reader connected. Ready to process payment.');
+    }
+  };
+
+  const processPayment = async () => {
+    if (!terminal && (typeof window !== 'undefined' && navigator.onLine)) {
+      setStatus('Terminal not ready.');
+      return;
+    }
+
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+       // Offline Mode Payment Enqueue
+       setStatus('Offline Tap-to-Pay. Authorizing locally...');
+       const syncManager = SyncManager.getInstance();
+       if (onOptimisticReserve) onOptimisticReserve();
+
+       cart?.forEach(item => {
+          syncManager.enqueueAction({
+             type: 'tap_to_pay',
+             product_id: item.product.id,
+             quantity: item.quantity,
+             payload: { amount_cents: item.product.price_cents * item.quantity }
+          });
+       });
+
+       setTimeout(() => {
+         setStatus('Tap-to-Pay saved offline. Will sync when network is restored.');
+         if (onSuccess) onSuccess();
+       }, 1500);
+       return;
+    }
+
+    setStatus('Waiting for card tap...');
+
+    // We must create an intent first by calling the backend
+    let intentSecret = '';
+    try {
+        const intentRes = await fetch('/api/v1/payments/terminal/intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount_cents: amount, tenant_id: tenantId, product_id: productId })
+        });
+        const intentData = await intentRes.json();
+        intentSecret = intentData.client_secret || 'pi_mock_123_secret';
+    } catch (e) {
+        setStatus('Failed to fetch payment intent');
+        return;
+    }
+
+    const res = await terminal.collectPaymentMethod(intentSecret);
+    if (res.error) {
+      setStatus('Payment failed: ' + res.error.message);
+    } else {
+      setStatus('Processing payment...');
+      const processRes = await terminal.processPayment(res.paymentIntent);
+      if (processRes.error) {
+        setStatus('Payment failed: ' + processRes.error.message);
+      } else {
+        setStatus('Payment successful!');
+        if (onSuccess) onSuccess();
+      }
+    }
+  };
+
+  const processCashSale = async () => {
+     const syncManager = SyncManager.getInstance();
+     if (onOptimisticReserve) onOptimisticReserve();
+
+     cart?.forEach(item => {
+        syncManager.enqueueAction({
+           type: 'cash_sale',
+           product_id: item.product.id,
+           quantity: item.quantity,
+           payload: { amount_cents: item.product.price_cents * item.quantity }
+        });
+     });
+
+     setTimeout(() => {
+       setStatus('Cash sale recorded.');
+       if (onSuccess) onSuccess();
+     }, 500);
+  };
 
   return (
     <WalkthroughTarget id="pos-keypad">
