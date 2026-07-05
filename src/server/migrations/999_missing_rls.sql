@@ -140,3 +140,14 @@ CREATE POLICY tenant_isolation_epics ON epics USING (tenant_id = current_setting
 ALTER TABLE IF EXISTS incidents ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_incidents ON incidents;
 CREATE POLICY tenant_isolation_incidents ON incidents USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+-- Missing Policies added by cleanup script
+DROP POLICY IF EXISTS tenant_isolation_embedding_cache ON embedding_cache;
+CREATE POLICY tenant_isolation_embedding_cache ON embedding_cache USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+
+DROP POLICY IF EXISTS tenant_isolation_telemetry_buffer ON telemetry_buffer;
+CREATE POLICY tenant_isolation_telemetry_buffer ON telemetry_buffer USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+
+-- Missing RLS Enablement added by cleanup script
+ALTER TABLE IF EXISTS embedding_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS telemetry_buffer ENABLE ROW LEVEL SECURITY;
