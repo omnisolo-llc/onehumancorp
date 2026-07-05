@@ -97,7 +97,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
        if (onOptimisticReserve) onOptimisticReserve();
 
        cart?.forEach(item => {
-          syncManager.enqueueAction({
+           SyncManager.getInstance().enqueue({
              type: 'tap_to_pay',
              product_id: item.product.id,
              quantity: item.quantity,
@@ -149,7 +149,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
      if (onOptimisticReserve) onOptimisticReserve();
 
      cart?.forEach(item => {
-        syncManager.enqueueAction({
+           SyncManager.getInstance().enqueue({
            type: 'cash_sale',
            product_id: item.product.id,
            quantity: item.quantity,
