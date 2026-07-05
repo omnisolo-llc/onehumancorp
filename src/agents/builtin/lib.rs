@@ -389,6 +389,5 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-pub mod aider_repomap;
 pub mod jit_retrieval;
 pub mod microagent;

@@ -81,13 +81,18 @@ impl RepoMapExecutor {
         unique_sigs
     }
 
-    fn generate_map_recursive(dir: PathBuf, prefix: String, current_depth: usize, max_depth: usize, exclude_dirs: &Vec<String>, include_symbols: bool) -> Result<String, std::io::Error> {
+    #[async_recursion::async_recursion]
+    async fn generate_map_recursive(dir: PathBuf, prefix: String, current_depth: usize, max_depth: usize, exclude_dirs: &Vec<String>, include_symbols: bool) -> Result<String, std::io::Error> {
         let mut map = String::new();
         if !dir.is_dir() {
             return Ok(map);
         }
 
-        let mut entries: Vec<_> = std::fs::read_dir(&dir)?.filter_map(|e| e.ok()).collect();
+        let mut read_dir = tokio::fs::read_dir(&dir).await?;
+        let mut entries = Vec::new();
+        while let Ok(Some(entry)) = read_dir.next_entry().await {
+            entries.push(entry);
+        }
         entries.sort_by_key(|e| e.path());
 
         for entry in entries {
@@ -102,7 +107,7 @@ impl RepoMapExecutor {
             if path.is_dir() {
                 map.push_str(&format!("{}📁 {}/\n", prefix, name));
                 if current_depth < max_depth {
-                    map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix), current_depth + 1, max_depth, exclude_dirs, include_symbols)?);
+                    map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix), current_depth + 1, max_depth, exclude_dirs, include_symbols).await?);
                 } else {
                     map.push_str(&format!("{}  ... (max depth reached)\n", prefix));
                 }
@@ -112,7 +117,7 @@ impl RepoMapExecutor {
                 // Read file to extract signatures only if include_symbols is true
                 if include_symbols {
                     if let Some(ext) = path.extension().and_then(|e| e.to_str())
-                        && let Ok(content) = std::fs::read_to_string(&path) {
+                        && let Ok(content) = tokio::fs::read_to_string(&path).await {
                             let sigs = Self::extract_signatures(&content, ext);
                             for sig in sigs.iter().take(10) { // Limit to top 10 signatures per file to keep it compact
                                 map.push_str(&format!("{}  │ {}\n", prefix, sig));
@@ -156,9 +161,8 @@ impl PydanticToolExecutor<RepoMapArgs> for RepoMapExecutor {
 
         let exclude_dirs = args.exclude_dirs.unwrap_or_default();
         let include_symbols = args.include_symbols.unwrap_or(true);
-        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth, &exclude_dirs, include_symbols))
+        let map = RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth, &exclude_dirs, include_symbols)
             .await
-            .map_err(|e| ToolError::Transient(format!("Task Join Error: {}", e)))?
             .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         let mut final_output = format!("RepoMap for {}:\n", target_path.display());
@@ -262,7 +266,7 @@ mod tests {
         assert!(result.contains("│ fn helper()"));
 
         assert!(result.contains("📄 utils.py"));
-        println!("RESULT: {}", result); assert!(result.contains("│ def do_something()"));
+        assert!(result.contains("│ def do_something()"));
         assert!(result.contains("│ class Data"));
 
         assert!(result.contains("📄 app.ts"));
