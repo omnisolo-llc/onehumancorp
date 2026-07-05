@@ -67,6 +67,7 @@ rust_library(
         "plan_and_execute.rs",
 
         "harness.rs",
+        "hooks.rs",
         "hibernation.rs",
         "json_rpc_server.rs",
         "json_store.rs",

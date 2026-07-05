@@ -416,3 +416,41 @@ mod tests_custom {
         assert!(!msg_semantic.contains("Please strictly follow the tool's JSON schema and try again."));
     }
 }
+
+#[cfg(test)]
+mod tests_extra {
+    use super::*;
+
+    #[test]
+    fn test_format_pydantic_error_string() {
+        let error_msg = "Invalid email format";
+        let args_str = "{\"email\": \"invalid-email\"}";
+        let custom_instruction = "Please provide a valid email address.";
+
+        let msg = format_pydantic_error_string(error_msg, Some(args_str), Some(custom_instruction));
+
+        assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+        assert!(msg.contains("Invalid email format"));
+        assert!(msg.contains("Please provide a valid email address."));
+        assert!(msg.contains("invalid-email"));
+    }
+
+    #[test]
+    fn test_format_pydantic_error_string_no_instruction() {
+        let error_msg = "Missing required field";
+        let msg = format_pydantic_error_string(error_msg, None, None);
+
+        assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+        assert!(msg.contains("Missing required field"));
+        assert!(msg.contains("Please strictly follow the tool's JSON schema"));
+    }
+
+    #[test]
+    fn test_format_llm_recoverable_error() {
+        let tool_name = "test_tool";
+        let msg = "Something went wrong";
+        let formatted = format_llm_recoverable_error(tool_name, msg);
+        assert!(formatted.contains("test_tool"));
+        assert!(formatted.contains("Something went wrong"));
+    }
+}

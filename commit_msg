@@ -1,9 +1,15 @@
-Wizard: Fix validation errors not clearing upon user selection
+🤖 Implementer: Harness Upgrade - Claude Code Automation Hooks
 
-Persona: Non-technical business owner (e.g. Maya the baker).
-Browser/Playwright flow attempted: Starting on `setup.html`, proceed to the "Set up your Assistant" step. Click "Next" without selecting a team or a tone to trigger validation errors. Then, select a team and a tone.
-CUJ gap observed: After making a selection, the validation error message and the red border around the input remained visible, confusing the user into thinking their selection was invalid.
-UX reason for fix: Immediate feedback is crucial for form validation. Users should not have to click "Next" again just to see if their action fixed the error.
-Post-fix flow: Following the same steps, selecting a team now immediately clears the "Please select an AI agent team." error and the red border. Similarly, selecting a tone immediately clears the "Please select a tone." error and its red border. E2E tests have been added to verify this behavior, and the test suite has been repaired from a broken state caused by earlier debugging.
+This commit implements the "Automation: Automate with hooks" SOTA Harness Pattern from the Claude Code Master Catalog.
 
-Loaded superpowers: none.
+Excerpt from article: "Run shell commands automatically when Claude Code edits files, finishes tasks, or needs input. Hooks are user-defined shell commands that execute at specific points in Claude Code's lifecycle... exit 2: the action is blocked...".
+
+Rust implementation mechanics:
+1. Created `src/agents/builtin/hooks.rs` with `HookExecutor`, `HooksConfig`, and `HookType` definitions matching the Claude Code configuration format.
+2. The executor intercepts tool calls (`PreToolUse`), pipes the JSON payload via `stdin` to the user-defined shell command, and reads the exit code.
+3. Implemented standard Claude Code exit code semantics: `exit 2` correctly returns a blocking error with the stderr captured, while other exit codes or `exit 0` allow execution to proceed.
+4. Hooked this seamlessly into `ToolExecutionEngine::execute_tool_with_langgraph_mechanics` as a pre-execution guardrail check.
+
+Tests passed: 100%
+Run `bazel test //src/agents/builtin/...`
+Loaded superpowers skill: none (not applicable to agent backend loop implementation)

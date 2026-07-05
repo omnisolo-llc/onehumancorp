@@ -1,5 +1,6 @@
 use crate::agent::AgentRunConfig;
 use crate::tools_gating::ToolGater;
+use crate::hooks::HookExecutor;
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
 /// Master Catalog B.8. Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2. LangGraph Mechanic (4-types): 1) Transient (retry with backoff), 2) LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct), 3) User-fixable (interrupt execution and ask user for input), 4) Unexpected (bubble up to debug).
@@ -19,6 +20,15 @@ impl ToolExecutionEngine {
     ) -> Result<String, ToolError> {
         // Enforce Anthropic 3-stage tool gating before execution
         ToolGater::check_gating(tc, tool.is_read_only, cfg)?;
+        // Automation: Hooks (Claude Code Mechanic)
+        if let Some(hooks_cfg_value) = &cfg.hooks_config {
+            if let Ok(hooks_cfg) = serde_json::from_value(hooks_cfg_value.clone()) {
+                let hook_executor = HookExecutor::new(hooks_cfg);
+                if let Err(e) = hook_executor.execute_pre_tool_use(tc, ".").await {
+                    return Err(ToolError::Fatal(e));
+                }
+            }
+        }
         // SOTA Harness Patterns (2025-2026): Error Handling
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut retry_count = 0;
