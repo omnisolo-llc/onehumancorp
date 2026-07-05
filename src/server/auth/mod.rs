@@ -1028,6 +1028,7 @@ mod store_tests {
 
     #[test]
     fn test_secret_paths_are_safe() {
+        unsafe { std::env::set_var("JWT_SECRET", "test_secret"); }
         let store = Store::new();
         // Since we can't easily assert on the inner paths without modifying visibility,
         // we assert that we don't panic upon creation.
@@ -1044,6 +1045,7 @@ mod store_tests {
 
     #[test]
     fn test_store_validate_org_id_multitenant() {
+        unsafe { std::env::set_var("JWT_SECRET", "test_secret"); }
         // Create an empty store just to access the validate_org_id method
         let store = Store::new();
 
