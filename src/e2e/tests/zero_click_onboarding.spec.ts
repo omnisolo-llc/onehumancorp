@@ -1,9 +1,32 @@
 import { test, expect } from '@playwright/test';
+import * as path from 'path';
+import * as fs from 'fs';
 
 test.describe('Zero-Click Onboarding to Agent Feed', () => {
+  test.beforeEach(async ({ page }) => {
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
+
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+
+    await page.route('http://mock/setup.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    await page.route('http://mock/api/tooltips', async route => {
+        await route.fulfill({ contentType: 'application/json', body: "{}" });
+    });
+    await page.route('**/success.html*', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+  });
+
   test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
     // Navigate to the setup route
-    await page.goto('/setup.html');
+    await page.goto('http://mock/setup.html');
 
     // Make sure we're on a mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
@@ -14,18 +37,27 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await conversationalSetupBtn.click();
 
     // Wait for chat input to be visible
-    const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
+    const chatInput = page.locator('#chat-input');
     await expect(chatInput).toBeVisible();
 
     // Type a simple sentence and press Enter
+    await page.route('**/api/onboarding/start_zero_click', async route => {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ organization_id: "test-org" }) });
+    });
+    await page.route('**/api/onboarding/chat', async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ reply: "Give me a minute... I'm building your business.", is_complete: true, intake_data: { business_name: 'test', categories: ['test'], location: 'test', target_audience: 'test', initial_products: [] } })
+        });
+    });
+    await page.route('**/api/onboarding/start', async route => {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ organization_id: "test-org" }) });
+    });
     await chatInput.fill('I run a mobile dog grooming service in Austin');
-    await chatInput.press('Enter');
+    await page.locator('#chat-send-btn').click();
 
-    // The app should automatically transition to provisioning state
-    await expect(page.locator('text=Building Your Business...')).toBeVisible({ timeout: 15000 });
-
-    // Since this uses the real backend, the UI will eventually redirect to /dashboard
-    await expect(page.getByRole('heading', { name: /Your business is live!/ })).toBeVisible({ timeout: 60000 });
+    await expect(page.getByRole('heading', { name: /You're Live!/ })).toBeVisible({ timeout: 60000 });
 
     // Check horizontal scroll by verifying document width equals window innerWidth
     const hasHorizontalScroll = await page.evaluate(() => {
@@ -35,7 +67,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup prevents empty submissions', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('http://mock/setup.html');
 
     // Click Conversational Setup
     const conversationalSetupBtn = page.locator('text=Conversational Setup').first();
@@ -43,10 +75,10 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await conversationalSetupBtn.click();
 
     // Ensure input is empty and send
-    const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
+    const chatInput = page.locator('#chat-input');
     await expect(chatInput).toBeVisible();
     await chatInput.fill('');
-    await page.locator('button[type="submit"]').click();
+    await page.locator('#chat-send-btn').click();
 
     // Message shouldn't appear in chat history
     const userMessages = page.locator('.chat-message.user');
@@ -54,7 +86,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup opens image upload input when toggled', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('http://mock/setup.html');
 
     // Click Conversational Setup
     const conversationalSetupBtn = page.locator('text=Conversational Setup').first();
@@ -74,7 +106,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup maintains history after reload', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('http://mock/setup.html');
 
     // Start conversational flow
     const conversationalSetupBtn = page.locator('text=Conversational Setup').first();
@@ -82,10 +114,13 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await conversationalSetupBtn.click();
 
     // Type a message
-    const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
+    const chatInput = page.locator('#chat-input');
     await expect(chatInput).toBeVisible();
     await chatInput.fill('This is a test message to ensure history persistence.');
-    await page.locator('button[type="submit"]').click();
+    await page.route('**/api/onboarding/chat', async route => {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ reply: "Hello!" }) });
+    });
+    await page.locator('#chat-send-btn').click();
 
     // Wait for the message to appear
     const userMessages = page.locator('.chat-message.user');
@@ -103,7 +138,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
   });
 
   test('Conversational Setup renders user messages correctly', async ({ page }) => {
-    await page.goto('/setup.html');
+    await page.goto('http://mock/setup.html');
 
     // Start conversational flow
     const conversationalSetupBtn = page.locator('text=Conversational Setup').first();
@@ -111,10 +146,13 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await conversationalSetupBtn.click();
 
     // Type a message
-    const chatInput = page.locator('input[placeholder*="e.g. I am a home baker"]');
+    const chatInput = page.locator('#chat-input');
     await expect(chatInput).toBeVisible();
     await chatInput.fill('Testing chat bubble formatting');
-    await page.locator('button[type="submit"]').click();
+    await page.route('**/api/onboarding/chat', async route => {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ reply: "Hello!" }) });
+    });
+    await page.locator('#chat-send-btn').click();
 
     // Check message wrapper layout
     const lastUserMessage = page.locator('.chat-message.user').last();

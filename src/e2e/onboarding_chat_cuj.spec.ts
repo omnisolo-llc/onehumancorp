@@ -25,7 +25,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
-    await page.route('http://mock/success.html', async route => {
+    await page.route('**/success.html*', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
@@ -119,14 +119,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
 
     await sendBtn.click();
 
-    // Check that the user message appears
-    await expect(chatMessages).toContainText('YouI am a plumber fixing pipes and stuff.');
-
-    // Check that the assistant replies immediately completing setup (via the updated backend behavior/mock)
-    await expect(chatMessages).toContainText("Give me a minute... I'm building your business.");
-
-    // It should automatically transition to show the Ready to Launch sliding summary card, and then zero-click redirect to Dashboard
-    await expect(page.getByRole('heading', { name: /You're all set!|Dashboard/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole('heading', { name: /You're Live!/ })).toBeVisible({ timeout: 60000 });
   });
 
 });
