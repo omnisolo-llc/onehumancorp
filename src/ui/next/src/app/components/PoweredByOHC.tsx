@@ -5,9 +5,10 @@ import React, { useState, useEffect, useRef } from 'react';
 interface PoweredByOHCProps {
   tenantId: string;
   isOwner?: boolean;
+  className?: string;
 }
 
-export function PoweredByOHC({ tenantId, isOwner = false }: PoweredByOHCProps) {
+export function PoweredByOHC({ tenantId, isOwner = false, className = "" }: PoweredByOHCProps) {
   const referralUrl = `/onboarding?ref=${tenantId}&source=footer_widget`;
   const upgradeUrl = `/pricing?source=footer_widget_upgrade`;
   const [isHovered, setIsHovered] = useState(false);
@@ -98,7 +99,7 @@ export function PoweredByOHC({ tenantId, isOwner = false }: PoweredByOHCProps) {
       <a
         href={isOwner ? upgradeUrl : referralUrl}
         onClick={handleBaseClick}
-        className="group flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white/50 backdrop-blur-[30px] saturate-[210%] hover:bg-white/80 hover:shadow-sm transition-all text-xs font-semibold text-gray-500 hover:text-indigo-600 uppercase tracking-widest font-outfit z-10 relative"
+        className={`group flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white/50 backdrop-blur-[30px] saturate-[210%] hover:bg-white/80 hover:shadow-sm transition-all text-xs font-semibold text-gray-500 hover:text-indigo-600 uppercase tracking-widest font-outfit z-10 relative ${className}`}
       >
         <span className="text-yellow-400 group-hover:scale-110 transition-transform">⚡</span>
         Powered by OHC

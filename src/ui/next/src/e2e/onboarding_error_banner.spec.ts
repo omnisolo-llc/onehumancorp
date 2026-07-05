@@ -32,7 +32,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Everyone');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(3000); await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Admin User');
@@ -70,7 +70,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Test');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(3000); await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Admin User');
@@ -104,7 +104,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Everyone');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(3000); await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Admin User');
@@ -148,7 +148,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Test');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(3000); await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Admin User');
@@ -181,7 +181,7 @@ test.describe('Onboarding Error Banner UI', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Test');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(3000); await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Admin User');

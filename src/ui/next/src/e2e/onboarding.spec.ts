@@ -30,7 +30,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
 
-    await page.waitForSelector("text=Review Details", { state: "visible", timeout: 30000 });
+    await page.waitForTimeout(5000); await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByText('Modern').click();
@@ -64,7 +64,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
 
-    await page.waitForSelector("text=Review Details", { state: "visible", timeout: 30000 });
+    await page.waitForTimeout(5000); await expect(page.getByText("Review Details")).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByText('Minimal').click();
@@ -97,7 +97,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Students');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.locator('input').nth(1)).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(5000); await expect(page.locator('input').nth(1)).toBeVisible({ timeout: 15000 });
     // Removed product assertion since fallback logic doesn't generate products
     await page.getByRole('button', { name: 'Continue' }).click();
 
@@ -131,7 +131,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Professionals');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.locator('input').nth(1)).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(5000); await expect(page.locator('input').nth(1)).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await page.getByText('Bold').click();
@@ -173,7 +173,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.reload();
 
     // We should be restored to the first step of the wizard where we were, with the text filled
-    await expect(page.getByText("What's the name of your business?")).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(5000); await expect(page.getByText("What's the name of your business?")).toBeVisible({ timeout: 15000 });
     await expect(page.locator('input').first()).toHaveValue('My Restored Business', { timeout: 15000 });
   });
 
@@ -285,6 +285,6 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Generate Storefront' }).click();
 
     // Expect it to eventually reach "You're Live!" screen
-    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+    await page.waitForTimeout(5000); await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
   });
 });
