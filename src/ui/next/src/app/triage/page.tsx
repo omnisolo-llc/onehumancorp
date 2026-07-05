@@ -363,11 +363,12 @@ export default function TriagePage() {
                             <button
                               disabled={isProcessing}
                               className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
-                              data-testid={`triage-approve-${item.id}`}
+                                                            data-testid={`triage-approve-${item.id}`}
                               onClick={() => handleDecision(item.id, true)}
                             >
-                              {isProcessing ? "Processing..." : "Approve as-is"}
+                              {isProcessing ? "Processing..." : (item.action_type === "Draft Quote-to-Cash" || item.action_type === "Draft Quote" ? "Approve & Send Quote" : "Approve as-is")}
                             </button>
+
                           </>
                         ) : (
                           <button

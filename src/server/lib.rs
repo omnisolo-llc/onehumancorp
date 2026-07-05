@@ -3735,7 +3735,7 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
-                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "ProposedInvoice" {
+                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "Draft Quote-to-Cash" || action_type == "ProposedInvoice" {
                         tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
@@ -3768,7 +3768,61 @@ pub async fn update_ui_triage_action_handler(
                             .execute(&mut *tx)
                             .await {
                                 tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
-                            } else {
+                                                        } else {
+                                if action_type == "Draft Quote-to-Cash" {
+                                    // Create a provisional booking if start_time/end_time exist
+                                    let product_id = json_payload.get("service_id").or_else(|| json_payload.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
+                                    let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                                    let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                                    if !start_time_str.is_empty() {
+                                        let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str)
+                                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                                            .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(1));
+
+                                        let end_time = chrono::DateTime::parse_from_rfc3339(end_time_str)
+                                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                                            .unwrap_or_else(|_| start_time + chrono::Duration::hours(1));
+
+                                        let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
+
+                                        if let Err(e) = sqlx::query(
+                                            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')"
+                                        )
+                                        .bind(&booking_id)
+                                        .bind(&tenant_id)
+                                        .bind(&cid)
+                                        .bind(&product_id)
+                                        .bind(start_time)
+                                        .bind(end_time)
+                                        .execute(&mut *tx)
+                                        .await {
+                                            tracing::error!("Failed to insert provisional booking for Quote-to-Cash {}: {:?}", quote_id, e);
+                                        }
+
+                                        // Attach proposed slot to quote
+                                        let _ = sqlx::query("UPDATE quotes SET proposed_slot_id = $1 WHERE id = $2")
+                                            .bind(&booking_id)
+                                            .bind(&quote_id)
+                                            .execute(&mut *tx)
+                                            .await;
+                                    }
+
+                                    // Add a deposit requirement
+                                    if required_deposit_cents > 0 {
+                                        let dr_id = format!("dr-{}", uuid::Uuid::new_v4());
+                                        let _ = sqlx::query(
+                                            "INSERT INTO deposit_requirements (id, tenant_id, estimate_id, amount_cents, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'pending', NOW(), NOW())"
+                                        )
+                                        .bind(&dr_id)
+                                        .bind(&tenant_id)
+                                        .bind(&quote_id)
+                                        .bind(required_deposit_cents)
+                                        .execute(&mut *tx)
+                                        .await;
+                                    }
+                                }
+
                                 if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
                                     for item in items {
                                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Item");
@@ -3996,7 +4050,7 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
-                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "ProposedInvoice" {
+                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "Draft Quote-to-Cash" || action_type == "ProposedInvoice" {
                         tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
@@ -4033,7 +4087,61 @@ pub async fn update_ui_triage_action_handler(
                             .execute(&mut *tx)
                             .await {
                                 tracing::error!("Failed to insert drafted quote for triage item {}: {:?}", payload.triage_item_id, e); // pii-safe
-                            } else {
+                                                        } else {
+                                if action_type == "Draft Quote-to-Cash" {
+                                    // Create a provisional booking if start_time/end_time exist
+                                    let product_id = json_payload.get("service_id").or_else(|| json_payload.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
+                                    let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                                    let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                                    if !start_time_str.is_empty() {
+                                        let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str)
+                                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                                            .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(1));
+
+                                        let end_time = chrono::DateTime::parse_from_rfc3339(end_time_str)
+                                            .map(|dt| dt.with_timezone(&chrono::Utc))
+                                            .unwrap_or_else(|_| start_time + chrono::Duration::hours(1));
+
+                                        let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
+
+                                        if let Err(e) = sqlx::query(
+                                            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'scheduled', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                        )
+                                        .bind(&booking_id)
+                                        .bind(&tenant_id)
+                                        .bind(&cid)
+                                        .bind(&product_id)
+                                        .bind(start_time.to_rfc3339())
+                                        .bind(end_time.to_rfc3339())
+                                        .execute(&mut *tx)
+                                        .await {
+                                            tracing::error!("Failed to insert provisional booking for Quote-to-Cash {}: {:?}", quote_id, e);
+                                        }
+
+                                        // Attach proposed slot to quote
+                                        let _ = sqlx::query("UPDATE quotes SET proposed_slot_id = ? WHERE id = ?")
+                                            .bind(&booking_id)
+                                            .bind(&quote_id)
+                                            .execute(&mut *tx)
+                                            .await;
+                                    }
+
+                                    // Add a deposit requirement
+                                    if required_deposit_cents > 0 {
+                                        let dr_id = format!("dr-{}", uuid::Uuid::new_v4());
+                                        let _ = sqlx::query(
+                                            "INSERT INTO deposit_requirements (id, tenant_id, estimate_id, amount_cents, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                        )
+                                        .bind(&dr_id)
+                                        .bind(&tenant_id)
+                                        .bind(&quote_id)
+                                        .bind(required_deposit_cents)
+                                        .execute(&mut *tx)
+                                        .await;
+                                    }
+                                }
+
                                 if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
                                     for item in items {
                                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Item");
