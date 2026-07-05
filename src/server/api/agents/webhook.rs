@@ -117,6 +117,30 @@ async fn handle_webhook(
     if payload.source == "intake_form" || payload.source == "email_inquiry" || payload.source == "work_intake" {
         let tenant_id = payload.tenant_id.clone();
         let inquiry = payload.message.clone();
+        let pool = crate::db::get_pool();
+
+        let customer_id = uuid::Uuid::new_v4().to_string();
+        if let Some(name) = &payload.customer_name {
+            let _ = sqlx::query(
+                "INSERT INTO customers (id, tenant_id, name, email, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW()) ON CONFLICT DO NOTHING"
+            )
+            .bind(uuid::Uuid::parse_str(&customer_id).unwrap_or_default())
+            .bind(&tenant_id)
+            .bind(name)
+            .bind(&payload.customer_email)
+            .execute(&pool)
+            .await;
+        }
+
+        let service_lead_id = uuid::Uuid::new_v4().to_string();
+        let _ = sqlx::query("INSERT INTO service_leads (id, tenant_id, customer_id, description, source, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())")
+            .bind(&service_lead_id)
+            .bind(&tenant_id)
+            .bind(uuid::Uuid::parse_str(&customer_id).unwrap_or_default())
+            .bind(&inquiry)
+            .bind(&payload.source)
+            .execute(&pool)
+            .await;
 
         let (suggested_price, service_name, scope) = match analyze_intake_inquiry(&inquiry).await {
             Ok(res) => res,
@@ -147,20 +171,7 @@ async fn handle_webhook(
             inquiry, suggested_price
         );
 
-        // Create customer record
-        let pool = crate::db::get_pool();
-        let customer_id = uuid::Uuid::new_v4().to_string();
-        if let Some(name) = &payload.customer_name {
-            let _ = sqlx::query(
-                "INSERT INTO customers (id, tenant_id, name, email, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW()) ON CONFLICT DO NOTHING"
-            )
-            .bind(uuid::Uuid::parse_str(&customer_id).unwrap_or_default())
-            .bind(&tenant_id)
-            .bind(name)
-            .bind(&payload.customer_email)
-            .execute(&pool)
-            .await;
-        }
+        // Customer record created above
 
         let quote_id = uuid::Uuid::new_v4().to_string();
         let quote_line_item_id = uuid::Uuid::new_v4().to_string();
@@ -189,6 +200,7 @@ async fn handle_webhook(
 
         let action_payload = serde_json::json!({
             "feature_type": "quote_draft",
+            "service_lead_id": service_lead_id,
             "customer_inquiry": inquiry,
             "suggested_price": suggested_price,
             "scope": scope,

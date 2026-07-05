@@ -565,6 +565,20 @@ pub async fn stripe_webhook_handler(
                     .and_then(|m| m.get("conversational_intake_id"))
                     .and_then(|id| id.as_str());
 
+                // Field service deposit requirements
+                let service_lead_opt = obj.get("metadata")
+                    .and_then(|m| m.get("service_lead_id"))
+                    .and_then(|id| id.as_str());
+                let estimate_opt = obj.get("metadata")
+                    .and_then(|m| m.get("estimate_id"))
+                    .and_then(|id| id.as_str());
+                let deposit_req_opt = obj.get("metadata")
+                    .and_then(|m| m.get("deposit_requirement_id"))
+                    .and_then(|id| id.as_str());
+                let proposed_slot_opt = obj.get("metadata")
+                    .and_then(|m| m.get("proposed_slot_id"))
+                    .and_then(|id| id.as_str());
+
                 if let Some(intake_id) = conversational_intake_opt {
                     let _ = sqlx::query("UPDATE conversational_intake_queue SET status = 'BOOKED', updated_at = NOW() WHERE id = $1")
                         .bind(intake_id)
@@ -594,6 +608,32 @@ pub async fn stripe_webhook_handler(
                             .execute(&webhook_state.db.pool)
                             .await;
                     }
+                }
+
+                // If this checkout session was for a field-ops quote/estimate deposit
+                if let Some(estimate_id) = estimate_opt {
+                    let _ = sqlx::query("UPDATE estimates SET status = 'approved', updated_at = NOW() WHERE id = $1")
+                        .bind(estimate_id)
+                        .execute(&webhook_state.db.pool)
+                        .await;
+                }
+                if let Some(deposit_req_id) = deposit_req_opt {
+                    let _ = sqlx::query("UPDATE deposit_requirements SET status = 'paid', updated_at = NOW() WHERE id = $1")
+                        .bind(deposit_req_id)
+                        .execute(&webhook_state.db.pool)
+                        .await;
+                }
+                if let Some(service_lead_id) = service_lead_opt {
+                    let _ = sqlx::query("UPDATE service_leads SET status = 'booked', updated_at = NOW() WHERE id = $1")
+                        .bind(service_lead_id)
+                        .execute(&webhook_state.db.pool)
+                        .await;
+                }
+                if let Some(slot_id) = proposed_slot_opt {
+                    let _ = sqlx::query("UPDATE booking_slots SET status = 'booked', updated_at = NOW() WHERE id = $1")
+                        .bind(slot_id)
+                        .execute(&webhook_state.db.pool)
+                        .await;
                 }
 
                 if let (Some(tenant_id), Some(product_id)) = (tenant_id_opt, product_id_opt) {

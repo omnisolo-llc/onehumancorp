@@ -156,6 +156,33 @@ pub async fn handle_omnichannel_webhook(
     // 1. Resolve Identity
     let customer_id = resolve_identity(&state.db, tenant_id, channel, sender_id).await;
 
+    // Create ServiceLead if applicable
+    let service_lead_id = uuid::Uuid::new_v4().to_string();
+    if channel == "intake_form" || channel == "email_inquiry" || channel == "work_intake" || channel == "instagram_dm" || channel == "sms" || channel == "booking_form" {
+        match &state.db.store {
+            crate::db::DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO service_leads (id, tenant_id, customer_id, description, source, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())")
+                    .bind(&service_lead_id)
+                    .bind(tenant_id)
+                    .bind(uuid::Uuid::parse_str(&customer_id).ok())
+                    .bind(message)
+                    .bind(channel)
+                    .execute(&state.db.pool)
+                    .await;
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let _ = sqlx::query("INSERT INTO service_leads (id, tenant_id, customer_id, description, source, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'new', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .bind(&service_lead_id)
+                    .bind(tenant_id)
+                    .bind(uuid::Uuid::parse_str(&customer_id).ok().map(|u| u.to_string()))
+                    .bind(message)
+                    .bind(channel)
+                    .execute(sqlite_pool)
+                    .await;
+            }
+        };
+    }
+
     // 2. Persist Message into inbox_messages
     let inbox_id = Uuid::new_v4().to_string();
     let insert_result = match &state.db.store {
@@ -235,7 +262,8 @@ pub async fn handle_omnichannel_webhook(
         "source": channel,
         "content": message,
         "sender_id": sender_id,
-        "customer_id": customer_id
+        "customer_id": customer_id,
+        "service_lead_id": service_lead_id
     });
 
     let enqueue_result = match &state.db.store {
