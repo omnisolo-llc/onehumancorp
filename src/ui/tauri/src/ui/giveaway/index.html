@@ -213,6 +213,95 @@
 
     .btn-loading .btn-text { display: none; }
     .btn-loading .loading-spinner { display: block; }
+
+    .branding-toggle-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: rgba(134, 134, 139, 0.05);
+        border-radius: 12px;
+        border: 1px solid rgba(134, 134, 139, 0.1);
+    }
+    .branding-toggle-container span {
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--text-color);
+    }
+    .branding-toggle-container .pro-badge {
+        background: linear-gradient(135deg, #0066FF, #00C6FF);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-left: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #0066FF;
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    #paywall-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(5px);
+    }
+    .paywall-content {
+      background: var(--bg-color);
+      padding: 30px;
+      border-radius: 16px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      border: 1px solid var(--card-border);
+    }
+    .paywall-content h3 { margin-top: 0; font-size: 22px; }
+    .paywall-content p { color: #86868b; line-height: 1.5; margin-bottom: 25px; }
   </style>
 </head>
 <body>
@@ -229,6 +318,17 @@
     <div>
       <label for="desc">Description</label>
       <textarea id="desc" rows="4" placeholder="Enter instructions to win..."></textarea>
+    </div>
+
+    <div class="branding-toggle-container">
+      <div>
+        <span>Remove OHC Branding</span>
+        <span class="pro-badge">Pro Feature</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="branding-toggle">
+        <span class="slider"></span>
+      </label>
     </div>
 
     <button id="generate-btn">
@@ -255,7 +355,34 @@
     <a href="/api/v1/growth/referrals/click?target=/setup.html&ref=giveaway_footer" target="_blank" class="footer-link">⚡ Powered by OHC</a>
   </footer>
 
+  <div id="paywall-modal">
+    <div class="paywall-content">
+      <div style="font-size: 48px; margin-bottom: 15px;">⭐</div>
+      <h3>Upgrade to Pro</h3>
+      <p>Removing the "Powered by OHC" branding is a Pro feature. Upgrade your workspace to build completely white-labeled experiences.</p>
+      <button onclick="window.location.href='/pricing.html'" style="width: 100%; margin-bottom: 10px;">View Plans</button>
+      <button class="btn-secondary" onclick="document.getElementById('paywall-modal').style.display='none'" style="width: 100%;">Maybe Later</button>
+    </div>
+  </div>
+
   <script>
+    const hasPro = localStorage.getItem('has_pro') === 'true';
+    const brandingToggle = document.getElementById('branding-toggle');
+
+    brandingToggle.addEventListener('change', (e) => {
+        if (!hasPro) {
+            e.preventDefault();
+            brandingToggle.checked = false;
+            document.getElementById('paywall-modal').style.display = 'flex';
+        } else {
+            // Update preview or footer logic if needed
+            const footerLink = document.querySelector('.footer-link');
+            if (footerLink) {
+                footerLink.style.display = brandingToggle.checked ? 'none' : 'inline';
+            }
+        }
+    });
+
     document.getElementById('generate-btn').addEventListener('click', () => {
       const title = document.getElementById('title').value.trim();
       const desc = document.getElementById('desc').value.trim();
@@ -284,6 +411,9 @@
             desc: desc,
             ref: data.referral_link ? data.referral_link.split('/').pop() : 'giveaway_' + Date.now()
           });
+          if (brandingToggle.checked && hasPro) {
+              params.append('branding', 'false');
+          }
           const generatedUrl = `${baseUrl}/giveaway/enter?${params.toString()}`;
 
           showResult(generatedUrl);
@@ -295,6 +425,9 @@
             desc: desc,
             ref: 'giveaway_' + Date.now()
           });
+          if (brandingToggle.checked && hasPro) {
+              params.append('branding', 'false');
+          }
           const generatedUrl = `${baseUrl}/giveaway/enter?${params.toString()}`;
 
           showResult(generatedUrl);
