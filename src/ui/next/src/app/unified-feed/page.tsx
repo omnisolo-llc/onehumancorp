@@ -118,7 +118,7 @@ export default function UnifiedFeed() {
              <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
              </div>
-            <p className="font-medium text-sm">All caught up.</p>
+            <p className="font-medium text-sm">All caught up! Your business is running smoothly.</p>
           </div>
         ) : (
           feedItems.map((item) => (
