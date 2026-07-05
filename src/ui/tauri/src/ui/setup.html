@@ -51,6 +51,9 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
+      .glass-control {
+        border-radius: 8px !important;
+      }
       @media (prefers-color-scheme: dark) {
         .container, .glassmorphism {
           background: rgba(22, 22, 26, 0.7);
@@ -2861,9 +2864,11 @@
           }
         }
 
-        // Merge backend state, taking priority
+        // Merge backend state, taking priority if it has advanced further or exists
         if (loadedState && Object.keys(loadedState).length > 0) {
-          state = { ...state, ...loadedState };
+          if (!state.step || (loadedState.step && loadedState.step >= state.step)) {
+              state = { ...state, ...loadedState };
+          }
           if (loadedState.businessName && !loadedState.business_name) {
              state.business_name = loadedState.businessName;
           }
@@ -3122,12 +3127,12 @@
 
         clearTimeout(saveStateTimer);
         saveStateTimer = setTimeout(async () => {
+          localStorage.setItem("onboardingState", JSON.stringify(state));
           if (window.__TAURI__ && window.__TAURI__.core) {
             window.__TAURI__.core
               .invoke("save_onboarding_state", { state, tenantId, userId })
               .catch((err) => console.warn("Tauri save_onboarding_state failed, using offline fallback:", err));
           } else {
-            localStorage.setItem("onboardingState", JSON.stringify(state));
             const backendUrl =
               window.location.protocol === "file:" ||
               ["1420", "3000", "8081"].includes(window.location.port)
