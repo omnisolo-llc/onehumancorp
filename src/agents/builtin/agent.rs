@@ -3391,8 +3391,11 @@ impl Agent {
 
             let active_tools_clone = active_tools.clone();
             session_tools.push(crate::tools::lazy_load::lazy_load_tool(
-                active_tools_clone,
+                active_tools_clone.clone(),
                 std::sync::Arc::new(available_tools_names),
+            ));
+            session_tools.push(crate::tools::lazy_load::unload_tool(
+                active_tools_clone,
             ));
             // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
         }

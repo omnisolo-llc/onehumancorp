@@ -55,6 +55,37 @@ impl PydanticToolExecutor<LazyLoadArgs> for LazyLoadToolsExecutor {
     }
 }
 
+struct UnloadToolsExecutor {
+    active_tools: Arc<RwLock<HashSet<String>>>,
+}
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<LazyLoadArgs> for UnloadToolsExecutor {
+    async fn execute_typed(&self, args: LazyLoadArgs) -> Result<String, ToolError> {
+        if args.tool_names.is_empty() {
+            return Ok("No valid tool names provided to unload.".to_string());
+        }
+
+        let mut active = self.active_tools.write().await;
+        let mut unloaded = Vec::new();
+
+        for name in args.tool_names {
+            if active.remove(&name) {
+                unloaded.push(name);
+            }
+        }
+
+        if unloaded.is_empty() {
+            Ok("None of the specified tools were currently active in your context window.".to_string())
+        } else {
+            Ok(format!(
+                "Successfully unloaded {} tools from your context window. This frees up tokens for reasoning.",
+                unloaded.join(", ")
+            ))
+        }
+    }
+}
+
 pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>, available_tools: Arc<Vec<String>>) -> Tool {
     Tool {
         name: "LazyLoadTools".to_string(),
@@ -74,6 +105,26 @@ pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>, available_tool
             "required": ["tool_names"]
         }),
         execute: Arc::new(PydanticAdapter::new(LazyLoadToolsExecutor { active_tools, available_tools })),
+    }
+}
+
+pub fn unload_tool(active_tools: Arc<RwLock<HashSet<String>>>) -> Tool {
+    Tool {
+        name: "UnloadTools".to_string(),
+        description: "Unloads tools from your context window to free up context tokens. Use this when you are finished using a specific tool. (Claude Metric Mechanic)".to_string(),
+        is_read_only: false, // State mutation for the agent context
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "tool_names": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "A list of exact tool names to unload from your context."
+                }
+            },
+            "required": ["tool_names"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(UnloadToolsExecutor { active_tools })),
     }
 }
 
@@ -142,5 +193,27 @@ mod tests {
         assert!(res.is_ok());
         let msg = res.unwrap();
         assert!(msg.contains("No valid tool names provided to load"));
+    }
+
+    #[tokio::test]
+    async fn test_unload_tool() {
+        let mut initial_set = HashSet::new();
+        initial_set.insert("Bash".to_string());
+        initial_set.insert("Write".to_string());
+
+        let active_tools = Arc::new(RwLock::new(initial_set));
+        let tool = unload_tool(active_tools.clone());
+
+        let args = serde_json::json!({
+            "tool_names": ["Bash", "Read"]
+        });
+
+        let res = tool.execute.execute(args).await;
+        assert!(res.is_ok());
+        let msg = res.unwrap();
+        assert!(msg.contains("Successfully unloaded Bash"));
+        let lock = active_tools.read().await;
+        assert!(!lock.contains("Bash"));
+        assert!(lock.contains("Write"));
     }
 }
