@@ -251,7 +251,7 @@ export default function GroupBuyWidgetPage() {
 
               {!hideBranding && (
                 <div className={`py-3 text-center border-t ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
-                  <PoweredByOHC tenantId={tenant} />
+                  <PoweredByOHC tenantId={tenant} className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} />
                 </div>
               )}
             </div>

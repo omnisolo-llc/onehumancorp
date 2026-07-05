@@ -237,7 +237,17 @@ impl IntegrationsRegistry {
                 creds.api_token.clone()
             )));
         }
-        if integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
+        if integration_id == "whatsapp" {
+            if base_url.contains("twilio.com") {
+                let mut clients = self.twilio_clients.write().unwrap();
+                clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+            } else {
+                let mut clients = self.whatsapp_clients.write().unwrap();
+                clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
+                    creds.api_token.clone()
+                )));
+            }
+        } else if integration_id == "whatsapp_cloud_api" {
             let mut clients = self.whatsapp_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
                 creds.api_token.clone()
@@ -475,9 +485,24 @@ impl IntegrationsRegistry {
             if let Some(c) = client {
                 return c.send_whatsapp(to, from, body).await;
             }
-        } else if integration_id == "meta" || integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
+        } else if integration_id == "whatsapp" {
             let client = {
-                if integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
+                let clients = self.twilio_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            };
+            if let Some(c) = client {
+                return c.send_whatsapp(to, from, body).await;
+            }
+            let meta_client = {
+                let clients = self.whatsapp_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            };
+            if let Some(c) = meta_client {
+                return c.send_message("whatsapp", to, body).await;
+            }
+        } else if integration_id == "meta" || integration_id == "whatsapp_cloud_api" {
+            let client = {
+                if integration_id == "whatsapp_cloud_api" {
                     let clients = self.whatsapp_clients.read().unwrap();
                     clients.get(integration_id).cloned()
                 } else {
