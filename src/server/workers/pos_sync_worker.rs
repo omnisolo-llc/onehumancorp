@@ -622,8 +622,9 @@ mod tests {
             parent_task_id: "".to_string(),
         };
 
+        use crate::queue::TaskJobHandler;
         let handle = worker.handle(job);
-        let res = handle.await.unwrap();
+        let res = handle.await;
         assert!(res.is_ok());
 
         let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-worker-test-1'")
@@ -691,8 +692,9 @@ mod tests {
             parent_task_id: "".to_string(),
         };
 
+        use crate::queue::TaskJobHandler;
         let handle = worker.handle(job);
-        let res = handle.await.unwrap();
+        let res = handle.await;
         assert!(res.is_ok());
 
         let count: (i32,) = sqlx::query_as("SELECT available_quantity FROM products WHERE id = 'prod-worker-test-conflict'")
@@ -759,8 +761,9 @@ mod tests {
             parent_task_id: "".to_string(),
         };
 
+        use crate::queue::TaskJobHandler;
         let handle = worker.handle(job);
-        let res = handle.await.unwrap();
+        let res = handle.await;
         assert!(res.is_ok());
 
         let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-worker-test-2'")
