@@ -2274,7 +2274,7 @@ pub async fn bench_get_daily_work_latency() {
             tokio::spawn({
                 let db = db.clone();
                 async move {
-                    sqlx::query("SELECT id, signal_id, intent, '{}'::jsonb as customer_info, '{}'::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(&db.pool).await
+                    sqlx::query("SELECT id, signal_id, intent, NULL::jsonb as customer_info, NULL::jsonb as suggested_actions, status FROM daily_work_items WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(&db.pool).await
                 }
             }),
             tokio::spawn({
@@ -2311,7 +2311,7 @@ pub async fn bench_get_daily_work_latency() {
             tokio::spawn({
                 let db = db.clone();
                 async move {
-                    match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, signal_id, intent, '{}' as customer_info, '{}' as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) }
+                    match &db.store { crate::db::DbStore::Sqlite(pool) => sqlx::query("SELECT id, signal_id, intent, NULL as customer_info, NULL as suggested_actions, status FROM daily_work_items WHERE tenant_id = ? AND status = 'PENDING' ORDER BY created_at DESC").bind("test_tenant").fetch_all(pool).await, _ => Ok(vec![]) }
                 }
             }),
             tokio::spawn({
