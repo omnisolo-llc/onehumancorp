@@ -1084,16 +1084,16 @@ button,
 [role="button"],
 a.button,
 .app-button,
-.glassmorphism button,
-.glassmorphism a,
-.glassmorphism input,
-.glassmorphism select,
-.glassmorphism textarea {
+button.glass-control,
+a.glass-control,
+input.glass-control,
+select.glass-control,
+textarea.glass-control {
   border-radius: 8px !important;
 }
 
-.glassmorphism button,
-.glassmorphism a,
+button.glass-control,
+a.glass-control,
 input[type="text"],
 input[type="email"],
 input[type="password"],
