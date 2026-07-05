@@ -48,6 +48,9 @@ export async function POST(req: Request) {
   } catch (error: any) {
     // Check if the fault is from fetch_after where it was converted to an Error
     if (error.message && error.message.includes('Fault Injected')) {
+        if (error.message.includes('expert_team_api_start')) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
         if (error.message.includes('expert_team_api_fetch_after') || error.message.includes('expert_team_api_fetch_before')) {
             return NextResponse.json({ error: "Backend service unavailable" }, { status: 503 });
         }
