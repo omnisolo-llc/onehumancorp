@@ -369,16 +369,29 @@ impl Department for SalesAgent {
                         match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, None, None).await {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
-                                // Optional: Update timeline or send a message
+                                // Update proposals table to persist Stripe URL
+                                if let Some(eid) = payload.get("estimate_id").and_then(|v| v.as_str()) {
+                                    let db = crate::db::get_pool();
+                                    let _ = sqlx::query("UPDATE estimates SET status = 'sent', updated_at = NOW() WHERE id = $1")
+                                        .bind(eid)
+                                        .execute(&db)
+                                        .await;
+                                }
                             }
                             Err(e) => {
                                 tracing::error!("Failed to create checkout session for quote deposit: {}", e);
                             }
                         }
 
-                        if let Some(slot_id) = payload.get("proposed_slot_id").and_then(|v| v.as_str()) {
-                            let _ = self.orchestrator.confirm_booking_slot(&event.tenant_id, slot_id).await;
+                        if let Some(lid) = payload.get("service_lead_id").and_then(|v| v.as_str()) {
+                            let db = crate::db::get_pool();
+                            let _ = sqlx::query("UPDATE service_leads SET status = 'estimated', updated_at = NOW() WHERE id = $1")
+                                .bind(lid)
+                                .execute(&db)
+                                .await;
                         }
+
+                        // NOTE: booking_slot is NOT confirmed here. It is kept soft-locked until payment webhook.
                     }
                 }
             }
@@ -501,9 +514,43 @@ impl Department for SalesAgent {
                     ).await.ok().flatten();
                 }
 
+                // Create estimates (quotes) and deposit requirements
+                let estimate_id = uuid::Uuid::new_v4().to_string();
+                let deposit_requirement_id = uuid::Uuid::new_v4().to_string();
+                let service_lead_id = event.payload.get("service_lead_id").and_then(|v| v.as_str()).unwrap_or("");
+                let customer_id_val = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                let db = crate::db::get_pool();
+                let deposit_amount_cents = (price * 0.20 * 100.0) as i64;
+                let price_cents = (price * 100.0) as i64;
+
+                if !service_lead_id.is_empty() {
+                    let _ = sqlx::query("INSERT INTO estimates (id, tenant_id, service_lead_id, customer_id, description, min_price_cents, max_price_cents, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft')")
+                        .bind(&estimate_id)
+                        .bind(&event.tenant_id)
+                        .bind(service_lead_id)
+                        .bind(uuid::Uuid::parse_str(customer_id_val).ok())
+                        .bind(&scope)
+                        .bind(price_cents)
+                        .bind(price_cents)
+                        .execute(&db)
+                        .await;
+
+                    let _ = sqlx::query("INSERT INTO deposit_requirements (id, tenant_id, estimate_id, amount_cents, percentage, status) VALUES ($1, $2, $3, $4, 20.00, 'pending')")
+                        .bind(&deposit_requirement_id)
+                        .bind(&event.tenant_id)
+                        .bind(&estimate_id)
+                        .bind(deposit_amount_cents)
+                        .execute(&db)
+                        .await;
+                }
+
                 let action_payload = serde_json::json!({
                     "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
-                    "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+                    "customer_id": customer_id_val,
+                    "service_lead_id": service_lead_id,
+                    "estimate_id": estimate_id,
+                    "deposit_requirement_id": deposit_requirement_id,
                     "feature_type": "quote_draft",
                     "customer_inquiry": intent.original_message,
                     "suggested_price": price,
