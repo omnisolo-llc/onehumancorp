@@ -16,13 +16,13 @@ impl OmniChannelService {
     }
 
     pub async fn ingest_signal(&self, tenant_id_str: &str, customer_name: Option<String>, source: String, payload: Value) -> Result<WorkItem, String> {
-        let tenant_id = Uuid::parse_str(tenant_id_str).map_err(|e| e.to_string())?;
+        let tenant_id = tenant_id_str.to_string();
 
-        let profile = self.repo.create_customer_profile(tenant_id, customer_name)
+        let profile = self.repo.create_customer_profile(tenant_id.clone(), customer_name)
             .await
             .map_err(|e| e.to_string())?;
 
-        let work_item = self.repo.create_work_item(tenant_id, profile.id, source.clone(), payload.clone())
+        let work_item = self.repo.create_work_item(tenant_id.clone(), profile.id, source.clone(), payload.clone())
             .await
             .map_err(|e| e.to_string())?;
 
@@ -43,7 +43,7 @@ impl OmniChannelService {
         };
 
         if let Ok(draft_text) = llm_res {
-            let _ = self.repo.create_agent_draft(work_item.id, draft_text).await;
+            let _ = self.repo.create_agent_draft(tenant_id.clone(), work_item.id, draft_text).await;
         }
 
         Ok(work_item)
@@ -72,13 +72,13 @@ mod tests {
         // Ensure tables exist for test
         let _ = sqlx::query("
             CREATE TABLE IF NOT EXISTS customer_profile (
-                id UUID PRIMARY KEY, tenant_id UUID NOT NULL, name TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+                id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
             );
             CREATE TABLE IF NOT EXISTS work_item (
-                id UUID PRIMARY KEY, tenant_id UUID NOT NULL, customer_id UUID NOT NULL, source TEXT NOT NULL, payload JSONB, status TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+                id UUID PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id UUID NOT NULL, source TEXT NOT NULL, payload JSONB, status TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
             );
             CREATE TABLE IF NOT EXISTS agent_draft (
-                id UUID PRIMARY KEY, work_item_id UUID NOT NULL, response TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+                id UUID PRIMARY KEY, work_item_id UUID NOT NULL, tenant_id TEXT, response TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
             );
         ").execute(&db.pool).await;
 
