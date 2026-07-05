@@ -138,7 +138,7 @@ impl AutoResponderWorker {
             };
 
             let prompt = format!(
-                "You are the Customer & Relationship Assistant for {}. Draft a concise, warm customer-service reply to this customer message received via {}: '{}'.",
+                "You are the Customer & Relationship Assistant for {}. Draft a short, friendly chat reply to this customer message received via {}: '{}'.",
                 business_context, source, customer_message
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
