@@ -62,7 +62,7 @@ pub async fn apply_dynamic_pricing(
 
     if result.price_cents != base_price_cents {
         let _ = sqlx::query("INSERT INTO price_history (id, tenant_id, target_id, old_price_cents, new_price_cents, reason) VALUES ($1, $2, $3, $4, $5, $6)")
-            .bind(Uuid::new_v4())
+            .bind(Uuid::new_v4().to_string())
             .bind(tenant_id)
             .bind(target_id)
             .bind(base_price_cents)
@@ -99,7 +99,7 @@ pub async fn apply_yield_management(
         let surge_price = calculate_heuristic_yield(start_time, base_price_cents);
         if surge_price != base_price_cents {
             let _ = sqlx::query("INSERT INTO price_history (id, tenant_id, target_id, old_price_cents, new_price_cents, reason) VALUES ($1, $2, $3, $4, $5, $6)")
-                .bind(Uuid::new_v4())
+                .bind(Uuid::new_v4().to_string())
                 .bind(tenant_id)
                 .bind(service_id)
                 .bind(base_price_cents)

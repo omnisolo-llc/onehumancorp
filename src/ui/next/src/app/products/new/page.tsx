@@ -16,6 +16,10 @@ export default function AutoCatalogPage() {
 function AutoCatalogContent() {
   const [loading, setLoading] = useState(false);
   const [subscriptionMode, setSubscriptionMode] = useState(false);
+  const [smartPricingEnabled, setSmartPricingEnabled] = useState(false);
+  const [basePrice, setBasePrice] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [subscriptionInterval, setSubscriptionInterval] = useState('monthly');
   const [subscriptionCutoff, setSubscriptionCutoff] = useState('5');
   const [isSplitEnabled, setIsSplitEnabled] = useState(false);
@@ -154,7 +158,10 @@ function AutoCatalogContent() {
           item_type: productData.category,
           is_subscribable: productData.isSubscription,
           subscription_frequency: productData.subscriptionInterval,
-          subscription_discount_percent: productData.subscriptionDiscount ? parseInt(productData.subscriptionDiscount) : undefined
+          subscription_discount_percent: productData.subscriptionDiscount ? parseInt(productData.subscriptionDiscount) : undefined,
+          smart_pricing_enabled: smartPricingEnabled,
+          base_price: basePrice,
+          min_price: minPrice
         })
       });
       const data = await response.json().catch(() => ({}));
@@ -359,7 +366,56 @@ function AutoCatalogContent() {
                       </div>
                   </label>
 
-                  {isSplitEnabled && (
+
+          <div className="mb-6 border border-[#E5E5E5] rounded-xl overflow-hidden bg-white/50 backdrop-blur-md">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full px-4 py-3 flex items-center justify-between font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0071E3] focus:ring-inset"
+              aria-expanded={showAdvanced}
+            >
+              <span>Advanced Operations</span>
+              <svg className={`w-5 h-5 transform transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            {showAdvanced && (
+              <div className="px-4 pb-4 space-y-4 border-t border-[#E5E5E5] pt-4">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={smartPricingEnabled}
+                    onChange={(e) => setSmartPricingEnabled(e.target.checked)}
+                    className="form-checkbox h-5 w-5 text-[#0071E3] rounded border-gray-300 focus:ring-[#0071E3]"
+                  />
+                  <span className="text-gray-800 font-medium">Enable Smart Pricing</span>
+                </label>
+                {smartPricingEnabled && (
+                  <div className="space-y-3 bg-blue-50/50 p-4 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Base Price ($)</label>
+                      <input
+                        type="number"
+                        value={basePrice}
+                        onChange={(e) => setBasePrice(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3]"
+                        placeholder="e.g. 50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Acceptable Price ($)</label>
+                      <input
+                        type="number"
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3]"
+                        placeholder="e.g. 35"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">The Operations Agent will autonomously adjust pricing to maximize yield without dropping below your minimum.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+{isSplitEnabled && (
                       <div className="mt-4 p-4 bg-white/40 border border-white/60 rounded-xl animate-fade-in-up">
                           <div className="mb-3">
                               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Who gets a cut?</label>

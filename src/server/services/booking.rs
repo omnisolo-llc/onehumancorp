@@ -53,7 +53,7 @@ pub struct BookingRecord {
     pub id: String,
     pub tenant_id: String,
     pub customer_id: String,
-    pub product_id: String,
+    pub service_id: String,
     pub quote_id: Option<String>,
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
@@ -222,7 +222,7 @@ impl BookingService {
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, quote_id, start_time, end_time, status FROM bookings")
+        let rows = sqlx::query("SELECT id, tenant_id, customer_id, service_id, quote_id, start_time, end_time, status FROM bookings")
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -233,7 +233,7 @@ impl BookingService {
             id: row.get("id"),
             tenant_id: row.get("tenant_id"),
             customer_id: row.get("customer_id"),
-            product_id: row.get("product_id"),
+            service_id: row.get("service_id"),
             quote_id: row.try_get("quote_id").ok(),
             start_time: row.get("start_time"),
             end_time: row.get("end_time"),
@@ -256,13 +256,13 @@ impl BookingService {
         }
 
         sqlx::query(
-            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, quote_id, start_time, end_time, status) \
+            "INSERT INTO bookings (id, tenant_id, customer_id, service_id, quote_id, start_time, end_time, status) \
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(&booking.id)
         .bind(&booking.tenant_id)
         .bind(&booking.customer_id)
-        .bind(&booking.product_id)
+        .bind(&booking.service_id)
         .bind(&booking.quote_id)
         .bind(booking.start_time)
         .bind(booking.end_time)
@@ -280,7 +280,7 @@ impl BookingService {
         )
         .bind(&booking.id)
         .bind(&booking.tenant_id)
-        .bind(&booking.product_id)
+        .bind(&booking.service_id)
         .bind(&booking.customer_id)
         .bind(&booking.status)
         .bind(amount_cents)
@@ -479,24 +479,24 @@ impl BookingSoftLockStore {
     async fn acquire_capacity_lock(
         &self,
         tenant_id: &str,
-        product_id: &str,
+        service_id: &str,
         start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,
         owner: &str,
         ttl: Duration,
     ) -> Result<Option<SoftLockReceipt>, String> {
-        let key = capacity_lock_key(tenant_id, product_id, start_time, end_time);
+        let key = capacity_lock_key(tenant_id, service_id, start_time, end_time);
         self.acquire_key(key, owner, ttl).await
     }
 
     async fn is_capacity_locked(
         &self,
         tenant_id: &str,
-        product_id: &str,
+        service_id: &str,
         start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,
     ) -> Result<bool, String> {
-        let key = capacity_lock_key(tenant_id, product_id, start_time, end_time);
+        let key = capacity_lock_key(tenant_id, service_id, start_time, end_time);
         self.key_exists(&key).await
     }
 
@@ -504,7 +504,7 @@ impl BookingSoftLockStore {
     async fn acquire_inventory_lock(
         &self,
         tenant_id: &str,
-        product_id: &str,
+        service_id: &str,
         session_id: &str,
         product_capacity: i64,
         ttl: Duration,
@@ -513,7 +513,7 @@ impl BookingSoftLockStore {
             return Ok(None);
         }
 
-        let capacity_key = inventory_capacity_lock_key(tenant_id, product_id);
+        let capacity_key = inventory_capacity_lock_key(tenant_id, service_id);
         let Some(capacity_lock) = self
             .acquire_key(
                 capacity_key,
@@ -525,7 +525,7 @@ impl BookingSoftLockStore {
             return Ok(None);
         };
 
-        let active_locks = match self.active_inventory_lock_count(tenant_id, product_id).await {
+        let active_locks = match self.active_inventory_lock_count(tenant_id, service_id).await {
             Ok(count) => count,
             Err(e) => {
                 let _ = self.release(&capacity_lock).await;
@@ -537,7 +537,7 @@ impl BookingSoftLockStore {
             return Ok(None);
         }
 
-        let inventory_key = inventory_lock_key(tenant_id, product_id, session_id);
+        let inventory_key = inventory_lock_key(tenant_id, service_id, session_id);
         let acquired = match self.acquire_key(inventory_key, session_id, ttl).await {
             Ok(lock) => lock,
             Err(e) => {
@@ -594,9 +594,9 @@ impl BookingSoftLockStore {
     async fn active_inventory_lock_count(
         &self,
         tenant_id: &str,
-        product_id: &str,
+        service_id: &str,
     ) -> Result<usize, String> {
-        let prefix = inventory_lock_prefix(tenant_id, product_id);
+        let prefix = inventory_lock_prefix(tenant_id, service_id);
         if let Some(client) = &self.redis_client {
             return redis_scan_count(client, &format!("{}*", prefix)).await;
         }
@@ -607,32 +607,32 @@ impl BookingSoftLockStore {
 
 fn capacity_lock_key(
     tenant_id: &str,
-    product_id: &str,
+    service_id: &str,
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
 ) -> String {
     format!(
         "ohc:lock:{}:capacity:{}:{}:{}",
         tenant_id,
-        product_id,
+        service_id,
         start_time.timestamp(),
         end_time.timestamp()
     )
 }
 
 #[allow(dead_code)]
-fn inventory_capacity_lock_key(tenant_id: &str, product_id: &str) -> String {
-    format!("ohc:lock:{}:inventory_capacity:{}", tenant_id, product_id)
+fn inventory_capacity_lock_key(tenant_id: &str, service_id: &str) -> String {
+    format!("ohc:lock:{}:inventory_capacity:{}", tenant_id, service_id)
 }
 
 #[allow(dead_code)]
-fn inventory_lock_prefix(tenant_id: &str, product_id: &str) -> String {
-    format!("ohc:lock:{}:inventory:{}:", tenant_id, product_id)
+fn inventory_lock_prefix(tenant_id: &str, service_id: &str) -> String {
+    format!("ohc:lock:{}:inventory:{}:", tenant_id, service_id)
 }
 
 #[allow(dead_code)]
-fn inventory_lock_key(tenant_id: &str, product_id: &str, session_id: &str) -> String {
-    format!("{}{}", inventory_lock_prefix(tenant_id, product_id), session_id)
+fn inventory_lock_key(tenant_id: &str, service_id: &str, session_id: &str) -> String {
+    format!("{}{}", inventory_lock_prefix(tenant_id, service_id), session_id)
 }
 
 async fn redis_connection(
@@ -780,7 +780,7 @@ impl NativeBookingService {
 
     async fn product_inventory_capacity(
         tenant_id: &str,
-        product_id: &str,
+        service_id: &str,
     ) -> Result<i64, Status> {
         let pool = crate::db::get_pool();
         let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
@@ -792,7 +792,7 @@ impl NativeBookingService {
             "SELECT inventory_count::BIGINT FROM products WHERE tenant_id = $1 AND id = $2"
         )
         .bind(tenant_id)
-        .bind(product_id)
+        .bind(service_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
@@ -1052,7 +1052,7 @@ impl BookingEngineService for NativeBookingService {
         }
 
         // Yield Management: Dynamic Pricing for Booking
-        let base_price: i64 = sqlx::query_scalar("SELECT price_cents FROM products WHERE id = $1 AND tenant_id = $2")
+        let base_price: i64 = sqlx::query_scalar("SELECT price_cents FROM services WHERE id = $1 AND tenant_id = $2")
             .bind(&service_id)
             .bind(&tenant_id)
             .fetch_one(&mut *tx)
@@ -1074,14 +1074,14 @@ impl BookingEngineService for NativeBookingService {
 
         if let Err(e) = sqlx::query(
             r#"
-            INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status, total_amount_cents)
+            INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, total_amount_cents)
             VALUES ($1, $2, $3, $4, $5::timestamptz, $6::timestamptz, 'confirmed', $7)
             "#
         )
         .bind(&booking_id)
         .bind(&tenant_id)
         .bind(&customer_id)
-        .bind(&service_id) // using service_id as product_id for now
+        .bind(&service_id) // using service_id as service_id for now
         .bind(&start_time)
         .bind(&end_time)
         .bind(final_price)
@@ -1165,7 +1165,7 @@ impl BookingEngineService for NativeBookingService {
         let mut req = request.into_inner();
         req.tenant_id = tenant_id.clone();
 
-        let product_id = req.product_id;
+        let service_id = req.service_id;
         let date_str = req.date;
 
         let date_parsed = chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
@@ -1183,7 +1183,7 @@ impl BookingEngineService for NativeBookingService {
              AND COALESCE(status, 'pending') <> 'cancelled'"
         )
         .bind(&tenant_id)
-        .bind(&product_id)
+        .bind(&service_id)
         .bind(&date_str)
         .fetch_all(&mut *tx)
         .await
@@ -1197,10 +1197,10 @@ impl BookingEngineService for NativeBookingService {
 
         // Incorporate availability_ledger into blocked slots
         let ledger_rows = sqlx::query(
-            "SELECT start_time, end_time FROM availability_ledger WHERE tenant_id = $1 AND product_id = $2 AND start_time::date = $3::date AND status IN ('BLOCKED', 'BOOKED')"
+            "SELECT start_time, end_time FROM availability_ledger WHERE tenant_id = $1 AND service_id = $2 AND start_time::date = $3::date AND status IN ('BLOCKED', 'BOOKED')"
         )
         .bind(&tenant_id)
-        .bind(&product_id)
+        .bind(&service_id)
         .bind(&date_str)
         .fetch_all(&mut *tx)
         .await
@@ -1217,7 +1217,7 @@ impl BookingEngineService for NativeBookingService {
             "SELECT start_time, end_time FROM booking_slots WHERE tenant_id = $1 AND service_id = $2 AND start_time::date = $3::date AND status IN ('soft_locked', 'booked')"
         )
         .bind(&tenant_id)
-        .bind(&product_id)
+        .bind(&service_id)
         .bind(&date_str)
         .fetch_all(&mut *tx)
         .await
@@ -1261,7 +1261,7 @@ impl BookingEngineService for NativeBookingService {
             "SELECT start_time, end_time FROM availability_blocks WHERE tenant_id = $1 AND service_id = $2 AND start_time::date = $3::date AND is_available = true"
         )
         .bind(&tenant_id)
-        .bind(&product_id)
+        .bind(&service_id)
         .bind(&date_str)
         .fetch_all(&mut *tx)
         .await
@@ -1287,7 +1287,7 @@ impl BookingEngineService for NativeBookingService {
                 }
 
                 let soft_locked = soft_locks
-                    .is_capacity_locked(&tenant_id, &product_id, st, et)
+                    .is_capacity_locked(&tenant_id, &service_id, st, et)
                     .await
                     .map_err(Status::internal)?;
 
@@ -1314,7 +1314,7 @@ impl BookingEngineService for NativeBookingService {
                     }
 
                     let soft_locked = soft_locks
-                        .is_capacity_locked(&tenant_id, &product_id, st, et)
+                        .is_capacity_locked(&tenant_id, &service_id, st, et)
                         .await
                         .map_err(Status::internal)?;
 
@@ -1351,7 +1351,7 @@ impl BookingEngineService for NativeBookingService {
         let mut req = request.into_inner();
         req.tenant_id = tenant_id.clone();
         let customer_id = req.customer_id;
-        let product_id = req.product_id;
+        let service_id = req.service_id;
         let start_time_str = req.start_time;
         let end_time_str = req.end_time;
 
@@ -1371,7 +1371,7 @@ impl BookingEngineService for NativeBookingService {
         let Some(capacity_lock) = soft_locks
             .acquire_capacity_lock(
                 &tenant_id,
-                &product_id,
+                &service_id,
                 start_time,
                 end_time,
                 &booking_id,
@@ -1398,11 +1398,11 @@ impl BookingEngineService for NativeBookingService {
 
         let overlap_count: i64 = match sqlx::query_scalar(
             "SELECT COUNT(*) FROM bookings \
-             WHERE tenant_id = $1 AND product_id = $2 AND start_time < $4 AND end_time > $3 \
+             WHERE tenant_id = $1 AND service_id = $2 AND start_time < $4 AND end_time > $3 \
              AND COALESCE(status, 'pending') <> 'cancelled'"
         )
         .bind(&tenant_id)
-        .bind(&product_id)
+        .bind(&service_id)
         .bind(&start_time)
         .bind(&end_time)
         .fetch_one(&mut *tx)
@@ -1426,13 +1426,13 @@ impl BookingEngineService for NativeBookingService {
         let payment_intent_id = if req.requires_deposit { Some(format!("pi_test_{}", Uuid::new_v4().to_string().replace("-", ""))) } else { None };
 
         if let Err(e) = sqlx::query(
-            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status, payment_intent_id) \
+            "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, payment_intent_id) \
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(&booking_id)
         .bind(&tenant_id)
         .bind(&customer_id)
-        .bind(&product_id)
+        .bind(&service_id)
         .bind(start_time)
         .bind(end_time)
         .bind(initial_status)
@@ -1448,12 +1448,12 @@ impl BookingEngineService for NativeBookingService {
         // Add to availability_ledger
         let ledger_id = uuid::Uuid::new_v4().to_string();
         if let Err(e) = sqlx::query(
-            "INSERT INTO availability_ledger (id, tenant_id, product_id, start_time, end_time, status, booking_id) \
+            "INSERT INTO availability_ledger (id, tenant_id, service_id, start_time, end_time, status, booking_id) \
              VALUES ($1, $2, $3, $4, $5, 'BOOKED', $6)"
         )
         .bind(&ledger_id)
         .bind(&tenant_id)
-        .bind(&product_id)
+        .bind(&service_id)
         .bind(start_time)
         .bind(end_time)
         .bind(&booking_id)
@@ -1508,11 +1508,11 @@ impl BookingEngineService for NativeBookingService {
         let expires_at = Utc::now() + chrono::Duration::minutes(15);
 
         let _inventory_capacity =
-            Self::product_inventory_capacity(&req.tenant_id, &req.product_id).await?;
+            Self::product_inventory_capacity(&req.tenant_id, &req.service_id).await?;
 
         let inventory_service = crate::services::inventory::InventoryService::new(self.redis_client.clone());
         let reserve_result = inventory_service
-            .reserve_inventory(&req.tenant_id, &req.product_id, 1, 300)
+            .reserve_inventory(&req.tenant_id, &req.service_id, 1, 300)
             .await
             .map_err(|e| Status::internal(e))?;
 
@@ -1567,7 +1567,7 @@ impl BookingEngineService for NativeBookingService {
             // Assuming proposed_slot_id implies a start and end time that we should know or look up.
             // For now, if we don't have the explicit time block in the request, we look it up from the slot,
             // or just use the proposed_slot_id itself as a stand-in if the slot exists.
-            // Given the signature `acquire_capacity_lock(&self, tenant_id, product_id, start_time, end_time, owner, ttl)`,
+            // Given the signature `acquire_capacity_lock(&self, tenant_id, service_id, start_time, end_time, owner, ttl)`,
             // we will query the slot first.
 
             let slot_row = sqlx::query("SELECT start_time, end_time FROM booking_slots WHERE id = $1 AND tenant_id = $2")
@@ -1863,7 +1863,7 @@ mod native_booking_tests {
         let mut req = Request::new(ReserveTimeSlotRequest {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
-            product_id: "p1".to_string(),
+            service_id: "p1".to_string(),
             start_time: "invalid_time".to_string(),
             end_time: "invalid_time".to_string(),
             requires_deposit: false,
@@ -1886,7 +1886,7 @@ mod native_booking_tests {
         let svc = NativeBookingService { redis_client: None };
         let mut req = Request::new(::server_ohc::app::CheckAvailabilityRequest {
             tenant_id: "t1".to_string(),
-            product_id: "p1".to_string(),
+            service_id: "p1".to_string(),
             date: "invalid-date".to_string(),
         });
         if std::env::var("OHC_DATABASE_URL").is_err() { return; }
@@ -1908,7 +1908,7 @@ mod native_booking_tests {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
             amount_cents: 1000,
-            product_id: "p1".to_string(),
+            service_id: "p1".to_string(),
         });
         if std::env::var("OHC_DATABASE_URL").is_err() { return; }
         req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
@@ -1933,7 +1933,7 @@ mod native_booking_tests {
         let mut req = Request::new(ReserveTimeSlotRequest {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
-            product_id: "p1".to_string(),
+            service_id: "p1".to_string(),
             start_time: "invalid_time".to_string(),
             end_time: "invalid_time".to_string(),
             requires_deposit: true,
