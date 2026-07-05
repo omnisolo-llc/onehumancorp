@@ -245,10 +245,7 @@ pub async fn get_discovery_report(
         Err(_) => return Json(vec![]),
     };
 
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-        .bind(tenant_id)
-        .execute(&mut *conn)
-        .await;
+    let _ = ::server_common::auth_utils::set_org_context(&mut *conn, &tenant_id).await;
 
     let rows = sqlx::query_as::<_, (uuid::Uuid, String, String, Option<serde_json::Value>)>(
         "SELECT id, month, plain_language_summary, metrics FROM seo_discovery_reports WHERE tenant_id = $1 ORDER BY created_at DESC"

@@ -83,10 +83,7 @@ impl ConfigSyncTool for PgConfigSyncTool {
 
         let mut tx = self.pool.begin().await?;
         // The correct query for tenant context:
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&payload.tenant_id)
-            .execute(&mut *tx)
-            .await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await?;
 
         sqlx::query(
             "INSERT INTO mcp_config_sync_log (tenant_id, agent_id, config_key, config_value, metadata)
