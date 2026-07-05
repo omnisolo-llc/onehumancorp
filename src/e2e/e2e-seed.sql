@@ -435,6 +435,24 @@ INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('test_org', 'api_latency', 'histogram', 850.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
 
+-- P99 API Latency Seed Data
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 75.0, '{"mode":"cloud"}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 120.0, '{"mode":"cloud"}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 180.0, '{"mode":"cloud"}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 20.0, '{"mode":"standalone"}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 40.0, '{"mode":"standalone"}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 80.0, '{"mode":"standalone"}', CURRENT_TIMESTAMP, 'PENDING');
+
+-- LLM Outage Seed Data
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'error_rate_llm_outage', 'gauge', 0.15, '{}', CURRENT_TIMESTAMP, 'PENDING');
+
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('test_org', 'error_rate', 'gauge', 0.012, '{}', CURRENT_TIMESTAMP, 'PENDING');
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
