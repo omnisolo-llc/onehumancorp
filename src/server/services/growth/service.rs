@@ -940,7 +940,6 @@ mod tests {
             mobile_optimized: false,
         };
 
-        let mut request = Request::new(req);
         request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "test".to_string(),
             org_id: "test_org".to_string(),
@@ -975,7 +974,6 @@ mod tests {
             mobile_optimized: true,
         };
 
-        let mut request = Request::new(req);
         request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "test".to_string(),
             org_id: "test_org".to_string(),

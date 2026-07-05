@@ -1105,6 +1105,31 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     ).toFixed(2)}
                   </span>
                 </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Required Deposit:
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                    $
+                    {Number(
+                      (approval.proposed_action || approval.context_payload)
+                        .suggested_price ||
+                        (approval.proposed_action || approval.context_payload)
+                          .price ||
+                        0,
+                    ) * 0.20}
+                  </span>
+                </div>
+                {((approval.proposed_action || approval.context_payload).proposed_slot_id || (approval.proposed_action || approval.context_payload).suggested_time) && (
+                <div className="flex justify-between items-center text-sm mt-1 pt-1 border-t border-gray-200 dark:border-gray-700">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Provisional Slot Held:
+                  </span>
+                  <span className="font-semibold text-[#0066FF] dark:text-blue-400">
+                    Yes ({(approval.proposed_action || approval.context_payload).suggested_time || "Pending"})
+                  </span>
+                </div>
+                )}
               </div>
             ) : (
               <>

@@ -34,7 +34,137 @@
       .glassmorphism-input {
         border-radius: 8px;
       }
-    </style>
+
+      /* Tabs Style */
+      .pos-tabs {
+        display: flex;
+        width: 100%;
+        background: rgba(0,0,0,0.05);
+        border-radius: 12px;
+        padding: 4px;
+        margin-bottom: 16px;
+        box-sizing: border-box;
+      }
+      .pos-tab {
+        flex: 1;
+        padding: 8px 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #666;
+        background: none;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .pos-tab.active {
+        background: white;
+        color: #1d1d1f;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      }
+      .pos-content {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+      }
+      .pos-content.active {
+        display: flex;
+      }
+
+      /* Queue View Style */
+      .queue-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow-y: auto;
+        flex-grow: 1;
+      }
+      .queue-item {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        position: relative;
+        overflow: hidden;
+        border-left: 4px solid transparent;
+      }
+      .queue-item.status-pending { border-left-color: #FF9F0A; }
+      .queue-item.status-ready { border-left-color: #34C759; }
+      .queue-item-details { display: flex; flex-direction: column; text-align: left; }
+      .queue-item-id { font-weight: 700; font-size: 16px; color: #1d1d1f; }
+      .queue-item-status { font-size: 12px; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
+      .status-pending .queue-item-status { color: #FF9F0A; }
+      .status-ready .queue-item-status { color: #34C759; }
+
+      .swipe-action {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        background: #34C759;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        padding: 0 24px;
+        transform: translateX(100%);
+        transition: transform 0.2s;
+        cursor: pointer;
+      }
+      .queue-item.swiping .swipe-action {
+        transform: translateX(0);
+      }
+
+      .menu-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow-y: auto;
+        flex-grow: 1;
+      }
+      .menu-item {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      }
+      .menu-item-info { display: flex; flex-direction: column; text-align: left; }
+      .menu-item-name { font-weight: 600; font-size: 16px; color: #1d1d1f; }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+      }
+      .toggle-switch input { opacity: 0; width: 0; height: 0; }
+      .toggle-slider {
+        position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #ccc; transition: .4s; border-radius: 34px;
+      }
+      .toggle-slider:before {
+        position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px;
+        background-color: white; transition: .4s; border-radius: 50%;
+      }
+      input:checked + .toggle-slider { background-color: #34C759; }
+      input:checked + .toggle-slider:before { transform: translateX(22px); }
+
+      body[dir="rtl"] {
+        font-family: "Tajawal", "Outfit", sans-serif;
+      }
+      body[dir="rtl"] .queue-item-details { text-align: right; }
+      body[dir="rtl"] .swipe-action { left: 0; right: auto; transform: translateX(-100%); }
+      body[dir="rtl"] .queue-item.swiping .swipe-action { transform: translateX(0); }
+      body[dir="rtl"] .menu-item-info { text-align: right; }
+</style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>OHC - Quick Charge</title>
@@ -383,8 +513,16 @@
               Dashboard
             </a>
             <div style="flex-grow: 1;"></div>
+        <div class="pos-tabs">
+            <button id="tab-charge" class="pos-tab active" onclick="switchTab('charge')">Charge</button>
+            <button id="tab-queue" class="pos-tab" onclick="switchTab('queue')">Queue</button>
+            <button id="tab-menu" class="pos-tab" onclick="switchTab('menu')">Menu</button>
+        </div>
+
+        <div id="content-charge" class="pos-content active">
+
             <button id="pos-walkthrough-btn" data-tooltip="pos-walkthrough-btn" style="background: none; border: none; font-size: 14px; font-weight: 600; color: #0066FF; cursor: pointer; padding: 0 8px;" onclick="window.startWalkthrough([{selector: '#charge-btn', title: 'Accept Payment', text: 'Enter an amount and tap here to charge.'}])">Walkthrough</button>
-            <button id="help-center-nav-btn" data-tooltip="help-center-nav-btn" style="background: none; border: none; font-size: 18px; font-weight: 600; color: #1d1d1f; cursor: pointer; padding: 0 8px;" onclick="window.location.href='help.html'">?</button>
+            <button <button id="lang-toggle-btn" onclick="toggleLanguage()" style="background: none; border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px; margin-right: 8px; font-weight: bold; cursor: pointer;">عربي</button>id="help-center-nav-btn" data-tooltip="help-center-nav-btn" style="background: none; border: none; font-size: 18px; font-weight: 600; color: #1d1d1f; cursor: pointer; padding: 0 8px;" onclick="window.location.href='help.html'">?</button>
           </div>
 
           <h3 style="font-size: 14px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px 0; align-self: flex-start; padding: 0 4px;">Quick Actions</h3>
@@ -432,7 +570,18 @@
           </button>
       </div>
 
-      <!-- Tap to Pay Overlay -->
+
+        </div>
+
+        <div id="content-queue" class="pos-content">
+            <button onclick="printDailySummary()" style="width: 100%; margin-bottom: 12px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">🖨️ Print Daily Summary</button>
+            <div id="queue-list" class="queue-list"></div>
+        </div>
+
+        <div id="content-menu" class="pos-content">
+            <div id="menu-list" class="menu-list"></div>
+        </div>
+        <!-- Tap to Pay Overlay -->
       <div class="tap-overlay" id="tap-overlay">
         <svg class="tap-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 2L6 22M12 4L12 20M18 6L18 18M2 12C2 12 4.5 12 7 12M17 12C17 12 19.5 12 22 12"/>
@@ -464,6 +613,153 @@
 
 
     <script>
+      const langDict = {
+        en: {
+          charge: "Charge",
+          queue: "Queue",
+          menu: "Menu",
+          quickCharge: "Quick Charge",
+          refunds: "Refunds",
+          catalog: "Product Catalog",
+          loading: "Loading catalog...",
+          pending: "Pending",
+          ready: "Ready",
+          markReady: "Mark Ready",
+          available: "Available",
+          soldOut: "Sold Out",
+          printSummary: "Print Daily Summary",
+          noOrders: "No active orders"
+        },
+        ar: {
+          charge: "دفع",
+          queue: "الطابور",
+          menu: "القائمة",
+          quickCharge: "دفع سريع",
+          refunds: "استرداد",
+          catalog: "قائمة المنتجات",
+          loading: "جاري التحميل...",
+          pending: "قيد الانتظار",
+          ready: "جاهز",
+          markReady: "تحديد كجاهز",
+          available: "متاح",
+          soldOut: "مباع",
+          printSummary: "طباعة ملخص اليوم",
+          noOrders: "لا توجد طلبات نشطة"
+        }
+      };
+      let currentLang = 'en';
+
+      function toggleLanguage() {
+        currentLang = currentLang === 'en' ? 'ar' : 'en';
+        document.body.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+        document.getElementById('lang-toggle-btn').innerText = currentLang === 'en' ? 'عربي' : 'English';
+        applyTranslations();
+      }
+
+      function applyTranslations() {
+        const d = langDict[currentLang];
+        document.getElementById('tab-charge').innerText = d.charge;
+        document.getElementById('tab-queue').innerText = d.queue;
+        document.getElementById('tab-menu').innerText = d.menu;
+        // The rest is handled in dynamic rendering
+        renderQueue();
+        if (window.catalogData) window.renderCatalog(window.catalogData);
+      }
+
+      function switchTab(tabId) {
+        document.querySelectorAll('.pos-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.pos-content').forEach(c => c.classList.remove('active'));
+
+        document.getElementById('tab-' + tabId).classList.add('active');
+        document.getElementById('content-' + tabId).classList.add('active');
+
+        if (tabId === 'queue') {
+            fetchQueue();
+        }
+      }
+
+      let activeOrders = [];
+
+      async function fetchQueue() {
+        try {
+            const tenantId = localStorage.getItem('tenant_id') || 'default';
+            const res = await fetch(`/api/ui/orders?tenant_id=${tenantId}&mobile_optimized=true`, {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                activeOrders = data.filter(o => o.status !== 'delivered' && o.status !== 'abandoned');
+                renderQueue();
+            }
+        } catch(e) {
+            console.error("Failed to fetch queue", e);
+        }
+      }
+
+      function renderQueue() {
+        const ql = document.getElementById('queue-list');
+        if (!ql) return;
+        ql.innerHTML = '';
+        if (activeOrders.length === 0) {
+            ql.innerHTML = `<p style="text-align:center; color:#666;">${langDict[currentLang].noOrders}</p>`;
+            return;
+        }
+        activeOrders.forEach(o => {
+            const item = document.createElement('div');
+            item.className = `queue-item status-${o.status}`;
+
+            const isReady = o.status === 'ready';
+            const statusText = isReady ? langDict[currentLang].ready : langDict[currentLang].pending;
+
+            item.innerHTML = `
+                <div class="queue-item-details">
+                    <span class="queue-item-id">Order #${o.id.split('-').pop()}</span>
+                    <span class="queue-item-status">${statusText}</span>
+                </div>
+                <div class="swipe-action" onclick="markOrderReady('${o.id}')">
+                    ${langDict[currentLang].markReady}
+                </div>
+            `;
+
+            // simple swipe detection
+            let startX = 0;
+            item.addEventListener('touchstart', e => { startX = e.changedTouches[0].screenX; }, {passive: true});
+            item.addEventListener('touchend', e => {
+                let endX = e.changedTouches[0].screenX;
+                if (currentLang === 'en' && startX - endX > 50) item.classList.add('swiping'); // Swipe left to reveal right action
+                else if (currentLang === 'ar' && endX - startX > 50) item.classList.add('swiping'); // RTL swipe
+                else item.classList.remove('swiping');
+            }, {passive: true});
+
+            // For desktop test
+            item.addEventListener('click', () => item.classList.toggle('swiping'));
+
+            ql.appendChild(item);
+        });
+      }
+
+      async function markOrderReady(id) {
+          // Optimistically update
+          activeOrders = activeOrders.map(o => o.id === id ? { ...o, status: 'ready' } : o);
+          renderQueue();
+
+          if (window.enqueueOfflineMutation) {
+              window.enqueueOfflineMutation({
+                  type: 'mark_ready',
+                  id: 'mark-ready-' + id,
+                  payload: { order_id: id },
+                  timestamp: new Date().toISOString()
+              });
+          }
+      }
+
+      function printDailySummary() {
+          const summaryWindow = window.open('', '_blank');
+          summaryWindow.document.write('<pre>' + JSON.stringify(activeOrders, null, 2) + '</pre>');
+          summaryWindow.document.close();
+          summaryWindow.print();
+      }
+
 (function() {
     // Inject walkthrough CSS
     const style = document.createElement('style');
@@ -1037,6 +1333,10 @@
           };
 
           window.renderCatalog = (products) => {
+              window.catalogData = products; // store for lang switch
+              const menuList = document.getElementById("menu-list");
+              if(menuList) menuList.innerHTML = "";
+
               if (!productGrid) return;
               productGrid.innerHTML = '';
               if (products.length === 0) {
@@ -1083,17 +1383,24 @@
                       ${variantHtml}
                   `;
 
-                  const toggleBtn = document.createElement('button');
-                  toggleBtn.innerText = isSoldOut ? "Available" : "Sold Out";
-                  toggleBtn.style = "margin-top: 8px; padding: 4px 8px; font-size: 11px; border-radius: 4px; background: rgba(0,0,0,0.05); border: none; cursor: pointer; color: #666; font-weight: bold;";
-                  toggleBtn.onclick = (e) => {
-                      e.stopPropagation(); // prevent selectProduct
-                      toggleSoldOut(p.id, !isSoldOut);
-                  };
+
 
                   btn.appendChild(infoDiv);
-                  btn.appendChild(toggleBtn);
-                  productGrid.appendChild(btn);
+                  if (menuList) {
+                      const menuItem = document.createElement('div');
+                      menuItem.className = 'menu-item';
+                      menuItem.innerHTML = `
+                          <div class="menu-item-info">
+                              <span class="menu-item-name">${title}</span>
+                          </div>
+                          <label class="toggle-switch">
+                              <input type="checkbox" onchange="toggleSoldOut('${p.id}', !this.checked)" ${!isSoldOut ? 'checked' : ''}>
+                              <span class="toggle-slider"></span>
+                          </label>
+                      `;
+                      menuList.appendChild(menuItem);
+                  }
+productGrid.appendChild(btn);
               });
           };
 
