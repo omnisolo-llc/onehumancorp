@@ -49,6 +49,14 @@ test.describe('Intelligent Owner Triage Inbox (Mobile First)', () => {
     await expect(itemCard.locator('text=Needs attention right away')).toBeVisible();
     await expect(itemCard.locator('text=Draft Reply')).toBeVisible();
 
+    // Click the Review Draft button
+    const reviewButton = page.getByTestId('triage-review-btn-triage-item-1');
+    await expect(reviewButton).toBeVisible();
+    await reviewButton.click();
+
+    // Verify the draft is shown
+    await expect(itemCard.locator('text="Here is a draft"')).toBeVisible();
+
     // Test the button target size
     const approveButton = page.getByTestId('triage-approve-triage-item-1');
     await expect(approveButton).toBeVisible();
@@ -92,10 +100,15 @@ test.describe('Intelligent Owner Triage Inbox (Mobile First)', () => {
     await expect(cardHeader).toBeVisible();
     await cardHeader.click();
 
-    const reviewButton = page.getByTestId('triage-review-btn-triage-item-3');
-    await expect(reviewButton).toBeVisible();
+    // First click review draft
+    const reviewDraftButton = page.getByTestId('triage-review-btn-triage-item-3');
+    await expect(reviewDraftButton).toBeVisible();
+    await reviewDraftButton.click();
 
-    await reviewButton.click();
+    // Then click edit
+    const editButton = page.getByTestId('triage-edit-btn-triage-item-3');
+    await expect(editButton).toBeVisible();
+    await editButton.click();
 
     const textarea = page.getByTestId('triage-edit-textarea-triage-item-3');
     await expect(textarea).toBeVisible();
