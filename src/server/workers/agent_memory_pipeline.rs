@@ -175,7 +175,7 @@ impl AgentMemoryPipeline {
         match &self.db.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < datetime('now', '-180 days') AND reference_count < 5 AND owner_override = FALSE")
-                    .execute(sqlite_pool)
+                    .execute(&*sqlite_pool)
                     .await?;
             }
             DbStore::Postgres => {
@@ -216,7 +216,7 @@ impl AgentMemoryPipeline {
                                     .bind("FS_MEMORY")
                                     .bind(&content)
                                     .bind(&emb_str)
-                                    .execute(sqlite_pool)
+                                    .execute(&*sqlite_pool)
                                     .await?;
                             }
                             DbStore::Postgres => {

@@ -11452,7 +11452,7 @@ mod fail_fast_tests {
 #[tokio::test]
 async fn test_agent_loop_llm_recoverable() {
     use crate::agent::{Agent, AgentRunConfig, AgentEvent};
-    use crate::types::{Message, Role, ToolCall, ToolResult, ChatRequest, ChatResponse, Usage};
+    use crate::types::{Message, ToolCall, ChatRequest, ChatResponse, Usage};
     use crate::llm::LlmClient;
     use crate::tools::Tool;
     use ohc_builtin_agent_core::types::ToolError;

@@ -265,7 +265,7 @@ impl ProactiveAnalysisWorker {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
     use std::time::Duration;
 
     #[tokio::test]

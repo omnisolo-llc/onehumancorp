@@ -2228,12 +2228,14 @@ pub async fn execute_action(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
     use crate::orchestration::mesh::CentrifugeNode;
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
 
     #[tokio::test]
     async fn test_orchestrator_initialization() {
+        use std::sync::Arc;
+        use crate::orchestration::departments::{DepartmentOrchestrator, DummyDepartment, DepartmentType};
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
