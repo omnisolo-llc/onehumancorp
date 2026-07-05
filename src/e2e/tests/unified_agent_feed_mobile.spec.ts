@@ -27,8 +27,8 @@ test.describe('Mobile Unified Agent Feed @mobile', () => {
       await expect(loadingMessage).toBeHidden({ timeout: 15000 });
     }
 
-    // Either we see the "All caught up!" state or actual feed items
-    const allCaughtUp = page.getByText('All caught up!');
+    // Either we see the "All caught up! Your business is running smoothly." state or actual feed items
+    const allCaughtUp = page.getByText('All caught up! Your business is running smoothly.');
     const agentCard = page.locator('.bg-\\[rgba\\(255\\,255\\,255\\,0\\.65\\)\\]').filter({ hasText: 'Approval' }).first();
     const actionNeededCard = page.locator('.bg-\\[rgba\\(255\\,255\\,255\\,0\\.65\\)\\]').filter({ hasText: 'Action Needed' }).first();
 
@@ -37,7 +37,7 @@ test.describe('Mobile Unified Agent Feed @mobile', () => {
     const isActionNeededCardVisible = await actionNeededCard.isVisible();
 
     // At least one of these states should be present
-    expect(isAllCaughtUpVisible || isAgentCardVisible || isActionNeededCardVisible || (await page.getByText(/All caught up!\s*Your agents are currently monitoring the business/).isVisible())).toBeTruthy();
+    expect(isAllCaughtUpVisible || isAgentCardVisible || isActionNeededCardVisible || (await page.getByText(/All caught up! Your business is running smoothly.\s*Your agents are currently monitoring the business/).isVisible())).toBeTruthy();
 
     if (isAgentCardVisible || isActionNeededCardVisible) {
        // Verify touch targets have minimum height requirements for mobile UX

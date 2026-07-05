@@ -1,23 +1,23 @@
 backend:
   autoscaling:
     enabled: true
-    maxReplicas: 100
+    maxReplicas: 200
     minReplicas: 2
-    targetCPUUtilizationPercentage: 75
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   headless: false
   image: onehumancorp/server:latest
   multiTenant: true
   networkPolicy:
     enabled: true
-  replicas: 3
+  replicas: 2
   resources:
     limits:
-      cpu: 1000m
-      memory: 1Gi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 50m
+      memory: 128Mi
   service:
     port: 8080
   vpa:
@@ -26,23 +26,23 @@ chatwoot:
   adminEmail: admin@ohc.local
   autoscaling:
     enabled: true
-    maxReplicas: 100
+    maxReplicas: 200
     minReplicas: 2
-    targetCPUUtilizationPercentage: 75
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   databaseUrl: ''
   enabled: true
   image: chatwoot/chatwoot:v3.15.1
   networkPolicy:
     enabled: true
   redisUrl: ''
-  replicas: 3
+  replicas: 2
   resources:
     limits:
       cpu: 500m
-      memory: 1Gi
+      memory: 512Mi
     requests:
-      cpu: 100m
+      cpu: 50m
       memory: 128Mi
   service:
     port: 3000
@@ -101,22 +101,22 @@ multiTenant:
 ohcCore:
   autoscaling:
     enabled: true
-    maxReplicas: 100
+    maxReplicas: 200
     minReplicas: 2
-    targetCPUUtilizationPercentage: 75
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   enabled: true
   image: onehumancorp/mono-core:latest
   networkPolicy:
     enabled: true
-  replicas: 3
+  replicas: 2
   resources:
     limits:
-      cpu: 1000m
-      memory: 1Gi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 50m
+      memory: 128Mi
   service:
     port: 18789
   vpa:
@@ -124,22 +124,22 @@ ohcCore:
 powersync:
   autoscaling:
     enabled: true
-    maxReplicas: 100
+    maxReplicas: 200
     minReplicas: 2
-    targetCPUUtilizationPercentage: 75
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
   enabled: true
   image: journeyapps/powersync-service:latest
   networkPolicy:
     enabled: true
-  replicas: 3
+  replicas: 2
   resources:
     limits:
-      cpu: 1000m
-      memory: 1Gi
+      cpu: 500m
+      memory: 512Mi
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 50m
+      memory: 128Mi
   service:
     port: 8081
     targetPort: 8080

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { motion } from "framer-motion";
 import { WithTooltip } from '../../components/TooltipRegistry';
 import Link from 'next/link';
 import { VideoTutorialList } from '../../components/VideoTutorialList';
@@ -136,7 +137,7 @@ export default function HelpCenterPage() {
 
             {advancedArticles.length > 0 && (
               <div className="pt-8">
-                <div className="border-t border-gray-200/50 pt-8 mt-4"><button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} className="flex items-center text-gray-500 hover:text-gray-900 transition-colors duration-200"><span className="text-lg font-bold font-outfit mr-2">Advanced</span><svg className={`w-5 h-5 transform transition-transform duration-200 ${isAdvancedOpen ? 'rotate-180' : ' '}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>{isAdvancedOpen && (<div className="pt-6 animate-fade-in-up"><ArticleSections articles={advancedArticles} hoverBg="hover:bg-white/80" /></div>)}</div>
+                <div className="border-t border-gray-200/50 pt-8 mt-4"><button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} className="flex items-center text-gray-500 hover:text-gray-900 transition-colors duration-200"><span className="text-lg font-bold font-outfit mr-2">Advanced</span><svg className={`w-5 h-5 transform transition-transform duration-200 ${isAdvancedOpen ? 'rotate-180' : ' '}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>{isAdvancedOpen && (<motion.div className="pt-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}><ArticleSections articles={advancedArticles} hoverBg="hover:bg-white/80" /></motion.div>)}</div>
               </div>
             )}
           </div>

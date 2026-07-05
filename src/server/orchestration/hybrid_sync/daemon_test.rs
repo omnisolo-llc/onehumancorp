@@ -646,22 +646,47 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         sqlx::query("CREATE TABLE IF NOT EXISTS department_dead_letters (id VARCHAR PRIMARY KEY, tenant_id VARCHAR, event_type VARCHAR, department VARCHAR, payload TEXT, error_message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)").execute(&pg_pool).await.unwrap();
 
         // Insert stuck queued tasks
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at, payload) VALUES ('stuck_queued_sqlite', 'tenant1', 'QUEUED', datetime('now', '-25 hour'), '{}')")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_sqlite', 'tenant1', 'QUEUED', datetime('now', '-25 hour'), datetime('now', '-25 hour'), '{}')")
             .execute(&sqlite_pool).await.unwrap();
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at, payload) VALUES ('stuck_queued_pg', 'tenant1', 'QUEUED', NOW() - INTERVAL '25 hours', '{}')")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, created_at, updated_at, payload) VALUES ('stuck_queued_pg', 'tenant1', 'QUEUED', NOW() - INTERVAL '25 hours', NOW() - INTERVAL '25 hours', '{}')")
+            .execute(&pg_pool).await.unwrap();
+
+        // Insert stuck running tasks
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_running_sqlite', 'tenant1', 'RUNNING', datetime('now', '-2 hour'), '{}')")
+            .execute(&sqlite_pool).await.unwrap();
+
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, status, updated_at, payload) VALUES ('stuck_running_pg', 'tenant1', 'RUNNING', NOW() - INTERVAL '2 hours', '{}')")
             .execute(&pg_pool).await.unwrap();
 
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
         daemon.prune_stuck_sub_agent_queue().await.unwrap();
 
-        // Verify SQLite queue is failed
+        // Verify SQLite queue is failed (deleted)
         let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_queued_sqlite\'").fetch_optional(&sqlite_pool).await.unwrap();
         assert!(row_queue_sqlite.is_none());
 
-        // Verify PG queue is failed
+        // Verify PG queue is failed (deleted)
         let row_queue = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_queued_pg\'").fetch_optional(&pg_pool).await.unwrap();
         assert!(row_queue.is_none());
+
+        // Verify SQLite running is failed
+        use sqlx::Row;
+        let row_running_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_running_sqlite\'").fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(row_running_sqlite.get::<String, _>("status"), "FAILED");
+
+        // Verify PG running is failed
+        let row_running = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_running_pg\'").fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(row_running.get::<String, _>("status"), "FAILED");
+
+        // Verify dead letters were created for running jobs
+        let dl_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE payload LIKE '%stuck_running_sqlite%'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(dl_sqlite.0, 1);
+
+        let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE payload LIKE '%stuck_running_pg%'")
+            .fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(dl_pg.0, 1);
     }
 
     #[tokio::test]
