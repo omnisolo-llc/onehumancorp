@@ -1096,7 +1096,7 @@ fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(data: &serde_json::V
             Err(crate::types::format_pydantic_error(
                 &e,
                 Some(&args_str),
-                Some("Please strictly follow the Pydantic-first tool schema and try again."),
+                Some("Please strictly follow the Pydantic-first tool schema and try again. Also ensure all enum variants are exact string matches."),
             ))
         }
     }
