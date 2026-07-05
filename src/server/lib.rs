@@ -5478,6 +5478,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
     use axum::response::IntoResponse;
     let tenant_id = crate::common::auth_utils::ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let fields = query.fields.as_deref();
 
     let cache_key = format!("ui_unified_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
@@ -5489,7 +5490,8 @@ async fn ui_dashboard_unified_agent_feed_handler(
         }
     }).await;
 
-    let result = items_opt.unwrap_or_else(|| serde_json::json!({}));
+    let mut result = items_opt.unwrap_or_else(|| serde_json::json!({}));
+    result = ::server_utils::payload_shaper::shape_payload(result, fields);
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
