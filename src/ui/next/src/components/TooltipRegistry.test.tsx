@@ -1,7 +1,21 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { TooltipProvider, WithTooltip, useTooltip } from './TooltipRegistry';
+
+vi.mock("framer-motion", () => {
+  return {
+    motion: {
+      div: ({ children, ...props }: any) => {
+        // Strip out Framer Motion props so React doesn't complain, but render the element
+        const { initial, animate, exit, transition, ...rest } = props;
+        return <div {...rest}>{children}</div>;
+      },
+    },
+    AnimatePresence: ({ children }: any) => <>{children}</>,
+  };
+});
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockTooltipFetch = vi.fn((url) => {
@@ -173,7 +187,7 @@ describe('TooltipRegistry window resize', () => {
       fireEvent(window, new Event('resize'));
     });
     act(() => {
-      vi.advanceTimersByTime(150);
+      vi.advanceTimersByTime(200);
     });
     expect(true).toBe(true);
   });
@@ -197,7 +211,7 @@ describe('TooltipRegistry scroll and contextmenu', () => {
     );
     await act(async () => {
       render(ui);
-      vi.advanceTimersByTime(20);
+      vi.advanceTimersByTime(200);
     });
 
     const button = screen.getByText('Hover me');
@@ -208,14 +222,14 @@ describe('TooltipRegistry scroll and contextmenu', () => {
 
     await act(async () => {
         fireEvent.mouseEnter(button.parentElement!);
-        vi.advanceTimersByTime(20);
+        vi.advanceTimersByTime(200);
     });
 
     expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
 
     await act(async () => {
         fireEvent.scroll(window);
-        vi.advanceTimersByTime(20);
+        vi.advanceTimersByTime(200);
     });
 
     expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
@@ -231,7 +245,7 @@ describe('TooltipRegistry scroll and contextmenu', () => {
     );
     await act(async () => {
       render(ui);
-      vi.advanceTimersByTime(20);
+      vi.advanceTimersByTime(200);
     });
 
     const button = screen.getByText('Hover me');

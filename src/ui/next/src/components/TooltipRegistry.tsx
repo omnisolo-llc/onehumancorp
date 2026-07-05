@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from "framer-motion";
 
 type TooltipContextType = {
   activeTooltip: string | null;
@@ -59,7 +60,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     let timeoutId: NodeJS.Timeout;
     const handleResize = () => {
       clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => setWindowWidth(window.innerWidth), 100);
+      timeoutId = setTimeout(() => setWindowWidth(window.innerWidth), 150);
     };
     window.addEventListener('resize', handleResize);
     return () => {
@@ -69,8 +70,10 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    let scrollTimeoutId: NodeJS.Timeout;
     const handleScroll = () => {
-      setActiveTooltip(null);
+      clearTimeout(scrollTimeoutId);
+      scrollTimeoutId = setTimeout(() => setActiveTooltip(null), 150);
     };
     window.addEventListener('scroll', handleScroll, true);
     return () => {
@@ -81,26 +84,28 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   return (
     <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
       {children}
+
+      <AnimatePresence>
       {activeTooltip && tooltipRect && (
-        <div
-          className="fixed z-[100] backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-[0_12px_40px_rgba(0,0,0,0.2)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed animate-fade-in-up"
+        <motion.div
+          initial={{ opacity: 0, y: 5, x: "-50%" }}
+          animate={{ opacity: 1, y: 0, x: "-50%" }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed z-[100] backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-[0_12px_40px_rgba(0,0,0,0.2)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed"
           style={{
             top: tooltipRect.top - 10,
             left: Math.max(144, Math.min(windowWidth - 144, tooltipRect.left + tooltipRect.width / 2)),
-            transform: 'translate(-50%, -100%)'
+            marginTop: '-100%'
           }}
         >
           {tooltipText}
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/90 dark:border-t-black/80 border-t-8 border-x-transparent border-x-8 border-b-0 backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70"></div>
-        </div>
+        </motion.div>
       )}
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fade-in-up {
-          0% { opacity: 0; transform: translate(-50%, -90%); }
-          100% { opacity: 1; transform: translate(-50%, -100%); }
-        }
-        .animate-fade-in-up { animation: fade-in-up 0.2s ease-out forwards; }
-      `}} />
+      </AnimatePresence>
+
+
     </TooltipContext.Provider>
   );
 }
