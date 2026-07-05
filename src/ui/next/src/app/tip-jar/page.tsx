@@ -46,7 +46,7 @@ export default function TipJarWidgetGenerator() {
         <title>Tip Jar Widget Builder | OHC</title>
       </Head>
 
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
          <div className="flex items-center gap-3">
              <span className="text-2xl font-bold text-indigo-600">⚡</span>
              <h1 className="text-xl font-bold font-outfit text-gray-900">Tip Jar Builder</h1>
@@ -101,14 +101,14 @@ export default function TipJarWidgetGenerator() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] transition-all ${theme === 'light' ? 'bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] transition-all ${theme === 'dark' ? 'bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -148,7 +148,7 @@ export default function TipJarWidgetGenerator() {
 
         {/* Live Preview */}
         <div className="w-full md:w-2/3">
-            <div className="p-8 h-full flex flex-col items-center justify-center relative overflow-hidden bg-white/50 backdrop-blur-[30px] saturate-[210%] border border-white/80 shadow-lg">
+            <div className="p-8 h-full flex flex-col items-center justify-center relative overflow-hidden bg-white backdrop-blur-[30px] saturate-[210%] border border-white/80 shadow-lg">
                 <div className="absolute top-4 left-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Preview</div>
 
                 {/* The Widget Preview */}

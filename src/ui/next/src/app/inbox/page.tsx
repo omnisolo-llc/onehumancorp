@@ -228,7 +228,7 @@ function InboxWorkspace({
                     setSelectedId(message.id);
                     setShowOriginal(false);
                   }}
-                  className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-[12px] transition-all backdrop-filter ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
+                  className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-[12px] transition-all backdrop-filter ${selected?.id === message.id ? "bg-white dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
                 >
                   <div className="min-w-0">
                     <div className="app-list-title">{message.source || "Unknown source"}</div>

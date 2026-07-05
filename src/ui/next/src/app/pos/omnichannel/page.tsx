@@ -74,7 +74,7 @@ export default function OmnichannelCartPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F8F9FA] text-gray-900 p-4 md:p-8 font-inter">
-      <div className="max-w-md mx-auto w-full bg-white/65 backdrop-blur-[30px] saturate-[210%] rounded-[24px] shadow-lg p-6 border border-white/40 mt-10">
+      <div className="max-w-md mx-auto w-full bg-white backdrop-blur-[30px] saturate-[210%] rounded-[24px] shadow-lg p-6 border border-white/40 mt-10">
         <h1 className="text-2xl font-bold font-outfit mb-4 text-gray-900 tracking-tight">New In-Store Sale</h1>
         <p className="text-sm text-gray-600 mb-6 font-medium bg-gray-50 p-2 rounded-lg" id="status-message">Status: {status}</p>
 

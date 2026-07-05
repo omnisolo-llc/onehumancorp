@@ -70,7 +70,7 @@ export default function ZeroClickBuilderPage() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="e.g., I am a home baker in Austin selling custom vegan cakes and cupcakes."
-                className="w-full min-h-[120px] p-4 rounded-[8px] bg-white/50 dark:bg-black/50 border border-gray-200 dark:border-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0066FF] resize-none"
+                className="w-full min-h-[120px] p-4 rounded-[8px] bg-white dark:bg-black/50 border border-gray-200 dark:border-gray-800 text-[#1D1D1F] dark:text-[#F5F5F7] placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0066FF] resize-none"
               />
               {error && <p className="text-[#FF3B30] text-sm mt-1">{error}</p>}
             </div>

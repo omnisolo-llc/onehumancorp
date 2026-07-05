@@ -93,7 +93,7 @@ export default function LeadGenCampaignPage() {
                   placeholder="50"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
-                  className="w-full pl-8 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all"
+                  className="w-full pl-8 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all"
                 />
               </div>
             </div>
@@ -109,7 +109,7 @@ export default function LeadGenCampaignPage() {
                 placeholder="90210"
                 value={zipCode}
                 onChange={(e) => setZipCode(e.target.value)}
-                className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all"
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all"
               />
             </div>
 

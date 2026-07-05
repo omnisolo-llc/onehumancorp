@@ -44,11 +44,11 @@ export default function DiscoveryReportPage() {
         </header>
 
         {loading ? (
-          <div className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-2xl p-6 shadow-sm flex items-center justify-center min-h-[150px]">
+          <div className="bg-white dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-2xl p-6 shadow-sm flex items-center justify-center min-h-[150px]">
             <p className="text-sm text-gray-500">Loading your report...</p>
           </div>
         ) : !reports || reports.length === 0 ? (
-          <div className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-2xl p-6 shadow-sm">
+          <div className="bg-white dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 mb-4">
               <svg className="w-6 h-6 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -62,7 +62,7 @@ export default function DiscoveryReportPage() {
         ) : (
           <div className="space-y-4">
             {reports.map((report) => (
-              <div key={report.id} className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-2xl p-6 shadow-sm">
+              <div key={report.id} className="bg-white dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-2xl p-6 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="font-semibold text-lg">{report.month}</h3>
                   <span className="text-xs font-medium px-2.5 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full">

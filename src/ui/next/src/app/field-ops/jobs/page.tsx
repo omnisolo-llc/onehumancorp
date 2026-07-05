@@ -370,7 +370,7 @@ function FieldOpsJobsPageContent() {
         {jobs.map((job) => (
           <div
             key={job.id}
-            className="bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm border border-white/40 overflow-hidden rounded-[16px]"
+            className="bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm border border-white/40 overflow-hidden rounded-[16px]"
           >
             <div className="p-5 border-b border-gray-100 bg-gray-50/50">
               <div className="flex justify-between items-start mb-2">
@@ -537,7 +537,7 @@ function FieldOpsJobsPageContent() {
                 </p>
                 <textarea
                   data-testid="voice-transcript-input"
-                  className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#0066FF] outline-none min-h-[100px] mb-4 bg-white/50 dark:bg-black/20 text-gray-900 dark:text-white"
+                  className="w-full border border-gray-300 dark:border-gray-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#0066FF] outline-none min-h-[100px] mb-4 bg-white dark:bg-black/20 text-gray-900 dark:text-white"
                   placeholder="e.g. Needs 2 hours labor for pipe repair, $50 in parts..."
                   value={voiceTranscript}
                   onChange={e => setVoiceTranscript(e.target.value)}
@@ -558,7 +558,7 @@ function FieldOpsJobsPageContent() {
                 </div>
 
                 {draftQuoteResult.quote && (
-                  <div className="bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <div className="bg-white dark:bg-black/20 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Calculated Total</p>
                      <p className="text-xl font-bold text-gray-900 dark:text-white mb-4">
                        ${((draftQuoteResult.quote.total_amount_cents || 0) / 100).toFixed(2)}

@@ -72,7 +72,7 @@ export default function CustomerReferralProgramPage() {
                       type="number"
                       value={giveAmount}
                       onChange={(e) => setGiveAmount(e.target.value)}
-                      className="w-full pl-8 pr-4 py-3 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
+                      className="w-full pl-8 pr-4 py-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
                     />
                   </div>
                 </div>
@@ -86,7 +86,7 @@ export default function CustomerReferralProgramPage() {
                       type="number"
                       value={getAmount}
                       onChange={(e) => setGetAmount(e.target.value)}
-                      className="w-full pl-8 pr-4 py-3 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
+                      className="w-full pl-8 pr-4 py-3 bg-white dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all dark:text-white"
                     />
                   </div>
                 </div>

@@ -75,7 +75,7 @@ export function SuccessMilestoneWidget() {
         </div>
       </div>
       <div className="app-panel-body pt-5">
-        <div className="bg-white/60 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] p-4 rounded-xl border border-gray-100 dark:border-gray-800 mb-4">
+        <div className="bg-white dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] p-4 rounded-xl border border-gray-100 dark:border-gray-800 mb-4">
           <p className="text-sm text-gray-700 dark:text-gray-300 italic">"{fullShareText}"</p>
         </div>
 

@@ -49,7 +49,7 @@ export default function ServicesPage() {
               {status === 'restarting' ? 'Restarting...' : 'Restart Service'}
             </button>
 
-            <label className="inline-flex min-h-[44px] items-center gap-3 rounded-xl border border-white/50 dark:border-white/10 glassmorphism px-4 py-2 text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] cursor-pointer hover:bg-white/60 dark:hover:bg-black/40 transition-colors">
+            <label className="inline-flex min-h-[44px] items-center gap-3 rounded-xl border border-white/50 dark:border-white/10 glassmorphism px-4 py-2 text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] cursor-pointer hover:bg-white dark:hover:bg-black/40 transition-colors">
               <input
                 aria-label="Auto restart"
                 type="checkbox"

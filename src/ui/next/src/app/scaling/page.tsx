@@ -61,8 +61,8 @@ export default function ScalingPage() {
           <span className="app-badge good">Autoscale Ready</span>
         </div>
 
-        <div className="glass-panel glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 mt-4">
-          <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 mb-6">
+        <div className="glass-panel glassmorphism bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 mt-4">
+          <div className="glassmorphism bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 mb-6">
             <div className="app-metric-label">Current Scale</div>
             <div className="mt-2 text-4xl font-bold text-gray-900">{instances} agents</div>
             <p className="mt-2 text-sm text-gray-600" role="status">{message}</p>
@@ -125,7 +125,7 @@ export default function ScalingPage() {
           </button>
 
           {results.length > 0 && (
-            <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6">
+            <div className="glassmorphism bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6">
               <h3 className="font-bold text-lg mb-4">Results ({results.length} outputs)</h3>
               <div className="max-h-60 overflow-y-auto bg-transparent p-4 rounded-md border border-gray-200">
                 {results.slice(0, 20).map((r, i) => (

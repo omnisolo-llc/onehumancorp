@@ -61,7 +61,7 @@ export default function ReferralFabBuilder() {
         <title>Referral FAB Builder | OHC</title>
       </Head>
 
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Referral FAB Builder</h1>
         <button
           className="px-4 py-2 bg-gray-200 min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors"
@@ -150,7 +150,7 @@ export default function ReferralFabBuilder() {
         </div>
 
         {/* Preview Section */}
-        <div className="bg-white/50 backdrop-blur-3xl rounded-[40px] border-[8px] border-white/60 shadow-2xl overflow-hidden relative flex flex-col h-[600px] lg:h-auto min-h-[600px]">
+        <div className="bg-white backdrop-blur-3xl rounded-[40px] border-[8px] border-white/60 shadow-2xl overflow-hidden relative flex flex-col h-[600px] lg:h-auto min-h-[600px]">
            {/* Website Background */}
            <div className="bg-gray-100 h-12 flex items-center px-4 gap-2 border-b border-gray-200">
              <div className="w-3 h-3 rounded-full bg-red-400"></div>

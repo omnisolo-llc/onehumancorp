@@ -18,7 +18,7 @@ export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       aria-disabled={disabled}
-      className={`w-full text-left bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 flex items-center justify-between group mb-4 ${
+      className={`w-full text-left bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 flex items-center justify-between group mb-4 ${
         disabled
           ? 'opacity-60 cursor-not-allowed shadow-none'
           : 'shadow-sm hover:shadow-md transition-all active:scale-[0.98]'

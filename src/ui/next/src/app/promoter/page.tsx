@@ -167,7 +167,7 @@ export default function PromoterPage() {
             )}
 
             {isGenerating && (
-              <div className="bg-white/50 backdrop-blur-[30px] saturate-[210%] rounded-[24px] shadow-sm border border-gray-100 p-12 text-center h-full flex flex-col items-center justify-center animate-pulse">
+              <div className="bg-white backdrop-blur-[30px] saturate-[210%] rounded-[24px] shadow-sm border border-gray-100 p-12 text-center h-full flex flex-col items-center justify-center animate-pulse">
                 <div className="text-4xl mb-4 animate-bounce">⚡</div>
                 <h3 className="text-lg font-bold text-gray-900">Crafting your content...</h3>
               </div>

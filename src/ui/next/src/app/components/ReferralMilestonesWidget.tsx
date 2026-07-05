@@ -51,7 +51,7 @@ export default function ReferralMilestonesWidget({
 
   if (isLoading) {
     return (
-      <div className="ohc-growth-card p-6 border border-indigo-100 bg-white/50 animate-pulse">
+      <div className="ohc-growth-card p-6 border border-indigo-100 bg-white animate-pulse">
         <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
         <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
         <div className="space-y-3">
@@ -131,7 +131,7 @@ export default function ReferralMilestonesWidget({
             {milestones && milestones.map((milestone, idx) => (
                 <div
                     key={idx}
-                    className={`flex items-center p-3 rounded-xl border ${milestone.reached ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white/50 dark:bg-black/20 border-gray-100 dark:border-gray-800 opacity-70'}`}
+                    className={`flex items-center p-3 rounded-xl border ${milestone.reached ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : 'bg-white dark:bg-black/20 border-gray-100 dark:border-gray-800 opacity-70'}`}
                 >
                     <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${milestone.reached ? 'bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'}`}>
                         {milestone.reached ? '✓' : milestone.target}

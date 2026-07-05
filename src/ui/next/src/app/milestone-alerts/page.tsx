@@ -72,7 +72,7 @@ export default function MilestoneAlertsPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white backdrop-blur-[30px] saturate-[210%] border-white/40">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Success Milestones 🏆</h1>
         <button
           onClick={() => router.push('/dashboard')}
@@ -82,7 +82,7 @@ export default function MilestoneAlertsPage() {
         </button>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8 backdrop-blur-[30px] saturate-[210%] bg-white/60 shadow-sm border border-white/50 rounded-2xl">
+      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8 backdrop-blur-[30px] saturate-[210%] bg-white shadow-sm border border-white/50 rounded-2xl">
 
         {/* Milestones List */}
         <section className="w-full md:w-1/2 flex flex-col gap-4">

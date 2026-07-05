@@ -62,7 +62,7 @@ export default function PublishAgentPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-8 rounded-2xl shadow-sm">
+        <form onSubmit={handleSubmit} className="bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 p-8 rounded-2xl shadow-sm">
           <div className="mb-6">
             <label htmlFor="name" className="block text-gray-700 font-bold mb-2">Agent Name</label>
             <input

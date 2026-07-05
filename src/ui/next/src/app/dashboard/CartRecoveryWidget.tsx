@@ -53,11 +53,11 @@ export function CartRecoveryWidget() {
               Your Sales Agent automatically followed up on abandoned carts this week.
             </p>
             <div className="flex gap-4">
-              <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg flex-1">
+              <div className="bg-white dark:bg-black/20 p-3 rounded-lg flex-1">
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Recovered</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.recoveredCarts}</p>
               </div>
-              <div className="bg-white/50 dark:bg-black/20 p-3 rounded-lg flex-1">
+              <div className="bg-white dark:bg-black/20 p-3 rounded-lg flex-1">
                 <p className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Revenue Saved</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">${metrics.revenueSaved}</p>
               </div>

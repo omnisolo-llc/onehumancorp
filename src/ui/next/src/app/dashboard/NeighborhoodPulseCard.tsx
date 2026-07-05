@@ -51,7 +51,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
 
   return (
     <div
-      className="p-6 rounded-2xl mb-6 shadow-xl relative overflow-hidden text-black dark:text-white bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10"
+      className="p-6 rounded-2xl mb-6 shadow-xl relative overflow-hidden text-black dark:text-white bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10"
     >
       {/* Decorative pulse element */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -mr-10 -mt-10 animate-pulse"></div>

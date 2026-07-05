@@ -57,7 +57,7 @@ export default function PydanticValidationPage() {
         Test how the system validates tool payloads and generates recoverable errors.
       </p>
 
-      <div className="space-y-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] p-6 shadow-sm border border-white/40 border border-gray-200">
+      <div className="space-y-6 bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] p-6 shadow-sm border border-white/40 border border-gray-200">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Tool Name
@@ -113,7 +113,7 @@ export default function PydanticValidationPage() {
               {isRecoverable ? 'LLM-Recoverable Validation Error' : 'Validation Failed'}
             </h3>
           </div>
-          <div className="bg-white/50 p-4 rounded-lg border border-white/20 font-mono text-sm whitespace-pre-wrap">
+          <div className="bg-white p-4 rounded-lg border border-white/20 font-mono text-sm whitespace-pre-wrap">
             {error}
           </div>
           {isRecoverable && (
@@ -132,7 +132,7 @@ export default function PydanticValidationPage() {
             </svg>
             <h2 className="text-lg font-bold">Validation Successful</h2>
           </div>
-          <p className="bg-white/50 p-4 rounded-lg border border-green-100 text-sm">
+          <p className="bg-white p-4 rounded-lg border border-green-100 text-sm">
             {result}
           </p>
         </div>

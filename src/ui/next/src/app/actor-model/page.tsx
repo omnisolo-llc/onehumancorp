@@ -48,7 +48,7 @@ export default function ActorModelPage() {
           </label>
           <textarea
             id="message"
-            className="w-full p-4 border rounded-lg shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 bg-transparent"
+            className="w-full p-4 border rounded-lg shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] glassmorphism bg-white backdrop-blur-[30px] saturate-[210%] border-white/40 bg-transparent"
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -73,7 +73,7 @@ export default function ActorModelPage() {
       )}
 
       {result && (
-        <div className="mt-8 p-6 glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm" data-testid="success-message">
+        <div className="mt-8 p-6 glassmorphism bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm" data-testid="success-message">
           <h2 className="text-xl font-bold mb-4 border-b pb-2">Swarm Result</h2>
           <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono bg-gray-50 p-4 rounded">
             {result}

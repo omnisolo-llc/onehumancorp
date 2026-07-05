@@ -58,7 +58,7 @@ export default function ApiDocsPage() {
         </div>
       )}
       {mounted && !loading && spec && (
-        <div className="w-full max-w-6xl flex flex-col h-full backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 rounded-2xl p-0 sm:p-6 shadow-[0_12px_40px_rgba(0,0,0,0.15)] transition-all overflow-x-hidden box-border max-w-full">
+        <div className="w-full max-w-6xl flex flex-col h-full backdrop-blur-[30px] saturate-[210%] bg-white dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 rounded-2xl p-0 sm:p-6 shadow-[0_12px_40px_rgba(0,0,0,0.15)] transition-all overflow-x-hidden box-border max-w-full">
           <div className="w-full max-w-full overflow-x-hidden box-border">
             <MemoizedSwaggerUI spec={spec} />
           </div>

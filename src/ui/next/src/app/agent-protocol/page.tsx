@@ -103,7 +103,7 @@ export default function AgentProtocolPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
+        <div className="glassmorphism bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
           <h2 className="text-xl font-bold mb-4">Tasks</h2>
 
           <div className="flex space-x-2 mb-6">
@@ -112,7 +112,7 @@ export default function AgentProtocolPage() {
               placeholder="New Task Input..."
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white/65 backdrop-blur-[30px] saturate-[210%] focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors shadow-sm"
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white backdrop-blur-[30px] saturate-[210%] focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors shadow-sm"
             />
             <button
               onClick={createTask}
@@ -138,7 +138,7 @@ export default function AgentProtocolPage() {
           </ul>
         </div>
 
-        <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
+        <div className="glassmorphism bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl">
           <h2 className="text-xl font-bold mb-4">Steps</h2>
           {!selectedTaskId ? (
             <div className="text-gray-500 text-sm italic">Select a task to view its steps.</div>
@@ -150,7 +150,7 @@ export default function AgentProtocolPage() {
                   placeholder="Optional Step Input..."
                   value={stepInput}
                   onChange={(e) => setStepInput(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white/65 backdrop-blur-[30px] saturate-[210%] focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors shadow-sm"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white backdrop-blur-[30px] saturate-[210%] focus:ring-[#0066FF] focus:border-[#0066FF] transition-colors shadow-sm"
                 />
                 <button
                   onClick={executeStep}

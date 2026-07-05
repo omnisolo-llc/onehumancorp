@@ -37,7 +37,7 @@ export default function ShareToUnlockGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Share-to-Unlock Generator 🔓</h1>
         <button
           onClick={() => router.push('/dashboard')}
@@ -102,7 +102,7 @@ export default function ShareToUnlockGeneratorPage() {
                     <div className="flex gap-2 border p-1 min-h-[44px] min-w-[44px] bg-gray-50 border-gray-200">
                         <button
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'light' ? 'bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
@@ -149,7 +149,7 @@ export default function ShareToUnlockGeneratorPage() {
                         <div className="w-3 h-3 rounded-full bg-amber-400"></div>
                         <div className="w-3 h-3 rounded-full bg-green-400"></div>
                     </div>
-                    <div className="mx-auto bg-white/60 text-xs text-gray-500 px-4 py-1 rounded-full w-1/2 text-center truncate">
+                    <div className="mx-auto bg-white text-xs text-gray-500 px-4 py-1 rounded-full w-1/2 text-center truncate">
                         Preview: Your Share-to-Unlock Page
                     </div>
                 </div>

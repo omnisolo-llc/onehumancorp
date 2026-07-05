@@ -46,7 +46,7 @@ export default function OperationsPage() {
                     <div className="flex-1">
                         <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-lg">Guitar Lesson</h3>
                         <p className="text-sm text-[#86868B] dark:text-[#A1A1A6]">Sarah Johnson</p>
-                        <div className="mt-2 text-sm text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-black/5 dark:border-white/5">
+                        <div className="mt-2 text-sm text-[#1D1D1F] dark:text-[#F5F5F7] bg-white dark:bg-black/20 p-2 rounded-lg border border-black/5 dark:border-white/5">
                             <span className="font-medium flex items-center gap-1"><span className="text-xs">🤖</span> AI Summary:</span> 3rd lesson. Focus: Jazz scales. She struggled with chords last week.
                         </div>
                     </div>

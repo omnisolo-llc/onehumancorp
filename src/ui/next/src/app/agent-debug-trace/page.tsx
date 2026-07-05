@@ -54,7 +54,7 @@ export default function AgentDebugTracePage() {
                 className={`p-6 rounded-2xl border transition-all duration-200 shadow-sm ${
                   ev.isLlmRecoverable
                     ? 'bg-amber-50/80 border-amber-200 shadow-amber-100/50'
-                    : 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border-white/40 shadow-sm'
+                    : 'bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] border-white/40 shadow-sm'
                 }`}
               >
                 <div className="flex items-center justify-between mb-3">

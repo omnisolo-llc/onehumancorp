@@ -45,7 +45,7 @@ export default function LedgerPage() {
         description="Recent financial activity"
       />
 
-      <div className="bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm border border-white/40-sm border border-slate-200 mt-6 p-6">
+      <div className="bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm border border-white/40-sm border border-slate-200 mt-6 p-6">
         {loading && <p className="text-slate-500">Loading ledger entries...</p>}
         {error && <ErrorState title="Error" message={error} />}
         {!loading && !error && entries.length === 0 && (

@@ -66,7 +66,7 @@ export const ShiftReassignmentCard: React.FC<ShiftReassignmentCardProps> = ({
         <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
           Action Required: Shift Coverage
         </h3>
-        <div className="text-sm text-[#86868B] dark:text-[#98989D] mt-2 bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-black/5 dark:border-white/5">
+        <div className="text-sm text-[#86868B] dark:text-[#98989D] mt-2 bg-white dark:bg-black/20 p-3 rounded-xl border border-black/5 dark:border-white/5">
            <span className="font-semibold block mb-1">Context:</span>
            {shiftContext}
         </div>

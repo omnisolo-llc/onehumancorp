@@ -147,7 +147,7 @@ export default function MyPlanPage() {
                 </button>
                 <button
                     onClick={() => router.push('/cost-dashboard')}
-                    className="w-full sm:w-auto px-6 py-3 glass-card backdrop-blur-xl bg-white/60 hover:bg-white/80 text-gray-700 border border-white/40 rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
+                    className="w-full sm:w-auto px-6 py-3 glass-card backdrop-blur-xl bg-white hover:bg-white/80 text-gray-700 border border-white/40 rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
                     View Detailed Costs
                 </button>
             </div>

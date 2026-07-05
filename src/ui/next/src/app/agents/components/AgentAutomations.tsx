@@ -36,7 +36,7 @@ export default function AgentAutomations() {
         </div>
       )}
       {/* Autonomous Social Media Agent */}
-      <div className="shadow-sm p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+      <div className="shadow-sm p-6 bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-xl font-bold text-gray-900 font-outfit mb-1">Autonomous Social Media Agent</h3>
@@ -64,7 +64,7 @@ export default function AgentAutomations() {
       </div>
 
       {/* DM Auto-Responder */}
-      <div className="shadow-sm p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+      <div className="shadow-sm p-6 bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-xl font-bold text-gray-900 font-outfit mb-1">DM Auto-Responder</h3>
@@ -92,7 +92,7 @@ export default function AgentAutomations() {
       </div>
 
       {/* Weekly Push Notification Insight */}
-      <div className="shadow-sm p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40">
+      <div className="shadow-sm p-6 bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-xl font-bold text-gray-900 font-outfit mb-1">Weekly Push Notification Insight</h3>

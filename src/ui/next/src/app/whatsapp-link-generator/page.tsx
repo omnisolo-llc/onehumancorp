@@ -88,7 +88,7 @@ export default function WhatsAppLinkGeneratorPage() {
 
       <main className="max-w-6xl mx-auto p-6 pt-12 flex flex-col md:flex-row gap-12">
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-8 shadow-xl border border-gray-100 bg-white/60 backdrop-blur-[30px] saturate-[210%]">
+            <div className="p-8 shadow-xl border border-gray-100 bg-white backdrop-blur-[30px] saturate-[210%]">
                 <h1 className="text-3xl font-bold font-outfit mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                     WhatsApp Link Generator 📱
                 </h1>
@@ -145,7 +145,7 @@ export default function WhatsAppLinkGeneratorPage() {
                             aria-label="Light theme"
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
@@ -153,7 +153,7 @@ export default function WhatsAppLinkGeneratorPage() {
                             aria-label="Dark theme"
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -169,7 +169,7 @@ export default function WhatsAppLinkGeneratorPage() {
                 </button>
             </div>
 
-            <div className="p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm">
+            <div className="p-6 bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm">
                 <h3 className="text-md font-semibold font-outfit mb-2 flex items-center gap-2">
                     <span className="text-xl">🚀</span> Instant Chat
                 </h3>

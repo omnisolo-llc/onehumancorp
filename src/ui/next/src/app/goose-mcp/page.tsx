@@ -71,7 +71,7 @@ export default function GooseMcpPage() {
       ) : (
         <ul className="mb-4">
           {extensions.map((ext, idx) => (
-            <li key={idx} className="p-6 border border-white/40 rounded-2xl shadow-sm bg-white/65 backdrop-blur-[30px] saturate-[210%] glassmorphism mb-4">
+            <li key={idx} className="p-6 border border-white/40 rounded-2xl shadow-sm bg-white backdrop-blur-[30px] saturate-[210%] glassmorphism mb-4">
               <h3 className="font-bold" id={`extension-${ext.id}`}>{ext.name}</h3>
               <p>{ext.description}</p>
               <button
@@ -93,7 +93,7 @@ export default function GooseMcpPage() {
       </button>
 
       <h2 className="text-xl font-semibold mb-2">Execute Extension</h2>
-      <div className="p-6 border border-gray-300 rounded-2xl min-h-[100px] shadow-sm bg-white/65 backdrop-blur-[30px] saturate-[210%] glassmorphism" id="exec-result">
+      <div className="p-6 border border-gray-300 rounded-2xl min-h-[100px] shadow-sm bg-white backdrop-blur-[30px] saturate-[210%] glassmorphism" id="exec-result">
         {execResult ? (
           <pre>{execResult}</pre>
         ) : (

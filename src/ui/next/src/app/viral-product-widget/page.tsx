@@ -75,7 +75,7 @@ export default function ViralProductWidgetPage() {
                                         type="text"
                                         value={productName}
                                         onChange={(e) => setProductName(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-white/60 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all"
+                                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all"
                                         placeholder="E.g., Premium Artisan Coffee"
                                     />
                                 </div>
@@ -86,7 +86,7 @@ export default function ViralProductWidgetPage() {
                                         type="text"
                                         value={price}
                                         onChange={(e) => setPrice(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-white/60 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all"
+                                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all"
                                         placeholder="$24.99"
                                     />
                                 </div>
@@ -96,7 +96,7 @@ export default function ViralProductWidgetPage() {
                                     <textarea
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-white/60 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all resize-none h-24"
+                                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all resize-none h-24"
                                         placeholder="Short engaging description..."
                                     />
                                 </div>
@@ -107,7 +107,7 @@ export default function ViralProductWidgetPage() {
                                         type="text"
                                         value={imageUrl}
                                         onChange={(e) => setImageUrl(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-white/60 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all"
+                                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all"
                                         placeholder="https://example.com/image.jpg"
                                     />
                                 </div>
@@ -117,7 +117,7 @@ export default function ViralProductWidgetPage() {
                                     <select
                                         value={theme}
                                         onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
-                                        className="w-full px-4 py-2.5 bg-white/60 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all appearance-none"
+                                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all appearance-none"
                                     >
                                         <option value="light">Light</option>
                                         <option value="dark">Dark</option>

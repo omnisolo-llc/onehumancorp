@@ -18,7 +18,7 @@ export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval, onAp
       <div className="text-xs text-gray-500 dark:text-gray-400 font-medium break-words">
         Customer: <div className="triage-context inline break-words">{(approval.proposed_action || approval.context_payload)?.customer_message || (approval.proposed_action || approval.context_payload)?.original_message || (approval.proposed_action || approval.context_payload)?.description}</div>
       </div>
-      <div className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 p-3 rounded-[8px] break-words shadow-sm">
+      <div className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] bg-white dark:bg-black/20 p-3 rounded-[8px] break-words shadow-sm">
         <div className="font-semibold text-xs uppercase mb-1 block">Draft Reply:</div>
         <div className="whitespace-pre-wrap">{(approval.proposed_action || approval.context_payload)?.draft_reply || (approval.proposed_action || approval.context_payload)?.generated_response}</div>
       </div>

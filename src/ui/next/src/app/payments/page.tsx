@@ -73,7 +73,7 @@ export default function PaymentLedger() {
           type="number"
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value))}
-          className="w-full px-4 py-3 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-black/50 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF] font-inter"
+          className="w-full px-4 py-3 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-black/50 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF] font-inter"
           data-testid="payment-amount-input"
           aria-label="Payment Amount"
         />

@@ -313,7 +313,7 @@ export default function WebsiteBuilderPage() {
             {wizardStep !== 0 && (
               <button
                 onClick={handleBack}
-                className="absolute top-6 left-8 text-[#0066FF] font-medium text-sm hover:underline transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] z-10 flex items-center gap-1 bg-white/50 backdrop-blur-[30px] saturate-[210%] px-3 py-1 rounded-[8px] shadow-sm border border-white/20 min-h-[44px]"
+                className="absolute top-6 left-8 text-[#0066FF] font-medium text-sm hover:underline transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] z-10 flex items-center gap-1 bg-white backdrop-blur-[30px] saturate-[210%] px-3 py-1 rounded-[8px] shadow-sm border border-white/20 min-h-[44px]"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
@@ -326,7 +326,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep !== 0 && wizardStep !== 'instant-build' && (
                 <button
                   onClick={handleSaveDraft}
-                  className="text-[#0066FF] font-medium text-sm hover:underline transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] bg-white/50 backdrop-blur-[30px] saturate-[210%] px-3 py-1 rounded-[8px] shadow-sm border border-white/20 min-h-[44px]"
+                  className="text-[#0066FF] font-medium text-sm hover:underline transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] bg-white backdrop-blur-[30px] saturate-[210%] px-3 py-1 rounded-[8px] shadow-sm border border-white/20 min-h-[44px]"
                 >
                   Save Draft
                 </button>

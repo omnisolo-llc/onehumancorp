@@ -103,7 +103,7 @@ try {
   };
 
   return (
-    <div className="p-6 mb-6 shadow-sm w-full relative overflow-hidden group bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10">
+    <div className="p-6 mb-6 shadow-sm w-full relative overflow-hidden group bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10">
       <div className="absolute top-0 right-0 w-24 h-24 bg-white/40 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
 
       <div className="flex flex-col gap-4">

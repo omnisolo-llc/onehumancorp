@@ -87,7 +87,7 @@ export function PostPurchaseShareWidget({ tenantId, orderId, storeName = 'Our St
         {!unlocked && (
         <div className="w-full md:w-auto">
           <div className="flex flex-col gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-2 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 bg-white dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
               <input
                 id="post-purchase-share-link"
                 type="text"

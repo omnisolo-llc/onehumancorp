@@ -90,7 +90,7 @@ export function DashboardViralInviteWidget() {
               type="text"
               readOnly
               value={referralLink}
-              className="w-full px-4 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200"
+              className="w-full px-4 py-2 rounded-lg bg-white dark:bg-black/20 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200"
             />
             <div className="flex flex-wrap gap-2">
               <button

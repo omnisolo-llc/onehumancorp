@@ -370,7 +370,7 @@ export default function StorefrontBuilderPage() {
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
               </div>
-              <div className="flex-1 bg-white/50 dark:bg-black/50 rounded-xl p-4 mb-4 min-h-[200px] overflow-y-auto">
+              <div className="flex-1 bg-white dark:bg-black/50 rounded-xl p-4 mb-4 min-h-[200px] overflow-y-auto">
                   <div className="flex gap-3 mb-4">
                       <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0071E3] font-bold shrink-0">AI</div>
                       <div className="app-card dark:bg-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm text-sm">

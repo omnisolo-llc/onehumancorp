@@ -36,7 +36,7 @@ export default function QRCodeGeneratorPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
-      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40">
+      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white backdrop-blur-[30px] saturate-[210%] border-white/40">
         <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">QR Code Generator</h1>
         <Link href="/dashboard" className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard
@@ -122,7 +122,7 @@ export default function QRCodeGeneratorPage() {
 
              <div className="text-center flex flex-col items-center">
                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-6">Scan to test</h3>
-                 <div className="p-4 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm border border-white/40-sm border border-gray-100 inline-block mb-6">
+                 <div className="p-4 bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm border border-white/40-sm border border-gray-100 inline-block mb-6">
                     {/* Fallback svg while loading image from api */}
                     <img src={qrImageUrl} alt="QR Code" width={256} height={256} className="mx-auto" style={{ width: '256px', height: '256px' }} />
                  </div>

@@ -123,7 +123,7 @@ function QuotingContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 font-inter">
-      <header className="px-6 py-4 bg-white/65 backdrop-blur-3xl saturate-200 border-b border-white/40 sticky top-0 z-10 flex items-center justify-between shadow-sm">
+      <header className="px-6 py-4 bg-white backdrop-blur-3xl saturate-200 border-b border-white/40 sticky top-0 z-10 flex items-center justify-between shadow-sm">
         <h1 className="text-xl font-bold font-outfit text-[#1D1D1F]">Project Proposal</h1>
         <div className="text-sm px-3 py-1 bg-[#0066FF]/10 text-[#0066FF] rounded-full font-medium">
           {accepted ? 'Accepted' : quote.status}
@@ -131,7 +131,7 @@ function QuotingContent() {
       </header>
 
       <main className="p-4 md:p-10 flex-1 max-w-3xl mx-auto w-full">
-        <div className="bg-white/65 backdrop-blur-3xl saturate-200 shadow-sm border border-white/40 overflow-hidden">
+        <div className="bg-white backdrop-blur-3xl saturate-200 shadow-sm border border-white/40 overflow-hidden">
           <div className="p-6 md:p-8 border-b border-gray-100">
             <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">Quote Summary</h2>
             <p className="text-gray-600">Review the scope and pricing below. You can adjust the quantity and price if needed.</p>

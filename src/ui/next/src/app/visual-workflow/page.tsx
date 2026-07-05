@@ -64,7 +64,7 @@ export default function VisualWorkflowPage() {
           <label className="font-medium text-[#1D1D1F] sm:w-32 text-sm sm:text-base">Input Value:</label>
           <input
             type="text"
-            className="border border-[#D2D2D7] rounded-xl px-4 py-2.5 flex-grow focus:outline-none focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] transition-all min-h-[44px] bg-white/50"
+            className="border border-[#D2D2D7] rounded-xl px-4 py-2.5 flex-grow focus:outline-none focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] transition-all min-h-[44px] bg-white"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
           />
@@ -107,7 +107,7 @@ export default function VisualWorkflowPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <div className="border border-white/40 rounded-3xl p-6 min-h-[400px] bg-white/50 backdrop-blur-2xl shadow-sm">
+        <div className="border border-white/40 rounded-3xl p-6 min-h-[400px] bg-white backdrop-blur-2xl shadow-sm">
           <h2 className="text-xl font-semibold mb-4 text-[#1D1D1F]">Workspace Canvas</h2>
 
           {nodes.length === 0 && (

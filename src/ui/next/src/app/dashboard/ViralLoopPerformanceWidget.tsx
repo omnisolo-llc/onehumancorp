@@ -40,7 +40,7 @@ export function ViralLoopPerformanceWidget() {
           <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-1">Viral Loop Performance</h2>
           <div className="text-sm text-gray-600 dark:text-gray-300">Track your referral program and team growth.</div>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1 bg-white/50 dark:bg-black/20 rounded-full border border-white/40 dark:border-white/10">
+        <div className="flex items-center gap-2 px-3 py-1 bg-white dark:bg-black/20 rounded-full border border-white/40 dark:border-white/10">
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Active Loop</span>
         </div>
       </div>

@@ -47,7 +47,7 @@ export default function ShareAndSaveWidgetPage() {
       </div>
 
       {/* Widget Container */}
-      <div className="ohc-growth-card w-full max-w-md p-8 rounded-[24px] backdrop-blur-[30px] saturate-[210%] bg-white/60 shadow-xl border border-white/50 dark:bg-black/40 dark:border-white/10 flex flex-col items-center text-center">
+      <div className="ohc-growth-card w-full max-w-md p-8 rounded-[24px] backdrop-blur-[30px] saturate-[210%] bg-white shadow-xl border border-white/50 dark:bg-black/40 dark:border-white/10 flex flex-col items-center text-center">
 
         {/* Header Icon */}
         <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-lg shadow-indigo-500/30">

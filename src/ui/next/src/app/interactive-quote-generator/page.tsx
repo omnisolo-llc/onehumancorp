@@ -39,7 +39,7 @@ export default function InteractiveQuoteGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
         <div className="flex items-center gap-4">
           <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-700">
             ← Back
@@ -52,7 +52,7 @@ export default function InteractiveQuoteGeneratorPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Configuration Panel */}
             <div className="space-y-6">
-                <div className="glassmorphism p-6 rounded-[24px] border border-white/40 shadow-sm bg-white/60 backdrop-blur-[30px] saturate-[210%]">
+                <div className="glassmorphism p-6 rounded-[24px] border border-white/40 shadow-sm bg-white backdrop-blur-[30px] saturate-[210%]">
                     <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Widget Settings</h2>
 
                     <div className="space-y-4">
@@ -121,7 +121,7 @@ export default function InteractiveQuoteGeneratorPage() {
                     </div>
                 </div>
 
-                <div className="glassmorphism p-6 rounded-[24px] border border-white/40 shadow-sm bg-white/60 backdrop-blur-[30px] saturate-[210%]">
+                <div className="glassmorphism p-6 rounded-[24px] border border-white/40 shadow-sm bg-white backdrop-blur-[30px] saturate-[210%]">
                     <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Embed Code</h2>
                     <p className="text-sm text-gray-600 mb-4">Copy this HTML snippet to embed the interactive calculator on your website or blog.</p>
                     <div className="relative">

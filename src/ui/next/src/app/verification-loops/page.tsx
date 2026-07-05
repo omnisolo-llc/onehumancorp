@@ -46,7 +46,7 @@ export default function VerificationLoopsPage() {
         Test agent output against distinct verification loops: Computational Guides (bash/linters), Visual Verifiers (Playwright), or Inferential Sensors (LLM Judge).
       </p>
 
-      <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl space-y-6">
+      <div className="glassmorphism bg-white backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Task Context

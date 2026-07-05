@@ -255,7 +255,7 @@ function AutoCatalogContent() {
           >
             Subscription Box
           </button>
-          <label className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm cursor-pointer hover:bg-gray-50 transition-colors">
+          <label className="w-full aspect-square border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm cursor-pointer hover:bg-gray-50 transition-colors">
             <div className="text-4xl mb-2">📷</div>
             <span className="font-semibold text-gray-800">Take a photo or upload</span>
             <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
@@ -311,7 +311,7 @@ function AutoCatalogContent() {
                     type="text"
                     value={productData.title}
                     onChange={(e) => setProductData({...productData, title: e.target.value})}
-                    className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                    className="w-full bg-white border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                   />
               </div>
               <div>
@@ -320,7 +320,7 @@ function AutoCatalogContent() {
                     value={productData.description}
                     onChange={(e) => setProductData({...productData, description: e.target.value})}
                     rows={4}
-                    className="w-full bg-white/50 border border-white/60 px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                    className="w-full bg-white border border-white/60 px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                   />
               </div>
               <div className="flex gap-4">
@@ -332,7 +332,7 @@ function AutoCatalogContent() {
                             type="text"
                             value={productData.price}
                             onChange={(e) => setProductData({...productData, price: e.target.value})}
-                            className="w-full bg-white/50 border border-white/60 pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                            className="w-full bg-white border border-white/60 pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                           />
                       </div>
                   </div>
@@ -342,7 +342,7 @@ function AutoCatalogContent() {
                         type="text"
                         value={productData.category}
                         onChange={(e) => setProductData({...productData, category: e.target.value})}
-                        className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                        className="w-full bg-white border border-white/60 px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                       />
                   </div>
               </div>
@@ -414,7 +414,7 @@ function AutoCatalogContent() {
                                     setSubscriptionInterval(e.target.value);
                                     setProductData({...productData, subscriptionInterval: e.target.value});
                                   }}
-                                  className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                                  className="w-full bg-white border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                               >
                                   <option value="weekly">weekly</option>
                                   <option value="monthly">monthly</option>
@@ -427,7 +427,7 @@ function AutoCatalogContent() {
                                   type="number"
                                   value={productData?.subscriptionDiscount || ''}
                                   onChange={(e) => setProductData({...productData, subscriptionDiscount: e.target.value})}
-                                  className="w-full bg-white/50 border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
+                                  className="w-full bg-white border border-white/60 px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
                               />
                           </div>
                       </div>

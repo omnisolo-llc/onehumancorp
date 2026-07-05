@@ -119,7 +119,7 @@ export default function TeamPage() {
       <div className="w-[375px] max-w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-6 px-6 bg-white backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold font-outfit text-gray-900 tracking-tight">Your Team</h1>
             <p className="text-gray-500 text-sm mt-1">Invisible specialized AI teams</p>

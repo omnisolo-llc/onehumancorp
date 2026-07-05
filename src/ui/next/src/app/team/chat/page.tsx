@@ -129,7 +129,7 @@ export default function TeamChatPage() {
       <div className="w-[375px] min-h-[812px] glassmorphism shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
-        <div className="pt-12 pb-4 px-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
+        <div className="pt-12 pb-4 px-6 bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button aria-label="Back to Team" onClick={() => router.push('/team')} className="text-gray-500">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
@@ -184,7 +184,7 @@ export default function TeamChatPage() {
 
                 {/* Action Card if present */}
                 {msg.card && (
-                  <div className="app-card bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 p-4 shadow-sm relative overflow-hidden" data-testid="action-card">
+                  <div className="app-card bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 p-4 shadow-sm relative overflow-hidden" data-testid="action-card">
                     <div className={`absolute top-0 left-0 w-full h-1 ${msg.card.status === 'approved' ? 'bg-[#34C759]' : 'bg-gradient-to-r from-blue-400 to-indigo-500'}`}></div>
                     <div className="flex items-center gap-2 mb-2">
                       {msg.card.status === 'pending' ? (
@@ -242,7 +242,7 @@ export default function TeamChatPage() {
         </div>
 
         {/* Input */}
-        <div className="p-4 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border-t border-white/40 sticky bottom-0 z-10">
+        <div className="p-4 bg-white backdrop-blur-[30px] backdrop-saturate-[2.1] border-t border-white/40 sticky bottom-0 z-10">
           <div className="flex items-center bg-gray-50 rounded-full border border-gray-200 px-4 py-2">
             <input
               type="text"

@@ -52,7 +52,7 @@ export default function AnthropicGuardrailsPage() {
         Trust establishment, Session permissions, and High-risk user confirmation.
       </p>
 
-      <div className="space-y-6 bg-white/65 backdrop-blur-[30px] p-6 shadow-sm border border-white/40">
+      <div className="space-y-6 bg-white backdrop-blur-[30px] p-6 shadow-sm border border-white/40">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Tool to Execute
@@ -114,7 +114,7 @@ export default function AnthropicGuardrailsPage() {
       {error && (
         <div className="mt-8 p-6 rounded-xl border bg-red-50 border-red-200 text-red-800" data-testid="error-message">
           <h3 className="text-lg font-bold">Guardrail Tripped</h3>
-          <div className="bg-white/50 p-4 rounded-lg font-mono text-sm whitespace-pre-wrap mt-2">
+          <div className="bg-white p-4 rounded-lg font-mono text-sm whitespace-pre-wrap mt-2">
             {error}
           </div>
         </div>
@@ -123,7 +123,7 @@ export default function AnthropicGuardrailsPage() {
       {result && (
         <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-xl text-green-800" data-testid="success-message">
           <h2 className="text-lg font-bold">Guardrails Passed</h2>
-          <p className="bg-white/50 p-4 rounded-lg text-sm mt-2">{result}</p>
+          <p className="bg-white p-4 rounded-lg text-sm mt-2">{result}</p>
         </div>
       )}
     </div>

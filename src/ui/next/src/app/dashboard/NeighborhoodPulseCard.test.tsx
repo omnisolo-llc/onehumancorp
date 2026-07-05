@@ -63,7 +63,7 @@ describe('NeighborhoodPulseCard', () => {
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper).toHaveClass('backdrop-blur-[30px]');
     expect(wrapper).toHaveClass('backdrop-saturate-[2.1]');
-    expect(wrapper).toHaveClass('bg-white/65');
+    expect(wrapper).toHaveClass('bg-white');
   });
 
   it('handles successful invitation', async () => {

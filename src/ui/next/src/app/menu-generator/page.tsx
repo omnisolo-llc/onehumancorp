@@ -62,7 +62,7 @@ export default function MenuGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen bg-[#F5F5F7] dark:bg-[#000000] font-inter">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border-white/40 dark:border-white/10">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border-white/40 dark:border-white/10">
         <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white">Viral AI Menu Generator 🪄</h1>
         <button
           onClick={() => router.push('/dashboard')}
@@ -73,7 +73,7 @@ export default function MenuGeneratorPage() {
       </header>
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-3xl mx-auto">
-        <div className="glassmorphism p-6 md:p-8 border border-white/40 dark:border-white/10 shadow-lg mb-8 bg-white/50 dark:bg-black/30">
+        <div className="glassmorphism p-6 md:p-8 border border-white/40 dark:border-white/10 shadow-lg mb-8 bg-white dark:bg-black/30">
           <div className="mb-6">
             <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Menu Details</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">

@@ -117,7 +117,7 @@ export function WorkTriageFeed({
             </div>
 
             {item.action_type && (
-              <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
+              <div className="mt-4 mb-5 p-4 rounded-xl bg-white dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
                 <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">
                   Suggested Action: {item.action_type}
                 </div>
@@ -137,7 +137,7 @@ export function WorkTriageFeed({
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
-                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
+                className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] bg-white dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
                 data-testid={`triage-dismiss-${item.id}`}
               >
                 Dismiss
@@ -191,7 +191,7 @@ export function WorkTriageFeed({
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
-                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/40 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
+                className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/40 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer glassmorphism"
                 data-testid={`triage-dismiss-${item.id}`}
               >
                 Dismiss

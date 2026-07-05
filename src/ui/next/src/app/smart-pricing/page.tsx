@@ -59,7 +59,7 @@ export default function SmartPricingPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
-      <header className="px-6 py-4 flex items-center justify-between border-b border-white/40 dark:border-white/10 sticky top-0 z-50 bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[2.1]">
+      <header className="px-6 py-4 flex items-center justify-between border-b border-white/40 dark:border-white/10 sticky top-0 z-50 bg-white dark:bg-[#16161a]/70 backdrop-blur-[30px] backdrop-saturate-[2.1]">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-[-0.02em]">
           Smart Pricing
         </h1>
