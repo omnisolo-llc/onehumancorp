@@ -38,15 +38,15 @@ impl MyAgentManagerService {
         let org_id_clone_for_meetings = org_id.to_string();
         let (agents_res, meetings_res, cost_res_spawn, tasks_res) = if mobile_optimized {
             let (r1, r2) = tokio::join!(
-                tokio::spawn(async move { Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents)) }),
+                tokio::task::spawn_blocking(move || Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents))),
                 tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_for_meetings).await })
             );
             (r1, r2, Ok((0.0, 0, vec![])), Ok(vec![]))
         } else {
             tokio::join!(
-                tokio::spawn(async move { Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents)) }),
+                tokio::task::spawn_blocking(move || Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents))),
                 tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_for_meetings).await }),
-                tokio::spawn(async move {
+                tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
                     (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
                 }),
