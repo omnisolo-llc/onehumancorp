@@ -332,6 +332,23 @@ impl DB {
                                 return Err(e.into());
                             }
                         }
+
+                        // Pre-create SQLite auxiliary files (-wal and -shm) with secure permissions
+                        // to prevent them from inheriting the default umask (e.g. 0644).
+                        let wal_path = format!("{}-wal", db_path.display());
+                        let shm_path = format!("{}-shm", db_path.display());
+
+                        for ext_path in [&wal_path, &shm_path] {
+                            if let Ok(file) = opts.open(ext_path) {
+                                if let Ok(metadata) = file.metadata() {
+                                    let mut p = metadata.permissions();
+                                    if (p.mode() & 0o777) != 0o600 {
+                                        p.set_mode(0o600);
+                                        let _ = file.set_permissions(p);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 #[cfg(not(unix))]
