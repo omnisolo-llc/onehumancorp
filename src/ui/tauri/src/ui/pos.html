@@ -803,9 +803,7 @@
               console.warn("Payment intent API returned error");
           }
 
-        } catch (e) {
-          console.error("Failed to create intent", e);
-        }
+
       }
 
 
@@ -1634,15 +1632,24 @@ initWalkthrough();
         const text = document.getElementById("network-status-text");
 
         if (!navigator.onLine) {
+            networkIndicator.className = "hidden fixed top-4 right-4 glassmorphism flex items-center gap-2 px-3 py-1.5 shadow-sm z-50 text-sm font-medium transition-opacity duration-200";
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-yellow-400";
-            if (text) text.innerText = "Syncing Paused";
+            if (dot) {
+                dot.className = "w-2 h-2 rounded-full";
+                dot.style.background = "#FF9500";
+            }
+            if (text) text.innerText = "Offline - Cash & Saved Cards Only";
+            networkIndicator.style.color = "#1D1D1F";
         } else if (queue.length > 0) {
+            networkIndicator.className = "hidden fixed top-4 right-4 glassmorphism flex items-center gap-2 px-3 py-1.5 shadow-sm z-50 text-sm font-medium transition-opacity duration-200";
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-[#0066FF] animate-pulse";
-            if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
+            if (dot) {
+                dot.className = "w-2 h-2 rounded-full animate-pulse";
+                dot.style.background = "#0066FF";
+            }
+            if (text) text.innerText = "Syncing...";
         } else {
             networkIndicator.style.display = "none";
             networkIndicator.classList.add("hidden");
@@ -1654,7 +1661,6 @@ initWalkthrough();
             queueIndicator.innerText = queue.length + " Items Pending Sync";
         } else {
             queueIndicator.style.display = "none";
-            queueIndicator.classList.add("hidden");
         }
     }
 
