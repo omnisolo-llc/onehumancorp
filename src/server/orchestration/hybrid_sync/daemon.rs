@@ -452,7 +452,9 @@ impl HybridSyncDaemon {
         let pg_update = format!("UPDATE agent_missions SET status = 'FAILED' WHERE {}", PG_WHERE_CLAUSE);
 
         // SQLite
-        let _ = sqlx::query(&sqlite_insert).execute(&self.sqlite_pool).await;
+        if let Err(e) = sqlx::query(&sqlite_insert).execute(&self.sqlite_pool).await {
+            warn!("Failed to insert dead letter for SQLite agent missions: {}", e);
+        }
         if let Ok(res) = sqlx::query(&sqlite_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from SQLite", res.rows_affected());
@@ -460,7 +462,9 @@ impl HybridSyncDaemon {
         }
 
         // PG
-        let _ = sqlx::query(&pg_insert).execute(&self.pg_pool).await;
+        if let Err(e) = sqlx::query(&pg_insert).execute(&self.pg_pool).await {
+            warn!("Failed to insert dead letter for PostgreSQL agent missions: {}", e);
+        }
         if let Ok(res) = sqlx::query(&pg_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck agent missions from PostgreSQL", res.rows_affected());
@@ -476,22 +480,29 @@ impl HybridSyncDaemon {
         const PG_RUNNING_WHERE: &str = "status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'";
         const PG_QUEUED_WHERE: &str = "status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'";
 
+        let sqlite_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_stuck', 'sub_agent_queue', json_object('id', id, 'payload', json(COALESCE(payload, '{{}}'))), '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM sub_agent_queue WHERE {}", SQLITE_RUNNING_WHERE);
         let sqlite_running_update = format!("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_RUNNING_WHERE);
         let sqlite_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'sub_agent_queue', json_object('id', id, 'payload', json(COALESCE(payload, '{{}}'))), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE {}", SQLITE_QUEUED_WHERE);
         let sqlite_queued_delete = format!("DELETE FROM sub_agent_queue WHERE {}", SQLITE_QUEUED_WHERE);
 
+        let pg_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_stuck', 'sub_agent_queue', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{{}}'::jsonb))::text, '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM sub_agent_queue WHERE {}", PG_RUNNING_WHERE);
         let pg_running_update = format!("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_RUNNING_WHERE);
         let pg_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'sub_agent_queue', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{{}}'::jsonb))::text, '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE {}", PG_QUEUED_WHERE);
         let pg_queued_delete = format!("DELETE FROM sub_agent_queue WHERE {}", PG_QUEUED_WHERE);
 
         // SQLite queue
+        if let Err(e) = sqlx::query(&sqlite_running_insert).execute(&self.sqlite_pool).await {
+            warn!("Failed to insert dead letter for SQLite RUNNING jobs: {}", e);
+        }
         if let Ok(res) = sqlx::query(&sqlite_running_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck RUNNING jobs from SQLite sub_agent_queue", res.rows_affected());
             }
         }
 
-        let _ = sqlx::query(&sqlite_queued_insert).execute(&self.sqlite_pool).await;
+        if let Err(e) = sqlx::query(&sqlite_queued_insert).execute(&self.sqlite_pool).await {
+            warn!("Failed to insert dead letter for SQLite QUEUED jobs: {}", e);
+        }
         if let Ok(res) = sqlx::query(&sqlite_queued_delete).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck QUEUED jobs from SQLite sub_agent_queue", res.rows_affected());
@@ -499,13 +510,18 @@ impl HybridSyncDaemon {
         }
 
         // PG queue
+        if let Err(e) = sqlx::query(&pg_running_insert).execute(&self.pg_pool).await {
+            warn!("Failed to insert dead letter for PostgreSQL RUNNING jobs: {}", e);
+        }
         if let Ok(res) = sqlx::query(&pg_running_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck RUNNING jobs from PostgreSQL sub_agent_queue", res.rows_affected());
             }
         }
 
-        let _ = sqlx::query(&pg_queued_insert).execute(&self.pg_pool).await;
+        if let Err(e) = sqlx::query(&pg_queued_insert).execute(&self.pg_pool).await {
+            warn!("Failed to insert dead letter for PostgreSQL QUEUED jobs: {}", e);
+        }
         if let Ok(res) = sqlx::query(&pg_queued_delete).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
                 info!("Pruned {} stuck QUEUED jobs from PostgreSQL sub_agent_queue", res.rows_affected());

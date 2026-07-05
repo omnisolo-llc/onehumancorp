@@ -16,8 +16,8 @@ backend:
       cpu: 1000m
       memory: 1Gi
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 50m
+      memory: 128Mi
   service:
     port: 8080
   vpa:
@@ -115,8 +115,8 @@ ohcCore:
       cpu: 1000m
       memory: 1Gi
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 50m
+      memory: 128Mi
   service:
     port: 18789
   vpa:
