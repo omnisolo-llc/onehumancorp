@@ -1,0 +1,6 @@
+[
+  {
+    "comment_id": "4885265308",
+    "reply": "I have restored `test_dummy.tsx` and the lock files to undo the unintentional deletions. The branch is now fixed with only the required optimizations in `setup.html`."
+  }
+]
