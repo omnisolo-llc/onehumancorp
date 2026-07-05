@@ -689,15 +689,12 @@ impl DB {
         let mut backoff = std::time::Duration::from_millis(1);
 
         // Enforce the 60-second ML-Resilience rule for database operations
-        #[cfg(test)]
-        let start_time = tokio::time::Instant::now(); // use simulated time for tests
-        #[cfg(not(test))]
-        let start_time = std::time::Instant::now(); // use real time for prod
+        // Use tokio::time::Instant everywhere so that time paused in tests (like via tokio::time::advance)
+        // accurately increments the clock to simulate delays.
+        let start_time = tokio::time::Instant::now();
         let timeout_duration = std::time::Duration::from_secs(60);
 
         loop {
-            // Note: Since tokio::time::Instant does not interact with paused time during tests,
-            // it accurately tracks real elapsed time without causing false timeouts in simulated time tests.
             if start_time.elapsed() >= timeout_duration {
                 return Err(E::from(format!(
                     "Database operation '{}' timed out",
@@ -705,12 +702,7 @@ impl DB {
                 )));
             }
 
-            // In tests we want tokio::time::timeout to handle paused time cleanly.
-            let remaining_time = if cfg!(test) {
-                timeout_duration
-            } else {
-                timeout_duration.saturating_sub(start_time.elapsed())
-            };
+            let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
 
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
