@@ -6,18 +6,12 @@ use axum::{
 };
 use std::sync::Arc;
 use std::str::FromStr;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use crate::orchestration::router::{SemanticRouter};
 use ::server_common::Claims;
-use axum::extract::multipart::Multipart;
-
-#[derive(Deserialize)]
-pub struct VoiceCommandRequest {
-    /// Base64 encoded audio data (m4a/wav)
-    pub audio_data: String,
-}
+use axum::extract::Multipart;
 
 #[derive(Serialize)]
 pub struct VoiceCommandResponse {
@@ -45,14 +39,11 @@ pub async fn handle_voice_command(
     };
 
     let mut audio_data = Vec::new();
-    let mut provided_tenant_id = String::new();
 
     while let Some(field) = multipart.next_field().await.unwrap_or(None) {
         let name = field.name().unwrap_or("").to_string();
         if name == "audio" {
             audio_data = field.bytes().await.unwrap_or_default().to_vec();
-        } else if name == "tenant_id" {
-            provided_tenant_id = field.text().await.unwrap_or_default();
         }
     }
 

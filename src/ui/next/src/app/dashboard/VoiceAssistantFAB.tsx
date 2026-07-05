@@ -25,7 +25,7 @@ export function VoiceAssistantFAB() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioBlob = new Blob(audioChunksRef.current);
         await processVoiceCommand(audioBlob);
 
         // Stop all tracks to release the microphone
