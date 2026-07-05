@@ -539,17 +539,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
             bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px;';
+            bubble.classList.add('glassmorphism');
             document.body.appendChild(bubble);
 
             function renderStep() {
                 const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } bubble.setAttribute('aria-label', (step.title || 'Tour') + ' walkthrough step');
 
                 document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight', 'glassmorphism');
                     el.style.position = '';
                     el.style.zIndex = '';
-                    el.style.background = '';
                 el.style.pointerEvents = '';
                 });
 
@@ -562,8 +562,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #2563eb; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                        ${currentStep > 0 ? '<button id="wt-prev" class="glassmorphism" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 8px; cursor: pointer;">Back</button>' : ''}
+                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #2563eb; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                     </div>
                 `;
 
@@ -580,9 +580,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (target) {
                     target.classList.add('walkthrough-highlight');
+                    target.classList.add('glassmorphism');
                     target.style.position = 'relative';
                     target.style.zIndex = '99999';
-                    target.style.background = 'white';
                     target.style.pointerEvents = 'none';
 
                     const rect = target.getBoundingClientRect();
@@ -601,10 +601,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             function closeWalkthrough() {
                 document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight', 'glassmorphism');
                     el.style.position = '';
                     el.style.zIndex = '';
-                    el.style.background = '';
                 el.style.pointerEvents = '';
                 });
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
