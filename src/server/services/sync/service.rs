@@ -280,6 +280,28 @@ impl SyncService for MySyncService {
             {
                 Ok(_) => {
                     synced_count += 1;
+
+                    // Trigger inventory reconciliation if needed.
+                    if let Ok(parsed_data) = serde_json::from_str::<serde_json::Value>(&delta.data) {
+                         let task_id = uuid::Uuid::new_v4().to_string();
+                         let ai_payload = serde_json::json!({
+                             "delta_id": delta.id,
+                             "entity_id": delta.entity_id,
+                             "data": parsed_data,
+                             "message": "A data synchronization delta was received from POS offline sync. Please review and resolve if oversold."
+                         }).to_string();
+
+                         let insert_task = "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                                            VALUES ($1, $2, 'operations', 'sync.event.conflict', $3::jsonb, 'PENDING')
+                                            ON CONFLICT DO NOTHING";
+
+                         let _ = sqlx::query(insert_task)
+                            .bind(&task_id)
+                            .bind(&tenant_id)
+                            .bind(&ai_payload)
+                            .execute(&mut *tx)
+                            .await;
+                    }
                 }
                 Err(e) => {
                     ::server_telemetry::record_error_signal("[bug] failed to upsert CRDT delta: error=");

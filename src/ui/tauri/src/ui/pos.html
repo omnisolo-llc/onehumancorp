@@ -1636,16 +1636,30 @@ initWalkthrough();
         if (!navigator.onLine) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-yellow-400";
-            if (text) text.innerText = "Offline - Cash & Saved Cards Only";
+            // Apply OHC Premium Token glassmorphism for offline state
+            networkIndicator.style.background = "rgba(255, 255, 255, 0.65)";
+            networkIndicator.style.backdropFilter = "blur(30px)";
+            networkIndicator.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+            networkIndicator.style.color = "#86868b";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-gray-400";
+            if (text) text.innerText = "Offline - Sync Pending";
         } else if (queue.length > 0) {
             networkIndicator.style.display = "flex";
             networkIndicator.classList.remove("hidden");
-            if (dot) dot.className = "w-2 h-2 rounded-full bg-[#0066FF] animate-pulse";
-            if (text) text.innerText = `Syncing ${queue.length} action${queue.length !== 1 ? 's' : ''}...`;
+            // Apply OHC Premium Token glassmorphism for syncing state
+            networkIndicator.style.background = "rgba(255, 255, 255, 0.65)";
+            networkIndicator.style.backdropFilter = "blur(30px)";
+            networkIndicator.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+            networkIndicator.style.color = "#1d1d1f";
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-green-500 animate-pulse";
+            if (text) text.innerText = `Syncing...`;
         } else {
             networkIndicator.style.display = "none";
             networkIndicator.classList.add("hidden");
+            networkIndicator.style.background = "";
+            networkIndicator.style.backdropFilter = "";
+            networkIndicator.style.border = "";
+            networkIndicator.style.color = "";
         }
 
         if (queue.length > 0) {
@@ -1770,6 +1784,9 @@ initWalkthrough();
             } else if (m.type === "inventory_toggle") {
                 generalMutations.push({
                     transaction_id: m.id,
+                    mutation_type: "inventory_toggle",
+                    product_id: m.payload.item_id,
+                    quantity_deducted: m.payload.is_sold_out ? 1 : 0,
                     product_id: m.id.replace("e2e-product-", ""),
                     quantity_deducted: 1,
                     amount: null,
