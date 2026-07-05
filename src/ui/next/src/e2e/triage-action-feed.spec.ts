@@ -19,7 +19,7 @@ test.describe('Triage Action Feed UI', () => {
     // 2. Seed some distinct triage data matching the backend's expected payload
     const seedData = [
       {
-        source: 'Instagram DM Message',
+        source: 'Proactive Context Agent',
         priority: 'high',
         context: 'Message: Customer asked about vegan cakes.',
         action_type: 'Draft Reply',
@@ -66,13 +66,13 @@ test.describe('Triage Action Feed UI', () => {
       const firstCard = listItems.nth(0);
       const testId = await firstCard.getAttribute('data-testid');
       // Click header to expand
-      await firstCard.locator(`[data-testid="triage-card-header-${itemId}"]`).click();
+      await firstCard.locator(`[data-testid="triage-card-header-${testId?.replace("triage-card-", "")}"]`).click();
       await page.waitForTimeout(500);
 
       // Triage items in the UI are using dynamic IDs
-      const approveBtn = firstCard.locator(`button[data-testid="triage-approve-${itemId}"]`);
-      const reviewBtn = firstCard.locator(`button[data-testid="triage-review-btn-${itemId}"]`);
-      const dismissBtn = firstCard.locator(`button[data-testid="triage-dismiss-${itemId}"]`);
+      const approveBtn = firstCard.locator(`button[data-testid="triage-approve-${testId?.replace("triage-card-", "")}"]`);
+      const reviewBtn = firstCard.locator(`button[data-testid="triage-review-btn-${testId?.replace("triage-card-", "")}"]`);
+      const dismissBtn = firstCard.locator(`button[data-testid="triage-dismiss-${testId?.replace("triage-card-", "")}"]`);
 
       // We will wait for the API response after clicking
       const responsePromise = page.waitForResponse(response =>
@@ -86,7 +86,7 @@ test.describe('Triage Action Feed UI', () => {
         try {
           await reviewBtn.waitFor({ state: 'visible', timeout: 2000 });
           await reviewBtn.click();
-          const saveBtn = firstCard.locator(`button[data-testid="triage-save-btn-${itemId}"]`);
+          const saveBtn = firstCard.locator(`button[data-testid="triage-save-btn-${testId?.replace("triage-card-", "")}"]`);
           await saveBtn.waitFor({ state: 'visible', timeout: 2000 });
           await saveBtn.click();
         } catch (e1) {
@@ -94,7 +94,7 @@ test.describe('Triage Action Feed UI', () => {
             await dismissBtn.waitFor({ state: 'visible', timeout: 2000 });
             await dismissBtn.click();
           } catch (e2) {
-            console.log(`No approve, review, or dismiss button visible for ${itemId}!`);
+            console.log(`No approve, review, or dismiss button visible for ${testId?.replace("triage-card-", "")}!`);
             break;
           }
         }
