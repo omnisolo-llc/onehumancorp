@@ -211,4 +211,44 @@ test.describe('Onboarding Wizard Flow', () => {
     await expect(page.locator('#step-domain')).toBeHidden();
   });
 
+  test('Back button on location step navigates to offer step', async ({ page }) => {
+    await expect(page.locator('body')).toContainText('Tell us about your business');
+
+    await page.getByTestId('next-step-btn').first().click();
+    await page.getByTestId('context-storefront').click();
+    await page.getByTestId('next-step-btn').nth(1).click();
+    await page.locator('#business-categories').selectOption('Other');
+    await page.getByTestId('next-step-btn').nth(2).click();
+    await page.locator('#business-name').fill('My Awesome Business');
+    await page.getByTestId('next-step-btn').nth(3).click();
+
+    // Assistant step
+    await page.getByTestId('team-support').click();
+    await page.locator('#assistant-tone').selectOption('Professional');
+    await page.getByTestId('next-step-btn').nth(4).click();
+
+    // Admin Setup step
+    await page.locator('#admin-name').fill('John Doe');
+    await page.locator('#admin-email').fill('john.doe@example.com');
+    await page.locator('#admin-password').fill('password123');
+    await page.getByTestId('next-step-btn').nth(5).click();
+
+    // What you sell step
+    await expect(page.locator('body')).toContainText('What do you sell?');
+    await page.locator('#first-offer').fill('I sell awesome products');
+    await page.getByTestId('next-step-btn').nth(6).click();
+
+    // Location step
+    await expect(page.locator('body')).toContainText('Where are you located?');
+    await page.locator('#location-input').fill('New York, NY');
+
+    // Click back button inside step-location
+    const locationStep = page.locator('#step-location');
+    await locationStep.getByTestId('prev-step-btn').click();
+
+    // Assert that we are back at Offer step
+    await expect(page.locator('body')).toContainText('What do you sell?');
+    await expect(page.locator('#step-offer')).toBeVisible();
+    await expect(page.locator('#step-location')).toBeHidden();
+  });
 });
