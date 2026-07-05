@@ -2,14 +2,14 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import LeadMagnetGeneratorPage from './page';
+import { TooltipProvider } from '../../components/TooltipRegistry';
 
-// Mock useRouter
 vi.mock('next/navigation', () => ({
-  useRouter() {
-    return {
-      push: vi.fn(),
-    };
-  },
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+  usePathname: () => '/lead-magnet-generator',
+  useSearchParams: () => new URLSearchParams('?tenant=my-store'),
 }));
 
 describe('LeadMagnetGeneratorPage', () => {
@@ -19,7 +19,11 @@ describe('LeadMagnetGeneratorPage', () => {
   });
 
   it('renders the configurator with default values', () => {
-    render(<LeadMagnetGeneratorPage />);
+    render(
+      <TooltipProvider>
+        <LeadMagnetGeneratorPage />
+      </TooltipProvider>
+    );
 
     expect(screen.getByText('Lead Magnet Generator')).toBeInTheDocument();
 
@@ -32,7 +36,11 @@ describe('LeadMagnetGeneratorPage', () => {
   });
 
   it('updates embed code when inputs change', async () => {
-    render(<LeadMagnetGeneratorPage />);
+    render(
+      <TooltipProvider>
+        <LeadMagnetGeneratorPage />
+      </TooltipProvider>
+    );
 
     const headlineInput = screen.getByDisplayValue('Unlock the Ultimate Business Checklist');
 
@@ -44,7 +52,11 @@ describe('LeadMagnetGeneratorPage', () => {
   });
 
   it('displays soft paywall when attempting to remove branding without Pro', async () => {
-    render(<LeadMagnetGeneratorPage />);
+    render(
+      <TooltipProvider>
+        <LeadMagnetGeneratorPage />
+      </TooltipProvider>
+    );
 
     const checkbox = screen.getByLabelText(/Remove "Powered by OHC" Branding/i);
     fireEvent.click(checkbox);
@@ -56,7 +68,11 @@ describe('LeadMagnetGeneratorPage', () => {
 
   it('removes branding when Pro is active', async () => {
     localStorage.setItem('has_pro', 'true');
-    render(<LeadMagnetGeneratorPage />);
+    render(
+      <TooltipProvider>
+        <LeadMagnetGeneratorPage />
+      </TooltipProvider>
+    );
 
     const checkbox = screen.getByLabelText(/Remove "Powered by OHC" Branding/i);
     fireEvent.click(checkbox);
@@ -70,7 +86,11 @@ describe('LeadMagnetGeneratorPage', () => {
   });
 
   it('has powered by OHC footer in preview by default', () => {
-    render(<LeadMagnetGeneratorPage />);
+    render(
+      <TooltipProvider>
+        <LeadMagnetGeneratorPage />
+      </TooltipProvider>
+    );
 
     const links = screen.getAllByText('⚡ Powered by OHC');
     expect(links.length).toBeGreaterThan(0);

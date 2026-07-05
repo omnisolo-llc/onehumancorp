@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { AppShell } from "../components/AppShell";
 
 export default function LeadMagnetGeneratorPage() {
   const router = useRouter();
@@ -50,15 +51,11 @@ export default function LeadMagnetGeneratorPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter bg-gray-50">
-      <header className="px-6 py-4 bg-white border-b sticky top-0 z-10 flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-bold font-outfit text-gray-900">Lead Magnet Generator</h1>
-          <p className="text-sm text-gray-500">Capture emails and grow your audience.</p>
-        </div>
-      </header>
-
-      <main className="flex-1 p-6 md:p-8 max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <AppShell
+      title="Lead Magnet Generator"
+      subtitle="Capture emails and grow your audience."
+    >
+      <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8 font-inter">
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
             <h2 className="font-semibold text-gray-900 mb-4">Configure Widget</h2>
@@ -70,7 +67,7 @@ export default function LeadMagnetGeneratorPage() {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 animate-all duration-200"
                 />
               </div>
 
@@ -80,7 +77,7 @@ export default function LeadMagnetGeneratorPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 animate-all duration-200"
                 />
               </div>
 
@@ -90,7 +87,7 @@ export default function LeadMagnetGeneratorPage() {
                   type="text"
                   value={buttonText}
                   onChange={(e) => setButtonText(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 animate-all duration-200"
                 />
               </div>
 
@@ -145,7 +142,7 @@ export default function LeadMagnetGeneratorPage() {
               </pre>
               <button
                 onClick={handleCopy}
-                className="absolute top-2 right-2 bg-white px-3 py-1.5 rounded-md shadow-sm border text-sm font-medium hover:bg-gray-50 text-gray-700"
+                className="absolute top-2 right-2 bg-white px-3 py-1.5 rounded-md shadow-sm border text-sm font-medium hover:bg-gray-50 text-gray-700 cursor-pointer active:scale-[0.98] transition-all"
               >
                 {copied ? 'Copied!' : 'Copy Code'}
               </button>
@@ -159,7 +156,7 @@ export default function LeadMagnetGeneratorPage() {
         <div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 sticky top-24">
             <h2 className="font-semibold text-gray-900 mb-4">Live Preview</h2>
-            <div className="p-4 bg-gray-100 rounded-xl flex justify-center border border-gray-200">
+            <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl flex justify-center border border-gray-200 dark:border-gray-700">
               <div
                 className={`w-full max-w-sm rounded-2xl overflow-hidden shadow-lg border p-6 text-center ${theme === 'dark' ? 'bg-gray-900 text-white border-gray-800' : 'bg-white text-gray-900 border-gray-200'}`}
               >
@@ -170,9 +167,9 @@ export default function LeadMagnetGeneratorPage() {
                 </div>
                 <h3 className="text-xl font-bold font-outfit mb-2">{title}</h3>
                 <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{description}</p>
-                <div className="space-y-3">
+                <div className="space-y-3 flex flex-col items-center">
                   <input type="email" placeholder="Enter your email address" className={`w-full px-4 py-3 rounded-xl border text-sm ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'} focus:outline-none focus:ring-2 focus:ring-indigo-500`} readOnly />
-                  <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-md transition-colors text-sm">
+                  <button className="min-h-[40px] px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-full shadow-md transition-all text-sm active:scale-[0.98] cursor-pointer inline-flex justify-center items-center">
                     {buttonText}
                   </button>
                 </div>
@@ -187,7 +184,7 @@ export default function LeadMagnetGeneratorPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
@@ -203,13 +200,13 @@ export default function LeadMagnetGeneratorPage() {
             <div className="space-y-3">
               <button
                 onClick={handleUpgrade}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 Upgrade Now ($19/mo)
               </button>
               <button
                 onClick={() => setShowSoftPaywall(false)}
-                className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold rounded-xl transition-colors"
+                className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 Keep Branding
               </button>
@@ -217,6 +214,6 @@ export default function LeadMagnetGeneratorPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

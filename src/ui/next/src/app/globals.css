@@ -276,7 +276,7 @@ body {
   font-size: 14px;
   font-weight: 700;
   color: #1D1D1F;
-    transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+  transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -495,7 +495,7 @@ body {
     overflow-y: visible;
     padding: 12px 16px;
     border-right: none;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   .app-brand {
@@ -505,7 +505,7 @@ body {
     padding: 0 0 12px;
   }
 
-  .app-brand > div:not(.app-brand-mark) {
+  .app-brand>div:not(.app-brand-mark) {
     display: none;
   }
 
@@ -518,6 +518,7 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
   .app-nav::-webkit-scrollbar {
     display: none;
   }
@@ -533,7 +534,7 @@ body {
     padding: 0 12px;
   }
 
-  .app-nav-link > span:last-child {
+  .app-nav-link>span:last-child {
     display: none;
   }
 
@@ -563,37 +564,54 @@ body {
 }
 
 .ohc-hybrid-panel {
-    background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.65);
 
-    backdrop-filter: blur(30px) saturate(210%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    font-family: 'Outfit', 'Inter', sans-serif;
-    color: #1D1D1F;
-    transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  color: #1D1D1F;
+  transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
-    .ohc-hybrid-panel {
-        background: rgba(22, 22, 26, 0.7);
+  .ohc-hybrid-panel {
+    background: rgba(22, 22, 26, 0.7);
 
-        backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #F5F5F7;
-    }
+    backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #F5F5F7;
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-5px);
+  }
+
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 .animate-fade-in {
@@ -716,7 +734,7 @@ html.dark .glass-control {
   display: none !important;
 }
 
-.app-shell .app-main > [class*="min-h-screen"],
+.app-shell .app-main>[class*="min-h-screen"],
 .app-shell .app-main [class*="min-h-screen"] {
   min-height: 0 !important;
 }
@@ -737,7 +755,9 @@ select {
   border-radius: 8px;
 }
 
-button, .app-button, .charge-btn {
+button,
+.app-button,
+.charge-btn {
   border-radius: 8px;
 }
 
@@ -785,7 +805,7 @@ button, .app-button, .charge-btn {
   border-radius: 16px;
 }
 
-.setup-page #setup-screen > div:first-child {
+.setup-page #setup-screen>div:first-child {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -802,7 +822,7 @@ button, .app-button, .charge-btn {
   gap: 16px;
 }
 
-.setup-page #setup-screen .setup-header-main > div {
+.setup-page #setup-screen .setup-header-main>div {
   text-align: center;
 }
 
@@ -834,7 +854,7 @@ button, .app-button, .charge-btn {
   height: 44px;
 }
 
-.setup-page #setup-screen > div:first-child h1 {
+.setup-page #setup-screen>div:first-child h1 {
   margin: 0;
   color: #18212f;
   font-size: 24px;
@@ -842,27 +862,27 @@ button, .app-button, .charge-btn {
   font-weight: 760;
 }
 
-.setup-page #setup-screen > div:first-child p {
+.setup-page #setup-screen>div:first-child p {
   margin: 6px 0 0;
   color: #6b7788;
   font-size: 13px;
   line-height: 1.4;
 }
 
-.setup-page #setup-screen > div:nth-child(2) {
+.setup-page #setup-screen>div:nth-child(2) {
   height: 6px;
   width: 100%;
   background: #e6ebf1;
   overflow: hidden;
 }
 
-.setup-page #setup-screen > div:nth-child(2) > div {
+.setup-page #setup-screen>div:nth-child(2)>div {
   height: 100%;
   background: #1f6feb;
   box-shadow: none;
 }
 
-.setup-page #setup-screen > div:nth-child(3) {
+.setup-page #setup-screen>div:nth-child(3) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -915,7 +935,7 @@ button, .app-button, .charge-btn {
   line-height: 1.55;
 }
 
-.setup-page #setup-screen h2 + p,
+.setup-page #setup-screen h2+p,
 .setup-page #setup-screen .flex.items-start p,
 .setup-page #setup-screen .flex.items-center p {
   margin: 0;
@@ -1045,7 +1065,7 @@ button, .app-button, .charge-btn {
     border-radius: 0;
   }
 
-  .setup-page #setup-screen > div:first-child {
+  .setup-page #setup-screen>div:first-child {
     padding: 18px 18px 14px;
   }
 
@@ -1054,7 +1074,7 @@ button, .app-button, .charge-btn {
     gap: 10px;
   }
 
-  .setup-page #setup-screen .setup-header-main > div {
+  .setup-page #setup-screen .setup-header-main>div {
     text-align: left;
   }
 
@@ -1066,7 +1086,7 @@ button, .app-button, .charge-btn {
     display: none;
   }
 
-  .setup-page #setup-screen > div:nth-child(3) {
+  .setup-page #setup-screen>div:nth-child(3) {
     padding: 24px 18px 28px;
   }
 
@@ -1109,32 +1129,34 @@ select {
 
 
 
-.rounded-full { border-radius: 9999px !important; }
+.rounded-full {
+  border-radius: 9999px !important;
+}
 
 .ohc-growth-card {
-    background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.65);
 
-    backdrop-filter: blur(30px) saturate(210%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 16px;
-    font-family: 'Outfit', 'Inter', sans-serif;
-    padding: 24px;
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  padding: 24px;
 }
 
 @media (prefers-color-scheme: dark) {
-    .ohc-growth-card {
-        background: rgba(22, 22, 26, 0.7);
-
-        backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-}
-
-html.dark .ohc-growth-card {
+  .ohc-growth-card {
     background: rgba(22, 22, 26, 0.7);
 
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+html.dark .ohc-growth-card {
+  background: rgba(22, 22, 26, 0.7);
+
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .app-card {
@@ -1154,10 +1176,8 @@ html.dark .glass-panel {
 
 @layer utilities {
   .premium-glass {
-
-    background: rgba(255, 255, 255, 0.65);
+    background-color: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.4);
-
   }
 }

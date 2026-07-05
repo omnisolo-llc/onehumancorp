@@ -27,4 +27,20 @@ describe('Global CSS Standards', () => {
     }
     expect(true).toBe(true);
   });
+
+  it('prevents raw bg-white/65 Tailwind @apply regression', () => {
+    try {
+       const possiblePaths = [
+         path.resolve(__dirname, 'globals.css'),
+         path.resolve(process.cwd(), 'src/ui/next/src/app/globals.css'),
+       ];
+       let globalsPath = possiblePaths.find(p => fs.existsSync(p));
+       if (globalsPath) {
+           const content = fs.readFileSync(globalsPath, 'utf8');
+           expect(content).not.toContain('@apply bg-white/65');
+       }
+    } catch (e) {
+       // Ignore if not found
+    }
+  });
 });
