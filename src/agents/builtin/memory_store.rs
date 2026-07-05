@@ -492,19 +492,19 @@ impl VectorRepository {
     }
 
     /// Prunes stale context to prevent unbounded memory growth.
-    /// It deletes records older than `older_than` where `owner_override = FALSE`,
-    /// `reference_count < 5`, and `source_type = 'TASK_SUMMARY'`.
+    /// It deletes records older than `older_than` where `owner_override = FALSE`
+    /// and `reference_count < 5`.
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY'")
+                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5")
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -1927,7 +1927,7 @@ mod get_conflicts_tests {
         let query = "SELECT id FROM consolidated_memory";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
-        assert_eq!(rows.len(), 3, "Three records should remain");
+        assert_eq!(rows.len(), 2, "Two records should remain");
 
         let mut remaining_ids: Vec<String> = rows
             .into_iter()
@@ -1937,7 +1937,7 @@ mod get_conflicts_tests {
 
         assert_eq!(
             remaining_ids,
-            vec!["rec2", "rec3", "rec4"],
+            vec!["rec2", "rec3"],
             "The correct records should remain"
         );
     }
@@ -2096,10 +2096,7 @@ mod get_conflicts_tests {
         let query = "SELECT id FROM consolidated_memory";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
-        assert_eq!(rows.len(), 1, "Only one record should remain");
-
-        let id: String = rows[0].try_get("id").unwrap();
-        assert_eq!(id, "rec1", "The correct record should remain");
+        assert_eq!(rows.len(), 0, "No records should remain");
 
         // get_conflicting_pairs test
         let conflicts = repo.get_conflicting_pairs().await.unwrap();
@@ -4039,10 +4036,6 @@ mod get_and_delete_tests {
         assert!(
             repo.get_by_id("keep_ref_count").await.unwrap().is_some(),
             "Should have kept highly referenced record"
-        );
-        assert!(
-            repo.get_by_id("keep_wrong_type").await.unwrap().is_some(),
-            "Should have kept non-task-summary old record"
         );
     }
 }
