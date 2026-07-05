@@ -1,6 +1,7 @@
 pub mod sync;
 pub mod oauth;
 pub mod offline_sync;
+
 pub mod mesh_handler;
 pub mod twilio_webhook;
 pub mod twilio_voice;
@@ -44,6 +45,7 @@ pub mod cart;
 pub mod quotes;
 pub mod inbox;
 pub mod sync_gateway;
+
 pub mod assistant;
 pub mod payment_ledger;
 pub mod integrations_settings;
@@ -55,3 +57,4 @@ pub mod unified_inbox_webhook;
 pub mod work_triage;
 pub mod tool_integrations;
 pub mod ohc_job_queue;
+pub mod sync_pos;

@@ -30,6 +30,14 @@ pub fn router_with_pool<S: Clone + Send + Sync + 'static>() -> Router<sqlx::PgPo
     Router::new()
         .route("/power_sync_pull", post(power_sync_pull_handler))
         .route("/power_sync_push", post(power_sync_push_handler))
+        .route("/sync_pos", post(crate::api::sync_pos::sync_pos_handler))
+
+
+    Router::new()
+        .route("/power_sync_pull", post(power_sync_pull_handler))
+        .route("/power_sync_push", post(power_sync_push_handler))
+        .route("/sync_pos", post(crate::api::sync_pos::sync_pos_handler))
+
 }
 
 
