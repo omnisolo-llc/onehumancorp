@@ -25,7 +25,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
-    await page.route('http://mock/success.html', async route => {
+    await page.route('http://mock/success.html*', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
@@ -126,7 +126,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     await expect(chatMessages).toContainText("Give me a minute... I'm building your business.");
 
     // It should automatically transition to show the Ready to Launch sliding summary card, and then zero-click redirect to Dashboard
-    await expect(page.getByRole('heading', { name: /You're all set!|Dashboard/ })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole('heading', { name: /You're Live!|Dashboard/ })).toBeVisible({ timeout: 20000 });
   });
 
 });

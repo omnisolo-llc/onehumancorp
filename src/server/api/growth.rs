@@ -4537,7 +4537,7 @@ async fn handle_simulate_event(
     let order_id = req.order_id.unwrap_or_default();
 
     let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     let review_id = uuid::Uuid::new_v4().to_string();
     let rating = 5;
@@ -4601,7 +4601,7 @@ async fn handle_reputation_stats(
     let (rating_res, credits_res) = tokio::join!(
         async {
             let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+            let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
             let res: (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
                 .bind(&tenant_id)
                 .fetch_optional(&mut *tx)
@@ -4613,7 +4613,7 @@ async fn handle_reputation_stats(
         },
         async {
             let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-            let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+            let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
             let res: f64 = sqlx::query_scalar(
                 "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
             )
@@ -4644,7 +4644,7 @@ async fn handle_simulate_referral_checkout(
 ) -> Result<Json<SimulateReferralCheckoutResponse>, StatusCode> {
     let tenant_id = auth_info.org_id;
     let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     // find customer_id by referral_code
     let original_customer_id: String = sqlx::query_scalar(
@@ -4773,7 +4773,7 @@ pub async fn handle_get_link_in_bio(
     axum::extract::Path(tenant): axum::extract::Path<String>
 ) -> Result<axum::Json<LinkInBioConfig>, axum::http::StatusCode> {
     let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant).execute(&mut *tx).await;
+    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant).await;
 
     let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
         .bind(&tenant)
@@ -4813,7 +4813,7 @@ pub async fn handle_post_link_in_bio(
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
     let tenant_id = auth_info.org_id;
     let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id).execute(&mut *tx).await;
+    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     let config = LinkInBioConfig {
         store_name: req.store_name,

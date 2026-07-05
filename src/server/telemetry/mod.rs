@@ -1493,6 +1493,7 @@ pub fn get_onboarding_duration_histogram() -> &'static Histogram<u64> {
 }
 
 pub fn track_onboarding_step(tenant_id: &str, step: &str, duration_ms: u64) {
+    if !::server_config::get().telemetry_enabled { return; }
     let histogram = get_onboarding_duration_histogram();
     histogram.record(
         duration_ms,

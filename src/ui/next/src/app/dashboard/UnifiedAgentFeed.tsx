@@ -756,10 +756,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
                   All caught up! Your business is running smoothly.
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
-                  Your agents are currently monitoring the business. While
-                  you're here, why not help us grow?
-                </p>
                 <div className="w-full max-w-md text-left">
                   <GrowthReferralWidget />
                 </div>

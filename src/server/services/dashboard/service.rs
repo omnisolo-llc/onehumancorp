@@ -727,9 +727,10 @@ impl DashboardService for MyDashboardService {
 
     async fn get_video_tutorials(
         &self,
-        _request: Request<GetVideoTutorialsRequest>,
+        request: Request<GetVideoTutorialsRequest>,
     ) -> Result<Response<GetVideoTutorialsResponse>, Status> {
-        let videos = vec![
+        let req = request.into_inner();
+        let mut videos = vec![
             VideoMetadata {
                 title: "How to add your first product".to_string(),
                 description: "A quick 60-second guide to listing items in your store.".to_string(),
@@ -748,6 +749,13 @@ impl DashboardService for MyDashboardService {
                     .to_string(),
             },
         ];
+
+        if req.mobile_optimized {
+            for video in videos.iter_mut() {
+                video.description = String::new();
+                video.duration_sec = 0;
+            }
+        }
 
         Ok(Response::new(GetVideoTutorialsResponse { videos }))
     }
@@ -1074,6 +1082,17 @@ mod tests {
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().code(), tonic::Code::InvalidArgument);
     }
-}
 
-// Parallel Execution Optimization verified
+    #[tokio::test]
+    async fn test_get_video_tutorials_mobile_optimized() {
+        let service = setup_test_dashboard_service().await;
+        let request = Request::new(::server_ohc::app::GetVideoTutorialsRequest {
+            mobile_optimized: true,
+        });
+
+        let response = service.get_video_tutorials(request).await.unwrap().into_inner();
+        assert!(!response.videos.is_empty());
+        assert_eq!(response.videos[0].description, ""); // Omitted for mobile
+        assert_eq!(response.videos[0].duration_sec, 0); // Omitted for mobile
+    }
+}

@@ -332,6 +332,23 @@ impl DB {
                                 return Err(e.into());
                             }
                         }
+
+                        // Pre-create SQLite auxiliary files (-wal and -shm) with secure permissions
+                        // to prevent them from inheriting the default umask (e.g. 0644).
+                        let wal_path = format!("{}-wal", db_path.display());
+                        let shm_path = format!("{}-shm", db_path.display());
+
+                        for ext_path in [&wal_path, &shm_path] {
+                            if let Ok(file) = opts.open(ext_path) {
+                                if let Ok(metadata) = file.metadata() {
+                                    let mut p = metadata.permissions();
+                                    if (p.mode() & 0o777) != 0o600 {
+                                        p.set_mode(0o600);
+                                        let _ = file.set_permissions(p);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 #[cfg(not(unix))]
@@ -340,7 +357,13 @@ impl DB {
                         #[cfg(unix)]
                         {
                             use std::os::unix::fs::OpenOptionsExt;
-                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                            let mut file_opts = std::fs::OpenOptions::new();
+                            file_opts.write(true).create(true).mode(0o600);
+                            #[cfg(target_os = "linux")]
+                            file_opts.custom_flags(0x00020000);
+                            #[cfg(target_os = "macos")]
+                            file_opts.custom_flags(0x0100);
+                            let _ = file_opts.open(&db_path);
                         }
                         #[cfg(not(unix))]
                         {
@@ -689,15 +712,12 @@ impl DB {
         let mut backoff = std::time::Duration::from_millis(1);
 
         // Enforce the 60-second ML-Resilience rule for database operations
-        #[cfg(test)]
-        let start_time = tokio::time::Instant::now(); // use simulated time for tests
-        #[cfg(not(test))]
-        let start_time = std::time::Instant::now(); // use real time for prod
+        // Use tokio::time::Instant everywhere so that time paused in tests (like via tokio::time::advance)
+        // accurately increments the clock to simulate delays.
+        let start_time = tokio::time::Instant::now();
         let timeout_duration = std::time::Duration::from_secs(60);
 
         loop {
-            // Note: Since tokio::time::Instant does not interact with paused time during tests,
-            // it accurately tracks real elapsed time without causing false timeouts in simulated time tests.
             if start_time.elapsed() >= timeout_duration {
                 return Err(E::from(format!(
                     "Database operation '{}' timed out",
@@ -705,12 +725,7 @@ impl DB {
                 )));
             }
 
-            // In tests we want tokio::time::timeout to handle paused time cleanly.
-            let remaining_time = if cfg!(test) {
-                timeout_duration
-            } else {
-                timeout_duration.saturating_sub(start_time.elapsed())
-            };
+            let remaining_time = timeout_duration.saturating_sub(start_time.elapsed());
 
             let timeout_res = tokio::time::timeout(remaining_time, f()).await;
 
@@ -3421,7 +3436,13 @@ mod security_tests_final {
                         #[cfg(unix)]
                         {
                             use std::os::unix::fs::OpenOptionsExt;
-                            let _ = std::fs::OpenOptions::new().write(true).create(true).mode(0o600).open(&db_path);
+                            let mut file_opts = std::fs::OpenOptions::new();
+                            file_opts.write(true).create(true).mode(0o600);
+                            #[cfg(target_os = "linux")]
+                            file_opts.custom_flags(0x00020000);
+                            #[cfg(target_os = "macos")]
+                            file_opts.custom_flags(0x0100);
+                            let _ = file_opts.open(&db_path);
                         }
                         #[cfg(not(unix))]
                         {
