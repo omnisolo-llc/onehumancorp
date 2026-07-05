@@ -1,4 +1,5 @@
 "use client";
+import { enqueueAction } from "../../utils/offlineQueue";
 
 import React, { useEffect, useState } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
@@ -97,12 +98,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
        if (onOptimisticReserve) onOptimisticReserve();
 
        cart?.forEach(item => {
-          syncManager.enqueueAction({
-             type: 'tap_to_pay',
-             product_id: item.product.id,
-             quantity: item.quantity,
-             payload: { amount_cents: item.product.price_cents * item.quantity }
-          });
+          enqueueAction({ id: crypto.randomUUID(), timestamp: Date.now(), type: 'tap_to_pay', payload: { amount_cents: item.product.price_cents * item.quantity, product_id: item.product.id, quantity: item.quantity } });
        });
 
        setTimeout(() => {
@@ -149,12 +145,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
      if (onOptimisticReserve) onOptimisticReserve();
 
      cart?.forEach(item => {
-        syncManager.enqueueAction({
-           type: 'cash_sale',
-           product_id: item.product.id,
-           quantity: item.quantity,
-           payload: { amount_cents: item.product.price_cents * item.quantity }
-        });
+        enqueueAction({ id: crypto.randomUUID(), timestamp: Date.now(), type: 'cash_sale', payload: { amount_cents: item.product.price_cents * item.quantity, product_id: item.product.id, quantity: item.quantity } });
      });
 
      setTimeout(() => {
