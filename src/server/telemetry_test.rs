@@ -171,6 +171,34 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_record_llm_call_cost() {
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+            Ok(Ok(p)) => p,
+            _ => return,
+        };
+
+        let res: Result<(), _> = ::server_telemetry::record_llm_call_cost(&pool, "org-1", "test-model", 2.5).await;
+        assert!(res.is_ok());
+
+        let row: sqlx::postgres::PgRow = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_llm_call_cost' ORDER BY timestamp DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        use sqlx::Row;
+        let value: f64 = row.get("value");
+        assert_eq!(value, 2.5);
+
+        let row_cents: sqlx::postgres::PgRow = sqlx::query("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_llm_cost_total_cents' AND labels_json::jsonb->>'organization_id' = 'org-1' ORDER BY timestamp DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let value_cents: f64 = row_cents.get("value");
+        assert_eq!(value_cents, 250.0);
+    }
+
+    #[tokio::test]
     async fn test_record_agent_cost() {
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
@@ -196,6 +224,14 @@ mod tests {
         assert_eq!(parsed["agent_id"], "agent-123");
         assert_eq!(parsed["organization_id"], "[REDACTED]");
         assert_eq!(parsed["entity"], "test-entity");
+
+        let row_cents: sqlx::postgres::PgRow = sqlx::query("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_llm_cost_total_cents' AND labels_json::jsonb->>'agent_id' = 'agent-123' ORDER BY timestamp DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        let value_cents: f64 = row_cents.get("value");
+        assert_eq!(value_cents, 150.0);
     }
 
     #[tokio::test]

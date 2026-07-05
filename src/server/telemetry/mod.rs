@@ -614,7 +614,19 @@ pub async fn record_llm_call_cost(
             "model": model,
         }),
     )
-    .await
+    .await?;
+
+    let cost_cents = (cost_usd * 100.0).round() as i64;
+    buffer_metric_i64(
+        pool,
+        "ohc_llm_cost_total_cents",
+        "counter",
+        cost_cents,
+        serde_json::json!({
+            "organization_id": organization_id,
+            "model": model,
+        }),
+    ).await
 }
 
 pub async fn record_outbound_api_cost(
@@ -995,7 +1007,7 @@ pub async fn record_task_resolution_efficiency(
         let efficiency = 1.0 / (tokens as f32 / 1000.0);
         buffer_metric(
             pool,
-            "ohc_agent_efficiency_gauge",
+            "ohc_agent_roi_efficiency_score",
             "gauge",
             efficiency,
             serde_json::json!({
@@ -1044,7 +1056,22 @@ pub async fn record_agent_cost(
             "entity": entity,
         }),
     )
-    .await
+    .await?;
+
+    let cost_cents = (cost * 100.0).round() as i64;
+    buffer_metric_i64(
+        pool,
+        "ohc_llm_cost_total_cents",
+        "counter",
+        cost_cents,
+        serde_json::json!({
+            "agent_id": agent_id,
+            "organization_id": organization_id,
+            "role": role,
+            "model": model,
+            "entity": entity,
+        }),
+    ).await
 }
 
 pub async fn record_api_call_cost(
