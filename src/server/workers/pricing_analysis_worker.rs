@@ -344,7 +344,7 @@ mod tests {
             .unwrap();
 
         for i in 0..10 {
-            sqlx::query("INSERT INTO bookings (id, tenant_id, service_id) VALUES (?, ?, ?)")
+            sqlx::query("INSERT INTO bookings (id, tenant_id, product_id) VALUES (?, ?, ?)")
                 .bind(format!("b_{}", i))
                 .bind(tenant_id)
                 .bind(popular_id)
