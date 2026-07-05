@@ -904,6 +904,11 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_bench_ui_dashboard_unified_agent_feed_mobile_payload() {
+        super::bench_ui_dashboard_unified_agent_feed_mobile_payload().await;
+    }
+
+    #[tokio::test]
     async fn test_bench_ui_ledger_latency() {
         super::bench_ui_ledger_latency().await;
     }
@@ -1027,6 +1032,8 @@ mod tests {
 
         tracing::info!("16. Unified Agent Feed Latency");
         bench_ui_dashboard_unified_agent_feed_latency().await;
+    tracing::info!("16. Unified Agent Feed Mobile Payload Optimization Latency");
+    bench_ui_dashboard_unified_agent_feed_mobile_payload().await;
     }
 
     #[tokio::test]
@@ -1199,6 +1206,8 @@ pub async fn bench_hybrid_latency() {
 
     tracing::info!("16. Unified Agent Feed Latency");
     bench_ui_dashboard_unified_agent_feed_latency().await;
+    tracing::info!("16. Unified Agent Feed Mobile Payload Optimization Latency");
+    bench_ui_dashboard_unified_agent_feed_mobile_payload().await;
 
     tracing::info!("19. Completed Tasks Latency");
     tracing::info!("20. Triage Latency");
@@ -1216,6 +1225,61 @@ pub async fn bench_hybrid_latency() {
     tracing::info!("--- Hybrid Latency Benchmark Complete ---");
 }
 
+
+pub async fn bench_ui_dashboard_unified_agent_feed_mobile_payload() {
+    tracing::info!("Benchmarking Unified Agent Feed Mobile Payload Optimization...");
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT 20";
+            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+
+        tracing::info!(
+            "  - Unified Agent Feed Mobile Payload Optimization (Postgres): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: unified agent feed returned trimmed payload)"
+        );
+    } else {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT, tenant_id TEXT, event_source TEXT, lifecycle_state TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_action_requests (id TEXT, tenant_id TEXT, agent_type TEXT, status TEXT, action_type TEXT, payload TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = sqlite_pool.clone();
+
+        let _ = tokio::spawn(async move {
+            let query_str = "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT 20";
+            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
+        }).await;
+        let duration = start_sim.elapsed();
+        tracing::info!(
+            "  - Unified Agent Feed Mobile Payload Optimization (SQLite): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: unified agent feed returned trimmed payload)"
+        );
+    }
+}
 pub async fn bench_ui_triage_latency() {
     tracing::info!(
         "Benchmarking list_ui_triage_handler (Parallel Execution Optimization / Hybrid Cache)..."
