@@ -5,8 +5,8 @@ use chrono::Utc;
 use serde_json::Value;
 
 pub struct AgentFeedService {
-    #[allow(dead_code)]
-    pool: PgPool,
+
+    _pool: PgPool,
     repo: AgentFeedRepository,
 }
 
@@ -14,7 +14,7 @@ impl AgentFeedService {
     pub fn new(pool: PgPool) -> Self {
         Self {
             repo: AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres })),
-            pool,
+            _pool: pool,
         }
     }
 

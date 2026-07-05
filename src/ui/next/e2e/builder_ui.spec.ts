@@ -1,14 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test('builder flow completes successfully', async ({ page }) => {
-  await page.route('**/api/v1/builder/generate', route => route.fulfill({
-    status: 200,
-    json: { pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Test' } }] }] }
-  }));
-  await page.route('**/api/v1/builder/publish_draft', route => route.fulfill({
-    status: 200,
-    json: { domain: 'test' }
-  }));
 
   await page.goto('/builder');
 

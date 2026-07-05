@@ -3,27 +3,6 @@ import { test, expect } from '@playwright/test';
 test.describe('Neighborhood Pulse Dashboard UI', () => {
   test('should display neighborhood pulse card when neighbors are found', async ({ page }) => {
     // Intercept API call to mock a response that returns neighbors
-    await page.route('/api/mesh/v2/collective?action=getNearby', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          neighbors: ['carlos_repairs', 'fatima_food_cart']
-        })
-      });
-    });
-
-    // We also need to intercept the invite action
-    await page.route('/api/mesh/v2/collective', async (route) => {
-      if (route.request().method() === 'POST') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true })
-        });
-      } else {
-        await route.continue();
       }
     });
 

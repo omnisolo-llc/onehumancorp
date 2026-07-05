@@ -34,7 +34,7 @@ async fn validate_pydantic(
         "TopicRetrieve" => {
             #[derive(Deserialize)]
             #[allow(dead_code)]
-            struct Args { topic_name: String }
+            struct Args { _topic_name: Option<String> }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
                 err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
                 is_recoverable = true;
@@ -43,7 +43,7 @@ async fn validate_pydantic(
         "TranscriptSearch" => {
             #[derive(Deserialize)]
             #[allow(dead_code)]
-            struct Args { query: String }
+            struct Args { _query: Option<String> }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
                 err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
                 is_recoverable = true;
@@ -52,7 +52,7 @@ async fn validate_pydantic(
         "TopicWrite" => {
             #[derive(Deserialize)]
             #[allow(dead_code)]
-            struct Args { topic_name: String, content: String }
+            struct Args { _topic_name: Option<String>, _content: Option<String> }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
                 err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
                 is_recoverable = true;
@@ -61,7 +61,7 @@ async fn validate_pydantic(
         "Bash" => {
             #[derive(Deserialize)]
             #[allow(dead_code)]
-            struct Args { command: String }
+            struct Args { _command: Option<String> }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
                 err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
                 is_recoverable = true;

@@ -2,12 +2,6 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Checkout Flow', () => {
   // Use mock for the fetch request so it resolves correctly, in e2e mode we use interceptor
-  test.beforeEach(async ({ page }) => {
-    await page.route('/api/v1/growth/referrals/generate', async route => {
-      const json = { referral_link: 'http://ohc.store/join?ref=test-tenant' };
-      await route.fulfill({ json });
-    });
-  });
 
   test('completes payment successfully', async ({ page }) => {
     await page.goto('/checkout');
