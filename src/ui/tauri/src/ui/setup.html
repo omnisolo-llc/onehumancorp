@@ -2697,7 +2697,7 @@
                   }, 2000);
                 }
               })
-              .catch(console.error);
+              .catch(() => {});
           } else {
             fetch(`${backendUrl}/api/onboarding/draft`, {
               method: "POST",
@@ -2719,7 +2719,7 @@
                   }
                 }
               })
-              .catch(console.error);
+              .catch(() => {});
           }
         }, 500);
       }
@@ -2755,7 +2755,7 @@
               { tenantId, userId },
             );
           } catch (err) {
-            console.error("Tauri get_onboarding_state failed:", err);
+            /* debug removed */
           }
         } else {
           const backendUrl =
@@ -2772,7 +2772,7 @@
               loadedState = await res.json();
             }
           } catch (err) {
-            console.error("Web draft fetch failed:", err);
+            /* debug removed */
           }
         }
 
@@ -3053,9 +3053,8 @@
           if (window.__TAURI__ && window.__TAURI__.core) {
             window.__TAURI__.core
               .invoke("save_onboarding_state", { state, tenantId, userId })
-              .catch((err) => console.warn("Tauri save_onboarding_state failed, using offline fallback:", err));
+              .catch((err) => /* debug removed */);
           } else {
-            localStorage.setItem("onboardingState", JSON.stringify(state));
             const backendUrl =
               window.location.protocol === "file:" ||
               ["1420", "3000", "8081"].includes(window.location.port)
@@ -3072,10 +3071,10 @@
                 body: JSON.stringify(state),
               });
               if (!res.ok) {
-                console.warn("Failed to sync onboarding state with backend", res.status);
+                /* debug removed */
               }
             } catch (err) {
-              console.warn("Network error syncing onboarding state, offline fallback active", err);
+              /* debug removed */
             }
           }
         }, 1000);
@@ -3982,7 +3981,7 @@
               window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
             }, 1500);
           } catch (err) {
-            console.error(err);
+            /* debug removed */
             goToStep("step-initial");
             const errorMsg = err.message || "Network Error: Failed to fetch";
             instantErrorEl.innerText = errorMsg;
@@ -4034,7 +4033,7 @@
                 }, 3000);
               })
               .catch((err) => {
-                console.error("Failed to save draft", err);
+                /* debug removed */
                 e.target.innerText = "Error!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
@@ -4063,7 +4062,7 @@
                 }
               })
               .catch((err) => {
-                console.error("Failed to save draft", err);
+                /* debug removed */
                 e.target.innerText = "Error!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
@@ -4131,7 +4130,7 @@
                   window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
                 })
                 .catch((err) => {
-                  console.error(err);
+                  /* debug removed */
                   const submitError = document.getElementById("submit-error");
                   if (submitError) {
                     submitError.style.display = "block";
@@ -4181,7 +4180,7 @@
                   }
                 })
                 .catch((err) => {
-                  console.error(err);
+                  /* debug removed */
                   const submitError = document.getElementById("submit-error");
                   if (submitError) {
                     submitError.style.display = "block";
@@ -4234,7 +4233,7 @@
               document.body.prepend(errorDiv);
             }
           })
-          .catch((err) => console.error("Health check failed", err));
+          .catch((err) => /* debug removed */);
       });
 
       document.addEventListener("DOMContentLoaded", () => {
@@ -4453,7 +4452,7 @@
               window.OHC_TOOLTIPS = data;
             })
             .catch((e) => {
-              console.error(e);
+              /* debug removed */
             });
         }
         const tooltipEl = document.createElement("div");
@@ -4614,7 +4613,7 @@
               window.OHC_TOOLTIPS = data;
             })
             .catch((e) => {
-              console.error(e);
+              /* debug removed */
             });
         }
         const tooltipEl = document.createElement("div");
