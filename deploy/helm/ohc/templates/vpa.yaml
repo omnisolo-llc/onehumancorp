@@ -21,6 +21,12 @@ spec:
       - containerName: backend
         controlledResources: ["cpu", "memory"]
         controlledValues: RequestsAndLimits
+        minAllowed:
+          cpu: 100m
+          memory: 128Mi
+        maxAllowed:
+          cpu: 4000m
+          memory: 8Gi
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.vpa.enabled }}
@@ -46,6 +52,12 @@ spec:
       - containerName: ohc-core
         controlledResources: ["cpu", "memory"]
         controlledValues: RequestsAndLimits
+        minAllowed:
+          cpu: 100m
+          memory: 128Mi
+        maxAllowed:
+          cpu: 4000m
+          memory: 8Gi
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.vpa.enabled }}
@@ -71,6 +83,12 @@ spec:
       - containerName: chatwoot
         controlledResources: ["cpu", "memory"]
         controlledValues: RequestsAndLimits
+        minAllowed:
+          cpu: 100m
+          memory: 128Mi
+        maxAllowed:
+          cpu: 4000m
+          memory: 8Gi
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.vpa.enabled }}
@@ -96,4 +114,10 @@ spec:
       - containerName: powersync
         controlledResources: ["cpu", "memory"]
         controlledValues: RequestsAndLimits
+        minAllowed:
+          cpu: 100m
+          memory: 128Mi
+        maxAllowed:
+          cpu: 4000m
+          memory: 8Gi
 {{- end }}
