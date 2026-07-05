@@ -215,8 +215,9 @@ impl OHCJobQueue {
                 .execute(&mut *tx)
                 .await;
 
-                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, failed_reason = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                     .bind(next_retry)
+                    .bind(reason)
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await

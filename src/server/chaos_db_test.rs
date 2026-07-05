@@ -100,7 +100,8 @@ mod chaos_db_tests {
         }).await.unwrap();
 
         // Read the row back and verify NULL handling parity
-        let val: Option<String> = sqlx::query_scalar("SELECT val FROM isolation_test WHERE id = 'row1'")
+        let val: Option<String> = sqlx::query_scalar("SELECT val FROM isolation_test WHERE id = ?")
+            .bind("row1")
             .fetch_one(&sqlite_pool)
             .await
             .unwrap();
