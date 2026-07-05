@@ -265,8 +265,6 @@ impl ProactiveAnalysisWorker {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::time::Duration;
 
     #[tokio::test]
     async fn test_ml_resilience_proactive_analysis_timeout() {
