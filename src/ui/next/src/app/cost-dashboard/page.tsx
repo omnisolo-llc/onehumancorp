@@ -209,7 +209,7 @@ export default function CostDashboardPage() {
              <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 dark:text-white">My Plan</h2>
              <button
                onClick={() => router.push('/pricing')}
-               className="min-h-[44px] px-6 py-2 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center">
+               className="min-h-[44px] px-6 py-2 bg-[#0071E3] hover:bg-[#147ce5] active:bg-[#0062c2] text-white rounded-full text-sm font-medium transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer">
                Upgrade
              </button>
           </div>
@@ -252,17 +252,29 @@ export default function CostDashboardPage() {
                       <button
                           id="manage-billing-btn"
                           onClick={handleManageBilling}
-                          className="px-6 py-2 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm flex items-center justify-center"
+                          className="min-h-[44px] px-6 py-2 bg-[#0071E3] hover:bg-[#147ce5] active:bg-[#0062c2] text-white rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                       >
                           Manage Billing
                       </button>
-                      <button id="cancel-subscription-btn" onClick={handleCancelSubscription} className="px-6 py-2 bg-white text-red-600 hover:bg-red-50 border border-red-200 rounded-xl font-medium transition-all shadow-sm flex items-center justify-center">
+                      <button
+                          id="cancel-subscription-btn"
+                          onClick={handleCancelSubscription}
+                          className="min-h-[44px] px-6 py-2 bg-transparent text-[#FF3B30] hover:bg-red-50 dark:hover:bg-red-950/10 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                      >
                           Cancel Subscription
                       </button>
                   </div>
               )}
               {actionMessage && (
-                  <div id="plan-message" className="mt-4 rounded-xl border border-teal-100 bg-teal-50/20 p-4 text-sm font-medium text-[#0f766e] dark:text-[#6ac5bd] shadow-sm" role="status">
+                  <div
+                      id="plan-message"
+                      className={`mt-4 rounded-xl border p-4 text-sm font-medium shadow-sm transition-all ${
+                          actionMessage.toLowerCase().includes("fail") || actionMessage.toLowerCase().includes("error")
+                              ? "border-red-200 bg-red-50/50 text-red-800 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-300"
+                              : "border-emerald-200 bg-emerald-50/50 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-950/20 dark:text-emerald-300"
+                      }`}
+                      role="status"
+                  >
                       {actionMessage}
                   </div>
               )}

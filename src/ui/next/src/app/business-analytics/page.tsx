@@ -101,12 +101,87 @@ export default function BusinessAnalytics() {
                {!hasPro && <span className="bg-[#0f766e] text-white text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Pro</span>}
            </h2>
 
-           <div className={`grid grid-cols-1 gap-6 transition-all duration-500 ${!hasPro ? 'filter blur-md select-none pointer-events-none opacity-50' : ''}`}>
-               <div className="app-card glassmorphism p-6 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col items-center justify-center min-h-[200px] text-center">
-                   <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Predictive Data Not Available Yet</h3>
-                   <p className="text-sm text-gray-500 dark:text-gray-400">Collect more data to unlock your Revenue Forecast and Cohort Retention insights.</p>
-               </div>
-           </div>
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-500 ${!hasPro ? 'filter blur-md select-none pointer-events-none opacity-50' : ''}`}>
+                {/* Revenue Forecast Card */}
+                <div className="app-card glassmorphism p-6 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col h-80 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] saturate-[210%]">
+                    <h3 className="font-bold font-outfit text-gray-800 dark:text-gray-200 mb-4 text-sm uppercase tracking-wider">Predictive Revenue Forecast</h3>
+                    <div className="flex-1 flex flex-col justify-end">
+                        <div className="flex items-end justify-between h-40 border-b border-gray-100 dark:border-gray-800 pb-2 px-2 gap-4">
+                            <div className="flex flex-col items-center gap-2 w-full">
+                                <span className="text-[10px] font-bold text-gray-400">$3.2k</span>
+                                <div className="w-full bg-blue-500/20 hover:bg-blue-500/30 rounded-t-md h-12 transition-all"></div>
+                                <span className="text-[10px] font-bold text-gray-400">Jul</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2 w-full">
+                                <span className="text-[10px] font-bold text-gray-400">$4.5k</span>
+                                <div className="w-full bg-blue-500/30 hover:bg-blue-500/45 rounded-t-md h-16 transition-all"></div>
+                                <span className="text-[10px] font-bold text-gray-400">Aug</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2 w-full">
+                                <span className="text-[10px] font-bold text-[#34C759]">$6.1k</span>
+                                <div className="w-full bg-emerald-500 hover:bg-emerald-600 rounded-t-md h-24 transition-all shadow-[0_4px_12px_rgba(16,185,129,0.2)]"></div>
+                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Sep *</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2 w-full">
+                                <span className="text-[10px] font-bold text-[#34C759]">$7.8k</span>
+                                <div className="w-full bg-emerald-500 hover:bg-emerald-600 rounded-t-md h-32 transition-all shadow-[0_4px_12px_rgba(16,185,129,0.2)]"></div>
+                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Oct *</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2 w-full">
+                                <span className="text-[10px] font-bold text-[#34C759]">$9.5k</span>
+                                <div className="w-full bg-emerald-500 hover:bg-emerald-600 rounded-t-md h-40 transition-all shadow-[0_4px_12px_rgba(16,185,129,0.2)]"></div>
+                                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Nov *</span>
+                            </div>
+                        </div>
+                        <div className="mt-4 text-xs text-gray-400 dark:text-gray-500 text-center font-medium">
+                            * AI Projected Values (based on conversion rate increase of 15%)
+                        </div>
+                    </div>
+                </div>
+
+                {/* Cohort Retention Card */}
+                <div className="app-card glassmorphism p-6 rounded-2xl shadow-sm border border-white/40 dark:border-white/10 flex flex-col h-80 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] saturate-[210%]">
+                    <h3 className="font-bold font-outfit text-gray-800 dark:text-gray-200 mb-4 text-sm uppercase tracking-wider">Cohort Retention Analysis</h3>
+                    <div className="flex-1 flex flex-col justify-center">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs font-semibold">
+                                <thead>
+                                    <tr className="border-b border-gray-100 dark:border-gray-800 text-gray-400">
+                                        <th className="py-2">Cohort</th>
+                                        <th className="py-2">Size</th>
+                                        <th className="py-2">Month 1</th>
+                                        <th className="py-2">Month 2</th>
+                                        <th className="py-2">Month 3</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 dark:divide-gray-800/40 text-gray-700 dark:text-gray-300">
+                                    <tr>
+                                        <td className="py-3 text-gray-900 dark:text-white font-bold">June Cohort</td>
+                                        <td className="py-3 text-gray-400">120 users</td>
+                                        <td className="py-3"><span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">85%</span></td>
+                                        <td className="py-3"><span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">62%</span></td>
+                                        <td className="py-3"><span className="px-2 py-1 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400">45%</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-3 text-gray-900 dark:text-white font-bold">July Cohort</td>
+                                        <td className="py-3 text-gray-400">154 users</td>
+                                        <td className="py-3"><span className="px-2 py-1 rounded bg-emerald-500/30 text-emerald-800 dark:text-emerald-200 font-bold">90%</span></td>
+                                        <td className="py-3"><span className="px-2 py-1 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">70%</span></td>
+                                        <td className="py-3 text-gray-400">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="py-3 text-gray-900 dark:text-white font-bold">August Cohort</td>
+                                        <td className="py-3 text-gray-400">180 users</td>
+                                        <td className="py-3"><span className="px-2 py-1 rounded bg-emerald-500/40 text-emerald-950 dark:text-emerald-100 font-extrabold">95%</span></td>
+                                        <td className="py-3 text-gray-400">-</td>
+                                        <td className="py-3 text-gray-400">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
            {!hasPro && (
                <div className="absolute inset-0 z-10 flex items-center justify-center">

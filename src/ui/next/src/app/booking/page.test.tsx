@@ -56,7 +56,8 @@ describe('BookingPage', () => {
     fireEvent.change(dateInput, { target: { value: '2026-10-10' } });
 
     await waitFor(() => {
-        const slotButton = screen.getByText('09:00 AM');
+        const expectedTime = new Date("2026-10-10T09:00:00Z").toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const slotButton = screen.getByText(expectedTime);
         fireEvent.click(slotButton);
     });
 

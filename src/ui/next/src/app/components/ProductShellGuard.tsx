@@ -4,34 +4,13 @@ import { usePathname } from "next/navigation";
 import { AppShell } from "./AppShell";
 
 const shellRoutes: Record<string, { title: string; subtitle?: string }> = {
-
   "/agents": {
     title: "Agents",
     subtitle: "Manage expert teams, workflows, and assistant capabilities.",
   },
-  "/business-analytics": {
-    title: "Analytics",
-    subtitle: "Review business performance and growth signals.",
-  },
-  "/integrations": {
-    title: "Integrations",
-    subtitle: "Connect operational, marketing, finance, and social tools.",
-  },
   "/calendar": {
     title: "Calendar",
     subtitle: "Manage schedule, bookings, and upcoming work.",
-  },
-  "/cost-dashboard": {
-    title: "Cost",
-    subtitle: "Track usage, spend, and plan limits.",
-  },
-  "/diagnostics": {
-    title: "Diagnostics",
-    subtitle: "Inspect system health and operational checks.",
-  },
-  "/ai-usage-paywall": {
-    title: "AI Usage",
-    subtitle: "Review AI limits, usage, and upgrade options.",
   },
   "/langgraph": {
     title: "LangGraph",
@@ -42,15 +21,21 @@ const shellRoutes: Record<string, { title: string; subtitle?: string }> = {
 const routesWithOwnShell = new Set([
   "/action-center",
   "/agents",
+  "/ai-usage-paywall",
   "/assistant",
+  "/business-analytics",
+  "/cost-dashboard",
   "/dashboard",
+  "/diagnostics",
   "/embed-builder",
   "/exit-intent-builder",
   "/feed",
   "/finance",
   "/inbox",
+  "/integrations",
   "/inventory",
   "/kairos",
+  "/lead-magnet-generator",
   "/orders",
   "/pipeline",
   "/products",
