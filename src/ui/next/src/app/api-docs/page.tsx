@@ -5,6 +5,7 @@ import SwaggerUI from "swagger-ui-react";
 import "swagger-ui-react/swagger-ui.css";
 
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { motion } from "framer-motion";
 
 const MemoizedSwaggerUI = memo(SwaggerUI);
 
@@ -59,9 +60,14 @@ export default function ApiDocsPage() {
       )}
       {mounted && !loading && spec && (
         <div className="w-full max-w-6xl flex flex-col h-full backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 rounded-2xl p-0 sm:p-6 shadow-[0_12px_40px_rgba(0,0,0,0.15)] transition-all overflow-x-hidden box-border max-w-full">
-          <div className="w-full max-w-full overflow-x-hidden box-border">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            className="w-full max-w-full overflow-x-hidden box-border"
+          >
             <MemoizedSwaggerUI spec={spec} />
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
