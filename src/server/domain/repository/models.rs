@@ -434,3 +434,26 @@ pub struct DepositRequirement {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Offer {
+    pub id: String,
+    pub tenant_id: String,
+    pub r#type: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub price_cents: Option<i64>,
+    pub currency: Option<String>,
+    pub inventory_count: Option<i32>,
+    pub locked_quantity: Option<i32>,
+    pub available_quantity: Option<i32>,
+    pub duration_minutes: Option<i32>,
+    pub metadata: Option<sqlx::types::Json<serde_json::Value>>,
+    pub is_subscribable: Option<bool>,
+    pub subscription_frequency: Option<String>,
+    pub subscription_discount_percent: Option<i32>,
+    pub seo_title: Option<String>,
+    pub seo_description: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
