@@ -1194,6 +1194,7 @@
 
         bubbleEl = document.createElement('div');
         bubbleEl.className = 'ohc-walkthrough-bubble';
+        bubbleEl.id = 'walkthrough-bubble';
 
         document.body.appendChild(overlayEl);
         document.body.appendChild(highlightEl);
@@ -3129,7 +3130,7 @@ function initWalkthrough() {
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
                     <button id="wt-close" class="ohc-walkthrough-close" aria-label="Close walkthrough" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text || ""}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                     ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
                     <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
@@ -3722,7 +3723,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
                         <button id="wt-close" class="ohc-walkthrough-close" aria-label="Close walkthrough" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
+                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text || ""}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
                         ${currentStep > 0 ? '<button id="wt-prev" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 8px; background: white; cursor: pointer;">Back</button>' : ''}
                         <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
