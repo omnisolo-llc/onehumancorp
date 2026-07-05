@@ -112,17 +112,17 @@ export default function UnifiedFeed() {
         <h1 className="text-xl font-bold tracking-tight">Today</h1>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-4">
+      <main className="flex-1 overflow-y-auto p-4 space-y-4" data-testid="agent-feed">
         {feedItems.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 flex flex-col items-center gap-3">
-             <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-               <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-             </div>
-            <p className="font-medium text-sm">All caught up.</p>
+          <div className="text-center text-gray-500 py-8 flex flex-col items-center gap-3 glassmorphism shadow-sm opacity-90" data-testid="triage-feed-empty">
+             <div className="text-3xl mb-2">✨</div>
+             <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+               All caught up!
+             </h3>
           </div>
         ) : (
           feedItems.map((item) => (
-            <div key={item.workItem.id} className="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300">
+            <div key={item.workItem.id} className="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300" data-testid="agent-feed-card">
               <div className="p-4 pb-3 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center">
                   <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#0066FF]/20 px-2.5 py-1 rounded-full">
@@ -154,7 +154,7 @@ export default function UnifiedFeed() {
                        className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
                        onClick={() => handleEdit(item.workItem.id)}
                        disabled={processingId === item.workItem.id}
-                       data-testid="unified-feed-edit-btn"
+                       data-testid="edit-proposal"
                      >
                        Edit
                      </button>
@@ -162,7 +162,7 @@ export default function UnifiedFeed() {
                        className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-[#0066FF] text-white rounded-xl hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all"
                        onClick={() => handleApprove(item.workItem.id)}
                        disabled={processingId === item.workItem.id}
-                       data-testid="unified-feed-approve-btn"
+                       data-testid="feed-approve-btn"
                      >
                        {processingId === item.workItem.id ? '...' : 'Approve & Send'}
                      </button>

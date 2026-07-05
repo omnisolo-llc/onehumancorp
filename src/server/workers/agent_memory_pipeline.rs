@@ -40,130 +40,174 @@ impl AgentMemoryPipeline {
     pub async fn process_session_data(&self) -> Result<(), Box<dyn std::error::Error>> {
         match &self.db.store {
             DbStore::Sqlite(sqlite_pool) => {
-                for _ in 0..100 {
+                let fetched = {
                     let mut tx = sqlite_pool.begin().await?;
-
-                    let row = sqlx::query("
+                    let fetched = sqlx::query("
                         SELECT s.session_id, s.agent_id, s.context_data, a.tenant_id
                         FROM agent_session_data s
                         JOIN agents a ON s.agent_id = a.id
+                        WHERE s._sync_status IS NULL OR s._sync_status != 'processing' OR s.updated_at < datetime('now', '-10 minutes')
                         ORDER BY s.last_accessed ASC
-                        LIMIT 1
+                        LIMIT 100
                     ")
-                    .fetch_optional(&mut *tx)
+                    .fetch_all(&mut *tx)
                     .await?;
 
-                    if let Some(row) = row {
-                        use sqlx::Row;
-                        let session_id: String = row.get("session_id");
-                        let agent_id: String = row.get("agent_id");
-                        let context_data: String = row.get("context_data");
-                        let tenant_id: String = row.get("tenant_id");
-
-                        // We immediately delete to simulate "locking" it so other workers don't grab it
-                        sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
-                            .bind(&session_id)
-                            .execute(&mut *tx)
-                            .await?;
-
-                        let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&context_data)).await {
-                            Ok(Ok(emb)) => emb,
-                            Ok(Err(e)) => {
-                                ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
-                                tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
-                                vec![0.0; 1536]
-                            }
-                            Err(_) => {
-                                ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
-                                tracing::error!("AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
-                                vec![0.0; 1536]
-                            }
-                        };
-
-                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                        let mem_id = Uuid::new_v4();
-
-                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6)")
-                            .bind(mem_id.to_string())
-                            .bind(&tenant_id)
-                            .bind(&agent_id)
-                            .bind("SESSION_DATA")
-                            .bind(&context_data)
-                            .bind(&emb_str)
-                            .execute(&mut *tx)
-                            .await?;
-
-                        tx.commit().await?;
-                    } else {
-                        tx.rollback().await?;
-                        break;
+                    if !fetched.is_empty() {
+                        let session_ids: Vec<String> = fetched.iter().map(|row| { use sqlx::Row; row.get::<String, _>("session_id") }).collect();
+                        let placeholders = vec!["?"; session_ids.len()].join(", ");
+                        let query_str = format!("UPDATE agent_session_data SET _sync_status = 'processing', updated_at = CURRENT_TIMESTAMP WHERE session_id IN ({})", placeholders);
+                        let mut query = sqlx::query(&query_str);
+                        for id in &session_ids {
+                            query = query.bind(id);
+                        }
+                        query.execute(&mut *tx).await?;
                     }
+                    tx.commit().await?;
+                    fetched
+                };
+
+                // Network calls outside transaction
+                for row in fetched {
+                    use sqlx::Row;
+                    let session_id: String = row.get("session_id");
+                    let agent_id: String = row.get("agent_id");
+                    let context_data: String = row.get("context_data");
+                    let tenant_id: String = row.get("tenant_id");
+
+                    let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&context_data)).await {
+                        Ok(Ok(emb)) => emb,
+                        Ok(Err(e)) => {
+                            ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
+                            tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
+
+                            // Revert status on failure
+                            sqlx::query("UPDATE agent_session_data SET _sync_status = 'pending' WHERE session_id = ?")
+                                .bind(&session_id)
+                                .execute(sqlite_pool)
+                                .await?;
+                            continue;
+                        }
+                        Err(_) => {
+                            ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
+                            tracing::error!("AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
+
+                            // Revert status on failure
+                            sqlx::query("UPDATE agent_session_data SET _sync_status = 'pending' WHERE session_id = ?")
+                                .bind(&session_id)
+                                .execute(sqlite_pool)
+                                .await?;
+                            continue;
+                        }
+                    };
+
+                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    let mem_id = Uuid::new_v4();
+
+                    let mut tx = sqlite_pool.begin().await?;
+                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES (?, ?, ?, ?, ?, ?)")
+                        .bind(mem_id.to_string())
+                        .bind(&tenant_id)
+                        .bind(&agent_id)
+                        .bind("SESSION_DATA")
+                        .bind(&context_data)
+                        .bind(&emb_str)
+                        .execute(&mut *tx)
+                        .await?;
+
+                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = ?")
+                        .bind(&session_id)
+                        .execute(&mut *tx)
+                        .await?;
+                    tx.commit().await?;
                 }
             }
             DbStore::Postgres => {
-                for _ in 0..100 {
+                let fetched = {
                     let mut tx = self.db.pool.begin().await?;
-                    // Fetch one row, bypassing RLS locally for the read
+                    // Fetch up to 100 rows, bypassing RLS locally for the read
                     sqlx::query("SET LOCAL app.current_tenant = ''").execute(&mut *tx).await?;
 
-                    let row = sqlx::query("
+                    let fetched = sqlx::query("
                         SELECT s.session_id, s.agent_id, s.context_data, a.tenant_id
                         FROM agent_session_data s
                         JOIN agents a ON s.agent_id = a.id
+                        WHERE s._sync_status IS NULL OR s._sync_status != 'processing' OR s.updated_at < NOW() - INTERVAL '10 minutes'
                         ORDER BY s.last_accessed ASC
-                        LIMIT 1
                         FOR UPDATE OF s SKIP LOCKED
+                        LIMIT 100
                     ")
-                    .fetch_optional(&mut *tx)
+                    .fetch_all(&mut *tx)
                     .await?;
 
-                    if let Some(row) = row {
-                        use sqlx::Row;
-                        let session_id: String = row.get("session_id");
-                        let agent_id: String = row.get("agent_id");
-                        let context_data: String = row.get("context_data");
-                        let tenant_id: String = row.get("tenant_id");
-
-                        let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&context_data)).await {
-                            Ok(Ok(emb)) => emb,
-                            Ok(Err(e)) => {
-                                ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
-                                tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
-                                vec![0.0; 1536]
-                            }
-                            Err(_) => {
-                                ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
-                                tracing::error!("AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
-                                vec![0.0; 1536]
-                            }
-                        };
-
-                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                        let mem_id = Uuid::new_v4();
-
-                        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
-
-                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
-                            .bind(mem_id.to_string())
-                            .bind(&tenant_id)
-                            .bind(&agent_id)
-                            .bind("SESSION_DATA")
-                            .bind(&context_data)
-                            .bind(&emb_str)
-                            .execute(&mut *tx)
-                            .await?;
-
-                        sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
-                            .bind(&session_id)
-                            .execute(&mut *tx)
-                            .await?;
-
-                        tx.commit().await?;
-                    } else {
-                        // No more rows available
-                        tx.rollback().await?;
-                        break;
+                    if !fetched.is_empty() {
+                        let session_ids: Vec<String> = fetched.iter().map(|row| { use sqlx::Row; row.get::<String, _>("session_id") }).collect();
+                        let placeholders = (1..=session_ids.len()).map(|i| format!("${}", i)).collect::<Vec<_>>().join(", ");
+                        let query_str = format!("UPDATE agent_session_data SET _sync_status = 'processing', updated_at = CURRENT_TIMESTAMP WHERE session_id IN ({})", placeholders);
+                        let mut query = sqlx::query(&query_str);
+                        for id in &session_ids {
+                            query = query.bind(id);
+                        }
+                        query.execute(&mut *tx).await?;
                     }
+                    tx.commit().await?;
+                    fetched
+                };
+
+                for row in fetched {
+                    use sqlx::Row;
+                    let session_id: String = row.get("session_id");
+                    let agent_id: String = row.get("agent_id");
+                    let context_data: String = row.get("context_data");
+                    let tenant_id: String = row.get("tenant_id");
+
+                    let embedding = match tokio::time::timeout(std::time::Duration::from_secs(60), self.embedding_api.generate_embedding(&context_data)).await {
+                        Ok(Ok(emb)) => emb,
+                        Ok(Err(e)) => {
+                            ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: failed to generate embedding");
+                            tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
+
+                            // Revert status on failure
+                            sqlx::query("UPDATE agent_session_data SET _sync_status = 'pending' WHERE session_id = $1")
+                                .bind(&session_id)
+                                .execute(&self.db.pool)
+                                .await?;
+                            continue;
+                        }
+                        Err(_) => {
+                            ::server_telemetry::record_error_signal("[bug] AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
+                            tracing::error!("AgentMemoryPipeline: agent execution exceeded 60-second ML-Resilience timeout rule");
+
+                            // Revert status on failure
+                            sqlx::query("UPDATE agent_session_data SET _sync_status = 'pending' WHERE session_id = $1")
+                                .bind(&session_id)
+                                .execute(&self.db.pool)
+                                .await?;
+                            continue;
+                        }
+                    };
+
+                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    let mem_id = Uuid::new_v4();
+
+                    let mut tx = self.db.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+
+                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
+                        .bind(mem_id.to_string())
+                        .bind(&tenant_id)
+                        .bind(&agent_id)
+                        .bind("SESSION_DATA")
+                        .bind(&context_data)
+                        .bind(&emb_str)
+                        .execute(&mut *tx)
+                        .await?;
+
+                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                        .bind(&session_id)
+                        .execute(&mut *tx)
+                        .await?;
+                    tx.commit().await?;
                 }
             }
         }
@@ -258,7 +302,7 @@ impl AgentMemoryPipeline {
 }
 
 #[cfg(test)]
-#[allow(unused_imports, dead_code)]
+
 mod tests {
     // use super::*
     use super::*;
@@ -335,8 +379,6 @@ mod tests {
 #[cfg(test)]
 mod tests2 {
     // use super::*
-    use super::*;
-    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_ml_resilience_agent_memory_pipeline_timeout() {

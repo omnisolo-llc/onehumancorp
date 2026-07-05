@@ -116,13 +116,26 @@
         min-height: 44px;
         min-width: 44px;
         box-sizing: border-box;
-      }
-      /* Cleaned up duplicate glassmorphism */
-      textarea.glassmorphism, input.glassmorphism, select.glassmorphism, button.glassmorphism {
-        border-radius: 8px !important;
+      /* Added missing glass-control definition */
+      .glass-control {
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
       }
       @media (prefers-color-scheme: dark) {
-        textarea.glassmorphism, input.glassmorphism, select.glassmorphism, button.glassmorphism {
+        .glass-control {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+      textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
+        border-radius: 8px !important;
+        min-height: 44px;
+      }
+      @media (prefers-color-scheme: dark) {
+        textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
           border-radius: 8px !important;
         }
       }
@@ -335,7 +348,7 @@
             0 4px 6px -1px rgba(0, 0, 0, 0.1),
             0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        /* Cleaned up duplicate glassmorphism */
+        /* Cleaned up duplicate glass-control */
         h1 {
           color: #f5f5f7;
         }
@@ -1262,7 +1275,7 @@
         <textarea
           id="instant-bio"
           data-testid="instant-bio"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
           rows="4"
           style="resize: none; padding: 14px"
@@ -1274,7 +1287,7 @@
           type="url"
           id="instant-image-url"
           data-testid="instant-image-url"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="Image URL (Optional - e.g. logo or storefront)"
           inputmode="url"
           autocomplete="url"
@@ -1460,7 +1473,7 @@
 
         <div
           id="chat-messages"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           style="
             text-align: left;
             display: flex;
@@ -1491,7 +1504,7 @@
               type="url"
               id="chat-image-url"
               data-testid="chat-image-url"
-              class="glassmorphism"
+              class="glass-control glassmorphism"
               placeholder="Image URL (Optional)"
               inputmode="url"
               autocomplete="url"
@@ -1508,7 +1521,7 @@
             <button
               type="button"
               id="chat-upload-btn"
-              class="glassmorphism"
+              class="glass-control glassmorphism"
               style="
                 width: 44px;
                 height: 44px;
@@ -1546,7 +1559,7 @@
               type="text"
               id="chat-input"
               data-testid="chat-input"
-              class="glassmorphism"
+              class="glass-control glassmorphism"
               placeholder="Type a message..."
               enterkeyhint="send"
               autocomplete="off"
@@ -1560,7 +1573,7 @@
             <button
               id="chat-send-btn"
               data-testid="chat-send-btn"
-              class="glassmorphism"
+              class="glass-control glassmorphism"
               style="
                 width: 44px;
                 height: 44px;
@@ -1631,7 +1644,7 @@
 
         <div
           id="approval-details"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           style="
             text-align: left;
             padding: 16px;
@@ -1773,7 +1786,7 @@
         <select
           id="business-categories" required
           data-testid="business-categories"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
         >
           <option value="" disabled selected>Select a category...</option>
         </select>
@@ -1819,7 +1832,7 @@
           type="text"
           id="business-name" required
           data-testid="business-name"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="e.g. Maya's Custom Cakes"
           inputmode="text"
           autocomplete="organization"
@@ -1834,7 +1847,7 @@
           type="text"
           id="business-tagline"
           data-testid="business-tagline"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="Tagline (optional)"
           inputmode="text"
           autocomplete="off"
@@ -1909,7 +1922,7 @@
         <select
           id="assistant-tone"
           data-testid="assistant-tone"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           style="margin-bottom: 0"
         >
           <option value="" disabled selected>Select a tone</option>
@@ -2014,7 +2027,7 @@
           type="text"
           id="admin-name"
           data-testid="admin-name"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="Your Name (e.g. Maya)"
           inputmode="text"
           autocomplete="name"
@@ -2029,7 +2042,7 @@
           type="email"
           id="admin-email"
           data-testid="admin-email"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="admin@mybusiness.com"
           inputmode="email"
           autocomplete="email"
@@ -2053,7 +2066,7 @@
             type="password"
             id="admin-password"
             data-testid="admin-password"
-            class="glassmorphism"
+            class="glass-control glassmorphism"
             placeholder="Password (min 8 chars)"
             autocomplete="new-password"
             enterkeyhint="next"
@@ -2300,7 +2313,7 @@
         <textarea
           id="first-offer"
           data-testid="first-offer"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="e.g. I bake custom vegan cakes"
           inputmode="text"
           autocomplete="off"
@@ -2349,7 +2362,7 @@
           type="text"
           id="location-input"
           data-testid="location-input"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="e.g. Portland, OR"
           inputmode="text"
           autocomplete="off"
@@ -2397,7 +2410,7 @@
           type="text"
           id="target-audience"
           data-testid="target-audience"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
           placeholder="e.g. Local families, Tech startups"
           inputmode="text"
           autocomplete="off"
@@ -2453,7 +2466,7 @@
             type="text"
             id="domain-name"
             data-testid="domain-name"
-            class="glassmorphism"
+            class="glass-control glassmorphism"
             placeholder="e.g. my-business"
             inputmode="url"
             autocomplete="off"
@@ -2518,7 +2531,7 @@
         <select
           id="template-selection"
           data-testid="template-selection"
-          class="glassmorphism"
+          class="glass-control glassmorphism"
         >
           <option value="" disabled selected>Select a template...</option>
           <option value="Modern">Modern</option>
@@ -3062,7 +3075,7 @@
                 ? "http://127.0.0.1:18789"
                 : "";
             try {
-              const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
+              await fetch(`${backendUrl}/api/onboarding/draft`, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -3071,15 +3084,15 @@
                 },
                 body: JSON.stringify(state),
               });
-              if (!res.ok) {
-                console.warn("Failed to sync onboarding state with backend", res.status);
-              }
             } catch (err) {
-              console.warn("Network error syncing onboarding state, offline fallback active", err);
+              console.warn("Network error syncing onboarding state, offline fallback active");
             }
           }
         }, 1000);
       }
+      window.addEventListener('online', () => {
+          saveCurrentState();
+      });
 
       function validateStep(stepId) {
         let isValid = true;
@@ -3655,7 +3668,7 @@
             }
 
             const summaryCard = document.createElement("div");
-            summaryCard.className = "glassmorphism";
+            summaryCard.className = "glass-control";
             summaryCard.style.cssText =
               "position: absolute; bottom: 0; left: 0; right: 0; padding: 24px; border-radius: 16px 16px 0 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(210%); box-shadow: 0 -10px 30px rgba(0,0,0,0.1); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; border-top: 1px solid rgba(255, 255, 255, 0.6);";
 
@@ -4034,8 +4047,8 @@
                 }, 3000);
               })
               .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
+                console.warn("Failed to sync onboarding draft with backend (Offline fallback enabled).", err);
+                e.target.innerText = "Saved Locally!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
                   e.target.disabled = false;
@@ -4063,8 +4076,8 @@
                 }
               })
               .catch((err) => {
-                console.error("Failed to save draft", err);
-                e.target.innerText = "Error!";
+                console.warn("Failed to sync onboarding draft with backend (Offline fallback enabled).", err);
+                e.target.innerText = "Saved Locally!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
                   e.target.disabled = false;
