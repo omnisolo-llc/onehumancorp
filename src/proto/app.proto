@@ -28,7 +28,7 @@ enum PaymentSource {
 message Order {
   string id = 1;
   string organization_id = 2;
-  string product_id = 3;
+  string service_id = 3;
   int64 amount_cents = 4;
   string status = 5;
   int64 created_at_unix = 6;
@@ -57,7 +57,7 @@ message Booking {
   string id = 1;
   string organization_id = 2;
   string customer_id = 3;
-  string product_id = 4;
+  string service_id = 4;
   int64 start_time_unix = 5;
   int64 end_time_unix = 6;
   string status = 7;
@@ -210,7 +210,7 @@ service BookingEngineService {
 
 message CheckAvailabilityRequest {
   string tenant_id = 1;
-  string product_id = 2;
+  string service_id = 2;
   string date = 3; // YYYY-MM-DD
 }
 
@@ -226,7 +226,7 @@ message CheckAvailabilityResponse {
 message ReserveTimeSlotRequest {
   string tenant_id = 1;
   string customer_id = 2;
-  string product_id = 3;
+  string service_id = 3;
   string start_time = 4; // RFC3339
   string end_time = 5; // RFC3339
   bool requires_deposit = 6;
@@ -242,7 +242,7 @@ message CreateConversationalCheckoutRequest {
   string tenant_id = 1;
   string customer_id = 2;
   int64 amount_cents = 3;
-  string product_id = 4;
+  string service_id = 4;
 }
 
 message ConversationalCheckoutSession {
