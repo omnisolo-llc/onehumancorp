@@ -8,22 +8,6 @@ test.use({
 
 test('Maya the baker journey storefront v2', async ({ page }) => {
   // Mock API responses
-  await page.route('/api/v1/builder/generate', async route => {
-    await route.fulfill({
-      json: {
-        pages: [{
-          blocks: [
-            { block_type: 'HeroBlock', content: { headline: 'Maya Cakes', copy: 'Best cakes in town' } },
-            { block_type: 'ProductGridBlock', content: { items: [{ name: 'Chocolate Cake', price: '$20' }] } }
-          ]
-        }]
-      }
-    });
-  });
-
-  await page.route('/api/v1/builder/publish_draft', async route => {
-    await route.fulfill({
-      json: { id: 'site-123', domain: 'mayacakes' }
     });
   });
 

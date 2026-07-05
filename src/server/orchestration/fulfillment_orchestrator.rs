@@ -17,13 +17,13 @@ pub struct FulfillmentProposal {
 }
 
 pub struct FulfillmentOrchestrator {
-    #[allow(dead_code)]
-    db: Arc<DB>,
+
+    _db: Arc<DB>,
 }
 
 impl FulfillmentOrchestrator {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+        Self { _db: db }
     }
 
     pub async fn evaluate_and_propose(

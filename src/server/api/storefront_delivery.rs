@@ -258,7 +258,7 @@ fn set_storefront_headers(response: &mut axum::response::Response, html: &str, t
 }
 
 #[cfg(test)]
-#[allow(unused_imports, dead_code)]
+
 mod tests {
     use super::*;
 
