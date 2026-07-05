@@ -13,6 +13,23 @@ test.describe('Testimonial Widget Generator E2E', () => {
 
         await page.getByRole('button', { name: 'Dark' }).click();
 
+        // Check if viral loop option is present and showing PRO badge
+        await expect(page.getByText('Remove "Powered by OHC" Badge')).toBeVisible();
+
+        // Verify soft paywall appears when checking without Pro
+        const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OHC" Badge');
+        await removeBrandingCheckbox.check();
+
+        const paywallHeading = page.getByRole('heading', { name: 'Upgrade to Remove Branding' });
+        await expect(paywallHeading).toBeVisible();
+        await expect(page.getByText('Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.')).toBeVisible();
+
+        // Close paywall
+        await page.getByRole('button', { name: 'Close paywall' }).click();
+
+        // The checkbox should be unchecked since we don't have Pro
+        await expect(removeBrandingCheckbox).not.toBeChecked();
+
         await page.getByRole('button', { name: 'Get Widget Code' }).click();
 
         const modalHeading = page.getByRole('heading', { name: 'Embed Testimonial' });
@@ -25,6 +42,7 @@ test.describe('Testimonial Widget Generator E2E', () => {
         expect(embedValue).toContain('tenant=awesome-bakery');
         expect(embedValue).toContain('authorName=Maya%20The%20Baker');
         expect(embedValue).toContain('theme=dark');
+        expect(embedValue).toContain('branding=true');
 
         await page.getByRole('button', { name: 'Copy Code' }).click();
 
