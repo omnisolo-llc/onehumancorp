@@ -105,7 +105,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
         Department::CustomerSuccess => DepartmentConfig {
             system_prompt: ::server_pricing::compression::reduce_tokens("Department: Customer Success — 'The Ambassador'\n\
                 Keeps customers happy and coming back. Handles all post-sale relationship management.\n\
-                - Responds to customer messages (chat, email, Instagram DM, WhatsApp) with AI-generated drafts\n\
+                - Responds to customer messages (chat, email, Instagram DM, WhatsApp) with short, friendly AI-generated drafts\n\
                 - Sends order confirmations, shipping updates, and delivery notifications\n\
                 - Requests reviews and testimonials after successful orders\n\
                 - Re-engages customers who haven't purchased in a while\n\

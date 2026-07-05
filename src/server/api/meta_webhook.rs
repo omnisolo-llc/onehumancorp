@@ -122,7 +122,19 @@ pub async fn meta_webhook_post_handler(
                              for message in messages {
                                   let sender_id = message.get("from").and_then(|f| f.as_str()).unwrap_or("unknown");
                                   let display_phone_number = value.get("metadata").and_then(|m| m.get("display_phone_number")).and_then(|p| p.as_str()).unwrap_or("test_tenant");
-                                  let text = message.get("text").and_then(|t| t.get("body")).and_then(|b| b.as_str()).unwrap_or("");
+                                  let mut text = message.get("text").and_then(|t| t.get("body")).and_then(|b| b.as_str()).unwrap_or("").to_string();
+
+                                  if let Some(image) = message.get("image") {
+                                      if let Some(id) = image.get("id").and_then(|i| i.as_str()) {
+                                          let caption = image.get("caption").and_then(|c| c.as_str()).unwrap_or("");
+                                          let image_markdown = format!("![Image]({}) {}", id, caption);
+                                          if text.is_empty() {
+                                              text = image_markdown;
+                                          } else {
+                                              text = format!("{}\n\n{}", text, image_markdown);
+                                          }
+                                      }
+                                  }
 
                                   let pool = &state.db.pool;
                                   let resolved_tenant_id = match &state.db.store {
@@ -153,7 +165,7 @@ pub async fn meta_webhook_post_handler(
                                   if !text.is_empty() {
                                       tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
                                       let source = "whatsapp".to_string();
-                                      process_omnichannel_message(&state, resolved_tenant_id, source, sender_id.to_string(), text.to_string()).await;
+                                      process_omnichannel_message(&state, resolved_tenant_id, source, sender_id.to_string(), text).await;
                                   }
                              }
                          }
