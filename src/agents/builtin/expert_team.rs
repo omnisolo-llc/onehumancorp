@@ -47,6 +47,74 @@ impl SkillTrace {
     }
 }
 
+
+pub struct ProjectDirector<T: ExpertTeamLlmClient + ?Sized> {
+    pub name: String,
+    pub llm: std::sync::Arc<T>,
+}
+
+impl<T: ExpertTeamLlmClient + 'static> ProjectDirector<T> {
+    pub async fn coordinate(&self, task: &str, experts: Vec<DomainExpert<T>>, trace: &mut SkillTrace) -> Result<String, String> {
+        let manager = ExpertTeamManager::new(&self.name, experts);
+        manager.run_full_expert_workflow(task, trace, self.llm.clone()).await
+    }
+}
+
+pub struct IndustryResearcher<T: ExpertTeamLlmClient + ?Sized> {
+    pub role: String,
+    pub llm: std::sync::Arc<T>,
+}
+
+impl<T: ExpertTeamLlmClient + ?Sized> IndustryResearcher<T> {
+    pub fn into_expert(self) -> DomainExpert<T> {
+        DomainExpert { role: self.role, llm: self.llm }
+    }
+}
+
+pub struct FinancialAnalyst<T: ExpertTeamLlmClient + ?Sized> {
+    pub role: String,
+    pub llm: std::sync::Arc<T>,
+}
+
+impl<T: ExpertTeamLlmClient + ?Sized> FinancialAnalyst<T> {
+    pub fn into_expert(self) -> DomainExpert<T> {
+        DomainExpert { role: self.role, llm: self.llm }
+    }
+}
+
+pub struct StrategicAnalyst<T: ExpertTeamLlmClient + ?Sized> {
+    pub role: String,
+    pub llm: std::sync::Arc<T>,
+}
+
+impl<T: ExpertTeamLlmClient + ?Sized> StrategicAnalyst<T> {
+    pub fn into_expert(self) -> DomainExpert<T> {
+        DomainExpert { role: self.role, llm: self.llm }
+    }
+}
+
+pub struct ProcessSupervisor<T: ExpertTeamLlmClient + ?Sized> {
+    pub role: String,
+    pub llm: std::sync::Arc<T>,
+}
+
+impl<T: ExpertTeamLlmClient + ?Sized> ProcessSupervisor<T> {
+    pub fn into_expert(self) -> DomainExpert<T> {
+        DomainExpert { role: self.role, llm: self.llm }
+    }
+}
+
+pub struct QualityAuditor<T: ExpertTeamLlmClient + ?Sized> {
+    pub role: String,
+    pub llm: std::sync::Arc<T>,
+}
+
+impl<T: ExpertTeamLlmClient + ?Sized> QualityAuditor<T> {
+    pub fn into_expert(self) -> DomainExpert<T> {
+        DomainExpert { role: self.role, llm: self.llm }
+    }
+}
+
 pub struct DomainExpert<T: ExpertTeamLlmClient + ?Sized> {
     pub role: String,
     pub llm: std::sync::Arc<T>,
@@ -413,7 +481,28 @@ mod tests {
         assert!(result.is_ok(), "Expert workflow failed: {:?}", result.err());
     }
 
+
+    #[tokio::test]
+    async fn test_expert_team_parallel_execution() {
+        let director = ProjectDirector { name: "Project Director".to_string(), llm: Arc::new(MockExpertLlm { role_resp: format!("{} Chart: Required. Analysis: Deep.", "word ".repeat(20000)) }) };
+        let experts = vec![
+            IndustryResearcher { role: "Industry Researcher".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Research summary Chapter 1 Chapter 2".to_string() }) }.into_expert(),
+            FinancialAnalyst { role: "Financial Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Financial summary Chapter 3 Chapter 4".to_string() }) }.into_expert(),
+            StrategicAnalyst { role: "Strategic Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Strategic summary Chapter 5 Chapter 6".to_string() }) }.into_expert(),
+            ProcessSupervisor { role: "Process Supervisor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Process summary Chapter 7".to_string() }) }.into_expert(),
+            QualityAuditor { role: "Quality Auditor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Quality summary Chapter 8 Chart: Required. Analysis: Deep.".to_string() }) }.into_expert(),
+        ];
+
+        let task = "Test parallel execution Chart: Required. Analysis: Deep.";
+        let mut trace = SkillTrace::new();
+
+        let summary = director.coordinate(task, experts, &mut trace).await.unwrap();
+        assert!(trace.skills_used.contains(&"industry_researcher_analysis".to_string()));
+        assert!(trace.skills_used.contains(&"financial_analyst_analysis".to_string()));
+    }
+
     #[test]
+
     fn test_pre_flight_failure_not_enough_experts() {
         let experts = vec![DomainExpert {
             role: "Lone Wolf".to_string(),
