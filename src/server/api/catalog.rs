@@ -293,6 +293,14 @@ async fn handle_create_product(
     let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
     cache.invalidate(&tenant_id).await;
 
+    // Edge Cache Invalidation
+    let edge_cache = crate::builder::edge::get_edge_cache();
+    edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+    edge_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+    let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+    cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+
     if let Err(e) = hub.tracker().record_product_added(&tenant_id).await {
         tracing::warn!(
             "Failed to update product usage counter for tenant {}: {}",
