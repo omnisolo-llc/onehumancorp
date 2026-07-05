@@ -234,41 +234,33 @@ impl GatherActVerifyHarness {
                             let current_tools = current_tools.clone();
                             let tx = tx.clone();
                             let tc_name = tc.name.clone();
+                            let tc_args = tc.arguments.to_string();
                             read_only_futures.push(async move {
                                 let _ = tx.send(AgentEvent::TextChunk {
-                                    content: format!("Starting read-only tool call: {}", tc.name),
+                                    content: format!("Starting read-only tool call: {}", tc_name),
                                 });
 
-                                let tool_opt = current_tools.iter().find(|t| t.name == tc.name);
-                                let tr = if let Some(tool) = tool_opt {
+                                let tool_opt = current_tools.iter().find(|t| t.name == tc_name);
+                                let tr_res = if let Some(tool) = tool_opt {
                                     match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2, &config).await {
-                                        Ok(res) => ohc_builtin_agent_core::types::ToolResult {
+                                        Ok(res) => Ok(ohc_builtin_agent_core::types::ToolResult {
                                             tool_call_id: tc.id.clone(),
                                             content: res.clone(),
                                             error: String::new(),
-                                        },
-                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &msg),
-                                        Err(e) => ohc_builtin_agent_core::types::ToolResult {
-                                            tool_call_id: tc.id.clone(),
-                                            content: String::new(),
-                                            error: e.to_string(),
-                                        },
+                                        }),
+                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc_name, &msg)),
+                                        Err(e) => Err(e),
                                     }
                                 } else {
-                                    ohc_builtin_agent_core::types::ToolResult {
-                                        tool_call_id: tc.id.clone(),
-                                        content: String::new(),
-                                        error: format!("Tool {} not found in this phase", tc.name),
-                                    }
+                                    Err(ohc_builtin_agent_core::types::ToolError::Fatal(format!("Tool {} not found in this phase", tc_name)))
                                 };
 
-                                let _ = tx.send(AgentEvent::ToolCall {
-                                    name: tc.name.clone(),
-                                    args_json: tc.arguments.to_string(),
-                                    result: tr.content.clone() + &tr.error,
-                                    iteration: iteration as i32,
-                                });
-                                (tc_name, tr)
+                                match tr_res {
+                                    Ok(tr) => {
+                                        Ok((tc_name, tc_args, tr))
+                                    }
+                                    Err(e) => Err(e),
+                                }
                             });
                         }
 
@@ -276,7 +268,44 @@ impl GatherActVerifyHarness {
                         let mut tool_results = Vec::new();
                         let cfg_max_retries = std::cmp::min(config.max_retries, 2) as u64;
 
-                        for (name, mut tr) in ro_results {
+                        for res in ro_results {
+                            let (name, args, mut tr) = match res {
+                                Ok(r) => r,
+                                Err(e) => match e {
+                                    ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => {
+                                        let _ = tx.send(AgentEvent::UserInterventionRequired { error: format!("USER_FIXABLE: {}", msg) });
+                                        return;
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::Fatal(msg) => {
+                                        let _ = tx.send(AgentEvent::TaskError { error: format!("Fatal tool error: {}", msg) });
+                                        return;
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::Unexpected(msg) => {
+                                        let _ = tx.send(AgentEvent::TaskError { error: format!("Unexpected tool error: {}", msg) });
+                                        return;
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::Transient(msg) => {
+                                        let _ = tx.send(AgentEvent::TaskError { error: format!("Transient error after retries: {}", msg) });
+                                        return;
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::HandoffRequested(target) => {
+                                        let _ = tx.send(AgentEvent::Handoff { target_agent: target });
+                                        return;
+                                    }
+                                    _ => {
+                                        let _ = tx.send(AgentEvent::TaskError { error: format!("Fatal tool error: {:?}", e) });
+                                        return;
+                                    }
+                                }
+                            };
+
+                            let _ = tx.send(AgentEvent::ToolCall {
+                                name: name.clone(),
+                                args_json: args,
+                                result: if tr.error.is_empty() { tr.content.clone() } else { tr.error.clone() },
+                                iteration: iteration as i32,
+                            });
+
                             if tr.error.contains("LLM-Recoverable Error") || tr.error.contains("Recoverable error") {
                                 let count = *error_counts.entry(name.clone()).or_insert(0) + 1;
                                 error_counts.insert(name.clone(), count);
@@ -297,27 +326,56 @@ impl GatherActVerifyHarness {
                             });
 
                             let tool_opt = current_tools.iter().find(|t| t.name == tc.name);
-                            let tr = if let Some(tool) = tool_opt {
+                            let tr_res = if let Some(tool) = tool_opt {
                                 match crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &tc, 2, &config).await {
-                                    Ok(res) => ohc_builtin_agent_core::types::ToolResult {
+                                    Ok(res) => Ok(ohc_builtin_agent_core::types::ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content: res.clone(),
                                         error: String::new(),
-                                    },
-                                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &msg),
-                                    Err(e) => ohc_builtin_agent_core::types::ToolResult {
-                                        tool_call_id: tc.id.clone(),
-                                        content: String::new(),
-                                        error: e.to_string(),
-                                    },
+                                    }),
+                                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &msg)),
+                                    Err(e) => Err(e),
                                 }
                             } else {
-                                ohc_builtin_agent_core::types::ToolResult {
-                                    tool_call_id: tc.id.clone(),
-                                    content: String::new(),
-                                    error: format!("Tool {} not found in this phase", tc.name),
+                                Err(ohc_builtin_agent_core::types::ToolError::Fatal(format!("Tool {} not found in this phase", tc.name)))
+                            };
+
+                            let mut tr = match tr_res {
+                                Ok(r) => r,
+                                Err(e) => match e {
+                                    ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => {
+                                        let _ = tx.send(AgentEvent::UserInterventionRequired { error: format!("USER_FIXABLE: {}", msg) });
+                                        return;
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::Fatal(msg) => {
+                                        let _ = tx.send(AgentEvent::TaskError { error: format!("Fatal tool error: {}", msg) });
+                                        return;
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::Unexpected(msg) => {
+                                        let _ = tx.send(AgentEvent::TaskError { error: format!("Unexpected tool error: {}", msg) });
+                                        return;
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::Transient(msg) => {
+                                        let _ = tx.send(AgentEvent::TaskError { error: format!("Transient error after retries: {}", msg) });
+                                        return;
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::HandoffRequested(target) => {
+                                        let _ = tx.send(AgentEvent::Handoff { target_agent: target });
+                                        return;
+                                    }
+                                    _ => {
+                                        let _ = tx.send(AgentEvent::TaskError { error: format!("Fatal tool error: {:?}", e) });
+                                        return;
+                                    }
                                 }
                             };
+
+                            let _ = tx.send(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: if tr.error.is_empty() { tr.content.clone() } else { tr.error.clone() },
+                                iteration: iteration as i32,
+                            });
 
                             if tr.error.contains("LLM-Recoverable Error") || tr.error.contains("Recoverable error") {
                                 let count = *error_counts.entry(tc.name.clone()).or_insert(0) + 1;
