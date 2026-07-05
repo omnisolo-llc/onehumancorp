@@ -13,7 +13,7 @@ test('Cost Soft Limit friendly prompt shows', async ({ page, loginAs, unlimitedA
       }
   });
 
-  await page.goto('/cost-dashboard', { waitUntil: 'load' });
+  await page.goto('/ui/cost-dashboard.html', { waitUntil: 'load' });
 
   // Wait for a core UI element proving the page actually mounted
   await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 25000 });

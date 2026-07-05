@@ -24,13 +24,13 @@ test.describe('My Plan and Cost Dashboard Screens', () => {
     const detailedCostsButton = page.locator('button', { hasText: 'View Detailed Costs' });
     await expect(detailedCostsButton).toBeVisible();
     await detailedCostsButton.click();
-    await page.waitForURL('**/cost-dashboard');
-    await expect(page.url()).toContain('/cost-dashboard');
+    await page.waitForURL('**/ui/cost-dashboard.html');
+    await expect(page.url()).toContain('/ui/cost-dashboard.html');
   });
 
   test('Cost Dashboard screen metrics are visible', async ({ page }) => {
     // Go directly to Cost Dashboard
-    await page.goto('/cost-dashboard');
+    await page.goto('/ui/cost-dashboard.html');
 
     // Check core metric elements visibility
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 10000 });

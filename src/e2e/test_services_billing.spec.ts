@@ -35,10 +35,10 @@ test.describe('Billing Services & Plan Limits E2E', () => {
     await page.goto('/plan');
     // await page.waitForLoadState('networkidle'); // Removed due to timeout in mock server env
 
-    // 4. Click View Detailed Costs and assert navigation to /cost-dashboard
+    // 4. Click View Detailed Costs and assert navigation to /ui/cost-dashboard.html
     await page.getByRole('button', { name: 'View Detailed Costs' }).click();
     // await page.waitForLoadState('networkidle'); // Removed due to timeout in mock server env
-    await expect(page).toHaveURL(/\/cost-dashboard/);
+    await expect(page).toHaveURL(/\/ui\/cost-dashboard\.html/);
     await expect(page.getByRole('button', { name: 'Download Invoice' })).toBeVisible({ timeout: 10000 });
   });
 
@@ -69,7 +69,7 @@ test.describe('Billing Services & Plan Limits E2E', () => {
   test('Cost Dashboard renders core metrics and handles interactions', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
 
-    await page.goto('/cost-dashboard');
+    await page.goto('/ui/cost-dashboard.html');
     // await page.waitForLoadState('networkidle'); // Removed due to timeout in mock server env
 
     // Set viewport to a mobile size

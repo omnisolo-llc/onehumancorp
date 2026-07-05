@@ -5,7 +5,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await loginAs(page, adminUser);
 
     // Navigate to the Cost Dashboard directly
-    await page.goto('/cost-dashboard');
+    await page.goto('/ui/cost-dashboard.html');
 
     // Wait for the main heading to be visible
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
@@ -32,7 +32,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     // Set viewport to 375px width (iPhone SE size)
     await page.setViewportSize({ width: 375, height: 667 });
 
-    await page.goto('/cost-dashboard');
+    await page.goto('/ui/cost-dashboard.html');
 
     // Verify main widget renders
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
@@ -146,8 +146,8 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await viewDetailedCostsBtn.click();
 
     // Wait for URL to update
-    await page.waitForURL('**/cost-dashboard');
-    expect(page.url()).toContain('/cost-dashboard');
+    await page.waitForURL('**/ui/cost-dashboard.html');
+    expect(page.url()).toContain('/ui/cost-dashboard.html');
 
     // Now Cost Dashboard is visible
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });

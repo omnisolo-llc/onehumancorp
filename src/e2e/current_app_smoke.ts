@@ -42,7 +42,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     // const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     // expect(ogCard.ok()).toBeTruthy();
 
-    await page.goto('/cost-dashboard');
+    await page.goto('/ui/cost-dashboard.html');
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
 
