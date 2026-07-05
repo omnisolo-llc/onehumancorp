@@ -27,7 +27,7 @@
         let service = MyDocsService::new();
 
         // Test 1: Empty query, empty topic (should return all)
-        let request = Request::new(SearchHelpArticlesRequest {
+        let request = Request::new(SearchHelpArticlesRequest { mobile_optimized: false,
             query: "".to_string(),
             topic_filter: "".to_string(),
         });
@@ -35,7 +35,7 @@
         assert_eq!(response.articles.len(), 6);
 
         // Test 2: Search by query "payment"
-        let request = Request::new(SearchHelpArticlesRequest {
+        let request = Request::new(SearchHelpArticlesRequest { mobile_optimized: false,
             query: "payment".to_string(),
             topic_filter: "".to_string(),
         });
@@ -44,7 +44,7 @@
         assert!(response.articles.iter().any(|a| a.topic == "Getting Started")); // "accept payments"
 
         // Test 3: Search by topic "AI Agents"
-        let request = Request::new(SearchHelpArticlesRequest {
+        let request = Request::new(SearchHelpArticlesRequest { mobile_optimized: false,
             query: "".to_string(),
             topic_filter: "AI Agents".to_string(),
         });
@@ -53,7 +53,7 @@
         assert_eq!(response.articles[0].topic, "AI Agents");
 
         // Test 4: Search by query and topic
-        let request = Request::new(SearchHelpArticlesRequest {
+        let request = Request::new(SearchHelpArticlesRequest { mobile_optimized: false,
             query: "support".to_string(),
             topic_filter: "AI Agents".to_string(),
         });
@@ -102,7 +102,7 @@
         ];
 
         for (query, topic, expected) in cases {
-            let request = Request::new(SearchHelpArticlesRequest {
+            let request = Request::new(SearchHelpArticlesRequest { mobile_optimized: false,
                 query: query.to_string(),
                 topic_filter: topic.to_string(),
             });
@@ -405,7 +405,7 @@
         ];
 
         for (query, expected) in test_cases {
-            let request = Request::new(SearchHelpArticlesRequest {
+            let request = Request::new(SearchHelpArticlesRequest { mobile_optimized: false,
                 query: query.to_string(),
                 topic_filter: "".to_string(),
             });
@@ -728,7 +728,7 @@
         ];
 
         for (topic, expected) in test_cases {
-            let request = Request::new(SearchHelpArticlesRequest {
+            let request = Request::new(SearchHelpArticlesRequest { mobile_optimized: false,
                 query: "".to_string(),
                 topic_filter: topic.to_string(),
             });
@@ -998,11 +998,37 @@
         ];
 
         for (query, topic, expected) in test_cases {
-            let request = Request::new(SearchHelpArticlesRequest {
+            let request = Request::new(SearchHelpArticlesRequest { mobile_optimized: false,
                 query: query.to_string(),
                 topic_filter: topic.to_string(),
             });
             let response = service.search_help_articles(request).await.unwrap().into_inner();
             assert_eq!(response.articles.len(), expected, "Failed for query '{}', topic '{}'", query, topic);
         }
+    }
+    #[tokio::test]
+    async fn test_search_help_articles_mobile_optimized() {
+        let service = MyDocsService::new();
+        let request = Request::new(SearchHelpArticlesRequest {
+            query: "welcome".to_string(),
+            topic_filter: "".to_string(),
+            mobile_optimized: true,
+        });
+
+        let response = service.search_help_articles(request).await.unwrap().into_inner();
+        assert_eq!(response.articles.len(), 1);
+        assert_eq!(response.articles[0].id, "getting-started-1");
+        assert_eq!(response.articles[0].content_markdown, ""); // Omitted for mobile
+    }
+
+    #[tokio::test]
+    async fn test_get_video_tutorials_mobile_optimized() {
+        let service = MyDocsService::new();
+        let request = Request::new(GetVideoTutorialsRequest {
+            mobile_optimized: true,
+        });
+
+        let response = service.get_video_tutorials(request).await.unwrap().into_inner();
+        assert!(!response.tutorials.is_empty());
+        assert_eq!(response.tutorials[0].duration, ""); // Omitted for mobile
     }

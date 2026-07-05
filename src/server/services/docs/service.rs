@@ -122,8 +122,14 @@ impl DocsService for MyDocsService {
             .cloned()
             .collect();
 
+        let mut final_articles = filtered;
+        if req.mobile_optimized {
+            for article in final_articles.iter_mut() {
+                article.content_markdown = String::new();
+            }
+        }
         Ok(Response::new(SearchHelpArticlesResponse {
-            articles: filtered,
+            articles: final_articles,
         }))
     }
 
@@ -144,11 +150,19 @@ impl DocsService for MyDocsService {
 
     async fn get_video_tutorials(
         &self,
-        _request: Request<GetVideoTutorialsRequest>,
+        request: Request<GetVideoTutorialsRequest>,
     ) -> Result<Response<GetVideoTutorialsResponse>, Status> {
-        let tutorials = get_video_tutorials();
+        let req = request.into_inner();
+        let mut tutorials = get_video_tutorials().clone();
+
+        if req.mobile_optimized {
+            for tutorial in tutorials.iter_mut() {
+                tutorial.duration = String::new();
+            }
+        }
+
         Ok(Response::new(GetVideoTutorialsResponse {
-            tutorials: tutorials.clone(),
+            tutorials,
         }))
     }
 }

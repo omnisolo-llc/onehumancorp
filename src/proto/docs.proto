@@ -22,6 +22,7 @@ message GetHelpArticleResponse {
 message SearchHelpArticlesRequest {
   string query = 1;
   string topic_filter = 2; // optional
+  bool mobile_optimized = 3;
 }
 
 message SearchHelpArticlesResponse {
@@ -49,7 +50,9 @@ message VideoTutorial {
   string video_url = 4;
 }
 
-message GetVideoTutorialsRequest {}
+message GetVideoTutorialsRequest {
+  bool mobile_optimized = 1;
+}
 
 message GetVideoTutorialsResponse {
   repeated VideoTutorial tutorials = 1;
