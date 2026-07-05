@@ -1,14 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Subscription Management Portal', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.route('/api/subscription/magic-link', async route => {
-      // Mock the magic link backend logic
-      await route.fulfill({
-        json: { success: true }
-      });
-    });
-  });
 
   test('successfully pauses subscription via magic link', async ({ page }) => {
     // Navigate to the portal with magic link query params

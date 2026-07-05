@@ -1,13 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Conversational Checkout Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // Mock the referral API that may be called in the success modal
-    await page.route('/api/v1/growth/referrals/generate', async route => {
-      const json = { referral_link: 'http://ohc.store/join?ref=test-tenant' };
-      await route.fulfill({ json });
-    });
-  });
 
   test('successfully displays and interacts with Conversational Checkout Session after login', async ({ page }) => {
     // Login to application first
