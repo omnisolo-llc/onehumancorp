@@ -271,3 +271,59 @@ async fn test_rls_policies_protect_cross_tenant_reads() {
 
     assert_eq!(row.0, 0, "RLS policy bypass detected! A tenant could read another tenant's loyalty ledger.");
 }
+
+#[tokio::test]
+async fn test_rls_policies_protect_cross_tenant_writes() {
+    let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
+
+    let database_url = match std::env::var("OHC_DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => return,
+    };
+
+    if database_url.starts_with("sqlite") {
+        return;
+    }
+
+    let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+        .acquire_timeout(Duration::from_millis(50))
+        .connect_lazy(&database_url)
+        .unwrap();
+
+    let tenant_1 = "00000000-0000-0000-0000-000000000001";
+    let tenant_2 = "00000000-0000-0000-0000-000000000002";
+
+    // Set context to tenant 1
+    let mut tx1 = pool.begin().await.unwrap();
+    ::server_common::auth_utils::set_org_context(&mut *tx1, tenant_1).await.unwrap();
+
+    // Try to insert a row for tenant 2 while context is tenant 1
+    let insert_result = sqlx::query("INSERT INTO customer_profile (id, tenant_id, name) VALUES ('00000000-0000-0000-0000-000000000003'::uuid, $1::uuid, 'leak_test')")
+        .bind(tenant_2)
+        .execute(&mut *tx1)
+        .await;
+
+    // The insert should fail due to WITH CHECK policy violations
+    assert!(insert_result.is_err(), "CRITICAL VULNERABILITY: RLS bypass detected! A tenant successfully wrote data for another tenant.");
+
+    // Check that the error is indeed an RLS policy violation (error code 42501 in postgres)
+    if let Err(sqlx::Error::Database(db_err)) = insert_result {
+        assert_eq!(db_err.code().as_deref(), Some("42501"), "Expected an RLS violation (42501), got something else.");
+    }
+
+    tx1.rollback().await.unwrap();
+}
