@@ -10,7 +10,7 @@ use tower::ServiceExt;
 use axum::extract::Extension;
 
 use crate::hub::Hub;
-use crate::settings::integrations::whatsapp::{connect_whatsapp_cloud_api, connect_whatsapp_twilio};
+use crate::api::settings::integrations::whatsapp::{connect_whatsapp_cloud_api, connect_whatsapp_twilio};
 use ::server_common::Claims;
 
 async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
@@ -64,7 +64,7 @@ async fn test_hub() -> Arc<Hub> {
     .await
     .unwrap();
 
-    let db = Arc::new(crate::db::DB {
+    let _db = Arc::new(crate::db::DB {
         pool: pg_pool.clone(),
         store: crate::db::DbStore::Sqlite(pool.clone()),
     });
