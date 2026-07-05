@@ -62,7 +62,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.locator('#step-name')).toBeVisible();
     const nameInput = page.locator('#business-name');
     await expect(nameInput).toBeVisible();
-    await expect(nameInput).toHaveClass(/glassmorphism/);
+    await expect(nameInput).toHaveClass(/glass-control/);
     await expect(nameInput).toHaveAttribute('autocomplete', 'organization');
 
     await nameInput.fill("My Awesome E2E Business");
@@ -201,7 +201,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     const bioInput = page.locator('#instant-bio');
     await expect(bioInput).toBeVisible();
-    await expect(bioInput).toHaveClass(/glassmorphism/);
+    await expect(bioInput).toHaveClass(/glass-control/);
 
     await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
 
