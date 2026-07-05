@@ -119,11 +119,14 @@
       }
       /* Added missing glass-control definition */
       .glass-control {
-        border-radius: 8px;
+        border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+      textarea.glass-control, input.glass-control, select.glass-control, button.glass-control {
+        border-radius: 8px !important;
       }
       @media (prefers-color-scheme: dark) {
         .glass-control {
@@ -3240,7 +3243,7 @@
           }
         } else if (stepId === "step-domain") {
           if (inputs.domain_name.value.trim().length < 3) {
-            errors.domain_name.style.display = "block";
+            errors.domain_name.style.display = "flex";
             inputs.domain_name.classList.add("invalid-input");
             isValid = false;
           } else {
