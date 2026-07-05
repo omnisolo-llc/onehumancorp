@@ -490,7 +490,7 @@
         text-align: right;
       }
 
-      @keyframes fadeIn {
+      @keyframes stepFadeIn {
         from {
           opacity: 0;
           transform: translateY(5px);
@@ -646,13 +646,8 @@
       }
 
       /* Multi-step logic */
-      .step {
-        display: none;
-        animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      .step.active {
-        display: block;
-      }
+
+
       @keyframes fadeIn {
         0% {
           opacity: 0;
@@ -1127,8 +1122,69 @@
       .glassmorphism.panel {
         border-radius: 16px;
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
       .context-card { min-height: 44px; box-sizing: border-box; }
+
+      /* --- OHC Premium Dark Mode & Animations --- */
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #000000;
+          color: #f5f5f7;
+        }
+        h1, h2, h3, h4, p, label {
+          color: #f5f5f7 !important;
+        }
+        .container, .glassmorphism, .context-card, .toggle-row, .ohc-tooltip {
+          background: rgba(22, 22, 26, 0.7) !important;
+          backdrop-filter: blur(30px) saturate(210%) !important;
+          -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        .context-card:hover {
+          background: rgba(40, 40, 45, 0.7) !important;
+        }
+        .context-desc, .toggle-desc {
+          color: #a1a1a6 !important;
+        }
+        input, select, textarea {
+          background: rgba(30, 30, 30, 0.8) !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+          color: #f5f5f7 !important;
+        }
+        footer {
+          background: rgba(22, 22, 26, 0.7) !important;
+          border-top-color: rgba(255, 255, 255, 0.1) !important;
+          color: #f5f5f7 !important;
+        }
+        footer a {
+          color: #0066FF !important;
+        }
+      }
+
+      /* Transitions */
+      .container {
+        transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .context-card {
+        transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* Entrance/Exit Animation */
+      .step {
+        display: none;
+        opacity: 0;
+        transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .step.active {
+        display: block;
+        opacity: 1;
+        animation: stepFadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      @keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+
     </style>
 
     <style>
@@ -1235,7 +1291,7 @@
           box-shadow: 0 0 0 1px #0066FF;
         }
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
       .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
 
@@ -4617,7 +4673,7 @@
       .ohc-tooltip.visible {
         opacity: 1;
       }
-          #instant-bio { min-height: 44px; box-sizing: border-box; }
+          #instant-bio { min-height: 44px; box-sizing: border-box; border-radius: 8px; }
       .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
     <script>
