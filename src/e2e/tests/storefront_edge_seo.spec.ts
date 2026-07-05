@@ -39,6 +39,6 @@ test.describe('Storefront Edge SEO and Caching', () => {
         await expect(page.locator('#copy-link-btn')).toBeVisible({ timeout: 10000 });
 
         // Assert cache was successfully invalidated internally by our webhook above
-        expect(true).toBe(true);
+        await expect(frame.locator('body')).toContainText('Original SEO Name');
     });
 });

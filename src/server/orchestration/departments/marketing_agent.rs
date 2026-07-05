@@ -280,6 +280,9 @@ impl Department for MarketingAgent {
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
+                                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
+                                cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
 
                                 // Trigger site publish job for all sites for the tenant
                                 if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_id).await {
