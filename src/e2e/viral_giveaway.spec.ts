@@ -41,7 +41,11 @@ test.describe('Viral Giveaway Loop', () => {
     await generateBtn.click();
 
     // 5. Capture the URL
+<<<<<<< HEAD
     await expect(page.getByText('Link Ready!')).toBeVisible();
+=======
+    await expect(page.getByText('Your Viral Link is Ready!')).toBeVisible();
+>>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
     const linkInput = page.locator('input[readonly]');
     const generatedUrl = await linkInput.inputValue();
     expect(generatedUrl).toContain('/giveaway/enter');
@@ -92,8 +96,13 @@ test.describe('Viral Giveaway Loop', () => {
     });
     await page.reload();
 
+<<<<<<< HEAD
     const toggle = page.locator('input[type="checkbox"]');
     await toggle.click({ force: true }); // It's hidden behind styling
+=======
+
+    await page.locator('.toggle-switch').click({ force: true });
+>>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
 
     // Soft paywall should appear
     await expect(page.locator('text=Pro Feature')).toBeVisible();
@@ -112,8 +121,13 @@ test.describe('Viral Giveaway Loop', () => {
     const titleInput = page.getByLabel('Prize / Title');
     await titleInput.fill('Win a Free iPad');
 
+<<<<<<< HEAD
     const toggle = page.locator('input[type="checkbox"]');
     await toggle.click({ force: true });
+=======
+
+    await page.locator('.toggle-switch').click({ force: true });
+>>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
 
     // Soft paywall should not appear
     await expect(page.locator('text=Pro Feature')).not.toBeVisible();
@@ -126,7 +140,11 @@ test.describe('Viral Giveaway Loop', () => {
     await generateBtn.click();
 
     // 5. Capture the URL
+<<<<<<< HEAD
     await expect(page.getByText('Link Ready!')).toBeVisible();
+=======
+    await expect(page.getByText('Your Viral Link is Ready!')).toBeVisible();
+>>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
     const linkInput = page.locator('input[readonly]');
     const generatedUrl = await linkInput.inputValue();
     expect(generatedUrl).toContain('branding=false');
@@ -140,4 +158,28 @@ test.describe('Viral Giveaway Loop', () => {
 
     await publicPage.close();
   });
+<<<<<<< HEAD
+=======
+  test('should dismiss soft paywall when Maybe Later is clicked', async ({ page }) => {
+    await page.goto('/giveaway');
+    await page.evaluate(() => {
+        localStorage.setItem('tenant', 'e2e-test-store');
+        localStorage.setItem('has_pro', 'false');
+    });
+    await page.reload();
+
+    await page.locator('.toggle-switch').click({ force: true });
+
+    await expect(page.locator('text=Pro Feature')).toBeVisible();
+    await page.getByRole('button', { name: 'Maybe Later' }).click();
+    await expect(page.locator('text=Pro Feature')).not.toBeVisible();
+  });
+
+  test('should hide footer when branding=false is in the url', async ({ page }) => {
+    await page.goto('/giveaway/enter?branding=false');
+
+    // Verify "Powered by OHC" footer is not present
+    await expect(page.locator('a', { hasText: '⚡ Powered by OHC' })).not.toBeVisible();
+  });
+>>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
 });
