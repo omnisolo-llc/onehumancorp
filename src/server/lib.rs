@@ -3735,7 +3735,7 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
-                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "ProposedInvoice" {
+                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "ProposedInvoice" || action_type == "Accept Booking" || action_type == "Reorder" {
                         tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
@@ -3996,7 +3996,7 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
-                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "ProposedInvoice" {
+                    } else if action_type == "Approve Draft" || action_type == "Draft Quote" || action_type == "ProposedInvoice" || action_type == "Accept Booking" || action_type == "Reorder" {
                         tracing::info!("Executing proposed action: Draft Quote, payload: {}", action_payload); // pii-safe
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
 
