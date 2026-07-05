@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 temp-env = { version = "0.3", features = ["async_closure"] }
 async-trait = "0.1"
-axum = { version = "0.8.1", features = ["ws"] }
+axum = { version = "0.8.1", features = ["ws", "multipart"] }
 bcrypt = "0.16.0"
 chrono = { workspace = true }
 hex = "0.4"
