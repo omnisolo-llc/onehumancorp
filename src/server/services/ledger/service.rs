@@ -34,10 +34,7 @@ impl LedgerService for LedgerServiceImpl {
             .await
             .map_err(|e| Status::internal(format!("Failed to begin transaction: {}", e)))?;
 
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&req.tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(format!("Failed to set RLS tenant: {}", e)))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(format!("Failed to set RLS tenant: {}", e)))?;
 
 
         // 1. Record the transaction
@@ -108,10 +105,7 @@ impl LedgerService for LedgerServiceImpl {
         let req = request.into_inner();
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(format!("Failed to begin tx: {}", e)))?;
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&req.tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(format!("Failed to set RLS tenant: {}", e)))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(format!("Failed to set RLS tenant: {}", e)))?;
 
         let account = sqlx::query(
 r#"
@@ -138,10 +132,7 @@ r#"
         let req = request.into_inner();
 
         let mut tx = self.pool.begin().await.map_err(|e| Status::internal(format!("Failed to begin tx: {}", e)))?;
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&req.tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(format!("Failed to set RLS tenant: {}", e)))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(format!("Failed to set RLS tenant: {}", e)))?;
 
         let entries_records = sqlx::query(
 r#"

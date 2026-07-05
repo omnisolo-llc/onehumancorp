@@ -28,7 +28,7 @@ async fn create_dummy_pg_pool() -> sqlx::PgPool {
         .before_acquire(|conn: &mut sqlx::PgConnection, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute("SET app.current_tenant = ''").await?;
+                ::server_common::auth_utils::set_org_context(&mut *conn, "").await?;
                 Ok(true)
             })
         })
