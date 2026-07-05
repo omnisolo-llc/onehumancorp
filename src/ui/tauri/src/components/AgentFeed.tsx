@@ -29,23 +29,44 @@ export const AgentFeed: React.FC = () => {
 
     const handleApprove = async (id: string) => {
         try {
-            const response = await fetch(`/api/inbox/action_required/${id}/approve`, {
+            const response = await fetch(\`/api/inbox/action_required/\${id}/approve\`, {
                 method: 'POST',
             });
             if (response.ok) {
-                // Remove the draft from the UI optimistically
                 setDrafts(drafts.filter(d => d.draft_id !== id));
             } else {
-                console.error("Failed to approve draft");
+                setError("Failed to approve draft");
             }
-        } catch (err) {
-            console.error(err);
+        } catch (err: any) {
+            setError(err.message);
         }
     };
 
-    const handleEdit = (id: string) => {
-        // Implement edit logic, maybe a modal or inline editing
-        console.log("Edit draft", id);
+    const handleEdit = async (id: string) => {
+        const draftToEdit = drafts.find(d => d.draft_id === id);
+        if (draftToEdit) {
+            const newResponse = window.prompt("Edit draft response:", draftToEdit.response);
+            if (newResponse !== null && newResponse !== draftToEdit.response) {
+                try {
+                    const response = await fetch(\`/api/inbox/action_required/\${id}\`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ response: newResponse }),
+                    });
+                    if (response.ok) {
+                        setDrafts(drafts.map(d =>
+                            d.draft_id === id ? { ...d, response: newResponse } : d
+                        ));
+                    } else {
+                        setError("Failed to update draft");
+                    }
+                } catch (err: any) {
+                    setError(err.message);
+                }
+            }
+        }
     };
 
     if (loading) return <div className="p-4 text-center">Loading feed...</div>;

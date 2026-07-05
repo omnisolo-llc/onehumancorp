@@ -42,7 +42,6 @@ pub struct ProposalLineItem {
 pub struct DraftAgentRequest {
     pub inquiry: String,
     pub customer_id: String,
-    pub tenant_id: String,
 }
 
 #[derive(Serialize)]
@@ -365,7 +364,7 @@ mod tests {
             .method("POST")
             .uri("/draft_agent")
             .header("Content-Type", "application/json")
-            .body(Body::from(r#"{"inquiry": "test", "customer_id": "cust1", "tenant_id": "tenant1"}"#))
+            .body(Body::from(r#"{"inquiry": "test", "customer_id": "cust1"}"#))
             .unwrap();
 
         let _res = app.oneshot(req).await.unwrap();
