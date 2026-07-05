@@ -90,3 +90,4 @@ test.describe('WhatsApp Integration UI', () => {
     await expect(page).toHaveURL(/\/inbox$/);
   });
 });
+// E2E UI verification for WhatsApp Cloud API and Twilio for WhatsApp
