@@ -276,16 +276,49 @@ Your response:",
         }
 
         // Clean up markdown code blocks if present
-        let mut clean_json = response.as_str();
+        let mut clean_json = response.to_string();
         if let Some(start) = clean_json.find('{') {
             if let Some(end) = clean_json.rfind('}') {
                 if start <= end {
-                    clean_json = &clean_json[start..=end];
+                    clean_json = clean_json[start..=end].to_string();
                 }
             }
         }
 
-        let data: IntakeData = serde_json::from_str(clean_json)
+        // Basic structural repair for truncated LLM JSON output
+        let mut string_literal = false;
+        let mut escaped = false;
+        let mut open_braces: usize = 0;
+        let mut open_brackets: usize = 0;
+
+        for c in clean_json.chars() {
+            if c == '"' && !escaped {
+                string_literal = !string_literal;
+            }
+            escaped = if c == '\\' { !escaped } else { false };
+
+            if !string_literal {
+                match c {
+                    '{' => open_braces += 1,
+                    '}' => open_braces = open_braces.saturating_sub(1),
+                    '[' => open_brackets += 1,
+                    ']' => open_brackets = open_brackets.saturating_sub(1),
+                    _ => {}
+                }
+            }
+        }
+
+        if string_literal {
+            clean_json.push('"');
+        }
+        for _ in 0..open_brackets {
+            clean_json.push(']');
+        }
+        for _ in 0..open_braces {
+            clean_json.push('}');
+        }
+
+        let data: IntakeData = serde_json::from_str(&clean_json)
             .map_err(|e| format!("Failed to parse AI response as JSON: {}. Response was: {}", e, response))?;
 
         Ok(data)
