@@ -39,7 +39,7 @@ export default function ChangelogPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div>
             </div>
           ) : sections.length === 0 ? (
-            <p className="text-center text-gray-500 font-medium py-8 backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl">
+            <p className="text-center text-gray-500 font-medium py-8 backdrop-blur-[60px] saturate-[200%] bg-white/50 dark:bg-[#1C1C1E]/50 border border-white/40 dark:border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.12)] rounded-3xl">
               No changelog available.
             </p>
           ) : (
@@ -49,7 +49,7 @@ export default function ChangelogPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1, duration: 0.4 }}
-                className="backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] p-6 sm:p-8 rounded-3xl transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)] hover:border-blue-300 dark:hover:border-blue-700"
+                className="backdrop-blur-[60px] saturate-[200%] bg-white/50 dark:bg-[#1C1C1E]/50 border border-white/40 dark:border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.12)] p-6 sm:p-8 rounded-3xl transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,0,0,0.12)] hover:border-blue-300 dark:hover:border-blue-700"
               >
                 <h2 className="text-xl sm:text-2xl font-bold text-[#0071E3] dark:text-blue-400 mb-4 font-outfit">
                   {section.version}
