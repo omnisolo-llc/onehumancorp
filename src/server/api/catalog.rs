@@ -48,6 +48,9 @@ pub struct CreateProductRequest {
     pub subscription_frequency: Option<String>,
     pub subscription_discount_percent: Option<i32>,
     pub variants: Option<Vec<ProductVariantRequest>>,
+    pub smart_pricing_enabled: Option<bool>,
+    pub base_price: Option<String>,
+    pub min_price: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -323,6 +326,25 @@ async fn handle_create_product(
             tracing::error!("Failed to insert subscription plan: {}", e);
             // Non-fatal, just log it. The product was created.
         }
+    }
+
+    if payload.smart_pricing_enabled.unwrap_or(false) {
+        let base_price_cents = (payload.base_price.unwrap_or(payload.price.clone()).parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
+        let _min_price_cents = (payload.min_price.unwrap_or("0".to_string()).parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
+        let rules_id = uuid::Uuid::new_v4().to_string();
+
+        let _ = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, is_active, rules_json) VALUES ($1, $2, $3, $4, $5, TRUE, $6)")
+            .bind(&rules_id)
+            .bind(&tenant_id)
+            .bind(&product_id)
+            .bind(format!("Smart Pricing: {}", payload.name))
+            .bind(base_price_cents)
+            .bind(serde_json::json!([{
+                "type": "InventoryThreshold",
+                "config": { "threshold": 10, "adjustment_percent": -10.0 }
+            }]))
+            .execute(&mut *conn)
+            .await;
     }
 
     let event_payload = serde_json::json!({

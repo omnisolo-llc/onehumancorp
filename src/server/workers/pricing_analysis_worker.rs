@@ -131,6 +131,24 @@ impl PricingAnalysisWorker {
                 }
             });
 
+            // Autonomously apply rule
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let mut conn = db.pool.acquire().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id).await.map_err(|e| e.to_string())?;
+                    let _ = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, is_active, rules_json) VALUES ($1, $2, $3, $4, $5, TRUE, $6) ON CONFLICT (tenant_id, target_id) DO UPDATE SET rules_json = EXCLUDED.rules_json")
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(tenant_id)
+                        .bind(&target.id)
+                        .bind(format!("Clearance: {}", target.title))
+                        .bind(target._price_cents)
+                        .bind(serde_json::json!([{ "type": "InventoryThreshold", "config": { "threshold": target.inventory_count, "adjustment_percent": -15.0 } }]))
+                        .execute(&mut *conn)
+                        .await;
+                }
+                _ => {}
+            }
+
             Self::create_feed_item(db, tenant_id, "Pricing Agent", proposal).await?;
         }
 
@@ -202,6 +220,24 @@ impl PricingAnalysisWorker {
                     }
                 }
             });
+
+            // Autonomously apply rule
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let mut conn = db.pool.acquire().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id).await.map_err(|e| e.to_string())?;
+                    let _ = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, is_active, rules_json) VALUES ($1, $2, $3, $4, $5, TRUE, $6) ON CONFLICT (tenant_id, target_id) DO UPDATE SET rules_json = EXCLUDED.rules_json")
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(tenant_id)
+                        .bind(&target.id)
+                        .bind(format!("Peak Surge: {}", target.title))
+                        .bind(target._price_cents)
+                        .bind(serde_json::json!([{ "type": "DemandSurge", "config": { "threshold_score": 0.8, "adjustment_percent": 10.0 } }]))
+                        .execute(&mut *conn)
+                        .await;
+                }
+                _ => {}
+            }
 
             Self::create_feed_item(db, tenant_id, "Yield Agent", proposal).await?;
         }
@@ -308,7 +344,7 @@ mod tests {
             .unwrap();
 
         for i in 0..10 {
-            sqlx::query("INSERT INTO bookings (id, tenant_id, product_id) VALUES (?, ?, ?)")
+            sqlx::query("INSERT INTO bookings (id, tenant_id, service_id) VALUES (?, ?, ?)")
                 .bind(format!("b_{}", i))
                 .bind(tenant_id)
                 .bind(popular_id)

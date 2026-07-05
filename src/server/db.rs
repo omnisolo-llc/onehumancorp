@@ -1149,7 +1149,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
                         order_id TEXT,
-                        product_id TEXT,
+                        service_id TEXT,
                         quantity INTEGER,
                         price REAL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

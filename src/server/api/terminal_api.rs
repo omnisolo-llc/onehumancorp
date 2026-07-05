@@ -699,7 +699,15 @@ pub async fn create_payment_intent_handler(
         }
     }
 
-    info!(tenant_id = %tenant_id, amount = req_data.amount_cents, currency = %req_data.currency, "Creating Stripe Terminal Payment Intent");
+    // Compute dynamic yield price before generating payment intent
+    let mut final_amount_cents = req_data.amount_cents;
+
+    if let Some(product_id) = &req_data.product_id {
+        let calculated_price = ::server_pricing::engine::apply_yield_management(&pool, &tenant_id, product_id, chrono::Utc::now(), req_data.amount_cents).await;
+        final_amount_cents = calculated_price;
+    }
+
+    info!(tenant_id = %tenant_id, amount = final_amount_cents, currency = %req_data.currency, "Creating Stripe Terminal Payment Intent");
 
     if let Err(e) = ::server_telemetry::record_api_call_cost(
         &crate::db::get_pool(),
@@ -718,7 +726,7 @@ pub async fn create_payment_intent_handler(
     match crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default()).require_api_key() {
         Ok(_) => match session_manager.create_terminal_payment_intent(
             &tenant_id,
-            req_data.amount_cents,
+            final_amount_cents,
             &req_data.currency,
             req_data.product_id.as_deref(),
             req_data.quantity,
@@ -728,7 +736,7 @@ pub async fn create_payment_intent_handler(
             Ok((payment_intent_id, client_secret)) => {
                 let pool = crate::db::get_pool();
 
-                let amount_float = (req_data.amount_cents as f64) / 100.0;
+                let amount_float = (final_amount_cents as f64) / 100.0;
                 let payment_id = uuid::Uuid::new_v4().to_string();
 
                 // Use ON CONFLICT DO NOTHING to avoid duplicate key errors if idempotency_key is reused and already exists.
