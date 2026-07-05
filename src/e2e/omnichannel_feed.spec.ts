@@ -26,7 +26,7 @@ test.describe('Omnichannel Inbox Differentiation & Customer Memory', () => {
 
     const emptyState = page.locator('[data-testid="triage-feed-empty"]');
     await expect(emptyState).toBeVisible();
-    await expect(emptyState).toContainText('All caught up!');
+    await expect(emptyState).toContainText('All caught up! Your business is running smoothly.');
   });
 
   // Test 3: Action Card Interaction

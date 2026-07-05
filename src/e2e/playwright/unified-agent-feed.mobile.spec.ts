@@ -39,7 +39,7 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
 
     // Check action cards if they appear
     const approveButtons = page.locator('button:has-text("Approve")');
-    const caughtUpText = page.locator('text=All caught up!');
+    const caughtUpText = page.locator('text=All caught up! Your business is running smoothly.');
 
     // Wait for either the list to load items or show the empty state
     await Promise.race([

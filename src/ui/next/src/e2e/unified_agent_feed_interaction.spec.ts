@@ -120,7 +120,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Check if feed loads
-    const feedContainer = page.locator('div.glassmorphism').filter({ hasText: 'All caught up' }).first();
+    const feedContainer = page.locator('div.glassmorphism').filter({ hasText: 'All caught up! Your business is running smoothly.' }).first();
   });
 
 
