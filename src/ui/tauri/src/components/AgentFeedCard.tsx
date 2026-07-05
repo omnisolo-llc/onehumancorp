@@ -25,12 +25,12 @@ export const AgentFeedCard: React.FC<AgentFeedCardProps> = ({ draft, onApprove, 
                 <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
                     Message from {draft.customer_name || 'Unknown User'}
                 </div>
-                <div className="text-xs text-gray-500 uppercase">
+                <div className="text-xs text-[#1D1D1F]/60 dark:text-[#F5F5F7]/60 uppercase">
                     {draft.source}
                 </div>
             </div>
 
-            <div className="text-sm text-gray-800 dark:text-gray-200 bg-white/40 dark:bg-black/20 p-3 rounded-lg">
+            <div className="text-sm text-[#1D1D1F]/80 dark:text-[#F5F5F7]/80 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 p-3 rounded-[8px]">
                 {draft.response}
             </div>
 
@@ -43,7 +43,7 @@ export const AgentFeedCard: React.FC<AgentFeedCardProps> = ({ draft, onApprove, 
                 </button>
                 <button
                     onClick={() => onEdit(draft.draft_id)}
-                    className="w-full min-h-[44px] bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-[8px] font-medium transition-colors"
+                    className="w-full min-h-[44px] bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-700/50 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-[8px] border border-white/40 dark:border-white/10 font-medium transition-colors"
                 >
                     Edit Draft
                 </button>
