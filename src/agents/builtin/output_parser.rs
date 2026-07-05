@@ -290,26 +290,42 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
     fn generate_feedback_message(current_req: &mut ChatRequest, msg: &Message, parse_error_msg: &str) {
         if !msg.tool_calls.is_empty() {
             current_req.messages.push(msg.clone());
-            let detailed_error = if parse_error_msg.contains("Validation Error") || parse_error_msg.contains("Semantic validation failed") {
-                parse_error_msg.to_string()
-            } else {
-                // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
-                let args_snippet = msg.tool_calls.first().map(|tc| tc.arguments.to_string());
-                crate::types::format_pydantic_error_string(
-                    parse_error_msg,
-                    args_snippet.as_deref(),
-                    Some("Please strictly follow the Pydantic-first tool schema and try again. The provided arguments do not match the expected JSON schema. Fix the errors and output a new tool call.")
-                )
-            };
-            let tool_results = msg
-                .tool_calls
-                .iter()
-                .map(|tc| crate::types::ToolResult::new_llm_recoverable(
+
+            let mut tool_results = vec![];
+            for tc in &msg.tool_calls {
+                // Find the schema for this tool
+                let schema_str = current_req
+                    .tools
+                    .iter()
+                    .find(|t| t.name == tc.name)
+                    .map(|t| serde_json::to_string_pretty(&t.parameters).unwrap_or_default())
+                    .unwrap_or_default();
+
+                let mut detailed_error = if parse_error_msg.contains("Validation Error") || parse_error_msg.contains("Semantic validation failed") {
+                    parse_error_msg.to_string()
+                } else {
+                    // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
+                    let args_snippet = Some(tc.arguments.to_string());
+                    crate::types::format_pydantic_error_string(
+                        parse_error_msg,
+                        args_snippet.as_deref(),
+                        Some("Please strictly follow the Pydantic-first tool schema and try again. The provided arguments do not match the expected JSON schema. Fix the errors and output a new tool call.")
+                    )
+                };
+
+                if !schema_str.is_empty() {
+                    detailed_error = format!("{}
+
+Expected Schema:
+{}", detailed_error, schema_str);
+                }
+
+                tool_results.push(crate::types::ToolResult::new_llm_recoverable(
                     tc.id.clone(),
                     &tc.name,
                     &detailed_error,
-                ))
-                .collect();
+                ));
+            }
 
             current_req.messages.push(Message {
                 role: crate::types::Role::Tool,
