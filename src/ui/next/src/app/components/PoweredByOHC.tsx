@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 interface PoweredByOHCProps {
+  className?: string;
   tenantId: string;
   isOwner?: boolean;
 }
 
-export function PoweredByOHC({ tenantId, isOwner = false }: PoweredByOHCProps) {
+export function PoweredByOHC({ tenantId, isOwner = false, className }: PoweredByOHCProps) {
   const referralUrl = `/onboarding?ref=${tenantId}&source=footer_widget`;
   const upgradeUrl = `/pricing?source=footer_widget_upgrade`;
   const [isHovered, setIsHovered] = useState(false);

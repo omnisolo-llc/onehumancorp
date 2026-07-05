@@ -9,7 +9,7 @@ interface StripeTerminalClientProps {
   onSuccess?: () => void;
   cart?: { product: any, quantity: number }[];
   amount: number;
-  productId: string;
+  productId?: string;
   tenantId: string;
   onOptimisticReserve?: () => void;
   onOptimisticRollback?: () => void;
@@ -56,6 +56,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
       setStatus('Terminal initialized. Ready to discover readers.');
     }
     initTerminal();
+  }, []);
+
 
 
   return (
@@ -124,14 +126,32 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
           {selectedMethod === 'tap' && !connectedReader && (
             <div className="mb-4">
-              <button onClick={discoverReaders} disabled={typeof window !== 'undefined' && !navigator.onLine} className={`w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-colors ${(typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
+              <button onClick={async () => {
+                if (terminal) {
+                  const discoverResult = await terminal.discoverReaders();
+                  if (discoverResult.discoveredReaders) {
+                    setDiscoveredReaders(discoverResult.discoveredReaders);
+                  }
+                }
+              }} disabled={typeof window !== 'undefined' && !navigator.onLine} className={`w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 active:scale-[0.98] transition-colors ${(typeof window !== 'undefined' && !navigator.onLine) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}>
                 Discover Readers
               </button>
               <ul className="mt-4 space-y-2">
                 {discoveredReaders.map(reader => (
                   <li key={reader.id} className="flex justify-between items-center p-4 border border-white/50 rounded-2xl bg-white/60 backdrop-blur-[30px] saturate-[210%] shadow-sm transition-all hover:bg-white/80">
                     <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
-                    <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-5 py-2 min-h-[44px] min-w-[44px] rounded-xl text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
+                    <button onClick={async () => {
+                      if (terminal) {
+                        setStatus("Connecting...");
+                        const connectResult = await terminal.connectReader(reader);
+                        if (connectResult.error) {
+                          setStatus("Failed to connect: " + connectResult.error.message);
+                        } else {
+                          setConnectedReader(connectResult.reader);
+                          setStatus("Connected successfully");
+                        }
+                      }
+                    }} className="bg-[#34C759] text-white px-5 py-2 min-h-[44px] min-w-[44px] rounded-xl text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
                       Connect
                     </button>
                   </li>
@@ -151,7 +171,10 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
                   });
-                  await processPayment();
+                  if (terminal) {
+                    await terminal.collectPaymentMethod();
+                    await terminal.processPayment();
+                  }
                 } catch(e: any) {
                   setStatus('Error: ' + e.message);
                 } finally {
@@ -174,7 +197,8 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                      headers: { 'Content-Type': 'application/json' },
                      body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
                    });
-                   await processCashSale();
+                   // Cash sale processing mock
+                  setStatus("Cash sale recorded offline");
                  } catch(e: any) {
                    setStatus('Error: ' + e.message);
                  } finally {

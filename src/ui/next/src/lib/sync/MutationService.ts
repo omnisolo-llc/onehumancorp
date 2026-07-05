@@ -1,5 +1,5 @@
 import { SyncManager } from './SyncManager';
-import { enqueueOperationIntent, OperationIntent } from '../../app/utils/offlineQueue';
+import { enqueueAction as enqueueOperationIntent, OfflineAction as OperationIntent } from '../../app/utils/offlineQueue';
 import { v4 as uuidv4 } from 'uuid';
 
 export class MutationService {
@@ -29,11 +29,9 @@ export class MutationService {
   ): Promise<void> {
     const intent: OperationIntent = {
       id: uuidv4(),
-      action_type: actionType,
+      type: actionType,
       payload,
-      status: 'PENDING',
-      retry_count: 0,
-      created_at: new Date().toISOString()
+      timestamp: Date.now()
     };
 
     try {
