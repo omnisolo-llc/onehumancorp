@@ -434,3 +434,17 @@ pub struct DepositRequirement {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct SocialPostProposal {
+    pub id: String,
+    pub tenant_id: String,
+    pub product_id: String,
+    pub content: String,
+    pub image_url: Option<String>,
+    pub seo_alt_text: Option<String>,
+    pub seo_meta_description: Option<String>,
+    pub status: String,
+    pub created_at_unix: i64,
+    pub updated_at_unix: i64,
+}

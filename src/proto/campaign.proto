@@ -70,4 +70,38 @@ service CampaignService {
     rpc CreateDraft(CreateDraftRequest) returns (CreateDraftResponse);
     rpc AddAsset(AddAssetRequest) returns (AddAssetResponse);
     rpc LaunchCampaign(LaunchCampaignRequest) returns (LaunchCampaignResponse);
+    rpc ListSocialPostProposals(ListSocialPostProposalsRequest) returns (ListSocialPostProposalsResponse);
+    rpc UpdateSocialPostProposal(UpdateSocialPostProposalRequest) returns (UpdateSocialPostProposalResponse);
+}
+
+message SocialPostProposal {
+    string id = 1;
+    string tenant_id = 2;
+    string product_id = 3;
+    string content = 4;
+    string image_url = 5;
+    string seo_alt_text = 6;
+    string seo_meta_description = 7;
+    string status = 8;
+    int64 created_at_unix = 9;
+    int64 updated_at_unix = 10;
+}
+
+message ListSocialPostProposalsRequest {
+    string tenant_id = 1;
+    string status = 2;
+}
+
+message ListSocialPostProposalsResponse {
+    repeated SocialPostProposal proposals = 1;
+}
+
+message UpdateSocialPostProposalRequest {
+    string tenant_id = 1;
+    string proposal_id = 2;
+    string status = 3;
+}
+
+message UpdateSocialPostProposalResponse {
+    SocialPostProposal proposal = 1;
 }

@@ -51,6 +51,7 @@ rust_library(
         "estimator.rs",
         "money.rs",
         "//src/server/domain/repository:campaign_repo.rs",
+        "//src/server/domain/repository:social_post_proposal_repo.rs",
         "//src/server/domain/repository:mod.rs",
         "//src/server/domain/repository:models.rs",
         "//src/server/domain/repository:task_repo.rs",
