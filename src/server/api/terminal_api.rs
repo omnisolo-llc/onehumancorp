@@ -366,6 +366,7 @@ pub async fn sync_offline_transactions_handler(
     let pool = crate::db::get_pool();
     let mut synced_count = 0;
     let mut failed_ids = Vec::new();
+    let mut pending_reconciliation_items: Vec<serde_json::Value> = Vec::new();
 
     for tx in &req_data.transactions {
         if let Some(sig) = &tx.device_signature {
@@ -448,6 +449,40 @@ pub async fn sync_offline_transactions_handler(
 
         match query_builder.build().fetch_all(&mut *db_tx).await {
             Ok(rows) => {
+                // Evaluate conflicts for pending reconciliation synchronously
+                for tx in &req_data.transactions {
+                    if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload) {
+                        if let Some(items) = payload_val.as_array() {
+                            for item in items {
+                                if let (Some(product_id), Some(quantity)) = (
+                                    item.get("product_id").and_then(|v| v.as_str()),
+                                    item.get("quantity").and_then(|v| v.as_i64()),
+                                ) {
+                                    let current_stock_res: Result<(i32,), sqlx::Error> = sqlx::query_as(
+                                        "SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2"
+                                    )
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_one(&mut *db_tx)
+                                    .await;
+
+                                    if let Ok((stock,)) = current_stock_res {
+                                        if stock < quantity as i32 {
+                                            let tx_id = tx.id.clone().unwrap_or_default();
+                                            pending_reconciliation_items.push(serde_json::json!({
+                                                "transaction_id": tx_id,
+                                                "product_id": product_id,
+                                                "shortage": (quantity as i32) - stock,
+                                                "timestamp": chrono::Utc::now().to_rfc3339()
+                                            }));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if !rows.is_empty() {
                     let mut job_query_builder = sqlx::QueryBuilder::new(
                         "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) "
@@ -490,6 +525,22 @@ pub async fn sync_offline_transactions_handler(
                                 failed_ids.push(tx.id.clone().unwrap_or_default());
                             }
                         } else {
+                            // Update pos_terminal_sessions with conflicts_pending if needed
+                            if !pending_reconciliation_items.is_empty() {
+                                let conflict_payload = serde_json::json!(pending_reconciliation_items.clone());
+                                let _ = sqlx::query(
+                                    "UPDATE pos_terminal_sessions
+                                     SET sync_status = 'CONFLICTS_PENDING',
+                                         pending_reconciliation = COALESCE(pending_reconciliation, '[]'::jsonb) || $1::jsonb
+                                     WHERE tenant_id = $2
+                                     AND device_id = $3"
+                                )
+                                .bind(conflict_payload)
+                                .bind(&tenant_id)
+                                .bind(&client_id)
+                                .execute(&pool)
+                                .await;
+                            }
                             synced_count = req_data.transactions.len() as i32;
                         }
                     }
