@@ -15,7 +15,7 @@ pub struct WorkerPool {
 
 impl WorkerPool {
     pub fn new(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>) -> Self {
-        Self::new_with_timeout(queue, num_workers, job_types, handler, ohc_builtin_agent::agent::agent_task_timeout().as_millis() as u64)
+        Self::new_with_timeout(queue, num_workers, job_types, handler, 60000)
     }
 
     pub fn new_with_timeout(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>, timeout_ms: u64) -> Self {
@@ -77,7 +77,7 @@ impl WorkerPool {
                                             ::server_telemetry::record_error_signal("[bug] Job timed out after ms");
                                             tracing::trace!("Job {} timed out after {} ms", job_id, timeout_ms);
                                             join_handle.abort();
-                                            if let Err(fail_err) = queue_clone.fail(&job_id, 3, "Job timed out").await {
+                                            if let Err(fail_err) = queue_clone.fail(&job_id, 3, "Agent execution exceeded 60-second ML-Resilience timeout rule").await {
                                                 ::server_telemetry::record_error_signal("[bug] Failed to register fail for timed out job ");
                                                 tracing::trace!("Failed to register fail for timed out job {}: {}", job_id, fail_err);
                                             }
