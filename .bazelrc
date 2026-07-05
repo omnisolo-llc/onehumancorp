@@ -94,6 +94,7 @@ test --test_env=HOME
 test --test_env=MCPANY_DEBUG
 test --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS
 test --test_env=PATH
+test --test_env=JWT_SECRET=test_secret
 
 # ── Action environment ────────────────────────────────────────────────────────
 build --action_env=GEMINI_API_KEY
