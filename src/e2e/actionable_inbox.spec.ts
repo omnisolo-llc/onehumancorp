@@ -11,7 +11,7 @@ test.describe('Actionable Inbox UX flow for owners on mobile', () => {
     const webhookResponse = await page.request.post('/api/v1/omnichannel/webhook', {
       data: {
         tenant_id: tenantId,
-        source: 'Instagram DM',
+        channel: 'instagram_dm',
         sender_id: 'maya_bakes',
         message: message,
       }
