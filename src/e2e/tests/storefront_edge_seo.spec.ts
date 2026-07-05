@@ -21,14 +21,24 @@ test.describe('Storefront Edge SEO and Caching', () => {
         });
 
         // Hit the edge cache endpoint via request
+        let initialRes = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/44444444-4444-4444-4444-444444444444`);
+        expect(initialRes.status()).toBe(200);
+        expect(initialRes.headers()['x-cache']).toBe('MISS');
+
         let res = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/44444444-4444-4444-4444-444444444444`);
         expect(res.status()).toBe(200);
+        expect(res.headers()['x-cache']).toBe('HIT');
 
         // Update the product, forcing an invalidation
         const invalidateRes = await request.post('http://127.0.0.1:18789/api/v1/storefront/webhook/invalidate', {
             data: { tags: [`entity:product:44444444-4444-4444-4444-444444444444`] }
         });
         expect(invalidateRes.status()).toBe(200);
+        await page.waitForTimeout(100);
+
+        let postInvalidateRes = await request.get(`http://127.0.0.1:18789/api/v1/storefront/${tenantId}/44444444-4444-4444-4444-444444444444`);
+        expect(postInvalidateRes.status()).toBe(200);
+        expect(postInvalidateRes.headers()['x-cache']).toBe('MISS');
 
         // Access the UI file
         const htmlPath = path.resolve(__dirname, '../../../src/ui/tauri/src/ui/storefront.html');
