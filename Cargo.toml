@@ -128,7 +128,7 @@ features = [ "grpc-tonic",]
 
 [dependencies.axum]
 version = "0.8.1"
-features = [ "ws",]
+features = [ "ws", "multipart",]
 
 [dependencies.protoc-gen-prost]
 workspace = true

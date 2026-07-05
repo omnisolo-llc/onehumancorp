@@ -1,9 +1,7 @@
 "use client";
 
-
 import { WithTooltip } from "./TooltipRegistry";
-
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 
 export function VoiceAssistant() {
   const [isRecording, setIsRecording] = useState(false);
@@ -26,13 +24,8 @@ export function VoiceAssistant() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/m4a' });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = async () => {
-          const base64Audio = (reader.result as string).split(',')[1];
-          await sendVoiceCommand(base64Audio);
-        };
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await sendVoiceCommand(audioBlob);
 
         // Stop all tracks to release the microphone
         stream.getTracks().forEach(track => track.stop());
@@ -56,15 +49,18 @@ export function VoiceAssistant() {
     }
   }, [isRecording]);
 
-  const sendVoiceCommand = async (base64Audio: string) => {
+  const sendVoiceCommand = async (audioBlob: Blob) => {
     try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'command.webm');
+      formData.append('tenant_id', localStorage.getItem('tenant_id') || 'default');
+
       const response = await fetch("/api/v1/voice/command", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ audio_data: base64Audio }),
+        body: formData,
       });
 
       if (!response.ok) throw new Error("Voice command failed");
@@ -72,6 +68,9 @@ export function VoiceAssistant() {
       const data = await response.json();
       setTranscription(data.transcription);
       setStatus("success");
+
+      // Dispatch event for Agent Feed / Unified Inbox
+      window.dispatchEvent(new CustomEvent('voice-command-processed', { detail: data }));
 
       setTimeout(() => {
         setStatus("idle");
@@ -91,7 +90,7 @@ export function VoiceAssistant() {
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${status === 'listening' ? 'bg-red-500 animate-pulse' : status === 'processing' ? 'bg-blue-500 animate-bounce' : status === 'error' ? 'bg-red-600' : 'bg-green-500'}`} />
             <span className="text-sm font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
-              {status === 'listening' ? 'Listening...' : status === 'processing' ? 'Thinking...' : status === 'error' ? 'Error. Try again.' : 'Action Prepared!'}
+              {status === 'listening' ? 'Listening...' : status === 'processing' ? 'Processing command...' : status === 'error' ? 'Error. Try again.' : 'Action Prepared!'}
             </span>
           </div>
           {transcription && (
