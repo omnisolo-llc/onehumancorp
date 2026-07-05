@@ -41,12 +41,7 @@ test.describe('Viral Giveaway Loop', () => {
     await generateBtn.click();
 
     // 5. Capture the URL
-<<<<<<< HEAD
-    await expect(page.getByText('Link Ready!')).toBeVisible();
-=======
-    await expect(page.getByText('Your Viral Link is Ready!')).toBeVisible();
->>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
-    const linkInput = page.locator('input[readonly]');
+    await expect(page.getByText('Your Viral Link is Ready!')).toBeVisible();    const linkInput = page.locator('input[readonly]');
     const generatedUrl = await linkInput.inputValue();
     expect(generatedUrl).toContain('/giveaway/enter');
     expect(generatedUrl).toContain('Win+a+Free+iPad%21');
@@ -96,14 +91,8 @@ test.describe('Viral Giveaway Loop', () => {
     });
     await page.reload();
 
-<<<<<<< HEAD
-    const toggle = page.locator('input[type="checkbox"]');
-    await toggle.click({ force: true }); // It's hidden behind styling
-=======
 
     await page.locator('.toggle-switch').click({ force: true });
->>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
-
     // Soft paywall should appear
     await expect(page.locator('text=Pro Feature')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Upgrade to Pro' }).first()).toBeVisible();
@@ -121,14 +110,8 @@ test.describe('Viral Giveaway Loop', () => {
     const titleInput = page.getByLabel('Prize / Title');
     await titleInput.fill('Win a Free iPad');
 
-<<<<<<< HEAD
-    const toggle = page.locator('input[type="checkbox"]');
-    await toggle.click({ force: true });
-=======
 
     await page.locator('.toggle-switch').click({ force: true });
->>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
-
     // Soft paywall should not appear
     await expect(page.locator('text=Pro Feature')).not.toBeVisible();
 
@@ -140,12 +123,7 @@ test.describe('Viral Giveaway Loop', () => {
     await generateBtn.click();
 
     // 5. Capture the URL
-<<<<<<< HEAD
-    await expect(page.getByText('Link Ready!')).toBeVisible();
-=======
-    await expect(page.getByText('Your Viral Link is Ready!')).toBeVisible();
->>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
-    const linkInput = page.locator('input[readonly]');
+    await expect(page.getByText('Your Viral Link is Ready!')).toBeVisible();    const linkInput = page.locator('input[readonly]');
     const generatedUrl = await linkInput.inputValue();
     expect(generatedUrl).toContain('branding=false');
 
