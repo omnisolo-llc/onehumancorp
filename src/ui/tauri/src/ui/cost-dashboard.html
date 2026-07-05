@@ -213,6 +213,8 @@
         gap: 8px;
         min-height: 44px;
         box-sizing: border-box;
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
       }
       @media (prefers-color-scheme: dark) {
         .btn-outline {
@@ -491,6 +493,10 @@
                     planMessageDiv.innerText = 'Invoice download is ready for your current billing period.';
                     planMessageDiv.style.color = '#34C759';
                     planMessageDiv.style.display = 'block';
+                } else {
+                    planMessageDiv.innerText = 'Failed to download invoice.';
+                    planMessageDiv.style.color = '#FF3B30';
+                    planMessageDiv.style.display = 'block';
                 }
             });
 
@@ -682,6 +688,8 @@
         gap: 8px;
         min-height: 44px;
         box-sizing: border-box;
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
       }
       @media (prefers-color-scheme: dark) {
         .btn-outline {
