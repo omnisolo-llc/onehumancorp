@@ -82,6 +82,8 @@ pub async fn connect_whatsapp_cloud_api(
         from_phone: from_phone.clone(),
     };
 
+    let _ = hub.integration_service().connect("meta", "", creds.clone());
+
     if let Err(e) = hub.integration_service().connect("whatsapp_cloud_api", "https://graph.facebook.com/v19.0", creds) {
          tracing::error!("Failed to register WhatsApp Cloud API in memory: {}", e);
          // Do not fail the request if memory registration fails, as DB is the source of truth,
