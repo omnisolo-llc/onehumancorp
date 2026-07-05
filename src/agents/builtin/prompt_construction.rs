@@ -282,7 +282,14 @@ impl HierarchicalPromptBuilder {
             }
         }
 
-        let mut combined_system = String::new();
+        // Pre-allocate capacity to avoid reallocation
+        let estimated_capacity = grounding_injection.len()
+            + self.server_system_message.len()
+            + self.tool_definitions.len()
+            + self.developer_instructions.len()
+            + self.user_instructions.len()
+            + 1024; // buffer for tags and formatting
+        let mut combined_system = String::with_capacity(estimated_capacity);
 
         // 1. Server-controlled System Message (Highest Priority)
         if !self.server_system_message.is_empty() {
