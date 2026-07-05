@@ -236,6 +236,9 @@ impl OperationsWorker {
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+                                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                                cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
                                 let pool_clone = db.pool.clone();
                                 let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
@@ -277,6 +280,9 @@ impl OperationsWorker {
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+                                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                                cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
                                 let pool_clone = db.pool.clone();
                                 let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
@@ -969,6 +975,9 @@ let db_for_products = self.db.clone();
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", pid)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
+                                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                                cdn_cache.invalidate_by_tag(&format!("entity:product:{}", pid)).await;
+                                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
 
                                 let pool_clone = db_for_products.pool.clone();
                                 let tenant_id_clone = uuid::Uuid::parse_str(&org_id).unwrap_or_default();
