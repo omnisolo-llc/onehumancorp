@@ -35,7 +35,12 @@ async fn setup_health_check(
     let is_cloud = query.mode.as_deref() == Some("cloud");
     match crate::services::onboarding::provisioner::check_environment(is_cloud) {
         Ok(_) => Ok(Json(serde_json::json!({ "status": "ready" }))),
-        Err(e) => Ok(Json(serde_json::json!({ "status": "error", "message": e }))),
+        Err(_) => {
+            match crate::services::onboarding::provisioner::provision_environment(is_cloud) {
+                Ok(_) => Ok(Json(serde_json::json!({ "status": "ready" }))),
+                Err(e) => Ok(Json(serde_json::json!({ "status": "error", "message": e }))),
+            }
+        }
     }
 }
 
