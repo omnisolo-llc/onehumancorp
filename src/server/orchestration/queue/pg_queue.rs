@@ -21,30 +21,6 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
-        let mut current_depths = std::collections::HashMap::new();
-
-        let mut unique_tenants = std::collections::HashSet::new();
-        for job in &jobs {
-            unique_tenants.insert(job.tenant_id.clone());
-        }
-
-        let tenants_vec: Vec<String> = unique_tenants.into_iter().collect();
-        if !tenants_vec.is_empty() {
-            if let Ok(rows) = sqlx::query("SELECT tenant_id, COUNT(*) FROM ohc_job_queue WHERE tenant_id = ANY($1) AND status = 'PENDING' GROUP BY tenant_id")
-                .bind(&tenants_vec)
-                .fetch_all(&mut *tx)
-                .await
-            {
-                for row in rows {
-                    let org_id: String = row.try_get(0).unwrap_or_default();
-                    let count: i64 = row.try_get(1).unwrap_or(0);
-                    current_depths.insert(org_id, count);
-                }
-            }
-        }
-
-        let bursts_threshold = 10;
-
         let mut ids = Vec::with_capacity(jobs.len());
         let mut parent_task_ids = Vec::with_capacity(jobs.len());
         let mut job_types = Vec::with_capacity(jobs.len());
@@ -54,14 +30,6 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         let mut tenant_ids = Vec::with_capacity(jobs.len());
 
         for job in &jobs {
-            let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
-            let mut next_retry_at = job.next_retry_at;
-            if depth > bursts_threshold {
-                let delay_seconds = (depth - bursts_threshold) * 5;
-                next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
-            }
-            *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
-
             let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
 
             ids.push(job.id.clone());
@@ -69,7 +37,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
             job_types.push(job.job_type.clone());
             payloads.push(payload_json);
             statuses.push("PENDING".to_string());
-            next_retry_ats.push(next_retry_at);
+            next_retry_ats.push(job.next_retry_at);
             tenant_ids.push(job.tenant_id.clone());
         }
 
@@ -98,19 +66,6 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
 
-        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE tenant_id = $1 AND status = 'PENDING'")
-            .bind(&job.tenant_id)
-            .fetch_one(&mut *tx)
-            .await
-            .unwrap_or((0,));
-
-        let mut next_retry_at = job.next_retry_at;
-        let bursts_threshold = 10;
-        if count_row.0 > bursts_threshold {
-            let delay_seconds = (count_row.0 - bursts_threshold) * 5;
-            next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
-        }
-
         sqlx::query(
             "INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id)
              VALUES ($1, $2, $3, $4, 'PENDING', $5, $6)"
@@ -119,7 +74,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         .bind(&job.parent_task_id)
         .bind(&job.job_type)
         .bind(payload_json)
-        .bind(next_retry_at)
+        .bind(job.next_retry_at)
         .bind(&job.tenant_id)
         .execute(&mut *tx)
         .await
