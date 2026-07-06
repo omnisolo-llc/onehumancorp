@@ -136,8 +136,8 @@ test.describe('Viral Giveaway Loop', () => {
 
     await publicPage.close();
   });
-<<<<<<< HEAD
-=======
+
+
   test('should dismiss soft paywall when Maybe Later is clicked', async ({ page }) => {
     await page.goto('/giveaway');
     await page.evaluate(() => {
@@ -159,5 +159,5 @@ test.describe('Viral Giveaway Loop', () => {
     // Verify "Powered by OHC" footer is not present
     await expect(page.locator('a', { hasText: '⚡ Powered by OHC' })).not.toBeVisible();
   });
->>>>>>> 6fa2c4b4 (feat: Add pro soft paywall to viral giveaway generator)
+
 });

@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
 
 test.describe('The Promoter Agent CUJ', () => {
-  test('generates social post and SEO tags for a new product', async ({ page, adminPage }) => {
+  test('generates social post and SEO tags for a new product', async ({ page }) => {
 
     // We start at the homepage/triage feed
     await page.goto('/');

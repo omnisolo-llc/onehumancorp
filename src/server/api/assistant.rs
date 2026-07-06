@@ -1913,6 +1913,7 @@ mod real_feature_state_tests {
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
+
                     ::server_common::auth_utils::set_org_context(&mut *conn, "").await?;
                     Ok(true)
                 })
@@ -1920,6 +1921,7 @@ mod real_feature_state_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
+
                     conn.execute("DISCARD ALL").await?;
                     Ok(true)
                 })
