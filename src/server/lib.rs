@@ -7083,3 +7083,5 @@ async fn test_api_settings_voice() {
 #[cfg(test)]
 mod health_test;
 // optimization done
+#[cfg(test)]
+pub mod chaos_network_test;
