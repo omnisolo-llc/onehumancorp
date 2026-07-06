@@ -25,6 +25,16 @@ test.describe('Onboarding Wizard Optimization', () => {
     await expect(page.locator('#domain-error')).toBeVisible();
     await expect(page.locator('#domain-error')).toContainText('contain only lowercase letters');
 
+    await domainInput.fill('-invalid-leading-hyphen');
+    await page.locator('#step-domain .next-step-btn').click();
+    await expect(page.locator('#domain-error')).toBeVisible();
+    await expect(page.locator('#domain-error')).toContainText('cannot start or end with a hyphen');
+
+    await domainInput.fill('invalid-trailing-hyphen-');
+    await page.locator('#step-domain .next-step-btn').click();
+    await expect(page.locator('#domain-error')).toBeVisible();
+    await expect(page.locator('#domain-error')).toContainText('cannot start or end with a hyphen');
+
     await domainInput.fill('valid-domain-123');
     await page.locator('#step-domain .next-step-btn').click();
 

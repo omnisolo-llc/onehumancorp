@@ -3312,9 +3312,9 @@
             state.target_audience = inputs.target_audience.value.trim();
           }
         } else if (stepId === "step-domain") {
-          const domainRegex = /^[a-z0-9-]+$/;
+          const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
           if (inputs.domain_name.value.trim().length < 3 || !domainRegex.test(inputs.domain_name.value.trim())) {
-            document.getElementById("domain-error").innerText = "Domain must be at least 3 characters and contain only lowercase letters, numbers, and hyphens.";
+            document.getElementById("domain-error").innerText = "Domain must be at least 3 characters, contain only lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.";
             document.getElementById("domain-error").style.display = "flex";
             inputs.domain_name.classList.add("invalid-input");
             isValid = false;
