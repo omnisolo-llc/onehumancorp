@@ -53,6 +53,78 @@ impl StripeClient {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 
+    pub async fn create_payment_link(&self, name: &str, amount_cents: i64) -> Result<String, String> {
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            // Mock response if no real key
+            let id = uuid::Uuid::new_v4().simple().to_string();
+            return Ok(format!("https://buy.stripe.com/test_{}", &id[0..16]));
+        }
+        let api_key = api_key_res.unwrap();
+        let client = reqwest::Client::new();
+
+        // 1. Create a Product
+        let mut product_form = std::collections::HashMap::new();
+        product_form.insert("name".to_string(), name.to_string());
+
+        let product_res = client
+            .post(format!("{}/v1/products", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&product_form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe API error creating product: {}", e))?;
+
+        if !product_res.status().is_success() {
+            return Err(format!("Stripe API error creating product: {}", product_res.text().await.unwrap_or_default()));
+        }
+
+        let product_json: serde_json::Value = product_res.json().await.map_err(|e| e.to_string())?;
+        let product_id = product_json["id"].as_str().unwrap_or_default().to_string();
+
+        // 2. Create a Price
+        let mut price_form = std::collections::HashMap::new();
+        price_form.insert("product".to_string(), product_id);
+        price_form.insert("currency".to_string(), "usd".to_string());
+        price_form.insert("unit_amount".to_string(), amount_cents.to_string());
+
+        let price_res = client
+            .post(format!("{}/v1/prices", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&price_form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe API error creating price: {}", e))?;
+
+        if !price_res.status().is_success() {
+             return Err(format!("Stripe API error creating price: {}", price_res.text().await.unwrap_or_default()));
+        }
+        let price_json: serde_json::Value = price_res.json().await.map_err(|e| e.to_string())?;
+        let price_id = price_json["id"].as_str().unwrap_or_default().to_string();
+
+        // 3. Create Payment Link
+        let mut link_form = std::collections::HashMap::new();
+        link_form.insert("line_items[0][price]".to_string(), price_id);
+        link_form.insert("line_items[0][quantity]".to_string(), "1".to_string());
+
+        let link_res = client
+            .post(format!("{}/v1/payment_links", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&link_form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe API error creating payment link: {}", e))?;
+
+        if !link_res.status().is_success() {
+             return Err(format!("Stripe API error creating payment link: {}", link_res.text().await.unwrap_or_default()));
+        }
+
+        let link_json: serde_json::Value = link_res.json().await.map_err(|e| e.to_string())?;
+        let url = link_json["url"].as_str().unwrap_or_default().to_string();
+
+        Ok(url)
+    }
+
     pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>, product_id: Option<String>) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);
