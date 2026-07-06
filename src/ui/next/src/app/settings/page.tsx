@@ -38,6 +38,33 @@ export default function SettingsPage() {
   const [hitRate, setHitRate] = useState<string>("");
   const [enableLazyToolLoading, setEnableLazyToolLoading] = useState(false);
   const [productTelemetryEnabled, setProductTelemetryEnabled] = useState(false);
+  const [twilioAccountSid, setTwilioAccountSid] = useState("");
+  const [twilioAuthToken, setTwilioAuthToken] = useState("");
+  const [twilioPhoneNumber, setTwilioPhoneNumber] = useState("");
+  const [twilioStatus, setTwilioStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  const handleConnectWhatsApp = async () => {
+    try {
+      setTwilioStatus("loading");
+      const res = await fetch("/api/v1/settings/integrations/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_token: twilioAccountSid,
+          bot_token: twilioAuthToken,
+          from_phone: twilioPhoneNumber,
+        }),
+      });
+      if (res.ok) {
+        setTwilioStatus("success");
+      } else {
+        setTwilioStatus("error");
+      }
+    } catch (e) {
+      setTwilioStatus("error");
+    }
+  };
+
 
 
   useEffect(() => {
@@ -575,6 +602,56 @@ export default function SettingsPage() {
                 className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
               />
             </label>
+          </div>
+        </section>
+
+                {/* Integrations Section */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+            <div>
+              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Integrations</div>
+              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Connect third-party tools and channels.</div>
+            </div>
+          </div>
+          <div className="app-panel-body p-6 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">WhatsApp Setup (Twilio)</h3>
+              <p className="text-xs text-gray-500 mb-4">Connect your Twilio WhatsApp Business API to receive orders and inquiries directly in your Work Triage feed.</p>
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Twilio Account SID"
+                  value={twilioAccountSid}
+                  onChange={(e) => setTwilioAccountSid(e.target.value)}
+                  className="w-full text-sm bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/50 transition-all placeholder-gray-400"
+                />
+                <input
+                  type="password"
+                  placeholder="Twilio Auth Token"
+                  value={twilioAuthToken}
+                  onChange={(e) => setTwilioAuthToken(e.target.value)}
+                  className="w-full text-sm bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/50 transition-all placeholder-gray-400"
+                />
+                <input
+                  type="text"
+                  placeholder="WhatsApp Phone Number (e.g., +1234567890)"
+                  value={twilioPhoneNumber}
+                  onChange={(e) => setTwilioPhoneNumber(e.target.value)}
+                  className="w-full text-sm bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#0f766e]/50 transition-all placeholder-gray-400"
+                />
+
+                <button
+                  onClick={handleConnectWhatsApp}
+                  disabled={twilioStatus === 'loading'}
+                  className="px-4 py-2 bg-[#0f766e] hover:bg-[#0f766e]/90 text-white font-bold rounded-lg shadow-sm transition-all active:scale-95 text-sm disabled:opacity-50"
+                >
+                  {twilioStatus === 'loading' ? 'Connecting...' : 'Connect WhatsApp'}
+                </button>
+                {twilioStatus === 'success' && <p className="text-xs text-green-600 mt-2">Connected successfully!</p>}
+                {twilioStatus === 'error' && <p className="text-xs text-red-600 mt-2">Failed to connect. Please check credentials.</p>}
+              </div>
+            </div>
           </div>
         </section>
 
