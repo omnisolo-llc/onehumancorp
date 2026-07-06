@@ -19,6 +19,22 @@
   "links": [],
   "panels": [
     {
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 999999,
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry"
+      },
+      "title": "Aesthetic Mandate Injector",
+      "transparent": true,
+      "type": "text"
+    },
+    {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
