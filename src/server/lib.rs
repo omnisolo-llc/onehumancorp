@@ -3315,6 +3315,47 @@ pub async fn update_ui_omni_inbox_action_handler(
                     .bind(reply)
                     .execute(&mut *tx)
                     .await;
+
+                    // Fetch source and sender_id
+                    let msg_row: Result<(Option<String>, Option<String>), sqlx::Error> = sqlx::query_as(
+                        "SELECT source, sender_id FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2"
+                    )
+                    .bind(&payload.message_id)
+                    .bind(&tenant_id)
+                    .fetch_one(&db.pool).await;
+
+                    if let Ok((Some(source), Some(sender_id))) = msg_row {
+                        if source == "whatsapp" || source == "sms" {
+                            let tenant_id_clone = tenant_id.clone();
+                            let reply_clone = reply.clone();
+                            tokio::spawn(async move {
+                                let pool = crate::db::get_pool();
+                                let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp' THEN 1 ELSE 2 END LIMIT 1")
+                                    .bind(&tenant_id_clone)
+                                    .fetch_one(&pool)
+                                    .await;
+
+                                if let Ok((account_sid, auth_token, from_phone)) = twilio_row {
+                                    if !account_sid.is_empty() && !auth_token.is_empty() {
+                                        use crate::integrations::twilio::provider::TwilioProvider;
+                                        let provider = TwilioProvider::new(account_sid, auth_token);
+
+                                        if from_phone.is_empty() {
+                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
+                                            return;
+                                        }
+                                        let twilio_from = from_phone;
+                                        let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
+                                        if source == "whatsapp" {
+                                            let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
+                                        } else {
+                                            let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
                 }
             }
             let _ = tx.commit().await;
@@ -3342,6 +3383,47 @@ pub async fn update_ui_omni_inbox_action_handler(
                     .bind(reply)
                     .execute(pool)
                     .await;
+
+                    // Fetch source and sender_id for sqlite
+                    let msg_row: Result<(Option<String>, Option<String>), sqlx::Error> = sqlx::query_as(
+                        "SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?"
+                    )
+                    .bind(&payload.message_id)
+                    .bind(&tenant_id)
+                    .fetch_one(pool).await;
+
+                    if let Ok((Some(source), Some(sender_id))) = msg_row {
+                        if source == "whatsapp" || source == "sms" {
+                            let tenant_id_clone = tenant_id.clone();
+                            let reply_clone = reply.clone();
+                            let pool_clone = pool.clone();
+                            tokio::spawn(async move {
+                                let twilio_row: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'twilio') AND tenant_id = ? ORDER BY CASE WHEN integration_id = 'whatsapp' THEN 1 ELSE 2 END LIMIT 1")
+                                    .bind(&tenant_id_clone)
+                                    .fetch_one(&pool_clone)
+                                    .await;
+
+                                if let Ok((account_sid, auth_token, from_phone)) = twilio_row {
+                                    if !account_sid.is_empty() && !auth_token.is_empty() {
+                                        use crate::integrations::twilio::provider::TwilioProvider;
+                                        let provider = TwilioProvider::new(account_sid, auth_token);
+
+                                        if from_phone.is_empty() {
+                                            tracing::error!("Failed to send whatsapp manual reply via Twilio integration: from_phone is empty in credentials");
+                                            return;
+                                        }
+                                        let twilio_from = from_phone;
+                                        let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
+                                        if source == "whatsapp" {
+                                            let _ = provider.send_whatsapp(&twilio_to, &twilio_from, &reply_clone).await;
+                                        } else {
+                                            let _ = provider.send_sms(&twilio_to, &twilio_from, &reply_clone).await;
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
                 }
             }
         }
