@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 // Inject floating widget styles
     const style = document.createElement('style');
-    style.textContent = `
+    style.textContent = \`
         #ohc-floating-help-btn {
             position: fixed;
             bottom: 24px;
@@ -98,50 +98,51 @@ document.addEventListener('DOMContentLoaded', () => {
         #ohc-floating-help-header h3 {
             margin: 0;
             font-size: 18px;
-            font-weight: 600;
             color: #0f172a;
+            font-weight: 600;
         }
         #ohc-floating-help-close {
             background: none;
             border: none;
-            cursor: pointer;
+            font-size: 24px;
             color: #64748b;
-            padding: 4px;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
         }
         #ohc-floating-help-tabs {
             display: flex;
             border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-            background: rgba(248, 250, 252, 0.6);
+            background: rgba(255, 255, 255, 0.4);
         }
         .ohc-help-tab {
             flex: 1;
-            padding: 12px;
+            padding: 12px 0;
             text-align: center;
             background: none;
             border: none;
-            cursor: pointer;
-            font-weight: 500;
+            font-size: 13px;
+            font-weight: 600;
             color: #64748b;
+            cursor: pointer;
             border-bottom: 2px solid transparent;
-            font-size: 14px;
+            font-family: inherit;
         }
         .ohc-help-tab.active {
-            color: #2563eb;
-            border-bottom-color: #2563eb;
+            color: #0066FF;
+            border-bottom-color: #0066FF;
         }
         .ohc-help-content {
             display: none;
             flex: 1;
             overflow-y: auto;
             padding: 16px;
+            flex-direction: column;
         }
         .ohc-help-content.active {
             display: flex;
-            flex-direction: column;
         }
-
-        /* Chat styles */
-        #ohc-help-chat-messages {
+        .ohc-chat-messages {
             flex: 1;
             overflow-y: auto;
             display: flex;
@@ -149,129 +150,144 @@ document.addEventListener('DOMContentLoaded', () => {
             gap: 12px;
             margin-bottom: 16px;
         }
-        .ohc-chat-msg {
-            padding: 12px 16px;
-            border-radius: 12px;
+        .ohc-chat-message {
             max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
             font-size: 14px;
             line-height: 1.5;
         }
-        .ohc-chat-msg.user {
-            background: rgba(0, 102, 255, 0.9);
-            color: white;
+        .ohc-chat-message.user {
             align-self: flex-end;
+            background: #0066FF;
+            color: white;
             border-bottom-right-radius: 4px;
         }
-        .ohc-chat-msg.agent {
+        .ohc-chat-message.agent {
+            align-self: flex-start;
             background: rgba(241, 245, 249, 0.8);
             color: #0f172a;
-            align-self: flex-start;
             border-bottom-left-radius: 4px;
+            border: 1px solid rgba(226, 232, 240, 0.5);
         }
-        .ohc-chat-msg a {
-            color: #2563eb;
+        .ohc-chat-message a {
+            color: #0066FF;
             text-decoration: underline;
-            font-weight: 500;
             display: block;
-            margin-top: 4px;
+            margin-top: 8px;
+            font-weight: 500;
         }
-        #ohc-help-chat-input-container {
+        .ohc-chat-input-area {
             display: flex;
             gap: 8px;
-            padding-top: 12px;
-            border-top: 1px solid rgba(226, 232, 240, 0.5);
+            background: rgba(255, 255, 255, 0.5);
+            padding: 8px;
+            border-radius: 24px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
         #ohc-help-chat-input {
             flex: 1;
-            padding: 10px 14px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-start;
-            border: 1px solid #cbd5e1;
-            border-radius: 20px;
+            border: none;
+            background: none;
+            padding: 8px 12px;
             font-size: 14px;
+            font-family: inherit;
             outline: none;
-            background: rgba(255, 255, 255, 0.8);
-        }
-        #ohc-help-chat-input:focus {
-            border-color: #2563eb;
         }
         #ohc-help-chat-send {
-            background: #2563eb;
+            background: #0066FF;
             color: white;
             border: none;
-            border-radius: 20px;
-            padding: 0 16px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        /* Tours styles */
-        .ohc-tour-card {
-            padding: 16px;
-            border: 1px solid rgba(226, 232, 240, 0.5);
-            border-radius: 8px;
-            margin-bottom: 12px;
+            border-radius: 16px;
+            padding: 0 16px;
+            font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
+        }
+        #ohc-help-chat-send:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+        }
+        .ohc-tour-card {
             background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
         }
         .ohc-tour-card:hover {
-            background: rgba(248, 250, 252, 0.8);
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-color: #0066FF;
         }
         .ohc-tour-card h4 {
             margin: 0 0 4px 0;
-            font-size: 15px;
             color: #0f172a;
+            font-size: 15px;
         }
         .ohc-tour-card p {
             margin: 0;
+            color: #64748b;
             font-size: 13px;
+        }
+        .ohc-video-card {
+            display: flex;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 12px;
+            padding: 12px;
+            cursor: pointer;
+            align-items: center;
+        }
+        .ohc-video-card:hover {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .ohc-video-thumb {
+            width: 80px;
+            height: 45px;
+            background: #cbd5e1;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .ohc-video-info h4 {
+            margin: 0 0 2px 0;
+            font-size: 13px;
+            color: #0f172a;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .ohc-video-info p {
+            margin: 0;
+            font-size: 11px;
             color: #64748b;
         }
-
-        /* Tooltip Styles */
-        .ohc-tooltip {
-            position: fixed;
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            color: #1d1d1f;
-            padding: 8px 12px;
-            border-radius: 16px;
-            font-size: 13px;
-            font-family: Outfit, sans-serif;
-            z-index: 100000;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 250px;
-            line-height: 1.4;
-        }
-        .ohc-tooltip.visible {
-            opacity: 1;
-        }
-    `;
+    \`;
     document.head.appendChild(style);
 
     // Create the button
     const btn = document.createElement('button');
     btn.id = 'ohc-floating-help-btn';
-    btn.setAttribute('aria-label', 'Open help chat');
-    btn.setAttribute('data-tooltip-id', 'ohc-floating-help-btn');
-    btn.setAttribute('data-tooltip', 'Open Help Center');
+    btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
+    btn.innerHTML = \`<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>\`;
     document.body.appendChild(btn);
 
     // Create the widget
     const widget = document.createElement('div');
     widget.id = 'ai-chat-interface';
-    widget.innerHTML = `
+    widget.innerHTML = \`
         <div id="ohc-floating-help-header">
-            <h3>Ask AI Help</h3>
-            <button id="ohc-floating-help-close" aria-label="Close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
+            <h3>OHC Help</h3>
+            <button id="ohc-floating-help-close">&times;</button>
         </div>
         <div id="ohc-floating-help-tabs">
             <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
@@ -282,22 +298,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="tab-articles" class="ohc-help-content active">
             <div style="margin-bottom: 16px;">
-                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full In-App Help Center</a>
+                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full Help Center</a>
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
-                <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
-                <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
+                <li><a href="/help_article.html?id=getting-started-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
+                <li><a href="/help_article.html?id=my-store-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
+                <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
             <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
-                <div style="margin-bottom: 8px;">
-                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500;">
-                    <input type="checkbox" onchange="document.getElementById('help-widget-advanced-links').style.display = this.checked ? 'block' : 'none';" />
-                    Advanced Settings
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                  <label style="font-size: 14px; font-weight: 500; color: #0f172a;">Advanced Controls</label>
+                  <label class="switch" style="position: relative; display: inline-block; width: 36px; height: 20px;">
+                    <input type="checkbox" id="advanced-toggle-help" style="opacity: 0; width: 0; height: 0;">
+                    <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px;"></span>
                   </label>
                 </div>
-                <div id="help-widget-advanced-links" style="display: none;">
+                <div id="advanced-help-links" style="display: none;">
                     <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OHC Advanced API Reference</a>
                     <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
                 </div>
@@ -319,78 +336,110 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
 
-                <div id="tab-videos" class="ohc-help-content">
+        <div id="tab-videos" class="ohc-help-content">
             <div id="video-list" style="display: flex; flex-direction: column; gap: 12px;">Loading videos...</div>
         </div>
 
         <div id="tab-chat" class="ohc-help-content" style="padding-bottom: 12px;">
-            <div id="ohc-help-chat-messages">
-                <div class="ohc-chat-msg agent">
-                    Need help setting up your store? I am your AI Help Agent! How can I assist you today?
-                </div>
+            <div class="ohc-chat-messages" id="ohc-help-chat-messages">
+                <div class="ohc-chat-message agent">Hi! I'm your OHC support agent. How can I help you today?</div>
             </div>
-            <div id="ohc-help-chat-input-container">
+            <div class="ohc-chat-input-area">
                 <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
-                <button id="ohc-help-chat-send" aria-label="Send message" disabled>Send</button>
+                <button id="ohc-help-chat-send" disabled>Send</button>
             </div>
         </div>
-    `;
-
-    window.addEventListener('open-help-chat', () => {
-        widget.style.display = 'flex';
-    });
-
+    \`;
     document.body.appendChild(widget);
 
-    // Logic
+    // Advanced toggle
+    const advToggle = document.getElementById('advanced-toggle-help');
+    const advLinks = document.getElementById('advanced-help-links');
+    if (advToggle && advLinks) {
+        advToggle.addEventListener('change', (e) => {
+            advLinks.style.display = e.target.checked ? 'block' : 'none';
+        });
+        // Add styling for the slider inline to ensure it works
+        const s = document.createElement('style');
+        s.textContent = \`
+            #advanced-toggle-help:checked + .slider { background-color: #0066FF; }
+            .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+            #advanced-toggle-help:checked + .slider:before { transform: translateX(16px); }
+        \`;
+        document.head.appendChild(s);
+    }
+
+    // Toggle widget
     btn.addEventListener('click', () => {
-        widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';
+        const isVisible = widget.style.display === 'flex';
+        widget.style.display = isVisible ? 'none' : 'flex';
+        if (!isVisible) {
+            document.getElementById('ohc-help-chat-input').focus();
+            loadVideos();
+        }
     });
 
     document.getElementById('ohc-floating-help-close').addEventListener('click', () => {
         widget.style.display = 'none';
     });
 
-    const tabs = widget.querySelectorAll('.ohc-help-tab');
-    const contents = widget.querySelectorAll('.ohc-help-content');
-
+    // Tab switching
+    const tabs = document.querySelectorAll('.ohc-help-tab');
+    const contents = document.querySelectorAll('.ohc-help-content');
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             contents.forEach(c => c.classList.remove('active'));
-
             tab.classList.add('active');
-            document.getElementById(tab.getAttribute("data-target")).classList.add("active");
-
-            if (tab.getAttribute("data-target") === "tab-videos") {
-                fetch("/api/videos").then(r => r.json()).then(data => {
-                    const vl = widget.querySelector("#video-list") || document.getElementById("video-list");
-                    vl.innerHTML = "";
-                    data.forEach(v => {
-                        vl.innerHTML += `<div style="background: white; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="if(window.openVideo) { window.openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}'); } else { alert('Playing video: ' + '${v.title.replace(/'/g, "\\'")}' + '\\nURL: ' + '${v.video_url}'); }">` +
-                            `<h4 style="margin: 0 0 4px 0; font-size: 14px;">${v.title}</h4>` +
-                            `<span style="font-size: 12px; color: #64748b;">${v.duration}</span>` +
-                            `</div>`;
-                    });
-                }).catch(e => {
-                    const errVl = widget.querySelector("#video-list") || document.getElementById("video-list");
-                    if (errVl) errVl.innerHTML = "Error loading videos.";
-                });
-            }
+            document.getElementById(tab.getAttribute('data-target')).classList.add('active');
         });
     });
 
-    // Chat Logic
+    // Load videos dynamically
+    let videosLoaded = false;
+    async function loadVideos() {
+        if (videosLoaded) return;
+        const videoList = document.getElementById('video-list');
+        try {
+            let data = [];
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                data = await window.__TAURI__.core.invoke('get_help_videos', {});
+            } else {
+                const res = await fetch('/api/videos');
+                data = await res.json();
+            }
+            videoList.innerHTML = '';
+            data.slice(0, 3).forEach(v => {
+                videoList.innerHTML += \`
+                    <div class="ohc-video-card" onclick="window.location.href='/help.html?play=\${v.id}'">
+                        <div class="ohc-video-thumb">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                        <div class="ohc-video-info">
+                            <h4>\${v.title}</h4>
+                            <p>\${v.duration}</p>
+                        </div>
+                    </div>
+                \`;
+            });
+            videoList.innerHTML += \`<a href="/help.html" style="text-align: center; color: #0066FF; font-size: 13px; text-decoration: none; margin-top: 8px;">View all videos →</a>\`;
+            videosLoaded = true;
+        } catch (e) {
+            videoList.innerHTML = 'Failed to load videos.';
+        }
+    }
+
+    // Chat functionality
     const chatInput = document.getElementById('ohc-help-chat-input');
     const chatSend = document.getElementById('ohc-help-chat-send');
     const chatMessages = document.getElementById('ohc-help-chat-messages');
 
     function appendMessage(text, sender, link = null) {
         const msg = document.createElement('div');
-        msg.className = `ohc-chat-msg ${sender}`;
-        msg.innerHTML = text;
+        msg.className = \`ohc-chat-message \${sender}\`;
+        msg.textContent = text;
         if (link && link.url && link.title) {
-            msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+            msg.innerHTML += \`<a href="\${link.url}">\${link.title}</a>\`;
         }
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -414,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             if (data.reply) {
-                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
+                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link || data.link);
             } else if (data.text) {
                 appendMessage(data.text, 'agent', data.link);
             } else {
@@ -439,13 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
+            // Silently fail if tooltips API is unavailable
         });
     }
     const tooltipEl = document.createElement('div');
@@ -470,8 +513,8 @@ document.addEventListener('DOMContentLoaded', () => {
             top = targetRect.top - tooltipEl.offsetHeight - 10;
         }
 
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
+        tooltipEl.style.top = \`\${top}px\`;
+        tooltipEl.style.left = \`\${left}px\`;
         tooltipEl.classList.add('visible');
     }
 
@@ -555,17 +598,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
 
-                bubble.innerHTML = `
+                bubble.innerHTML = \`
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">\${step.title || 'Tour'}</h4>
                         <button id="wt-close" class="ohc-walkthrough-close" aria-label="Close walkthrough" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
+                    <p style="margin: 0; font-size: 14px; color: #333;">\${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" class="glassmorphism" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 8px; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #2563eb; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                        \${currentStep > 0 ? '<button id="wt-prev" class="glassmorphism" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 8px; cursor: pointer;">Back</button>' : ''}
+                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #2563eb; color: white; cursor: pointer;">\${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
                     </div>
-                `;
+                \`;
 
                 document.getElementById('wt-close').onclick = closeWalkthrough;
                 if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
