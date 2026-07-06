@@ -174,6 +174,43 @@ struct StartOnboardingResponse {
 }
 
 #[tauri::command]
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+struct ZeroClickGenerateRequest {
+    prompt: String,
+    image_url: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+struct ZeroClickGenerateResponse {
+    organization_id: String,
+    user_id: String,
+    message: String,
+}
+
+#[tauri::command]
+async fn start_zero_click(req: ZeroClickGenerateRequest, _app_handle: tauri::AppHandle) -> Result<ZeroClickGenerateResponse, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/onboarding/start_zero_click", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(60))
+        .build()
+        .map_err(|err| err.to_string())?
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .json(&req);
+
+    let res = request.send().await.map_err(|err| err.to_string())?;
+
+    if !res.status().is_success() {
+        return Err(format!("Failed to start zero-click onboarding: {}", res.status()));
+    }
+
+    res.json::<ZeroClickGenerateResponse>().await.map_err(|err| err.to_string())
+}
+
+#[tauri::command]
 async fn start_onboarding(req: StartOnboardingRequest, _app_handle: tauri::AppHandle) -> Result<StartOnboardingResponse, String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/start", backend_url);
@@ -574,6 +611,7 @@ pub fn run() {
             get_onboarding_state,
             save_onboarding_state,
             start_onboarding,
+            start_zero_click,
             process_intake,
             get_help_articles,
             get_help_article,
