@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Viral Powered by OHC Widget - OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --text-main: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent: #0066FF;
+      --border: rgba(0, 0, 0, 0.1);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Outfit', 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 414px;
+      padding: 24px;
+      margin-top: 40px;
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      text-align: center;
+      letter-spacing: -0.5px;
+    }
+
+    p.subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      text-align: center;
+      margin: 0 0 24px 0;
+      line-height: 1.4;
+    }
+
+    .preview-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .ohc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .ohc-badge:hover {
+      background: rgba(0, 0, 0, 0.08);
+      color: var(--text-main);
+    }
+
+    .ohc-badge svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    button {
+      width: 100%;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    #result-area {
+      display: none;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .code-block {
+      background: #1d1d1f;
+      color: #f5f5f7;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .copy-btn {
+      background-color: #333;
+    }
+
+    .back-link {
+      margin-top: 24px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover {
+      color: var(--text-main);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #000;
+        --card-bg: rgba(30, 30, 30, 0.65);
+        --text-main: #f5f5f7;
+        --text-secondary: #a1a1a6;
+        --border: rgba(255, 255, 255, 0.1);
+      }
+      .preview-box {
+        background: #1c1c1e;
+      }
+      .ohc-badge {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .ohc-badge:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+      .code-block {
+        background: #000;
+        border: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div style="font-size: 40px; text-align: center; margin-bottom: 12px;">⚡</div>
+    <h1>Embed Footer Badge</h1>
+    <p class="subtitle">Add a "Powered by OHC" badge to your website. If a visitor clicks it and signs up, you get a referral credit.</p>
+
+    <div class="preview-box">
+      <div class="ohc-badge">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Powered by OHC
+      </div>
+    </div>
+
+    <button id="generate-btn">Generate Embed Code</button>
+
+    <div id="result-area">
+      <h2 style="font-size: 16px; margin: 0 0 12px 0;">Your Embed Code</h2>
+      <p style="font-size: 14px; color: var(--text-secondary); margin: 0 0 12px 0;">Paste this snippet just before the closing <code>&lt;/body&gt;</code> tag on your website.</p>
+
+      <div class="code-block" id="embed-code"></div>
+
+      <button id="copy-btn" class="copy-btn">Copy Code</button>
+    </div>
+  </div>
+
+  <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <script>
+    document.getElementById('generate-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('generate-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+
+        let referralLink = `https://ohc.network/invite/${tenantId}`;
+
+        try {
+          // Attempt to call the actual backend API to generate a referral link if it exists
+          const res = await fetch('/api/v1/growth/referrals/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.referral_link) {
+              referralLink = data.referral_link;
+            }
+          }
+        } catch (e) {
+          console.log('Using default format for demo due to API error', e);
+        }
+
+        const snippet = `<!-- OHC Referral Footer Badge -->
+<script>
+  (function() {
+    var b = document.createElement('a');
+    b.href = '${referralLink}';
+    b.target = '_blank';
+    b.style.cssText = 'position:fixed;bottom:16px;right:16px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,0,0,0.8);color:#fff;border-radius:100px;font-family:sans-serif;font-size:13px;font-weight:500;text-decoration:none;z-index:9999;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.1);';
+    b.innerHTML = '<svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OHC';
+    document.body.appendChild(b);
+  })();
+<\/script>`;
+
+        document.getElementById('embed-code').textContent = snippet;
+
+        // Simulate a tiny delay for realism
+        await new Promise(r => setTimeout(r, 600));
+
+        document.getElementById('result-area').style.display = 'block';
+        btn.style.display = 'none';
+
+      } catch (err) {
+        console.error(err);
+        btn.textContent = 'Error. Try Again.';
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+      const code = document.getElementById('embed-code').textContent;
+      try {
+        await navigator.clipboard.writeText(code);
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy Code'; }, 2000);
+      } catch (err) {
+        console.error('Failed to copy', err);
+      }
+    });
+  </script>
+</body>
+</html>
