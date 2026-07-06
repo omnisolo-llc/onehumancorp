@@ -150,7 +150,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "instagram_dm" ||
           (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "subscription_replenishment") && (
+            ?.feature_type === "subscription_replenishment" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "subscription_churn_risk") && (
           <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "incident_resolution" && (
@@ -760,6 +762,18 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                       "Check out our new product!"}
                     "
                   </div>
+                </div>
+              </div>
+            ) : (approval.proposed_action || approval.context_payload)?.feature_type === "subscription_churn_risk" ? (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-red-600 font-semibold text-sm">
+                  ⚠️ High Churn Risk
+                </div>
+                <div className="text-sm font-medium text-gray-800 dark:text-gray-200 border-l-2 border-red-400 pl-2">
+                  {approval.context_payload?.reason || approval.proposed_action?.reason || "Health score dropped due to inactivity."}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 italic">
+                  "{approval.proposed_action?.generated_response || approval.proposed_action?.message}"
                 </div>
               </div>
             ) : (approval.proposed_action || approval.context_payload)
@@ -1534,6 +1548,26 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               ) : (
                 "Dismiss"
               )}
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)?.feature_type === "subscription_churn_risk" ? (
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button
+              onClick={() => handleDecision(approval.id, true, undefined, approval.event_source)}
+              className="w-full sm:flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-red-600 text-white font-bold hover:bg-red-700 transition-all duration-200 shadow-md flex items-center justify-center transform active:scale-95"
+              aria-label="Approve Win-Back Offer"
+              data-testid={`action-card-approve-${approval.id}`}
+            >
+              Approve & Send Offer
+            </button>
+            <button
+              onClick={() => handleDecision(approval.id, false, undefined, approval.event_source)}
+              className="w-full sm:w-auto min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-6 rounded-[8px] glassmorphism bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center"
+              aria-label="Dismiss"
+              data-testid={`action-card-dismiss-${approval.id}`}
+              disabled={loadingAction !== null}
+            >
+              {isActionLoading("dismiss") ? <span className="animate-pulse">Loading...</span> : "Dismiss"}
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
