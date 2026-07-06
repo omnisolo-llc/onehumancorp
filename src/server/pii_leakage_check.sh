@@ -44,7 +44,7 @@ def main():
         for file in files:
             if file.endswith('.rs'):
                 filepath = os.path.join(root, file)
-                if 'telemetry' in filepath or 'analytics.rs' in filepath or '_test.rs' in filepath:
+                if '_test.rs' in filepath:
                     continue
 
                 matches = check_file(filepath)

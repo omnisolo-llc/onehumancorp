@@ -747,8 +747,12 @@ impl DB {
                             || err_str.contains("deadlock detected")
                             || err_str.contains("40001")
                             || err_str.contains("could not obtain lock"));
+                    let is_connection_err = err_str.contains("connection refused")
+                        || err_str.contains("connection reset")
+                        || err_str.contains("connection closed")
+                        || err_str.contains("broken pipe");
 
-                    if is_sqlite_lock || is_postgres_lock {
+                    if is_sqlite_lock || is_postgres_lock || is_connection_err {
                         attempt += 1;
                         if attempt >= max_attempts {
                             let _ = ::server_telemetry::record_sqlite_retry_exhausted(

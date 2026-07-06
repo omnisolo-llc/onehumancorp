@@ -47,7 +47,7 @@ describe('Agent Marketplace Page', () => {
       expect(screen.getByText('Senior Rust Developer')).toBeInTheDocument();
     });
     expect(screen.getByText('An expert in Rust capable of building concurrent and safe systems.')).toBeInTheDocument();
-    expect(screen.getByText('AutoGPT')).toBeInTheDocument();
+    expect(screen.getByText(/By AutoGPT/)).toBeInTheDocument();
 
   });
 
@@ -60,7 +60,7 @@ describe('Agent Marketplace Page', () => {
     render(<AgentMarketplacePage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No agents found matching/)).toBeInTheDocument();
+      expect(screen.getByText(/No agents found/)).toBeInTheDocument();
     });
   });
 

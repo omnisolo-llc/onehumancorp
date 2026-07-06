@@ -372,7 +372,7 @@ services:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - nginx-cache:/var/cache/nginx
     depends_on:
-      - ohc-core
+
       - server
     logging:
       driver: "json-file"

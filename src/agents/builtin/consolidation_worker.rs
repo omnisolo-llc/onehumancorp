@@ -253,7 +253,7 @@ mod tests {
         assert_eq!(id, "conflict_winner", "The winner must be preserved");
         // Loser has 1, winner has 2, logic increments winner by loser -> 2 + 1 = 3.
         assert_eq!(
-            ref_count, 2, // The upsert overrides rather than increments!
+            ref_count, 3, // The upsert correctly increments!
             "The winner should inherit the loser's reference count"
         );
         handle.abort();
