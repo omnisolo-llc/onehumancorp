@@ -75,6 +75,8 @@ rust_library(
         "lib.rs",
         "llm_condensation.rs",
         "aider_repomap.rs",
+        "deerflow.rs",
+        "deerflow_subagents.rs",
         "local_provider.rs",
         "memory_exhaustive_tests.rs",
         "memory_store.rs",

@@ -1,5 +1,6 @@
 use crate::agent::{Agent, AgentRunConfig};
 use crate::types::{ChatRequest, Message};
+#[allow(unused_imports)]
 use futures::future::join_all;
 use std::sync::Arc;
 

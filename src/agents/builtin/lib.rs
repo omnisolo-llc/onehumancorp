@@ -392,3 +392,5 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 pub mod aider_repomap;
 pub mod jit_retrieval;
 pub mod microagent;
+pub mod deerflow;
+pub mod deerflow_subagents;
