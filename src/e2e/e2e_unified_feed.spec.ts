@@ -41,10 +41,10 @@ test.describe('Unified Action Feed e2e', () => {
     await expect(page.getByText('Would you like to proceed with a $50 deposit?')).toBeVisible();
 
     // 3. Tap approve & send
-    await page.getByTestId('unified-feed-approve-btn').click();
+    await page.getByTestId('feed-approve-btn').click();
 
     // The item should disappear from the list (or show a success message)
     await expect(page.getByText('Can I get a custom cake next Tuesday?')).not.toBeVisible();
-    await expect(page.getByText('All caught up.')).toBeVisible();
+    await expect(page.getByText('All caught up!')).toBeVisible();
   });
 });
