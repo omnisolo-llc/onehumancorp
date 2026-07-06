@@ -2,8 +2,8 @@ import { test, expect } from './fixtures';
 
 test.describe('Omnichannel Voice Order Intake', () => {
   test.use({
-    viewport: { width: 375, height: 812 }, // Mobile-first constraint
-    permissions: ['microphone'],           // Allow microphone access to prevent NotAllowedError
+    viewport: { width: 375, height: 812 },
+    permissions: ['microphone'],
     launchOptions: {
       args: [
         '--use-fake-ui-for-media-stream',
