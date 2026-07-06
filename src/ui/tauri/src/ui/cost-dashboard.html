@@ -3,21 +3,29 @@
   <head>
     <style>
       .glassmorphism {
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(40px) saturate(200%);
+        -webkit-backdrop-filter: blur(40px) saturate(200%);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .glassmorphism:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
       }
       @media (prefers-color-scheme: dark) {
         .glassmorphism {
-          border-radius: 16px;
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          border-radius: 20px;
+          background: rgba(30, 30, 35, 0.4);
+          backdrop-filter: blur(40px) saturate(200%);
+          -webkit-backdrop-filter: blur(40px) saturate(200%);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        .glassmorphism:hover {
+          box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
         }
       }
       .old-glassmorphism {
