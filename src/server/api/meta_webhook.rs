@@ -122,7 +122,14 @@ pub async fn meta_webhook_post_handler(
                              for message in messages {
                                   let sender_id = message.get("from").and_then(|f| f.as_str()).unwrap_or("unknown");
                                   let display_phone_number = value.get("metadata").and_then(|m| m.get("display_phone_number")).and_then(|p| p.as_str()).unwrap_or("test_tenant");
-                                  let text = message.get("text").and_then(|t| t.get("body")).and_then(|b| b.as_str()).unwrap_or("");
+                                  let mut text = message.get("text").and_then(|t| t.get("body")).and_then(|b| b.as_str()).unwrap_or("").to_string();
+                                  if text.is_empty() {
+                                      if let Some(image) = message.get("image") {
+                                          let img_id = image.get("id").and_then(|i| i.as_str()).unwrap_or("unknown");
+                                          let caption = image.get("caption").and_then(|c| c.as_str()).unwrap_or("");
+                                          text = format!("![Image]({}) {}", img_id, caption).trim().to_string();
+                                      }
+                                  }
 
                                   let pool = &state.db.pool;
                                   let resolved_tenant_id = match &state.db.store {
