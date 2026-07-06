@@ -3120,39 +3120,30 @@ pub async fn list_ui_triage_handler(
 
     let cache_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-                    let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-        }
 
-        let db_bg = db.clone();
-        let t_bg = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            if let Ok(items) = load_ui_triage_from_db(&db_bg, &t_bg, mobile_optimized).await {
-                if let Some(c) = UI_TRIAGE_CACHE.get() {
-                    c.set(&cache_key_bg, items, std::time::Duration::from_secs(10)).await;
-                }
+    let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
+        let db = db.clone();
+        let t = tenant_id.clone();
+        move || async move {
+            match load_ui_triage_from_db(&db, &t, mobile_optimized).await {
+                Ok(items) => Some(items),
+                Err(sqlx::Error::RowNotFound) => Some(vec![]),
+                Err(_) => None,
             }
-        });
-                let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-    }
-
-    let items = match load_ui_triage_from_db(&db, &tenant_id, mobile_optimized).await {
-        Ok(items) => items,
-        Err(sqlx::Error::RowNotFound) => vec![],
-        Err(e) => {
-            tracing::error!("Failed to fetch triage items: {:?}", e);
-            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response();
         }
-    };
+    }).await;
 
-    let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
-    (axum::http::StatusCode::OK, axum::Json(items)).into_response()
+    match items_opt {
+        Some(items) => {
+            let fields = query.fields.as_deref();
+            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(items).unwrap_or_default(), fields);
+            (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
+        },
+        None => {
+            tracing::error!("Failed to fetch triage items");
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response()
+        }
+    }
 }
 
 
@@ -3237,39 +3228,30 @@ pub async fn list_ui_omni_inbox_handler(
 
     let cache_key = format!("ui_omni_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_OMNI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-                    let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-        }
 
-        let db_bg = db.clone();
-        let t_bg = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            if let Ok(items) = load_ui_omni_inbox_from_db(&db_bg, &t_bg, mobile_optimized).await {
-                if let Some(c) = UI_OMNI_INBOX_CACHE.get() {
-                    c.set(&cache_key_bg, items, std::time::Duration::from_secs(10)).await;
-                }
+    let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
+        let db = db.clone();
+        let t = tenant_id.clone();
+        move || async move {
+            match load_ui_omni_inbox_from_db(&db, &t, mobile_optimized).await {
+                Ok(items) => Some(items),
+                Err(sqlx::Error::RowNotFound) => Some(vec![]),
+                Err(_) => None,
             }
-        });
-                let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-    }
-
-    let items = match load_ui_omni_inbox_from_db(&db, &tenant_id, mobile_optimized).await {
-        Ok(items) => items,
-        Err(sqlx::Error::RowNotFound) => vec![],
-        Err(e) => {
-            tracing::error!("Failed to fetch omni inbox items: {:?}", e);
-            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response();
         }
-    };
+    }).await;
 
-    let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
-    (axum::http::StatusCode::OK, axum::Json(items)).into_response()
+    match items_opt {
+        Some(items) => {
+            let fields = query.fields.as_deref();
+            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(items).unwrap_or_default(), fields);
+            (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
+        },
+        None => {
+            tracing::error!("Failed to fetch omni inbox items");
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response()
+        }
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -4346,82 +4328,40 @@ async fn ui_dashboard_analytics_briefing_handler(
     let cache_key = format!("ui_analytics_briefing:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_ANALYTICS_BRIEFING_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-                    let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-        }
-
-        let db_bg = db.clone();
-        let t_bg = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            let db1 = db_bg.clone(); let db2 = db_bg.clone();
-            let tenant_id1 = t_bg.clone(); let tenant_id2 = t_bg.clone();
+    let result_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(60), {
+        let db = db.clone();
+        let t = tenant_id.clone();
+        move || async move {
+            let db1 = db.clone(); let db2 = db.clone();
+            let tenant_id1 = t.clone(); let tenant_id2 = t.clone();
 
             let (metrics_res, inbox_res) = tokio::join!(
                 tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, mobile_optimized).await }),
                 tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, mobile_optimized).await })
             );
 
-            let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-            let inbox_res = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-
-            let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
+            let metrics = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or(UiDashboardMetrics {
                 active_customers: 0,
                 pending_orders: 0,
                 total_sales: 0.0,
                 total_campaigns_sent: 0,
                 auto_replied: 0,
             });
-            let inbox_messages = inbox_res.unwrap_or_default();
+            let inbox_messages = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_default();
             let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
 
             let total_sales_formatted = format!("${:.2}", metrics.total_sales);
             let summary = format!("Good morning. You have {} pending orders totaling {}, and {} unanswered DMs.", metrics.pending_orders, total_sales_formatted, unanswered_dms);
 
-            let result = serde_json::json!({ "briefing": summary });
-            if let Some(c) = UI_ANALYTICS_BRIEFING_CACHE.get() {
-                c.set(&cache_key_bg, result, std::time::Duration::from_secs(60)).await;
-            }
-        });
-                let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-    }
+            Some(serde_json::json!({ "briefing": summary }))
+        }
+    }).await;
 
-    let db1 = db.clone();
-    let db2 = db.clone();
-    let tenant_id1 = tenant_id.clone();
-    let tenant_id2 = tenant_id.clone();
+    let result = result_opt.unwrap_or_else(|| serde_json::json!({ "briefing": "Good morning. Unable to fetch your briefing." }));
+    let fields = query.fields.as_deref();
+    let shaped = ::server_utils::payload_shaper::shape_payload(result, fields);
 
-    let (metrics_res, inbox_res) = tokio::join!(
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, mobile_optimized).await })
-    );
-
-    let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-    let inbox_res = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-
-    let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
-        active_customers: 0,
-        pending_orders: 0,
-        total_sales: 0.0,
-        total_campaigns_sent: 0,
-        auto_replied: 0,
-    });
-    let inbox_messages = inbox_res.unwrap_or_default();
-    let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
-
-    let total_sales_formatted = format!("${:.2}", metrics.total_sales);
-
-    let summary = format!("Good morning. You have {} pending orders totaling {}, and {} unanswered DMs.", metrics.pending_orders, total_sales_formatted, unanswered_dms);
-
-    let result = serde_json::json!({ "briefing": summary });
-    cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(60)).await;
-
-    (axum::http::StatusCode::OK, axum::Json(result)).into_response()
+    (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
 }
 
 #[derive(serde::Deserialize)]
@@ -4449,20 +4389,13 @@ async fn ui_dashboard_analytics_chat_handler(
     let cache_key = format!("ui_analytics_chat:{}:mobile:{}:{}", tenant_id, mobile_optimized, text_hash);
     let cache = UI_ANALYTICS_CHAT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-                    let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-        }
-
-        let db_bg = db.clone();
-        let t_bg = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
+    let result_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(60), {
+        let db = db.clone();
+        let t = tenant_id.clone();
         let text_bg = text.clone();
-        tokio::spawn(async move {
-            let db1 = db_bg.clone(); let db2 = db_bg.clone();
-            let tenant_id1 = t_bg.clone(); let tenant_id2 = t_bg.clone();
+        move || async move {
+            let db1 = db.clone(); let db2 = db.clone();
+            let tenant_id1 = t.clone(); let tenant_id2 = t.clone();
 
             let (inbox_res_handle, metrics_res_handle) = tokio::join!(
                 tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, mobile_optimized).await }),
@@ -4487,48 +4420,15 @@ async fn ui_dashboard_analytics_chat_handler(
                 "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
             };
 
-            let result = serde_json::json!({ "reply": response_text });
-            if let Some(c) = UI_ANALYTICS_CHAT_CACHE.get() {
-                c.set(&cache_key_bg, result, std::time::Duration::from_secs(60)).await;
-            }
-        });
-                let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-    }
-
-    let db1 = db.clone();
-    let db2 = db.clone();
-    let tenant_id1 = tenant_id.clone();
-    let tenant_id2 = tenant_id.clone();
-
-    let (inbox_res_handle, metrics_res_handle) = tokio::join!(
-        tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, mobile_optimized).await }),
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2, mobile_optimized).await })
-    );
-
-    let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-    let metrics_res = metrics_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-
-    let response_text = if text.contains("dm") || text.contains("message") {
-        let inbox_messages = inbox_res.unwrap_or_default();
-        let senders: Vec<String> = inbox_messages.iter().take(3).filter_map(|m| m.get("source").and_then(|s| s.as_str()).map(|s| s.to_string())).collect();
-        if senders.is_empty() {
-            "You have no recent messages.".to_string()
-        } else {
-            format!("Your latest messages are from: {}.", senders.join(", "))
+            Some(serde_json::json!({ "reply": response_text }))
         }
-    } else if text.contains("order") || text.contains("booking") || text.contains("revenue") || text.contains("sale") {
-        let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
-        format!("You currently have {} pending orders, with a total expected revenue of ${:.2}.", metrics.pending_orders, metrics.total_sales)
-    } else {
-        "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
-    };
+    }).await;
 
-    let result = serde_json::json!({ "reply": response_text });
-    cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(60)).await;
+    let result = result_opt.unwrap_or_else(|| serde_json::json!({ "reply": "I'm having trouble retrieving your analytics." }));
+    let fields = query.fields.as_deref();
+    let shaped = ::server_utils::payload_shaper::shape_payload(result, fields);
 
-    (axum::http::StatusCode::OK, axum::Json(result)).into_response()
+    (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
 }
 
 async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
@@ -5259,10 +5159,10 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let m_key_clone = m_key.clone();
             async move {
-                if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&m_key_clone).await { return v; }
-                }
-                load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default()
+                let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&m_key_clone, std::time::Duration::from_secs(60), move || async move {
+                    load_ui_dashboard_metrics(&db_clone, &t_clone, mobile_optimized).await.map(|m| serde_json::to_value(m).unwrap_or_default()).ok()
+                }).await.unwrap_or_default()
             }
         }),
         tokio::spawn({
@@ -5270,10 +5170,10 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let o_key_clone = o_key.clone();
             async move {
-                if let Some(c) = UI_ORDERS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&o_key_clone).await { return v; }
-                }
-                load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+                let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&o_key_clone, std::time::Duration::from_secs(5), move || async move {
+                    load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                }).await.unwrap_or_default()
             }
         }),
         tokio::spawn({
@@ -5281,10 +5181,10 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let i_key_clone = i_key.clone();
             async move {
-                if let Some(c) = UI_INBOX_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&i_key_clone).await { return v; }
-                }
-                load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+                let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&i_key_clone, std::time::Duration::from_secs(5), move || async move {
+                    load_ui_inbox_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                }).await.unwrap_or_default()
             }
         }),
         tokio::spawn({
@@ -5292,10 +5192,10 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let t_key_clone = t_key.clone();
             async move {
-                if let Some(c) = UI_TRIAGE_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&t_key_clone).await { return v; }
-                }
-                load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+                let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&t_key_clone, std::time::Duration::from_secs(10), move || async move {
+                    load_ui_triage_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                }).await.unwrap_or_default()
             }
         }),
         tokio::spawn({
@@ -5303,10 +5203,10 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let p_key_clone = p_key.clone();
             async move {
-                if let Some(c) = UI_PRIORITY_TASKS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&p_key_clone).await { return v; }
-                }
-                load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default()
+                let cache = UI_PRIORITY_TASKS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&p_key_clone, std::time::Duration::from_secs(10), move || async move {
+                    load_ui_priority_tasks_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                }).await.unwrap_or_default()
             }
         }),
         tokio::spawn({
@@ -5314,21 +5214,20 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let a_key_clone = a_key.clone();
             async move {
-                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&a_key_clone).await { return v; }
-                }
-                let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
-                for approval in &mut res {
-                    if let Some(obj) = approval.as_object_mut() {
-                        if !obj.contains_key("lifecycle_state") {
-                            let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
-                            let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
-                            obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                let cache = UI_AGENT_APPROVALS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&a_key_clone, std::time::Duration::from_secs(10), move || async move {
+                    let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()?;
+                    for approval in &mut res {
+                        if let Some(obj) = approval.as_object_mut() {
+                            if !obj.contains_key("lifecycle_state") {
+                                let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                                let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                                obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                            }
                         }
                     }
-                }
-                if let Some(c) = UI_AGENT_APPROVALS_CACHE.get() { c.set(&a_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
-                res
+                    Some(res)
+                }).await.unwrap_or_default()
             }
         }),
         tokio::spawn({
@@ -5336,12 +5235,10 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
             let t_clone = tenant_id.to_string();
             let f_key_clone = f_key.clone();
             async move {
-                if let Some(c) = UI_AGENT_FEED_CACHE.get() {
-                    if let Some((v, _)) = c.get_with_swr(&f_key_clone).await { return v; }
-                }
-                let res = load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.unwrap_or_default();
-                if let Some(c) = UI_AGENT_FEED_CACHE.get() { c.set(&f_key_clone, res.clone(), std::time::Duration::from_secs(10)).await; }
-                res
+                let cache = UI_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&f_key_clone, std::time::Duration::from_secs(10), move || async move {
+                    load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                }).await.unwrap_or_default()
             }
         })
     );
@@ -5371,60 +5268,20 @@ async fn ui_dashboard_unified_feed_handler(
     let cache = UI_UNIFIED_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
     let supply_future = tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t, mobile_optimized).await } });
-    let cache_res = cache.get_with_swr(&cache_key).await;
 
-    // Check cache
-    if let Some((cached, is_stale)) = cache_res {
-        if !is_stale {
-            // Supply should not be cached because it changes continuously (inventory counts),
-            // so we fetch supply and merge it on cache hit.
-            let supply_val = supply_future.await.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
-            let mut final_cached = cached.clone();
-            if let Some(obj) = final_cached.as_object_mut() {
-                obj.insert("supply".to_string(), supply_val.clone());
-            }
-            let shaped = ::server_utils::payload_shaper::shape_payload(final_cached, fields);
-            return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-        }
-
+    let mut final_result = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
         let db_bg = db.clone();
         let t_bg = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            let result = fetch_unified_feed_data(&db_bg, &t_bg, mobile_optimized).await;
-            if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
-                c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
-            }
-        });
-
-        // Supply should not be cached because it changes continuously (inventory counts),
-        // so we fetch supply and merge it on cache hit.
-        let supply_val = supply_future.await.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
-        let mut final_cached = cached.clone();
-        if let Some(obj) = final_cached.as_object_mut() {
-            obj.insert("supply".to_string(), supply_val.clone());
+        move || async move {
+            Some(fetch_unified_feed_data(&db_bg, &t_bg, mobile_optimized).await)
         }
-        let shaped = ::server_utils::payload_shaper::shape_payload(final_cached, fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-    }
+    }).await.unwrap_or_else(|| serde_json::json!({}));
 
-    let (cacheable_result, supply_res) = tokio::join!(
-        fetch_unified_feed_data(&db, &tenant_id, mobile_optimized),
-        supply_future
-    );
-
-    let supply_val = supply_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
-
-    if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
-        let cache_key_set = cache_key.clone();
-        let cacheable_result_set = cacheable_result.clone();
-        let _ = tokio::spawn(async move { c.set(&cache_key_set, cacheable_result_set, std::time::Duration::from_secs(10)).await; });
-    }
-
-    // Add supply to the final result
-    let mut final_result = cacheable_result;
+    // Supply should not be cached because it changes continuously (inventory counts),
+    // so we fetch supply and merge it on cache hit or miss.
+    let supply_val = supply_future.await.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
     if let Some(obj) = final_result.as_object_mut() {
-        obj.insert("supply".to_string(), supply_val);
+        obj.insert("supply".to_string(), supply_val.clone());
     }
 
     let shaped = ::server_utils::payload_shaper::shape_payload(final_result, fields);
@@ -5433,24 +5290,48 @@ async fn ui_dashboard_unified_feed_handler(
 
 
 async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: &str, mobile_optimized: bool) -> serde_json::Value {
+    let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
+    let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
+
     let (approvals_res, ledger_res, agent_feed_res) = tokio::join!(
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.to_string(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let a_key_clone = a_key.clone();
+            async move {
+                let cache = UI_AGENT_APPROVALS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&a_key_clone, std::time::Duration::from_secs(10), move || async move {
+                    let mut res = load_ui_agent_approvals_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()?;
+                    for approval in &mut res {
+                        if let Some(obj) = approval.as_object_mut() {
+                            if !obj.contains_key("lifecycle_state") {
+                                let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
+                                let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
+                                obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
+                            }
+                        }
+                    }
+                    Some(res)
+                }).await.unwrap_or_default()
+            }
+        }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.to_string(); async move { load_ui_ledger_from_db(&db, &t, mobile_optimized).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.to_string(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } })
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let f_key_clone = f_key.clone();
+            async move {
+                let cache = UI_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&f_key_clone, std::time::Duration::from_secs(10), move || async move {
+                    load_ui_agent_feed_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                }).await.unwrap_or_default()
+            }
+        })
     );
 
-    let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    for approval in &mut pending_approvals {
-        if let Some(obj) = approval.as_object_mut() {
-            if !obj.contains_key("lifecycle_state") {
-                let status = obj.get("status").and_then(|s| s.as_str()).unwrap_or("PENDING");
-                let lifecycle_state = if status == "DRAFT" || status == "PENDING" { "PENDING_APPROVAL" } else { status };
-                obj.insert("lifecycle_state".to_string(), serde_json::json!(lifecycle_state));
-            }
-        }
-    }
+    let pending_approvals = approvals_res.unwrap_or_default();
     let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let agent_feed = agent_feed_res.unwrap_or_default();
 
     serde_json::json!({
         "pending_approvals": pending_approvals,
@@ -5653,38 +5534,28 @@ async fn list_ui_bookings_handler(
 
     let cache_key = format!("ui_bookings:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-                    let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-        }
 
+    let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(60), {
         let db = db.clone();
         let t = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            if let Ok(bookings) = load_ui_bookings_from_db(&db, &t, mobile_optimized).await {
-                if let Some(c) = UI_BOOKINGS_CACHE.get() {
-                    c.set(&cache_key_bg, bookings, std::time::Duration::from_secs(5)).await;
-                }
+        move || async move {
+            match load_ui_bookings_from_db(&db, &t, mobile_optimized).await {
+                Ok(items) => Some(items),
+                Err(sqlx::Error::RowNotFound) => Some(vec![]),
+                Err(_) => None,
             }
-        });
-                let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-    }
-
-    match load_ui_bookings_from_db(&db, &tenant_id, mobile_optimized).await {
-        Ok(v) => {
-            cache.set(&cache_key, v.clone(), std::time::Duration::from_secs(60)).await;
-            let fields = query.fields.as_deref();
-            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(v).unwrap_or_default(), fields);
-            (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         }
-        Err(e) => {
-            tracing::error!("Failed to fetch ui bookings: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+    }).await;
+
+    match items_opt {
+        Some(items) => {
+            let fields = query.fields.as_deref();
+            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(items).unwrap_or_default(), fields);
+            (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
+        },
+        None => {
+            tracing::error!("Failed to fetch ui bookings");
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Failed to fetch ui bookings"}))).into_response()
         }
     }
 }
@@ -5699,39 +5570,28 @@ async fn list_ui_inbox_handler(
 
     let cache_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-                    let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-        }
 
+    let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), {
         let db = db.clone();
         let t = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-        tokio::spawn(async move {
-            if let Ok(messages) = load_ui_inbox_from_db(&db, &t, mobile_optimized).await {
-                if let Some(c) = UI_INBOX_CACHE.get() {
-                    c.set(&cache_key_bg, messages, std::time::Duration::from_secs(5)).await;
-                }
+        move || async move {
+            match load_ui_inbox_from_db(&db, &t, mobile_optimized).await {
+                Ok(items) => Some(items),
+                Err(sqlx::Error::RowNotFound) => Some(vec![]),
+                Err(_) => None,
             }
-        });
-                let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-    }
+        }
+    }).await;
 
-    let messages = load_ui_inbox_from_db(&db, &tenant_id, mobile_optimized).await;
-
-    match messages {
-        Ok(messages) => {
-            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(60)).await;
-            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+    match items_opt {
+        Some(items) => {
+            let fields = query.fields.as_deref();
+            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(items).unwrap_or_default(), fields);
+            (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         },
-        Err(e) => {
+        None => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch UI inbox messages");
-            tracing::error!("Failed to fetch UI inbox messages: {}", e);
+            tracing::error!("Failed to fetch UI inbox messages");
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
     }
@@ -5801,36 +5661,28 @@ async fn list_ui_supply_handler(
 
     let cache_key = format!("ui_supply:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_SUPPLY_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-                    let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached.clone()).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-        }
 
+    let item_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), {
         let db = db.clone();
         let t = tenant_id.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            if let Ok(supply) = load_ui_supply_from_db(&db, &t, mobile_optimized).await {
-                if let Some(c) = UI_SUPPLY_CACHE.get() {
-                    c.set(&cache_key_bg, supply, std::time::Duration::from_secs(5)).await;
-                }
+        move || async move {
+            match load_ui_supply_from_db(&db, &t, mobile_optimized).await {
+                Ok(items) => Some(items),
+                Err(sqlx::Error::RowNotFound) => Some(serde_json::json!({"vendors": [], "raw_materials": [], "bom_items": []})),
+                Err(_) => None,
             }
-        });
-                let fields = query.fields.as_deref();
-        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
-        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
-    }
-
-    match load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await {
-        Ok(result) => {
-            let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(5)).await;
-            (axum::http::StatusCode::OK, axum::Json(result)).into_response()
         }
-        Err(e) => {
-            tracing::error!("Failed to fetch UI supply: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({}))).into_response()
+    }).await;
+
+    match item_opt {
+        Some(item) => {
+            let fields = query.fields.as_deref();
+            let shaped = ::server_utils::payload_shaper::shape_payload(item, fields);
+            (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
+        },
+        None => {
+            tracing::error!("Failed to fetch UI supply");
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"vendors": [], "raw_materials": [], "bom_items": []}))).into_response()
         }
     }
 }
