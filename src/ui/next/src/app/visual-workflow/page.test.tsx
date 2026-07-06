@@ -77,4 +77,12 @@ describe("VisualWorkflowPage", () => {
       expect(screen.getByText(/Error: Network Error/)).toBeInTheDocument();
     });
   });
+
+  it("verifies macOS Translucent Glass styling", () => {
+    render(<VisualWorkflowPage />);
+    // Verify TDD check for the new Translucent Glass container that wraps nodes
+    const container = screen.getByTestId("glass-nodes-container");
+    expect(container).toHaveClass("backdrop-blur-2xl");
+    expect(container).toHaveClass("bg-white/40");
+  });
 });

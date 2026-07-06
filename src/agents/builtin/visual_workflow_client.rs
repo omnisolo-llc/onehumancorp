@@ -39,6 +39,7 @@ pub async fn handle_workflow_run(
         state.tools.clone(),
         state.sub_agents.clone(),
         state.default_config.clone(),
+        None,
     );
 
     match executor.execute(payload.inputs).await {

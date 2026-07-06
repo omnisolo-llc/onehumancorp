@@ -107,7 +107,7 @@ export default function VisualWorkflowPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        <div className="border border-white/40 rounded-3xl p-6 min-h-[400px] bg-white/50 backdrop-blur-2xl shadow-sm">
+        <div data-testid="glass-nodes-container" className="border border-white/40 rounded-3xl p-6 min-h-[400px] bg-white/40 backdrop-blur-2xl shadow-sm">
           <h2 className="text-xl font-semibold mb-4 text-[#1D1D1F]">Workspace Canvas</h2>
 
           {nodes.length === 0 && (

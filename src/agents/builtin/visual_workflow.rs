@@ -73,6 +73,8 @@ pub struct WorkflowExecutor {
     pub tools: Vec<crate::tools::Tool>,
     pub sub_agents: HashMap<String, Arc<Agent>>,
     pub config: AgentRunConfig,
+    pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+
 }
 
 fn evaluate_condition(expr: &str) -> bool {
@@ -130,6 +132,8 @@ impl WorkflowExecutor {
         tools: Vec<crate::tools::Tool>,
         sub_agents: HashMap<String, Arc<Agent>>,
         config: AgentRunConfig,
+        checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
+
     ) -> Self {
         Self {
             graph,
@@ -137,6 +141,8 @@ impl WorkflowExecutor {
             tools,
             sub_agents,
             config,
+            checkpointer,
+
         }
     }
 
@@ -209,6 +215,14 @@ impl WorkflowExecutor {
                     .ok_or_else(|| format!("Node not found: {}", current_node_id))?;
 
                 let count = visit_counts.entry(current_node_id.clone()).or_insert(0);
+
+                // Master Catalog B.7. State Management: Checkpoint at super-step boundaries
+                if let Some(cp) = &self.checkpointer {
+                    let state_json = serde_json::to_value(&state).unwrap_or_default();
+                    // We ignore errors in checkpointing so the workflow can continue
+                    let _ = cp.put_checkpoint(crate::checkpointer::Checkpoint { thread_id: "visual-workflow".to_string(), checkpoint_id: current_node_id.clone(), data: state_json, parent_id: None, created_at: chrono::Utc::now(), metadata: serde_json::Value::Null });
+                }
+
                 *count += 1;
 
                 if *count > self.config.max_workflow_cycles.unwrap_or(1) {
@@ -384,6 +398,7 @@ impl WorkflowExecutor {
                                     tools_clone,
                                     sub_agents_clone,
                                     config_clone,
+                      None,
                                 );
                                 sub_executor
                                     .execute_from_node(target_clone, state_clone)
@@ -519,7 +534,7 @@ mod tests {
             ..Default::default()
         };
 
-        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
@@ -547,7 +562,7 @@ mod tests {
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config, None);
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
 
@@ -593,7 +608,7 @@ mod tests {
         let agent = Arc::new(Agent::new(Arc::new(ErrorMockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config, None);
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
 
@@ -632,7 +647,7 @@ mod tests {
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config, None);
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
 
@@ -700,7 +715,7 @@ mod tests {
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, agent, tools, HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, agent, tools, HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "raw_data".to_string());
@@ -765,6 +780,7 @@ mod tests {
             vec![],
             HashMap::new(),
             config.clone(),
+            None,
         );
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
@@ -819,7 +835,7 @@ mod tests {
         let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
@@ -881,7 +897,7 @@ mod tests {
         let mut config = AgentRunConfig::default();
         config.max_retries = 0; // Prevent retries so the test completes quickly
 
-        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "trigger".to_string());
@@ -952,7 +968,7 @@ mod tests {
         }
 
         let agent = Arc::new(Agent::new(Arc::new(EmptyMockLlmClient), vec![]));
-        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config, None);
 
         let res = executor.execute(inputs).await;
         assert!(res.is_err());
@@ -1021,7 +1037,7 @@ mod tests {
 
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], sub_agents, config);
+        let executor = WorkflowExecutor::new(graph, main_agent, vec![], sub_agents, config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "my_task_data".to_string());
@@ -1077,7 +1093,7 @@ mod tests {
         let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in1".to_string(), "val1".to_string());
@@ -1160,7 +1176,7 @@ mod tests {
         let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "init_data".to_string());
@@ -1288,7 +1304,7 @@ mod tests {
         let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config);
+        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "root_data".to_string());
