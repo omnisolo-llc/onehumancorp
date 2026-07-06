@@ -555,6 +555,13 @@
       let items = [];
       let editingId = null;
 
+      let reviewingId = null;
+      function startReview(id) {
+         reviewingId = id;
+         renderUI();
+      }
+
+
       function tenantId() {
         return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
       }
@@ -575,11 +582,29 @@
 
           const data = await res.json();
           items = data.items || (Array.isArray(data) ? data : []);
+          // Sort items by priority (urgent > high > medium > low > other)
+          items.sort((a, b) => {
+            const priorityRank = { 'urgent': 1, 'high': 2, 'action needed': 3, 'medium': 4, 'low': 5, 'fyi': 6 };
+            const pA = priorityRank[(a.priority || '').toLowerCase()] || 99;
+            const pB = priorityRank[(b.priority || '').toLowerCase()] || 99;
+            if (pA !== pB) return pA - pB;
+            // secondary sort by date descending
+            return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+          });
+
 
           renderUI();
         } catch (e) {
           console.error(e);
-          listEl.innerHTML = `<div class="app-empty" style="color:var(--text-danger)">Failed to load items. ${e.message}</div>`;
+          // OHC Glassmorphism: Light/Dark mode glass styling for failure reports
+          const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const bg = isDarkMode ? 'rgba(22, 22, 26, 0.7)' : 'rgba(255, 255, 255, 0.65)';
+          const border = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.4)';
+
+          listEl.innerHTML = `<div class="app-empty" style="background: ${bg}; backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid ${border}; border-radius: 12px; padding: 24px; color:var(--text-danger)">
+              <h3 style="margin-top: 0; font-size: 16px; font-weight: 600;">System Offline or Degraded</h3>
+              <p style="margin: 8px 0 0 0; font-size: 14px;">Failed to load triage items. ${e.message}</p>
+          </div>`;
         }
       }
 
@@ -604,6 +629,7 @@
           }
           items = items.filter(i => i.id !== id);
           editingId = null;
+          reviewingId = null;
           renderUI();
         } catch (e) {
           console.error(e);
@@ -741,6 +767,8 @@
           let draftReply = item.action_payload || item.draft_reply || (item.proposed_action ? item.proposed_action.message || item.proposed_action.draft_reply : null) || (item.context_payload ? item.context_payload.draft_reply : null);
 
           let actionHtml = '';
+<<<<<<< HEAD
+=======
           if (draftReply) {
              actionHtml = `
                 <div class="triage-action-preview" style="background: rgba(0, 102, 255, 0.1); padding: 20px; display: flex; flex-col;">
@@ -749,32 +777,67 @@
                 </div>
              `;
           }
+>>>>>>> 529eec71 (fix: Remove unused HTML section and leftover artifacts)
 
           let buttonsHtml = '';
           if (editingId === item.id) {
              buttonsHtml = `
+<<<<<<< HEAD
+                <div class="triage-buttons" style="flex-direction: column;">
+                   <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">Edit Draft:</div>
+                   <textarea id="triage-edit-textarea-${item.id}" data-testid="triage-edit-textarea-${item.id}" class="triage-textarea" style="min-height: 100px;">${draftReply || ''}</textarea>
+=======
                 <div class="triage-buttons" style="flex-direction: column; padding: 20px; border-top: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.4);">
                    <textarea id="triage-edit-textarea-${item.id}" data-testid="triage-edit-textarea-${item.id}" class="triage-textarea" style="width: 100%; min-height: 88px; padding: 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.2); margin-bottom: 12px;">${draftReply || ''}</textarea>
+>>>>>>> 529eec71 (fix: Remove unused HTML section and leftover artifacts)
                    <div style="display: flex; gap: 12px; width: 100%;">
-                       <button class="triage-btn primary" data-testid="triage-save-btn-${item.id}" onclick="handleSaveDecision('${item.id}')">Save & Send</button>
-                       <button class="triage-btn secondary" data-testid="triage-cancel-btn-${item.id}" onclick="cancelEdit()">Cancel</button>
+                       <button class="triage-btn primary" data-testid="triage-save-btn-${item.id}" onclick="handleSaveDecision('${item.id}')" style="flex: 1; min-height: 44px;">Save & Send</button>
+                       <button class="triage-btn secondary" data-testid="triage-cancel-btn-${item.id}" onclick="cancelEdit()" style="flex: 1; min-height: 44px;">Cancel</button>
                    </div>
                 </div>
+             `;
+          } else if (reviewingId === item.id) {
+             buttonsHtml = `
+                 <div class="proposed-action glassmorphism" style="padding: 16px; margin-top: 12px; border: 1px solid rgba(255, 255, 255, 0.4);">
+                   <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                       <div style="font-weight: 600; font-size: 16px; color: #1D1D1F;">${item.action_type || 'Draft'} Ready</div>
+                       <span class="app-badge warn">Action Required</span>
+                   </div>
+                   <div style="font-size: 14px; margin-bottom: 16px; color: #1D1D1F; opacity: 0.8;">
+                      "${draftReply || ''}"
+                   </div>
+                   <div class="triage-buttons" style="margin-top: 0; display: flex; gap: 8px; width: 100%;">
+                       <button class="triage-btn primary" data-testid="triage-approve-${item.id}" onclick="handleDecision('${item.id}', true)" style="flex: 2; min-height: 44px;">Approve & Send</button>
+                       <button class="triage-btn secondary" data-testid="triage-edit-btn-${item.id}" onclick="startEdit('${item.id}')" style="flex: 1; min-height: 44px;">Edit</button>
+                   </div>
+                 </div>
              `;
           } else {
               if (draftReply) {
                   buttonsHtml = `
+<<<<<<< HEAD
+                    <div class="triage-buttons">
+                        <button class="triage-btn primary" data-testid="triage-review-btn-${item.id}" onclick="startReview('${item.id}')" style="flex: 2; min-height: 44px;">Review Draft</button>
+                        <button class="triage-btn secondary" data-testid="triage-dismiss-${item.id}" onclick="handleDecision('${item.id}', false)" style="flex: 1; min-height: 44px;">Dismiss</button>
+=======
                     <div class="triage-buttons" style="display: flex; gap: 12px; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.4);">
                         <button class="triage-btn primary" data-testid="triage-review-btn-${item.id}" onclick="startEdit('${item.id}')">Review Draft</button>
                         <button class="triage-btn secondary" data-testid="triage-approve-${item.id}" onclick="handleDecision('${item.id}', true)">Approve as-is</button>
                         <button class="triage-btn secondary" data-testid="triage-dismiss-${item.id}" onclick="handleDecision('${item.id}', false)">Dismiss</button>
+>>>>>>> 529eec71 (fix: Remove unused HTML section and leftover artifacts)
                     </div>
                   `;
               } else {
                   buttonsHtml = `
+<<<<<<< HEAD
+                    <div class="triage-buttons">
+                        <button class="triage-btn primary" data-testid="triage-approve-${item.id}" onclick="handleDecision('${item.id}', true)" style="flex: 2; min-height: 44px;">Approve & Send</button>
+                        <button class="triage-btn secondary" data-testid="triage-dismiss-${item.id}" onclick="handleDecision('${item.id}', false)" style="flex: 1; min-height: 44px;">Dismiss</button>
+=======
                     <div class="triage-buttons" style="display: flex; gap: 12px; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.4);">
                         <button class="triage-btn primary" data-testid="triage-approve-${item.id}" onclick="handleDecision('${item.id}', true)">Approve & Send</button>
                         <button class="triage-btn secondary" data-testid="triage-dismiss-${item.id}" onclick="handleDecision('${item.id}', false)">Dismiss</button>
+>>>>>>> 529eec71 (fix: Remove unused HTML section and leftover artifacts)
                     </div>
                   `;
               }

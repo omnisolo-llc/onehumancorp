@@ -92,7 +92,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed z-[100] backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-[0_12px_40px_rgba(0,0,0,0.2)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed"
+          className="fixed z-[100] backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-[0_12px_40px_rgba(0,0,0,0.2)] pointer-events-none w-auto max-w-[calc(100vw-32px)] md:max-w-xs mx-4 text-center leading-relaxed"
           style={{
             top: tooltipRect.top - 10,
             left: Math.max(144, Math.min(windowWidth - 144, tooltipRect.left + tooltipRect.width / 2)),
