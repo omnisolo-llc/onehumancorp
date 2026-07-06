@@ -621,7 +621,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS DOUBLE PRECISION) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2 OR CAST(total_cost AS TEXT) ILIKE $2) ORDER BY id ASC LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_cost AS REAL) as total_cost FROM purchase_orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2 OR CAST(total_cost AS TEXT) ILIKE $2) ORDER BY id ASC LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&mut *tx)
@@ -1542,6 +1542,1167 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         action_type TEXT NOT NULL,
                         state_change TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS active_discounts (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        policy_id TEXT,
+                        product_id TEXT NOT NULL,
+                        discount_amount REAL NOT NULL,
+                        expires_at TIMESTAMP NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS affiliate_ledgers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        affiliate_link_id TEXT,
+                        order_id TEXT NOT NULL,
+                        commission_amount INTEGER NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS affiliate_links (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        affiliate_code TEXT UNIQUE NOT NULL,
+                        discount_percentage INTEGER NOT NULL DEFAULT 10,
+                        commission_percentage INTEGER NOT NULL DEFAULT 10,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS affiliate_payouts (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        affiliate_link_id TEXT,
+                        amount INTEGER NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS agent_action_requests (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        action_type TEXT NOT NULL, -- e.g., 'Reorder', 'PriceAdjust'
+                        status TEXT NOT NULL DEFAULT 'Pending', -- 'Pending', 'Approved', 'Rejected'
+                        confidence_score REAL DEFAULT 0,
+                        product_id TEXT,
+                        payload TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS agent_draft (
+                        id TEXT PRIMARY KEY,
+                        work_item_id TEXT NOT NULL,
+                        response TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS applied_client_mutations (
+                        client_mutation_id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS appointments (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        job_template_id TEXT NOT NULL ,
+                        staff_profile_id TEXT ,
+                        status TEXT NOT NULL CHECK (status IN ('Requested', 'Scheduled', 'En-Route', 'In-Progress', 'Completed', 'Cancelled')),
+                        scheduled_start_time TIMESTAMP,
+                        scheduled_end_time TIMESTAMP,
+                        actual_start_time TIMESTAMP,
+                        actual_end_time TIMESTAMP,
+                        location_address TEXT,
+                        location_lat REAL,
+                        location_lng REAL,
+                        notes TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS assistant_artifacts (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        task_id TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        filename TEXT NOT NULL,
+                        path TEXT NOT NULL,
+                        mime_type TEXT NOT NULL,
+                        size INTEGER,
+                        preview_ref TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS assistant_connectors (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        kind TEXT NOT NULL DEFAULT 'custom',
+                        status TEXT NOT NULL,
+                        oauth BOOLEAN DEFAULT FALSE,
+                        config TEXT,
+                        last_error TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE (tenant_id, name)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS assistant_file_changes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        task_id TEXT NOT NULL,
+                        path TEXT NOT NULL,
+                        change_type TEXT NOT NULL,
+                        summary TEXT,
+                        approval_status TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS assistant_memory_records (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        scope TEXT NOT NULL DEFAULT 'global',
+                        source TEXT,
+                        enabled BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS assistant_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        task_id TEXT NOT NULL,
+                        role TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        tool_metadata TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS assistant_skills (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        category TEXT NOT NULL DEFAULT 'Custom',
+                        source TEXT NOT NULL DEFAULT 'database',
+                        status TEXT NOT NULL,
+                        version TEXT,
+                        description TEXT,
+                        config TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE (tenant_id, name)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS assistant_tasks (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        workspace_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        prompt TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        mode TEXT,
+                        permission_profile TEXT NOT NULL,
+                        model_config TEXT,
+                        current_step TEXT,
+                        archived BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS assistant_workspaces (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        default_work_dir TEXT,
+                        default_model TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS availability_blocks (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        service_id TEXT NOT NULL,
+                        start_time TIMESTAMP NOT NULL,
+                        end_time TIMESTAMP NOT NULL,
+                        is_available BOOLEAN NOT NULL DEFAULT TRUE,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS booking_resource_reservations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        booking_id TEXT NOT NULL,
+                        resource_id TEXT NOT NULL
+                    );
+
+                    CREATE TABLE IF NOT EXISTS booking_resources (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        resource_type TEXT NOT NULL,
+                        availability_schedule TEXT DEFAULT '[]',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS booking_slots (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        service_id TEXT,
+                        resource_id TEXT,
+                        start_time TIMESTAMP NOT NULL,
+                        end_time TIMESTAMP NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'soft_locked', 'booked')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS cash_ledger_entries (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        terminal_session_id TEXT NOT NULL,
+                        amount_cents INTEGER NOT NULL,
+                        currency TEXT NOT NULL DEFAULT 'USD',
+                        transaction_type TEXT NOT NULL,
+                        notes TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS conflict_queue (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        sync_event_id TEXT NOT NULL,
+                        entity_type TEXT NOT NULL,
+                        entity_id TEXT NOT NULL,
+                        action_type TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        base_version INTEGER NOT NULL,
+                        current_version INTEGER NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'UNRESOLVED', -- UNRESOLVED, RESOLVED
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS conversational_intakes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        inbox_message_id TEXT,
+                        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'quote_sent', 'payment_pending', 'confirmed')),
+                        context TEXT,
+                        service_name TEXT,
+                        suggested_price REAL,
+                        suggested_time TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS crdt_deltas (
+                        tenant_id TEXT NOT NULL,
+                        id TEXT NOT NULL,
+                        entity_id TEXT NOT NULL,
+                        data TEXT NOT NULL,
+                        updated_at TIMESTAMP NOT NULL,
+                        synced_to_cloud BOOLEAN NOT NULL DEFAULT FALSE,
+                        PRIMARY KEY (tenant_id, id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS customer_profile (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS daily_work_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        signal_id TEXT ,
+                        intent TEXT NOT NULL,
+                        customer_info TEXT,
+                        suggested_actions TEXT,
+                        status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'DISMISSED')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS delivery_tasks (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        order_id TEXT NOT NULL,
+                        driver_id TEXT,
+                        route_plan_id TEXT ,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        estimated_arrival TIMESTAMP,
+                        delivery_location TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS delivery_zones (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        polygon TEXT,
+                        flat_fee_cents INTEGER NOT NULL DEFAULT 0,
+                        min_order_value_cents INTEGER NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS deposit_requirements (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        estimate_id TEXT NOT NULL,
+                        amount_cents INTEGER NOT NULL,
+                        percentage REAL(5,2),
+                        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'refunded', 'voided')),
+                        payment_intent_id TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS entity_versions (
+                        tenant_id TEXT NOT NULL,
+                        entity_type TEXT NOT NULL,
+                        entity_id TEXT NOT NULL,
+                        current_version INTEGER NOT NULL DEFAULT 1,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, entity_type, entity_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS escalations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        location_id TEXT NOT NULL,
+                        task_id TEXT, -- Optional link to a specific task
+                        summary TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'RESOLVED')),
+                        created_by TEXT NOT NULL, -- User ID of the location manager
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS estimates (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        service_lead_id TEXT,
+                        customer_id TEXT,
+                        description TEXT,
+                        min_price_cents INTEGER,
+                        max_price_cents INTEGER,
+                        status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'approved', 'rejected', 'expired')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS fulfillment_batches (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        subscription_plan_id TEXT NOT NULL,
+                        fulfillment_date DATE NOT NULL,
+                        subscriber_count INTEGER NOT NULL DEFAULT 0,
+                        status TEXT NOT NULL DEFAULT 'PENDING', -- PENDING, LABELS_PRINTED, FULFILLED
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS help_articles (
+                        id INTEGER PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        desc_text TEXT NOT NULL,
+                        link TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS inbound_signals (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        raw_payload TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROCESSED', 'FAILED')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS integration_credentials (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        integration_id TEXT NOT NULL,
+                        bot_token TEXT,
+                        api_token TEXT,
+                        from_phone TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS interactive_proposal_line_items (
+                        id TEXT PRIMARY KEY,
+                        proposal_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        unit_price_cents INTEGER NOT NULL,
+                        quantity INTEGER NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS interactive_proposals (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        status TEXT NOT NULL CHECK (status IN ('Draft', 'Sent', 'Viewed', 'Accepted', 'Paid')),
+                        total_amount_cents INTEGER NOT NULL DEFAULT 0,
+                        required_deposit_cents INTEGER NOT NULL DEFAULT 0,
+                        checkout_url TEXT,
+                        message TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS inventory_levels (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        product_id TEXT,
+                        location TEXT NOT NULL, -- 'online' or 'in-store'
+                        quantity INT DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS inventory_predictions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        predicted_stockout_date TIMESTAMP,
+                        confidence_score REAL,
+                        suggested_reorder_quantity INTEGER,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS invoice_communication_events (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        invoice_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'drafted', -- drafted, approved, sent
+                        channel TEXT NOT NULL DEFAULT 'email', -- email, sms, whatsapp
+                        drafted_content TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS invoice_line_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        invoice_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        quantity INTEGER NOT NULL,
+                        unit_price REAL NOT NULL,
+                        amount REAL NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS invoices (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        client_id TEXT NOT NULL,
+                        client_name TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'draft',
+                        due_date INTEGER NOT NULL,
+                        currency TEXT NOT NULL DEFAULT 'USD',
+                        total_amount REAL NOT NULL,
+                        stripe_invoice_id TEXT,
+                        stripe_payment_link TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS job_locations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        service_route_id TEXT NOT NULL,
+                        appointment_id TEXT NOT NULL,
+                        sequence_order INTEGER NOT NULL,
+                        estimated_travel_time_mins INTEGER,
+                        distance_to_next_km REAL,
+                        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'en_route', 'on_site', 'completed', 'skipped')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(service_route_id, sequence_order)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS job_templates (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        estimated_duration_mins INTEGER NOT NULL,
+                        base_price_cents INTEGER NOT NULL,
+                        skills_required TEXT DEFAULT '[]',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS lead_gen_campaigns (
+                        id TEXT PRIMARY KEY ,
+                        tenant_id TEXT NOT NULL,
+                        budget NUMERIC(10, 2) NOT NULL,
+                        radius_miles INT NOT NULL,
+                        zip_code TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP
+);
+
+                    CREATE TABLE IF NOT EXISTS leads (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        source TEXT,
+                        contact_info TEXT,
+                        context TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ledger_reserves (
+                        tenant_id TEXT NOT NULL,
+                        envelope_id TEXT NOT NULL,
+                        envelope_type TEXT NOT NULL, -- 'tax', 'liability', 'general'
+                        balance REAL DEFAULT 0.0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, envelope_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS locations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS loyalty_ledgers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        points_balance INTEGER NOT NULL DEFAULT 0,
+                        lifetime_points INTEGER NOT NULL DEFAULT 0,
+                        tier TEXT,
+                        created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, customer_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS mcp_config_sync_log (
+                        id INTEGER PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        agent_id TEXT NOT NULL,
+                        config_key TEXT NOT NULL,
+                        config_value TEXT NOT NULL,
+                        metadata TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE (tenant_id, config_key)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS multi_party_split_ledgers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        partner_id TEXT NOT NULL,
+                        payment_event_id TEXT NOT NULL,
+                        source_resource_type TEXT NOT NULL,
+                        source_resource_id TEXT NOT NULL,
+                        total_amount REAL NOT NULL,
+                        partner_amount REAL NOT NULL,
+                        owner_amount REAL NOT NULL,
+                        status TEXT DEFAULT 'PENDING_PAYOUT', -- PENDING_PAYOUT, PAID_OUT
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS multi_party_splits (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        resource_type TEXT NOT NULL, -- e.g., "invoice", "product"
+                        resource_id TEXT NOT NULL,
+                        partner_id TEXT NOT NULL,
+                        split_percentage REAL NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_collective (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        location_center TEXT,
+                        radius_meters FLOAT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_collective_loyalty_balance (
+                        collective_id TEXT NOT NULL,
+                        buyer_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        balance INTEGER NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (collective_id, buyer_id, tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_collective_member (
+                        collective_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (collective_id, tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_shared_offer (
+                        id TEXT PRIMARY KEY,
+                        collective_id TEXT NOT NULL,
+                        originating_tenant_id TEXT NOT NULL,
+                        target_tenant_id TEXT NOT NULL,
+                        discount_type TEXT NOT NULL,
+                        value FLOAT NOT NULL,
+                        auto_apply BOOLEAN NOT NULL DEFAULT true,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_staff_member (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        phone_number TEXT NOT NULL,
+                        role TEXT NOT NULL,
+                        pin_hash TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_timecard_event (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        staff_id TEXT NOT NULL,
+                        event_type TEXT NOT NULL, -- CLOCK_IN, CLOCK_OUT
+                        event_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        sync_status TEXT NOT NULL DEFAULT 'SYNCED',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS operation_intents (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        action_type TEXT NOT NULL,
+                        payload TEXT NOT NULL DEFAULT '{}',
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        retry_count INT NOT NULL DEFAULT 0
+                    );
+
+                    CREATE TABLE IF NOT EXISTS opportunities (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        lead_id TEXT ,
+                        title TEXT NOT NULL,
+                        stage TEXT NOT NULL DEFAULT 'Qualified',
+                        estimated_value INTEGER,
+                        priority TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS pre_order_entries (
+                        id TEXT PRIMARY KEY ,
+                        tenant_id TEXT NOT NULL,
+                        waitlist_campaign_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        email TEXT NOT NULL,
+                        channel TEXT NOT NULL DEFAULT 'WEB',
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        deposit_amount REAL(10, 2),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS pricing_heuristics (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        service_category TEXT NOT NULL,
+                        base_rate_cents INTEGER NOT NULL,
+                        materials_markup_percentage NUMERIC NOT NULL,
+                        instructions TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS pricing_rules (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        base_price_cents INTEGER NOT NULL,
+                        rules_json TEXT NOT NULL DEFAULT '[]',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS project_tasks (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        project_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'Pending',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS projects (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        quote_id TEXT ,
+                        customer_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'Active',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS proposal_line_items (
+                        id TEXT PRIMARY KEY,
+                        proposal_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        unit_price_cents INTEGER NOT NULL,
+                        quantity INTEGER NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS proposals (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        status TEXT NOT NULL CHECK (status IN ('DRAFT', 'SENT', 'ACCEPTED', 'REJECTED')),
+                        total_amount_cents INTEGER NOT NULL DEFAULT 0,
+                        required_deposit_cents INTEGER NOT NULL DEFAULT 0,
+                        valid_until TIMESTAMP,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS proposed_bookings (
+                        id TEXT PRIMARY KEY ,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        conversation_id TEXT NOT NULL,
+                        requested_service TEXT NOT NULL,
+                        proposed_time TEXT NOT NULL,
+                        estimated_value REAL NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS purchase_orders (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        vendor_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'DRAFT',
+                        total_cost REAL NOT NULL DEFAULT 0.0,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS quote_line_items (
+                        id TEXT PRIMARY KEY,
+                        quote_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        unit_price_cents INTEGER NOT NULL,
+                        quantity INTEGER NOT NULL DEFAULT 1,
+                        is_optional BOOLEAN NOT NULL DEFAULT FALSE,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS quote_requests (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        status TEXT NOT NULL CHECK (status IN ('NEW', 'TRIAGED', 'ESTIMATING', 'PROPOSAL_DRAFTED', 'CLOSED')),
+                        source TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        images TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS recovery_attempts (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        source_event_id TEXT NOT NULL,
+                        assistant_message_id TEXT,
+                        status TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS recovery_campaigns (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        auto_send BOOLEAN DEFAULT FALSE,
+                        delay_minutes INTEGER DEFAULT 60,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS reward_claims (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        discount_code TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS role_assignments (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        location_id TEXT NOT NULL,
+                        role TEXT NOT NULL CHECK (role IN ('Owner', 'Location Manager', 'Staff')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS route_plans (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        delivery_date DATE NOT NULL,
+                        waypoint_sequence TEXT NOT NULL DEFAULT '[]',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS seo_discovery_reports (
+                        id TEXT PRIMARY KEY ,
+                        tenant_id TEXT NOT NULL,
+                        month TEXT NOT NULL,
+                        plain_language_summary TEXT NOT NULL,
+                        metrics TEXT DEFAULT '{}',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS service_leads (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT ,
+                        description TEXT,
+                        images TEXT,
+                        source TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'estimating', 'estimated', 'booked', 'closed')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS service_resource_requirements (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        service_id TEXT NOT NULL,
+                        resource_type TEXT NOT NULL,
+                        quantity INTEGER NOT NULL DEFAULT 1
+                    );
+
+                    CREATE TABLE IF NOT EXISTS service_routes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        staff_profile_id TEXT NOT NULL,
+                        route_date DATE NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'completed')),
+                        start_location_lat REAL,
+                        start_location_lng REAL,
+                        end_location_lat REAL,
+                        end_location_lng REAL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS services (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        price_cents INTEGER NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS shift_swap_requests (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        shift_id TEXT NOT NULL,
+                        requesting_staff_id TEXT NOT NULL,
+                        covering_staff_id TEXT ,
+                        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+                        reason TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS shifts (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        location_id TEXT ,
+                        staff_id TEXT ,
+                        start_time TIMESTAMP NOT NULL,
+                        end_time TIMESTAMP NOT NULL,
+                        role TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled', 'called_out')),
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS smart_pricing_policies (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        min_margin_percent REAL NOT NULL,
+                        auto_discount_trigger_days_stagnant INTEGER NOT NULL,
+                        max_discount_percent REAL NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS staff_availability (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        staff_id TEXT NOT NULL,
+                        day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+                        start_time TIME NOT NULL,
+                        end_time TIME NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS staff_profiles (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        skills TEXT DEFAULT '[]',
+                        work_hours TEXT DEFAULT '{}',
+                        current_location_lat REAL,
+                        current_location_lng REAL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS subscribers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        subscription_plan_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, PAST_DUE, CANCELED
+                        stripe_subscription_id TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS subscription_plans (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        price_cents INTEGER NOT NULL,
+                        currency TEXT NOT NULL DEFAULT 'USD',
+                        frequency TEXT NOT NULL, -- e.g. 'monthly', 'weekly'
+                        cutoff_day INTEGER, -- e.g. 5 for the 5th of the month
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS subscriptions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        plan_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'active', -- 'active', 'past_due', 'canceled', 'paused'
+                        current_period_start TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        current_period_end TIMESTAMP NOT NULL,
+                        cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+                        canceled_at TIMESTAMP,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS sync_events (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        entity_type TEXT NOT NULL,
+                        entity_id TEXT NOT NULL,
+                        action_type TEXT NOT NULL,
+                        payload TEXT NOT NULL DEFAULT '{}',
+                        base_version INTEGER NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING', -- PENDING, APPLIED, CONFLICT, FAILED
+                        synced_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS team_invites (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        team_id TEXT NOT NULL,
+                        inviter_id TEXT NOT NULL,
+                        invitee_id TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS tenant_feed_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        action_type TEXT NOT NULL,
+                        action_payload TEXT,
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS tool_integrations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        api_url TEXT,
+                        integration_code TEXT,
+                        status TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS tooltips (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        text TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS unified_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        thread_id TEXT NOT NULL,
+                        sender_type TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS unified_threads (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        channel TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'open',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS unified_triage_actions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        thread_id TEXT NOT NULL,
+                        action_type TEXT NOT NULL,
+                        action_payload TEXT,
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS vendors (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        contact_info TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS video_tutorials (
+                        id INTEGER PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        duration TEXT NOT NULL,
+                        video_url TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS waitlist_campaigns (
+                        id TEXT PRIMARY KEY ,
+                        tenant_id TEXT NOT NULL,
+                        product_id TEXT,
+                        name TEXT NOT NULL,
+                        offer_text TEXT,
+                        theme TEXT DEFAULT 'light',
+                        status TEXT NOT NULL DEFAULT 'ACTIVE',
+                        capacity_limit INTEGER,
+                        deposit_required BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS walkthrough_steps (
+                        id INTEGER PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        page TEXT NOT NULL,
+                        step_order INTEGER NOT NULL,
+                        selector TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        text TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS work_item (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        payload TEXT,
+                        status TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS work_tasks (
+                        id TEXT PRIMARY KEY ,
+                        tenant_id TEXT NOT NULL,
+                        booking_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'open',
+                        scheduled_time TIMESTAMP  NOT NULL,
+                        created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;

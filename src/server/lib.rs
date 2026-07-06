@@ -3395,7 +3395,7 @@ pub async fn simulate_ui_triage_item_handler(
             .bind(&item_id)
             .bind(&tenant_id)
             .bind("Draft Reply")
-            .bind("Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]")
+            .bind(r#"{"feature_type": "instagram_dm", "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]", "customer_message": "Do you have vegan chocolate cake available this weekend?"}"#)
             .execute(&mut *tx)
             .await {
                 tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
@@ -3438,7 +3438,7 @@ pub async fn simulate_ui_triage_item_handler(
             .bind(&item_id)
             .bind(&tenant_id)
             .bind("Draft Reply")
-            .bind("Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]")
+            .bind(r#"{"feature_type": "instagram_dm", "draft_reply": "Hi! Yes, we have 2 vegan chocolate cakes left for this weekend. Would you like me to hold one for you? [Link to $20 deposit]", "customer_message": "Do you have vegan chocolate cake available this weekend?"}"#)
             .execute(&mut *tx)
             .await {
                 tracing::error!("Failed to insert triage_proposed_actions: {:?}", e);
@@ -6634,6 +6634,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/pos", api::pos::pos_routes(hub.clone()))
         .nest("/api/v1/cart", api::cart::router(hub.clone()))
         .nest("/api/v1/storefront", api::storefront_delivery::router().with_state(api::storefront_delivery::DeliveryState { pool: db.pool.clone() }))
+
         .route("/api/v1/voice/command", axum::routing::post(api::audio_command::handle_voice_command).with_state(api::audio_command::VoiceCommandState {
             orchestrator: dept_orchestrator.clone(),
             semantic_router: semantic_router.clone(),

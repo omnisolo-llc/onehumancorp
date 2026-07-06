@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OHC Builder</title>
+    <title>OHC Setup</title>
     <style>
       body {
         font-family:
@@ -792,7 +792,7 @@
         min-height: 44px;
       }
       .btn-secondary:hover {
-        background-color: rgba(0, 0, 0, 0.05);
+        background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%);
         color: #1d1d1f;
       }
       .btn-group {
@@ -1222,11 +1222,7 @@
       .context-card { min-height: 44px; box-sizing: border-box; }
     </style>
 
-    <style>
-      input.glassmorphism, select.glassmorphism, textarea.glassmorphism, button.glassmorphism {
-        border-radius: 8px !important;
-      }
-    </style>
+
 </head>
   <body>
     <div class="container glassmorphism" id="form-container">
@@ -1553,6 +1549,7 @@
               class="glassmorphism"
               placeholder="Type a message..."
               enterkeyhint="send"
+              autocomplete="off"
               style="
                 margin-bottom: 0;
                 flex-grow: 1;
@@ -2385,7 +2382,7 @@
             aria-label="Previous Step"
             title="Previous Step"
             data-testid="prev-step-btn"
-            data-prev="step-offer"
+            data-prev="step-target-audience"
           >
             Back
           </button>
@@ -2507,7 +2504,7 @@
             aria-label="Previous Step"
             title="Previous Step"
             data-testid="prev-step-btn"
-            data-prev="step-offer"
+            data-prev="step-target-audience"
           >
             Back
           </button>
@@ -3449,6 +3446,9 @@
       document.querySelectorAll("select, input").forEach((input) => {
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
+            if (e.target.id === "chat-input" || e.target.id === "chat-image-url") {
+              return;
+            }
             e.preventDefault();
             const step = e.target.closest(".step");
             const nextBtn =

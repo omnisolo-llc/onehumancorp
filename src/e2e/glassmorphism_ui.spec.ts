@@ -15,7 +15,7 @@ test.describe('Glassmorphism UI Premium Design Standards', () => {
             };
         });
         expect(style.backdropFilter).toContain('blur(30px)');
-        expect(style.backdropFilter).toContain('saturate(210%)');
+        expect(style.backdropFilter).toMatch(/saturate\((210%|2\.1)\)/);
         expect(style.borderRadius).toContain('16px');
     }
   });

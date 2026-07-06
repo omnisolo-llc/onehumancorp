@@ -137,7 +137,7 @@
     </div>
   </div>
 
-  <footer>
+  <footer id="branding-footer">
     <a href="/setup.html?ref=giveaway_footer">⚡ Powered by OHC</a>
   </footer>
 
@@ -146,6 +146,10 @@
       const params = new URLSearchParams(window.location.search);
       const title = params.get('title') || 'Exclusive Giveaway';
       const desc = params.get('desc') || 'Enter your email below for a chance to win.';
+
+      if (params.get('branding') === 'false') {
+          document.getElementById('branding-footer').style.display = 'none';
+      }
 
       document.getElementById('giveaway-title').textContent = title;
       document.getElementById('giveaway-desc').textContent = desc;

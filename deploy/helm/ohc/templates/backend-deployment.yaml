@@ -56,7 +56,7 @@ spec:
             {{- end }}
             {{- if .Values.cnpg.enabled }}
             - name: DATABASE_URL
-              value: "postgres://{{ .Values.cnpg.owner }}:$(POSTGRES_PASSWORD)@{{ .Values.cnpg.clusterName }}-rw:5432/{{ .Values.cnpg.database }}?sslmode=require"
+              value: "postgres://{{ .Values.cnpg.owner }}:$(POSTGRES_PASSWORD)@{{ .Values.cnpg.clusterName }}-rw/{{ .Values.cnpg.database }}?sslmode=require"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
