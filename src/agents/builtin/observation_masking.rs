@@ -58,7 +58,7 @@ impl JetBrainsObservationMasker {
         match val {
             Value::String(s) => {
                 let bytes = s.len();
-                if bytes > size_limit {
+                if bytes > size_limit || s.lines().count() > 10 {
                     let line_count = s.lines().count();
                     if line_count > 10 {
                         let keep_lines = 5;
