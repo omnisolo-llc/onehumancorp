@@ -9091,6 +9091,7 @@ dependencies = [
  "server_pricing",
  "tokio",
  "tracing",
+ "urlencoding",
 ]
 
 [[package]]
