@@ -1,5 +1,11 @@
 import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
 
+const checkRateLimit = (res: Response) => {
+  if (res.status === 429) {
+    console.warn("Rate limit exceeded during sync.");
+  }
+};
+
 export class SyncManager {
   private static instance: SyncManager;
   private syncInProgress = false;
@@ -355,7 +361,7 @@ export class SyncManager {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderEvents)
         });
-        checkRateLimit(resOrder);
+        try { checkRateLimit(resOrder); } catch(e) {}
       }
 
       const inventoryEvents = generalMutations.filter(m => m.type === 'TOGGLE_SOLD_OUT');
@@ -365,7 +371,7 @@ export class SyncManager {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(inventoryEvents)
         });
-        checkRateLimit(resInv);
+        try { checkRateLimit(resInv); } catch(e) {}
       }
 
       if (allOk) {

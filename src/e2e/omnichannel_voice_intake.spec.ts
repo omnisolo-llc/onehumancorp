@@ -1,17 +1,17 @@
 import { test, expect } from './fixtures';
 
-test.describe('Omnichannel Voice Order Intake', () => {
-  test.use({
-    viewport: { width: 375, height: 812 },
-    permissions: ['microphone'],
-    launchOptions: {
-      args: [
-        '--use-fake-ui-for-media-stream',
-        '--use-fake-device-for-media-stream'
-      ]
-    }
-  });
+test.use({
+  viewport: { width: 375, height: 812 },
+  permissions: ['microphone'],
+  launchOptions: {
+    args: [
+      '--use-fake-ui-for-media-stream',
+      '--use-fake-device-for-media-stream'
+    ]
+  }
+});
 
+test.describe('Omnichannel Voice Order Intake', () => {
   test('Fatima can initiate a voice order from the dashboard', async ({ page }) => {
     // 1. Fatima opens the app and starts on the dashboard
     await page.goto('/dashboard');
