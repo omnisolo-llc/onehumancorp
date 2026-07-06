@@ -145,3 +145,37 @@ async fn test_my_plan_authenticated_success() {
     assert!(parsed.get("storage_used_bytes").is_some(), "missing storage_used_bytes");
     assert!(parsed.get("next_bill_estimated").is_some(), "missing next_bill_estimated");
 }
+
+#[tokio::test]
+async fn test_cost_dashboard_budget_limit() {
+    let hub = create_mock_hub().await;
+    let router = crate::api::billing_api::router(hub);
+    let app = axum::Router::new()
+        .merge(router)
+        .route_layer(axum::middleware::from_fn(|mut req: Request<Body>, next: axum::middleware::Next| async move {
+            req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test-spiffe".to_string(),
+                org_id: "test-tenant".to_string(),
+                agent_id: "test-agent".to_string(),
+            });
+            Ok::<axum::http::Response<axum::body::Body>, StatusCode>(next.run(req).await)
+        }));
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/cost-dashboard")
+                .method("GET")
+                .header("Authorization", "Bearer test-token")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+
+    let parsed: serde_json::Value = serde_json::from_slice(&body).expect("Failed to parse JSON");
+    assert!(parsed.get("budget_health_alert").is_some(), "missing budget_health_alert");
+}
