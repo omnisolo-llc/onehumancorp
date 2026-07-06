@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive ROI Calculator Generator</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+      color: #1d1d1f;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+      box-sizing: border-box;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .header-area {
+      grid-column: 1 / -1;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    p.subtitle {
+      color: #86868b;
+      margin-bottom: 0;
+      font-size: 15px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #1d1d1f;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      font-size: 15px;
+      background: white;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #0066FF;
+      box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+    }
+
+    .toggle-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #0066FF;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: #0055DD;
+    }
+
+    .btn-primary:disabled {
+      background: #99c2ff;
+      cursor: not-allowed;
+    }
+
+    .result-area {
+      display: none;
+      margin-top: 24px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      font-family: monospace;
+      font-size: 13px;
+      resize: vertical;
+      box-sizing: border-box;
+      background: #f8f9fa;
+      color: #374151;
+    }
+
+    .preview-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #eaeaea;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .preview-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    .preview-stat {
+      background: #f3f4f6;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .preview-stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: #10b981;
+    }
+
+    .preview-footer {
+      text-align: center;
+      font-size: 12px;
+      margin-top: 16px;
+    }
+
+    .preview-footer a {
+      color: #888;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 20px;
+      color: #0066FF;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Paywall Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .modal h2 {
+      margin-top: 0;
+      font-size: 22px;
+    }
+
+    .modal p {
+      color: #666;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .modal-btn {
+      width: 100%;
+      background: #0066FF;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    .modal-btn-outline {
+      width: 100%;
+      background: transparent;
+      color: #666;
+      border: 1px solid #ddd;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header-area">
+      <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+      <div style="font-size: 48px; margin-bottom: 10px;">📈</div>
+      <h1>Interactive ROI Calculator</h1>
+      <p class="subtitle">Embed a calculator to show prospects their potential return on investment. Captured leads convert faster.</p>
+    </div>
+
+    <div class="card">
+      <div class="form-group">
+        <label for="service-name">Service / Product Name</label>
+        <input type="text" id="service-name" value="OHC Pro Services" />
+      </div>
+
+      <div class="form-group">
+        <label for="base-investment">Typical Investment ($)</label>
+        <input type="number" id="base-investment" value="1000" />
+      </div>
+
+      <div class="form-group">
+        <label for="roi-multiplier">Expected ROI Multiplier (e.g., 3 for 300%)</label>
+        <input type="number" id="roi-multiplier" value="3" step="0.1" />
+      </div>
+
+      <div class="toggle-group">
+        <div>
+          <label style="margin-bottom: 2px;">Remove "Powered by OHC"</label>
+          <span style="font-size: 12px; color: #86868b;">Requires Pro Plan</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="remove-branding">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <button class="btn-primary" id="generate-btn">Generate Embed Code</button>
+
+      <div class="result-area" id="result-area">
+        <label>Your Embed Code:</label>
+        <textarea id="embed-code" readonly></textarea>
+        <button class="btn-primary" id="copy-btn" style="margin-top: 10px; background: #10b981;">Copy Code</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <label>Live Preview</label>
+      <div class="preview-container">
+        <h3 class="preview-title" id="preview-title">OHC Pro Services ROI</h3>
+        <p style="font-size: 14px; color: #666;">Adjust the investment below to see your potential return.</p>
+
+        <label style="font-size: 12px;">Investment Amount:</label>
+        <input type="range" style="width: 100%; margin-bottom: 20px;" min="100" max="10000" value="1000" disabled>
+
+        <div class="preview-stat">
+          <div style="font-size: 13px; color: #666; margin-bottom: 4px;">Potential Return</div>
+          <div class="preview-stat-val" id="preview-return">$3,000</div>
+        </div>
+
+        <button style="width: 100%; background: #111827; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600;">Get Started</button>
+
+        <div class="preview-footer" id="preview-footer">
+          <a href="#">⚡ Powered by OHC</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Paywall Modal -->
+  <div class="modal-overlay" id="paywall-modal">
+    <div class="modal">
+      <h2>Upgrade to Pro</h2>
+      <p>Removing the "Powered by OHC" branding is a Pro feature. Upgrade your workspace to unlock white-labeling.</p>
+      <button class="modal-btn" id="upgrade-btn">Upgrade Now</button>
+      <button class="modal-btn-outline" id="close-modal-btn">Keep Branding</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const serviceNameInput = document.getElementById('service-name');
+      const baseInvestmentInput = document.getElementById('base-investment');
+      const roiMultiplierInput = document.getElementById('roi-multiplier');
+      const removeBrandingCheck = document.getElementById('remove-branding');
+      const generateBtn = document.getElementById('generate-btn');
+      const copyBtn = document.getElementById('copy-btn');
+
+      const previewTitle = document.getElementById('preview-title');
+      const previewReturn = document.getElementById('preview-return');
+      const previewFooter = document.getElementById('preview-footer');
+
+      const paywallModal = document.getElementById('paywall-modal');
+      const closeModalBtn = document.getElementById('close-modal-btn');
+      const upgradeBtn = document.getElementById('upgrade-btn');
+
+      // Helper to check pro status
+      const hasPro = () => localStorage.getItem('has_pro') === 'true';
+      const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
+
+      function updatePreview() {
+        previewTitle.textContent = `${serviceNameInput.value} ROI`;
+
+        const inv = parseFloat(baseInvestmentInput.value) || 0;
+        const mult = parseFloat(roiMultiplierInput.value) || 0;
+        const ret = inv * mult;
+
+        previewReturn.textContent = '$' + ret.toLocaleString();
+
+        if (removeBrandingCheck.checked) {
+          previewFooter.style.display = 'none';
+        } else {
+          previewFooter.style.display = 'block';
+        }
+      }
+
+      serviceNameInput.addEventListener('input', updatePreview);
+      baseInvestmentInput.addEventListener('input', updatePreview);
+      roiMultiplierInput.addEventListener('input', updatePreview);
+
+      removeBrandingCheck.addEventListener('change', (e) => {
+        if (e.target.checked && !hasPro()) {
+          e.target.checked = false; // Prevent checking
+          paywallModal.style.display = 'flex';
+        }
+        updatePreview();
+      });
+
+      closeModalBtn.addEventListener('click', () => {
+        paywallModal.style.display = 'none';
+      });
+
+      upgradeBtn.addEventListener('click', () => {
+        localStorage.setItem('has_pro', 'true');
+        paywallModal.style.display = 'none';
+        removeBrandingCheck.checked = true;
+        updatePreview();
+      });
+
+      generateBtn.addEventListener('click', () => {
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'Generating...';
+
+        setTimeout(() => {
+          generateBtn.disabled = false;
+          generateBtn.textContent = 'Generate Embed Code';
+
+          let baseUrl = window.location.origin;
+          if (baseUrl === 'file://' || baseUrl.includes('localhost') || baseUrl === 'null') {
+            baseUrl = 'https://app.onehumancorp.com';
+          }
+
+          const serviceName = encodeURIComponent(serviceNameInput.value);
+          const baseInv = encodeURIComponent(baseInvestmentInput.value);
+          const mult = encodeURIComponent(roiMultiplierInput.value);
+          const branding = removeBrandingCheck.checked ? 'false' : 'true';
+
+          const embedUrl = `${baseUrl}/ui/roi-embed.html?tenant=${tenantId}&service=${serviceName}&inv=${baseInv}&mult=${mult}&branding=${branding}`;
+          const embedCode = `<iframe src="${embedUrl}" width="100%" height="320" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea; background: transparent;"></iframe>`;
+
+          document.getElementById('embed-code').value = embedCode;
+          document.getElementById('result-area').style.display = 'block';
+        }, 600);
+      });
+
+      copyBtn.addEventListener('click', () => {
+        const code = document.getElementById('embed-code').value;
+        navigator.clipboard.writeText(code).then(() => {
+          const originalText = copyBtn.textContent;
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => {
+            copyBtn.textContent = originalText;
+          }, 2000);
+        });
+      });
+
+      updatePreview();
+    });
+  </script>
+</body>
+</html>
