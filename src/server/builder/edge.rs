@@ -231,6 +231,88 @@ pub async fn handle_edge_request_impl(
     Ok(response)
 }
 
+pub async fn regenerate_product_cache(
+    pool: PgPool,
+    tenant_id: Uuid,
+    product_id: Uuid,
+    cache_key: String,
+    cache: std::sync::Arc<crate::utils::cache::HybridCache<String>>,
+) -> Result<(String, Vec<String>), axum::http::StatusCode> {
+    #[derive(sqlx::FromRow)]
+    struct ProductSeoRow {
+        seo_title: Option<String>,
+        seo_description: Option<String>,
+        seo_schema_json: Option<sqlx::types::Json<serde_json::Value>>,
+    }
+
+    let pool1 = pool.clone();
+    let pool2 = pool.clone();
+    let (site_id_res, seo_res) = tokio::join!(
+        async move {
+            sqlx::query_scalar::<_, Uuid>(
+                "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
+            )
+            .bind(tenant_id)
+            .fetch_one(&pool1)
+            .await
+        },
+        async move {
+            sqlx::query_as::<_, ProductSeoRow>(
+                "SELECT seo_title, seo_description, seo_schema_json FROM products WHERE id = $1 AND tenant_id = $2"
+            )
+            .bind(product_id.to_string())
+            .bind(tenant_id.to_string())
+            .fetch_optional(&pool2)
+            .await
+        }
+    );
+
+    if let Ok(site_id) = site_id_res {
+        // Just call regenerate_cache from builder edge
+        if let Ok((mut html, tags)) = regenerate_cache(pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
+
+            if let Ok(Some(row)) = seo_res {
+                if let Some(seo_title) = row.seo_title {
+                    if let Some(start) = html.find("<title>") {
+                        if let Some(end) = html[start..].find("</title>") {
+                            let end = start + end + "</title>".len();
+                            html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">", seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
+                        }
+                    }
+                }
+
+                if let Some(seo_desc) = row.seo_description {
+                    if let Some(start) = html.find("<meta name=\"description\"") {
+                        if let Some(end) = html[start..].find(">") {
+                            let end = start + end + ">".len();
+                            html.replace_range(start..end, &format!("<meta name=\"description\" content=\"{}\">", seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
+                        }
+                    } else if let Some(head_end) = html.find("</head>") {
+                        html.insert_str(head_end, &format!("<meta name=\"description\" content=\"{}\">\n", seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")));
+                    }
+                }
+
+                if let Some(seo_schema) = row.seo_schema_json {
+                    if let Some(start) = html.find("<script type=\"application/ld+json\">") {
+                        if let Some(end) = html[start..].find("</script>") {
+                            let end = start + end + "</script>".len();
+                            html.replace_range(start..end, &format!("<script type=\"application/ld+json\">\n{}\n</script>", serde_json::to_string(&seo_schema.0).unwrap_or_default()));
+                        }
+                    } else if let Some(head_end) = html.find("</head>") {
+                        html.insert_str(head_end, &format!("<script type=\"application/ld+json\">\n{}\n</script>\n", serde_json::to_string(&seo_schema.0).unwrap_or_default()));
+                    }
+                }
+            }
+
+            // Pre-warm the cache since SWR or cache miss just resolved
+            cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
+
+            return Ok((html, tags));
+        }
+    }
+    Err(axum::http::StatusCode::NOT_FOUND)
+}
+
 pub async fn regenerate_cache(
     pool: PgPool,
     tenant_id: Uuid,

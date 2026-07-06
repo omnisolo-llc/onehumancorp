@@ -288,6 +288,12 @@ impl Department for MarketingAgent {
                                 cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
                                 cdn.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
 
+                                // Proactively pre-render the product cache
+                                if let Ok(product_uuid) = uuid::Uuid::parse_str(&product_id_str) {
+                                    let cache_key = format!("storefront:product:{}:{}", tenant_id, product_uuid);
+                                    let _ = crate::builder::edge::regenerate_product_cache(pool.clone(), tenant_id, product_uuid, cache_key, cache.clone()).await;
+                                }
+
                                 // Trigger site publish job for all sites for the tenant
                                 if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_id).await {
                                     for site in sites {

@@ -80,10 +80,10 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                         .fetch_one(&pool)
                         .await;
 
-                        if let Ok(site_id) = site_id_res {
+                        if let Ok(_site_id) = site_id_res {
                             info!("Pre-warming cache for product: {} tenant: {}", product_id, tenant_id);
                             let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
-                            let _ = crate::builder::edge::regenerate_cache(pool.clone(), tenant_id, site_id, cache_key, edge_cache.clone()).await;
+                            let _ = crate::builder::edge::regenerate_product_cache(pool.clone(), tenant_id, product_id, cache_key, edge_cache.clone()).await;
                         }
                     }
                 }
