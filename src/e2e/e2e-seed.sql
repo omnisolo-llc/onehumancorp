@@ -737,3 +737,20 @@ INSERT INTO tooltips (id, tenant_id, text) VALUES ('api-docs-tooltip', 'e2e-tena
 INSERT INTO tooltips (id, tenant_id, text) VALUES ('kairos-nav-link-tooltip', 'e2e-tenant', 'Click here to see what your AI helpers are working on and how they plan.') ON CONFLICT DO NOTHING;
 INSERT INTO tooltips (id, tenant_id, text) VALUES ('generate-link-btn', 'e2e-tenant', 'Click here to share access with a team member.') ON CONFLICT DO NOTHING;
 INSERT INTO tooltips (id, tenant_id, text) VALUES ('ask-ai-tooltip', 'e2e-tenant', 'Open AI Help Chat to get answers instantly.') ON CONFLICT DO NOTHING;
+
+-- Add subscription churn risk seed data
+INSERT INTO customers (id, tenant_id, name, email)
+VALUES ('c_churn_1', 'e2e-tenant', 'Alex the Churner', 'alex@example.com')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO products (id, tenant_id, title, price_cents, status)
+VALUES ('p_churn_1', 'e2e-tenant', 'Music Lessons Weekly', 5000, 'active')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO subscription_plans (id, tenant_id, product_id, name, price_cents, interval, frequency)
+VALUES ('plan_churn_1', 'e2e-tenant', 'p_churn_1', 'Music Lessons Weekly', 5000, 'weekly', 'weekly')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO subscribers (id, tenant_id, customer_id, subscription_plan_id, status, health_score, last_engagement_at)
+VALUES ('sub_churn_1', 'e2e-tenant', 'c_churn_1', 'plan_churn_1', 'ACTIVE', 30, NOW() - INTERVAL '31 days')
+ON CONFLICT DO NOTHING;
