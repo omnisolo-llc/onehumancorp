@@ -1,6 +1,6 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
-test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () => {
+test.describe('Regression Audit: Verify Fake Data Removed and Features Rewired', () => {
 
   test('verify seasonal promo generation without setTimeout', async ({ page }) => {
     // Navigate to the Seasonal Promo page
@@ -44,8 +44,8 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
 
 });
 
-  test('verify affiliate track API fails gracefully when backend is down instead of mocking', async ({ page, request }) => {
-    // Attempting a direct API hit that previously mocked the backend
+  test('verify affiliate track API fails gracefully when backend is down instead of returning fake data', async ({ page, request }) => {
+    // Attempting a direct API hit that previously faked the backend
     const response = await request.post('/api/v1/growth/affiliate/track', {
         data: { link: 'test' }
     });
@@ -56,7 +56,7 @@ test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () 
     expect(body.error).toBe('Failed to track affiliate link');
   });
 
-  test('verify whatsapp cloud api fails gracefully when backend is down instead of mocking', async ({ page, request }) => {
+  test('verify whatsapp cloud api fails gracefully when backend is down instead of returning fake data', async ({ page, request }) => {
     const response = await request.post('/api/integrations/whatsapp_cloud_api/connect', {
         data: { token: 'test' }
     });
