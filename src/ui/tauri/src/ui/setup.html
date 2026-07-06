@@ -3564,7 +3564,7 @@
           btn.disabled = true;
 
           // Add a small delay to allow browser to render "Saving..."
-          await new Promise((r) => setTimeout(r, 100));
+
 
           saveCurrentState();
 
@@ -3761,9 +3761,7 @@
                   delete window.generateStorefrontLoadingInterval;
               }
 
-              setTimeout(() => {
-                window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
-              }, 1500);
+              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
               return;
             }
 
@@ -3816,9 +3814,7 @@
                 delete window.generateStorefrontLoadingInterval;
             }
 
-            setTimeout(() => {
-              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
-            }, 1500);
+            window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
           }
         } catch (e) {
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -4031,9 +4027,7 @@
                   delete window.generateStorefrontLoadingInterval;
               }
 
-              setTimeout(() => {
-                window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
-              }, 1500);
+              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
               return;
             }
 
@@ -4085,9 +4079,7 @@
                 delete window.generateStorefrontLoadingInterval;
             }
 
-            setTimeout(() => {
-              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
-            }, 1500);
+            window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
           } catch (err) {
             console.error(err);
             goToStep("step-initial");
