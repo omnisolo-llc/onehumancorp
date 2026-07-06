@@ -120,7 +120,7 @@ test.describe('Onboarding Chat CUJ Flow', () => {
     await sendBtn.click();
 
     // Check that the user message appears
-    await expect(chatMessages).toContainText('YouI am a plumber fixing pipes and stuff.');
+    await expect(chatMessages).toContainText('I am a plumber fixing pipes and stuff.');
 
     // Check that the assistant replies immediately completing setup (via the updated backend behavior/mock)
     await expect(chatMessages).toContainText("Give me a minute... I'm building your business.");
