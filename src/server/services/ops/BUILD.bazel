@@ -4,6 +4,7 @@ exports_files(
     [
         "mod.rs",
         "service.rs",
+        "procurement.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -14,6 +15,7 @@ rust_library(
         "bazel_lib.rs",
         "mod.rs",
         "service.rs",
+        "procurement.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

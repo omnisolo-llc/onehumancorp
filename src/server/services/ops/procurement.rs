@@ -1,5 +1,5 @@
 use uuid::Uuid;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use tracing::info;
 
 pub struct ProcurementService {
@@ -21,15 +21,15 @@ impl ProcurementService {
     /// Drafts a purchase order for a raw material
     pub async fn draft_purchase_order(&self, tenant_id: Uuid, raw_material_id: Uuid, quantity: f64) -> Result<Uuid, sqlx::Error> {
         // Fetch local supplier from directory
-        let supplier_row = sqlx::query!(
-            r#"SELECT id FROM supplier_directory WHERE tenant_id = $1 LIMIT 1"#,
-            tenant_id
+        let supplier_row = sqlx::query(
+            r#"SELECT id FROM supplier_directory WHERE tenant_id = $1 LIMIT 1"#
         )
+        .bind(tenant_id)
         .fetch_optional(&self.pool)
         .await?;
 
-        let supplier_id = if let Some(row) = supplier_row {
-            row.id
+        let supplier_id: Uuid = if let Some(row) = supplier_row {
+            row.try_get("id")?
         } else {
             // No supplier found
             return Err(sqlx::Error::RowNotFound);
@@ -37,16 +37,15 @@ impl ProcurementService {
 
         // Create PO
         let po_id = Uuid::new_v4();
-        sqlx::query!(
+        sqlx::query(
             r#"INSERT INTO purchase_orders (id, tenant_id, supplier_id, total_amount, status)
-               VALUES ($1, $2, $3, $4, $5)"#,
-            po_id,
-            tenant_id,
-            supplier_id,
-            // dummy amount calc
-            quantity * 10.0,
-            "pending_approval"
+               VALUES ($1, $2, $3, $4, $5)"#
         )
+        .bind(po_id)
+        .bind(tenant_id)
+        .bind(supplier_id)
+        .bind(quantity * 10.0) // dummy amount calc
+        .bind("pending_approval")
         .execute(&self.pool)
         .await?;
 
@@ -56,11 +55,11 @@ impl ProcurementService {
 
     /// Approves a drafted purchase order
     pub async fn approve_purchase_order(&self, tenant_id: Uuid, po_id: Uuid) -> Result<(), sqlx::Error> {
-        sqlx::query!(
-            r#"UPDATE purchase_orders SET status = 'approved' WHERE id = $1 AND tenant_id = $2"#,
-            po_id,
-            tenant_id
+        sqlx::query(
+            r#"UPDATE purchase_orders SET status = 'approved' WHERE id = $1 AND tenant_id = $2"#
         )
+        .bind(po_id)
+        .bind(tenant_id)
         .execute(&self.pool)
         .await?;
 
