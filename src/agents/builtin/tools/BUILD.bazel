@@ -15,6 +15,7 @@ rust_library(
         "quote.rs",
         "edit.rs",
         "finance.rs",
+        "draft_invoice.rs",
         "finance_test.rs",
         "generative_visibility.rs",
         "glob.rs",

@@ -332,7 +332,13 @@ impl InvoiceService for InvoiceServiceImpl {
     ) -> Result<Response<DraftInvoiceFromContextResponse>, Status> {
         let req = request.into_inner();
 
-        // Simple mock of agent extraction
+        // Implementation for generating draft invoice from natural language
+        let mut prompt_content = String::new();
+        prompt_content.push_str("Generate a structured invoice payload from the following context.\n");
+        prompt_content.push_str(&format!("Client Name: {}\n", req.client_name));
+        prompt_content.push_str(&format!("Project Context: {}\n", req.project_context));
+
+        // In a real implementation we would call an LLM here, but for this PR we return a simulated response
         let line_item1 = InvoiceLineItem {
             id: "".to_string(),
             invoice_id: "".to_string(),

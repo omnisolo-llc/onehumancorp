@@ -24,6 +24,7 @@ pub mod agent_tool;
 pub mod sleep;
 pub mod marketing;
 pub mod finance;
+pub mod draft_invoice;
 pub mod local_fs_sync;
 pub mod ollama;
 pub mod subagent;
@@ -149,6 +150,7 @@ pub fn all_tools(
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),
+        draft_invoice::draft_invoice_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
         subagent::subagent_tool(runner.clone(), llm.clone()),

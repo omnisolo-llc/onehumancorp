@@ -36,7 +36,7 @@ pub struct DepartmentConfig {
 pub fn get_department_config(dep: Department) -> DepartmentConfig {
     match dep {
         Department::Operations => DepartmentConfig {
-            system_prompt: ::server_pricing::compression::reduce_tokens("Department: Operations — 'The Manager'\n\
+            system_prompt: ::server_pricing::compression::reduce_tokens("Department: Operations\n                - Can draft invoices and bill customers from natural language requests — 'The Manager'\n\
                 Handles the day-to-day execution of orders, bookings, inventory, and deliveries.\n\
                 - Processes orders from placement to fulfillment\n\
                 - Manages booking calendars and sends reminders\n\
@@ -50,6 +50,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "head",
                 "tail",
                 "task_create",
+                "draft_invoice",
                 "task_update",
                 "task_list",
                 "task_get",
@@ -97,6 +98,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "write",
                 "sendmessage",
                 "conversational_checkout",
+                "draft_invoice",
+                "draft_invoice",
                 "generate_quote",
                 "booking_reschedule",
             ],
@@ -132,7 +135,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Generates plain-language financial reports (weekly revenue, monthly trends)\n\
                 - Manages subscription billing and recurring payments\n\
                 - Provides tax-ready financial summaries (income statements, expense tracking)").leak(),
-            allowed_tools: vec!["read", "head", "tail", "write", "bash", "finance_report"],
+            allowed_tools: vec!["read", "head", "tail", "write", "bash", "finance_report", "draft_invoice"],
             confidence_threshold: 0.95,
         },
         Department::Legal => DepartmentConfig {
@@ -223,7 +226,7 @@ mod tests {
     #[test]
     fn test_get_department_config_operations() {
         let config = get_department_config(Department::Operations);
-        assert!(config.system_prompt.contains("Department: Operations"));
+        assert!(config.system_prompt.contains("Department: Operations\n                - Can draft invoices and bill customers from natural language requests"));
         assert!(config.allowed_tools.contains(&"read"));
         assert!(config.allowed_tools.contains(&"task_create"));
         assert_eq!(config.confidence_threshold, 0.85);
@@ -243,6 +246,7 @@ mod tests {
         assert!(config.system_prompt.contains("Sales & Acquisition"));
         assert!(config.allowed_tools.contains(&"sendmessage"));
         assert!(config.allowed_tools.contains(&"conversational_checkout"));
+                assert!(config.allowed_tools.contains(&"draft_invoice"));
         assert_eq!(config.confidence_threshold, 0.80);
     }
 

@@ -260,7 +260,7 @@ fn set_storefront_headers(response: &mut axum::response::Response, html: &str, t
 #[cfg(test)]
 
 mod tests {
-    use super::*;
+
 
     #[test]
     fn test_storefront_headers_dummy() {
