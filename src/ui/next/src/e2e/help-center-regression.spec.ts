@@ -1,4 +1,4 @@
-import { test, expect } from "../../../../e2e/fixtures";
+import { test, expect } from "@playwright/test";
 
 test.describe("Help Center E2E", () => {
   test("User navigates the Help Center correctly", async ({ page }) => {
@@ -11,9 +11,9 @@ test.describe("Help Center E2E", () => {
     await searchInput.fill("payments");
 
     // Help Chat
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#ohc-floating-help-btn');
     await expect(chatButton).toBeVisible();
     await chatButton.click();
-    await expect(page.locator("h3", { hasText: "Ask anything" })).toBeVisible();
+    await expect(page.getByText("Ask anything", { exact: true })).toBeVisible();
   });
 });

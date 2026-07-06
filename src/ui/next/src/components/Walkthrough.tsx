@@ -53,6 +53,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         window.removeEventListener('resize', handleScroll);
       };
     } else {
+
       console.warn(`Walkthrough: Target element with id "${currentStep.targetId}" not found.`);
       setTargetRect(null);
     }
