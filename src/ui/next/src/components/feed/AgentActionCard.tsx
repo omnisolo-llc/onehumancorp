@@ -2156,7 +2156,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : approval.action_type === "Review Proposed Win-back" ? (
+        ) : (approval.proposed_action || approval.context_payload)?.action_type === "Review Proposed Win-back" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
               onClick={() =>
