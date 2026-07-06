@@ -394,7 +394,7 @@
 
     <script>
       function formatBytes(bytes) {
-        if (bytes === 0) return '0 B';
+        if (bytes == null || bytes <= 0) return '0 B';
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -437,9 +437,9 @@
                 let warningMessage = "";
 
                 // AI Actions
-                const actionsText = planData.ai_actions_limit ? `${planData.ai_actions_used} / ${planData.ai_actions_limit}` : `${planData.ai_actions_used} / Unlimited`;
+                const actionsText = (planData.ai_actions_limit != null && planData.ai_actions_limit >= 0) ? `${planData.ai_actions_used} / ${planData.ai_actions_limit}` : `${planData.ai_actions_used} / Unlimited`;
                 document.getElementById('ai-actions-text').innerText = actionsText;
-                if (planData.ai_actions_limit) {
+                if (planData.ai_actions_limit != null && planData.ai_actions_limit > 0) {
                     const pct = Math.min((planData.ai_actions_used / planData.ai_actions_limit) * 100, 100);
                     const bar = document.getElementById('ai-actions-bar');
                     bar.style.width = pct + '%';
@@ -455,9 +455,9 @@
                 }
 
                 // Storage
-                const storageText = planData.storage_limit_bytes ? `${formatBytes(planData.storage_used_bytes)} / ${formatBytes(planData.storage_limit_bytes)}` : `${formatBytes(planData.storage_used_bytes)} / Unlimited`;
+                const storageText = (planData.storage_limit_bytes != null && planData.storage_limit_bytes >= 0) ? `${formatBytes(planData.storage_used_bytes)} / ${formatBytes(planData.storage_limit_bytes)}` : `${formatBytes(planData.storage_used_bytes)} / Unlimited`;
                 document.getElementById('storage-text').innerText = storageText;
-                if (planData.storage_limit_bytes) {
+                if (planData.storage_limit_bytes != null && planData.storage_limit_bytes > 0) {
                     const pct = Math.min((planData.storage_used_bytes / planData.storage_limit_bytes) * 100, 100);
                     const bar = document.getElementById('storage-bar');
                     bar.style.width = pct + '%';
