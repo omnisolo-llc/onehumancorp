@@ -1,5 +1,5 @@
 use crate::agent::{Agent, AgentRunConfig};
-use crate::types::{ChatRequest, Message};
+
 #[allow(unused_imports)]
 use futures::future::join_all;
 use std::sync::Arc;
@@ -197,7 +197,7 @@ mod tests {
             };
 
             Ok(ChatResponse {
-                message: Message::assistant(response_text),
+                message: crate::types::Message::assistant(response_text),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
                 response_id: Some("id".to_string()),
