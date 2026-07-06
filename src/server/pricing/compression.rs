@@ -36,42 +36,69 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
 }
 
 static STOP_WORDS: &[&str] = &[
-    "a", "an", "the", "is", "are",
-    "and", "or", "but", "in", "on",
-    "at", "to", "for", "with", "by",
-    "about", "as", "of", "it", "this",
-    "that", "these", "those", "then",
-    "than", "so", "because",
-    "while", "where", "when", "how",
-    "all", "any", "both", "each",
-    "few", "more", "most", "other",
-    "some", "such", "only", "own", "same",
-    "too", "very", "can", "will",
-    "just", "should", "now"
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
+    "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being",
+    "below", "between", "both", "but", "by", "can", "can't", "cannot", "could", "couldn't",
+    "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during", "each",
+    "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't",
+    "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself",
+    "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've",
+    "if", "in", "into", "is", "isn't", "it", "it's", "its", "itself", "just",
+    "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor", "not",
+    "now", "of", "off", "on", "once", "only", "or", "other", "ought", "our",
+    "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd", "she'll",
+    "she's", "should", "shouldn't", "so", "some", "such", "than", "that", "that's", "the",
+    "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd",
+    "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until",
+    "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were",
+    "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who",
+    "who's", "whom", "why", "why's", "will", "with", "won't", "would", "wouldn't", "you",
+    "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves",
 ];
 
-static REDUCE_TOKENS_CACHE: OnceLock<DashMap<String, String>> = OnceLock::new();
+use std::sync::atomic::{AtomicU32, Ordering};
+
+struct CacheEntry {
+    value: String,
+    access_count: AtomicU32,
+}
+
+static REDUCE_TOKENS_CACHE: OnceLock<DashMap<String, CacheEntry>> = OnceLock::new();
+
 
 pub fn reduce_tokens(data: &str) -> String {
     let cache = REDUCE_TOKENS_CACHE.get_or_init(DashMap::new);
 
     if let Some(cached) = cache.get(data) {
-        return cached.clone();
+        cached.access_count.fetch_add(1, Ordering::Relaxed);
+        return cached.value.clone();
     }
 
     let reduced = data.split_whitespace()
         .filter(|word| {
-            // Optimization: Iterate over stop words directly. No allocation.
             let len = word.len();
-            if len == 0 || len > 7 {
-                return true; // None of our stop words are > 7 chars (longest is 'because')
+            if len == 0 || len > 10 {
+                return true;
             }
-            !STOP_WORDS.iter().any(|&stop_word| {
-                if stop_word.len() != len {
-                    return false;
+
+            // Allocation-free case-insensitive binary search
+            let res = STOP_WORDS.binary_search_by(|probe| {
+                let mut it1 = probe.bytes();
+                let mut it2 = word.bytes().map(|b| b.to_ascii_lowercase());
+                loop {
+                    match (it1.next(), it2.next()) {
+                        (Some(b1), Some(b2)) => {
+                            if b1 != b2 {
+                                return b1.cmp(&b2);
+                            }
+                        }
+                        (Some(_), None) => return std::cmp::Ordering::Greater,
+                        (None, Some(_)) => return std::cmp::Ordering::Less,
+                        (None, None) => return std::cmp::Ordering::Equal,
+                    }
                 }
-                word.eq_ignore_ascii_case(stop_word)
-            })
+            });
+            res.is_err()
         })
         .fold(String::with_capacity(data.len()), |mut acc, w| {
             if !acc.is_empty() {
@@ -81,18 +108,31 @@ pub fn reduce_tokens(data: &str) -> String {
             acc
         });
 
-    // Optionally bounds check the cache to prevent infinite memory growth
     if cache.len() > 10_000 {
-        // Optimization: retain half the cache to avoid massive latency spikes instead of full clear
-        // We use retain and a simple counter to keep ~50%
-        let mut count = 0;
-        cache.retain(|_, _| {
-            count += 1;
-            count % 2 == 0
+        // Fast eviction pass: retain items with access_count > 0,
+        // halve the count of retained items.
+        // We use retain() to avoid manual iteration and locking.
+        cache.retain(|_, v| {
+            let count = v.access_count.load(Ordering::Relaxed);
+            if count == 0 {
+                false
+            } else {
+                v.access_count.store(count / 2, Ordering::Relaxed);
+                true
+            }
         });
+
+        // If still too large, forcefully clear out some
+        if cache.len() > 9_500 {
+            cache.clear();
+        }
     }
 
-    cache.insert(data.to_string(), reduced.clone());
+    cache.insert(data.to_string(), CacheEntry {
+        value: reduced.clone(),
+        // Start count at 1 so new items aren't immediately evicted in the first pass
+        access_count: AtomicU32::new(1),
+    });
     reduced
 }
 
