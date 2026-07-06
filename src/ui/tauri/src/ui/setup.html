@@ -123,7 +123,7 @@
       }
       /* Added missing glass-control definition */
       .glass-control {
-        border-radius: 16px;
+        border-radius: 8px;
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -3314,12 +3314,12 @@
         } else if (stepId === "step-domain") {
           const domainRegex = /^[a-z0-9-]+$/;
           if (inputs.domain_name.value.trim().length < 3 || !domainRegex.test(inputs.domain_name.value.trim())) {
-            errors.domain_name.innerText = "Domain must be at least 3 characters and contain only lowercase letters, numbers, and hyphens.";
-            errors.domain_name.style.display = "flex";
+            document.getElementById("domain-error").innerText = "Domain must be at least 3 characters and contain only lowercase letters, numbers, and hyphens.";
+            document.getElementById("domain-error").style.display = "flex";
             inputs.domain_name.classList.add("invalid-input");
             isValid = false;
           } else {
-            errors.domain_name.style.display = "none";
+            document.getElementById("domain-error").style.display = "none";
             inputs.domain_name.classList.remove("invalid-input");
             state.domain = inputs.domain_name.value.trim();
           }
