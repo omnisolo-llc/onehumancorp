@@ -2468,7 +2468,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     retention_job.start();
 
     let replenishment_job = crate::workers::subscription_replenishment_job::SubscriptionReplenishmentJob::new(db.clone());
+    let health_job = crate::workers::subscription_health_job::SubscriptionHealthJob::new(db.clone());
     replenishment_job.start();
+    health_job.start();
     // Start Subscription Replenishment Worker
     let replenishment_worker = std::sync::Arc::new(crate::workers::subscription_replenishment_worker::SubscriptionReplenishmentWorker::new(db.clone()));
     replenishment_worker.start();
@@ -2613,6 +2615,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+    let health_worker = std::sync::Arc::new(crate::workers::subscription_health_worker::SubscriptionHealthWorker::new(db.clone()).with_orchestrator(dept_orchestrator.clone()));
+    health_worker.start();
     let agent_action_worker = std::sync::Arc::new(crate::workers::agent_action_worker::AgentActionWorker::new(db.pool.clone(), std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string())));
     agent_action_worker.start();
     let _ = crate::workers::invoice_followup_worker::start_invoice_followup_worker(db.clone(), dept_orchestrator.clone());
@@ -3118,7 +3122,9 @@ pub async fn list_ui_triage_handler(
     let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                    let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
         }
 
         let db_bg = db.clone();
@@ -3131,7 +3137,9 @@ pub async fn list_ui_triage_handler(
                 }
             }
         });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
     }
 
     let items = match load_ui_triage_from_db(&db, &tenant_id, mobile_optimized).await {
@@ -3231,7 +3239,9 @@ pub async fn list_ui_omni_inbox_handler(
     let cache = UI_OMNI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                    let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
         }
 
         let db_bg = db.clone();
@@ -3244,7 +3254,9 @@ pub async fn list_ui_omni_inbox_handler(
                 }
             }
         });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
     }
 
     let items = match load_ui_omni_inbox_from_db(&db, &tenant_id, mobile_optimized).await {
@@ -4336,7 +4348,9 @@ async fn ui_dashboard_analytics_briefing_handler(
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                    let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
         }
 
         let db_bg = db.clone();
@@ -4372,7 +4386,9 @@ async fn ui_dashboard_analytics_briefing_handler(
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(60)).await;
             }
         });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
     }
 
     let db1 = db.clone();
@@ -4435,7 +4451,9 @@ async fn ui_dashboard_analytics_chat_handler(
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                    let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
         }
 
         let db_bg = db.clone();
@@ -4474,7 +4492,9 @@ async fn ui_dashboard_analytics_chat_handler(
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(60)).await;
             }
         });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
     }
 
     let db1 = db.clone();
@@ -5488,7 +5508,11 @@ pub async fn list_ui_priority_tasks_handler(
     }).await;
 
     match items_opt {
-        Some(tasks) => (axum::http::StatusCode::OK, axum::Json(tasks)).into_response(),
+        Some(tasks) => {
+            let fields = query.fields.as_deref();
+            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(tasks).unwrap_or_default(), fields);
+            (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
+        },
         None => {
             tracing::error!("Failed to fetch UI priority tasks");
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
@@ -5517,7 +5541,11 @@ async fn list_ui_orders_handler(
     }).await;
 
     match items_opt {
-        Some(orders) => (axum::http::StatusCode::OK, axum::Json(orders)).into_response(),
+        Some(orders) => {
+            let fields = query.fields.as_deref();
+            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(orders).unwrap_or_default(), fields);
+            (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
+        },
         None => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch UI orders");
             tracing::error!("Failed to fetch UI orders");
@@ -5627,7 +5655,9 @@ async fn list_ui_bookings_handler(
     let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                    let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
         }
 
         let db = db.clone();
@@ -5640,13 +5670,17 @@ async fn list_ui_bookings_handler(
                 }
             }
         });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
     }
 
     match load_ui_bookings_from_db(&db, &tenant_id, mobile_optimized).await {
         Ok(v) => {
             cache.set(&cache_key, v.clone(), std::time::Duration::from_secs(60)).await;
-            (axum::http::StatusCode::OK, axum::Json(v)).into_response()
+            let fields = query.fields.as_deref();
+            let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(v).unwrap_or_default(), fields);
+            (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
         }
         Err(e) => {
             tracing::error!("Failed to fetch ui bookings: {}", e);
@@ -5667,7 +5701,9 @@ async fn list_ui_inbox_handler(
     let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                    let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
         }
 
         let db = db.clone();
@@ -5681,7 +5717,9 @@ async fn list_ui_inbox_handler(
                 }
             }
         });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
     }
 
     let messages = load_ui_inbox_from_db(&db, &tenant_id, mobile_optimized).await;
@@ -5711,7 +5749,9 @@ async fn ui_dashboard_metrics_handler(
     let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                    let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
         }
 
         let db = db.clone();
@@ -5725,7 +5765,9 @@ async fn ui_dashboard_metrics_handler(
                 }
             }
         });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
     }
 
     let metrics = load_ui_dashboard_metrics(&db, &tenant_id, mobile_optimized).await;
@@ -5761,7 +5803,9 @@ async fn list_ui_supply_handler(
     let cache = UI_SUPPLY_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
-            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                    let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached.clone()).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
         }
 
         let db = db.clone();
@@ -5774,7 +5818,9 @@ async fn list_ui_supply_handler(
                 }
             }
         });
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+                let fields = query.fields.as_deref();
+        let shaped = ::server_utils::payload_shaper::shape_payload(serde_json::to_value(cached).unwrap_or_default(), fields);
+        return (axum::http::StatusCode::OK, axum::Json(shaped)).into_response();
     }
 
     match load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await {
@@ -6748,7 +6794,7 @@ async fn create_ui_bom_item_handler(
                 ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
                 ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
                 ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
-                ("api", "Interactive API reference for integrations."),
+                ("api", "If you use custom tools, you can connect them to our system here. This is for advanced users."),
             ];
 
             let query = req.message.to_lowercase();
@@ -7083,3 +7129,5 @@ async fn test_api_settings_voice() {
 #[cfg(test)]
 mod health_test;
 // optimization done
+#[cfg(test)]
+pub mod chaos_network_test;

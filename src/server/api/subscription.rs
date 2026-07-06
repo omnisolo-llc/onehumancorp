@@ -32,6 +32,7 @@ pub struct SubscriberResponse {
     pub id: String,
     pub customer_id: String,
     pub status: String,
+    pub health_score: Option<i32>,
 }
 
 #[derive(Serialize)]
@@ -112,6 +113,7 @@ async fn get_subscribers(
                 id: r.try_get("id").unwrap_or_default(),
                 customer_id: r.try_get("customer_id").unwrap_or_default(),
                 status: r.try_get("status").unwrap_or_default(),
+                health_score: r.try_get("health_score").unwrap_or(None),
             }).collect();
             (StatusCode::OK, Json(subscribers)).into_response()
         },
