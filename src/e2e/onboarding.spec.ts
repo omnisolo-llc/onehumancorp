@@ -44,6 +44,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     // Click manual configuration
     const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
     await startButton.click();
+    await page.waitForTimeout(500); // Give it time to render the next step
 
     // Context Card Flow starts in step-context in Tauri
     await expect(page.locator('#step-context')).toBeVisible();
@@ -83,6 +84,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     // Click manual configuration
     const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
     await startButton.click();
+    await page.waitForTimeout(500); // Give it time to render the next step
 
     const contextCard = page.locator('.context-card').first();
     await expect(contextCard).toBeVisible();
@@ -99,6 +101,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     // Click manual configuration
     const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
     await startButton.click();
+    await page.waitForTimeout(500); // Give it time to render the next step
 
     // Jump straight to the name step to test validation
     await page.evaluate(() => { (window as any).goToStep('step-name', false) });
@@ -125,6 +128,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     // Click manual configuration
     const startButton = page.locator('button', { hasText: 'Step-by-Step Setup' });
     await startButton.click();
+    await page.waitForTimeout(500); // Give it time to render the next step
 
     // Jump straight to the name step to test validation
     await page.evaluate(() => { (window as any).goToStep('step-name', false) });

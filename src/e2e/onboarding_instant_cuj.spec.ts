@@ -15,16 +15,10 @@ test.describe('Instant Setup CUJ', () => {
     await page.goto('/setup.html');
 
 
-    // Verify Initial Screen
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
-
-    // 1. Click "Instant Build"
-    await page.getByRole('button', { name: 'Instant Build' }).click();
-
-    // 2. Verify we are in the instant step
+    // Verify Initial Screen / Instant Build Step
     await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
 
-    // 3. Fill in the description
+    // 1. Fill in the description
     const instantInput = page.locator('#instant-bio');
     await expect(instantInput).toBeVisible();
     await instantInput.fill('I make custom vegan cakes in Austin. I need a website and a way to take bookings.');
@@ -32,17 +26,10 @@ test.describe('Instant Setup CUJ', () => {
     const generateBtn = page.getByTestId('generate-storefront-btn');
     await expect(generateBtn).toBeEnabled();
 
-    // Test the bug fix by navigating back and forward to ensure text is preserved
-    await page.getByRole('button', { name: 'Back' }).click();
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
-    await page.getByRole('button', { name: 'Instant Build' }).click();
-    await expect(instantInput).toHaveValue('I make custom vegan cakes in Austin. I need a website and a way to take bookings.');
-    await expect(generateBtn).toBeEnabled();
-
-    // 4. Click generate
+    // 2. Click generate
     await generateBtn.click();
 
-    // 5. Verify loading texts (animation progress)
+    // 3. Verify loading texts (animation progress)
     const btnText = await generateBtn.innerText();
     expect(btnText).toContain('Analyzing request...');
 

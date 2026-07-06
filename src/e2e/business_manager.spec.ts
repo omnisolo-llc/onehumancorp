@@ -23,7 +23,7 @@ test.describe('Business Manager UI', () => {
   test('should display business setup page', async ({ page }) => {
     await page.goto('/setup.html');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
     await expect(page.locator('#setup-screen')).toBeVisible();
   });
 });

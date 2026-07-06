@@ -9,10 +9,10 @@ test.describe('Onboarding UI Audit', () => {
     await expect(page.locator('h1').filter({ hasText: 'Setup' })).toBeVisible();
 
     // Step -2: Welcome Screen
-    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await expect(page.getByText('Tell us about your business')).toBeVisible();
 
     // "Start My Business" navigates to `step: 1` which is "Tell us about your business" in the conversational setup.
-    await page.getByRole('button', { name: 'Start My Business' }).click();
+    await page.getByRole('button', { name: 'Conversational Setup' }).click();
 
     await expect(page.getByText('What\'s the name of your business?')).toBeVisible({ timeout: 10000 });
 
