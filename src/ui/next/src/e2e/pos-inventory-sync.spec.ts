@@ -5,6 +5,17 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
     const tenantId = 'e2e-tenant-pos';
     const productId = 'e2e-product-cake-pos';
 
+        // Create the product
+    await page.request.post('/api/v1/catalog/products', {
+        headers: { 'x-tenant-id': tenantId },
+        data: {
+            id: productId,
+            title: 'Test Product',
+            inventory_count: 10,
+            price_cents: 1000
+        }
+    });
+
     // Simulate POS (User B) acquiring lock
     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
         data: {
@@ -71,6 +82,17 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
       localStorage.setItem('tenant', tenant);
       localStorage.setItem('customer_id', 'e2e-customer');
     }, tenantId);
+
+        // Create the product
+    await page.request.post('/api/v1/catalog/products', {
+        headers: { 'x-tenant-id': tenantId },
+        data: {
+            id: productId,
+            title: 'Test Product',
+            inventory_count: 10,
+            price_cents: 1000
+        }
+    });
 
     // Simulate POS (User B) acquiring lock
     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
@@ -187,6 +209,17 @@ test.describe('POS Inventory Sync - E2E Race Condition', () => {
         }
     });
     expect(createProductRes.ok()).toBeTruthy();
+
+        // Create the product
+    await page.request.post('/api/v1/catalog/products', {
+        headers: { 'x-tenant-id': tenantId },
+        data: {
+            id: productId,
+            title: 'Test Product',
+            inventory_count: 10,
+            price_cents: 1000
+        }
+    });
 
     // Simulate POS (User B) acquiring lock
     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {

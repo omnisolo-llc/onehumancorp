@@ -1,0 +1,18 @@
+{
+  "task_description": "test task",
+  "features": [
+    {
+      "name": "Step 1",
+      "status": "pending"
+    },
+    {
+      "name": "Step 2",
+      "status": "pending"
+    }
+  ],
+  "current_feature_index": 0,
+  "notes": [
+    "Initialized task and broken down into features."
+  ],
+  "is_complete": false
+}

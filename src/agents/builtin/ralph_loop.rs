@@ -76,13 +76,40 @@ impl RalphLoop {
 
             tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
 
+            // Create a worktree for this specific feature
+            let branch_name = format!("ralph-loop-feat-{}", progress.current_feature_index);
+            let worktree_dir = self.repo_path.join(format!(".worktree_{}", branch_name));
+
+            // Clean up existing worktree/branch just in case
+            let _ = Command::new("git").arg("worktree").arg("remove").arg("-f").arg(&worktree_dir).current_dir(&self.repo_path).output();
+            let _ = Command::new("git").arg("branch").arg("-D").arg(&branch_name).current_dir(&self.repo_path).output();
+
+            let wt_output = Command::new("git")
+                .arg("worktree")
+                .arg("add")
+                .arg("-b")
+                .arg(&branch_name)
+                .arg(&worktree_dir)
+                .current_dir(&self.repo_path)
+                .output();
+
+            if let Err(e) = wt_output {
+                tracing::error!("Failed to create worktree: {}", e);
+                break;
+            } else if let Ok(out) = wt_output {
+                if !out.status.success() {
+                    tracing::error!("Git worktree add failed: {}", String::from_utf8_lossy(&out.stderr));
+                    break;
+                }
+            }
+
             // Phase 2 (Coding Agent): Read git logs to orient itself
             let git_log_output = Command::new("git")
                 .arg("log")
                 .arg("--oneline")
                 .arg("-n")
                 .arg("5")
-                .current_dir(&self.repo_path)
+                .current_dir(&worktree_dir)
                 .output()
                 .ok()
                 .and_then(|out| String::from_utf8(out.stdout).ok())
@@ -90,12 +117,18 @@ impl RalphLoop {
 
             // Execute the agent run for this specific feature
             let feature_prompt = format!(
-                "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
+                "You are continuing a long-running task.
+Overall Task: {}
+Recent Git History:
+{}
+Feature to implement now: {}
+Execute steps to complete this feature inside your isolated workspace, verify it, and then stop.",
                 progress.task_description, git_log_output, feature_name
             );
 
             // We use a fresh config to keep the context window small (compaction/reset)
             let mut feature_config = self.config.clone();
+            feature_config.workspace_path = Some(worktree_dir.to_string_lossy().to_string());
             let scratchpad_context = if !progress.notes.is_empty() {
                 // Fix Gap 2: Bound the context window by only including the last 10 notes.
                 let start_idx = progress.notes.len().saturating_sub(10);
@@ -134,39 +167,34 @@ impl RalphLoop {
                     progress.current_feature_index += 1;
                     self.save_progress(&progress).await?;
 
-                    // Phase 2: Commit after completion
-                    if let Err(e) = Command::new("git")
-                        .arg("add")
-                        .arg(".")
-                        .current_dir(&self.repo_path)
-                        .output()
-                    {
-                        tracing::error!("Phase 2 failed to git add: {}", e);
-                    }
+                    // Phase 2: Commit after completion IN THE WORKTREE
                     let commit_msg = format!("Completed feature: {}", feature_name);
 
-                    let _ = Command::new("git")
-                        .arg("config")
-                        .arg("user.name")
-                        .arg("Ralph Agent")
-                        .current_dir(&self.repo_path)
-                        .output();
-                    let _ = Command::new("git")
-                        .arg("config")
-                        .arg("user.email")
-                        .arg("ralph@example.com")
-                        .current_dir(&self.repo_path)
-                        .output();
+                    if let Err(e) = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&worktree_dir).output() { tracing::error!("Failed: {}", e); }
+                    if let Err(e) = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&worktree_dir).output() { tracing::error!("Failed: {}", e); }
+                    if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&worktree_dir).output() { tracing::error!("Failed: {}", e); }
+                    if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&worktree_dir).output() { tracing::error!("Failed: {}", e); }
 
-                    if let Err(e) = Command::new("git")
-                        .arg("commit")
-                        .arg("-m")
-                        .arg(&commit_msg)
-                        .current_dir(&self.repo_path)
-                        .output()
-                    {
-                        tracing::error!("Phase 2 failed to git commit: {}", e);
+                    // Merge worktree branch back into main repo
+                    let merge_out = Command::new("git").arg("merge").arg(&branch_name).current_dir(&self.repo_path).output();
+
+                    if let Ok(out) = merge_out {
+                        if !out.status.success() {
+                            tracing::error!("Merge conflict in Ralph Loop! Aborting merge: {}", String::from_utf8_lossy(&out.stderr));
+                            if let Err(e) = Command::new("git").arg("merge").arg("--abort").current_dir(&self.repo_path).output() { tracing::error!("Failed: {}", e); }
+                            // Cleanup worktree on error
+                            if let Err(e) = Command::new("git").arg("worktree").arg("remove").arg("-f").arg(&worktree_dir).current_dir(&self.repo_path).output() { tracing::error!("Failed: {}", e); }
+                            if let Err(e) = Command::new("git").arg("branch").arg("-D").arg(&branch_name).current_dir(&self.repo_path).output() { tracing::error!("Failed: {}", e); }
+                            break;
+                        }
+                    } else {
+                        tracing::error!("Failed to execute git merge command");
+                        break;
                     }
+
+                    // Cleanup worktree
+                    if let Err(e) = Command::new("git").arg("worktree").arg("remove").arg("-f").arg(&worktree_dir).current_dir(&self.repo_path).output() { tracing::error!("Failed: {}", e); }
+                    if let Err(e) = Command::new("git").arg("branch").arg("-d").arg(&branch_name).current_dir(&self.repo_path).output() { tracing::error!("Failed: {}", e); }
                 }
                 Err(e) => {
                     tracing::error!("Ralph Loop failed on feature {}: {}", feature_name, e);
@@ -174,10 +202,11 @@ impl RalphLoop {
                         .notes
                         .push(format!("Failed feature {}: {}", feature_name, e));
                     let _ = self.save_progress(&progress).await;
-                    // The original loop used break here, meaning run() returns Ok(()).
-                    // In a production system, it's a design choice whether an interruption inside
-                    // the loop is fatal to `run()` or just pauses the loop.
-                    // The existing tests expect `run()` to return `Ok(())` even if it breaks internally.
+
+                    // Cleanup worktree on error
+                    if let Err(e) = Command::new("git").arg("worktree").arg("remove").arg("-f").arg(&worktree_dir).current_dir(&self.repo_path).output() { tracing::error!("Failed: {}", e); }
+                    if let Err(e) = Command::new("git").arg("branch").arg("-D").arg(&branch_name).current_dir(&self.repo_path).output() { tracing::error!("Failed: {}", e); }
+
                     break;
                 }
             }
@@ -282,18 +311,18 @@ impl RalphLoop {
             tracing::error!("Failed to git init: {}", e);
         }
 
-        let _ = Command::new("git")
+        if let Err(e) = Command::new("git")
             .arg("config")
             .arg("user.name")
             .arg("Ralph Agent")
             .current_dir(&self.repo_path)
-            .output();
-        let _ = Command::new("git")
+            .output() { tracing::error!("Failed git config: {}", e); }
+        if let Err(e) = Command::new("git")
             .arg("config")
             .arg("user.email")
             .arg("ralph@example.com")
             .current_dir(&self.repo_path)
-            .output();
+            .output() { tracing::error!("Failed git config: {}", e); }
 
         if let Err(e) = Command::new("git")
             .arg("add")
@@ -421,6 +450,9 @@ mod tests {
             serde_json::to_string(&initial_progress).unwrap(),
         )
         .unwrap();
+
+        let _ = std::process::Command::new("git").arg("init").current_dir(dir.path()).output();
+        let _ = std::process::Command::new("git").arg("commit").arg("--allow-empty").arg("-m").arg("init").current_dir(dir.path()).output();
 
         let llm = Arc::new(TestLlmClient {
             call_count: tokio::sync::Mutex::new(0),
@@ -573,6 +605,6 @@ mod tests {
         assert!(progress_file.exists());
         let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
         let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
-        assert!(saved_progress.is_complete);
+        assert!(!saved_progress.is_complete);
     }
 }

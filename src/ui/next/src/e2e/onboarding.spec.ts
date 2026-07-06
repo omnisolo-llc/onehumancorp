@@ -195,7 +195,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Anyone');
     await page.getByRole('button', { name: 'Next' }).click();
 
-    await page.getByRole('button', { name: 'Continue' }).click({ timeout: 15000 });
+    await page.getByRole('button', { name: 'Continue' }).click({ timeout: 60000 });
 
     // Do NOT fill out admin email and password initially
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');

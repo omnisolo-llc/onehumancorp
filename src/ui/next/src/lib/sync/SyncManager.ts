@@ -1,3 +1,4 @@
+import { checkRateLimit } from "./rateLimit";
 import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
 
 export class SyncManager {

@@ -768,7 +768,7 @@ mod tests2 {
         obj.insert("output".to_string(), Value::String(long_string.to_string()));
 
         let mut val = Value::Object(obj);
-        JetBrainsObservationMasker::mask_json_value(&mut val, 200, 10, 0);
+        JetBrainsObservationMasker::mask_json_value(&mut val, 100, 10, 0);
 
         let s = val.get("output").unwrap().as_str().unwrap();
         assert!(s.contains("Line 1"));
