@@ -176,7 +176,7 @@ export class SyncManager {
           },
           body: JSON.stringify({ deltas: crdtDeltas })
         });
-        checkRateLimit(resCrdt);
+        this.checkRateLimit(resCrdt);
       }
 
       // Sync Quote Actions
@@ -187,7 +187,7 @@ export class SyncManager {
           headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
           body: JSON.stringify(update.payload)
         });
-        checkRateLimit(res);
+        this.checkRateLimit(res);
       }
 
       const quoteApprovals = generalMutations.filter(m => m.type === 'approve_quote');
@@ -196,7 +196,7 @@ export class SyncManager {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
         });
-        checkRateLimit(res);
+        this.checkRateLimit(res);
       }
 
       // Sync POS transactions
@@ -213,7 +213,7 @@ export class SyncManager {
             transactions: posTransactions
           })
         });
-        checkRateLimit(resPos);
+        this.checkRateLimit(resPos);
         try {
           const resPosData = await resPos.json();
           if (resPosData.pending_reconciliation && resPosData.pending_reconciliation.length > 0) {
@@ -237,7 +237,7 @@ export class SyncManager {
           },
           body: JSON.stringify({ mutations: generalGenMutations })
         });
-        checkRateLimit(resGen);
+        this.checkRateLimit(resGen);
         try {
           const resGenData = await resGen.json();
           if (resGenData.pending_reconciliation && resGenData.pending_reconciliation.length > 0) {
@@ -264,7 +264,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
-            try { checkRateLimit(res); } catch(e) {}
+            try { this.checkRateLimit(res); } catch(e) {}
             console.error(`Triage Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOk = false;
           }
@@ -288,7 +288,7 @@ export class SyncManager {
             body: JSON.stringify({ approved: action.payload.approved })
           });
           if (!res.ok) {
-            try { checkRateLimit(res); } catch(e) {}
+            try { this.checkRateLimit(res); } catch(e) {}
             console.error(`Advisory Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOk = false;
           }
@@ -313,7 +313,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
-            try { checkRateLimit(res); } catch(e) {}
+            try { this.checkRateLimit(res); } catch(e) {}
             console.error(`Generate Invoice Sync failed with status ${res.status}`);
             if (res.status >= 500) allOk = false;
           }
@@ -337,7 +337,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
-            try { checkRateLimit(res); } catch(e) {}
+            try { this.checkRateLimit(res); } catch(e) {}
             console.error(`Field Ops Status Sync failed with status ${res.status}`);
             if (res.status >= 500) allOk = false;
           }
@@ -355,7 +355,7 @@ export class SyncManager {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderEvents)
         });
-        checkRateLimit(resOrder);
+        this.checkRateLimit(resOrder);
       }
 
       const inventoryEvents = generalMutations.filter(m => m.type === 'TOGGLE_SOLD_OUT');
@@ -365,7 +365,7 @@ export class SyncManager {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(inventoryEvents)
         });
-        checkRateLimit(resInv);
+        this.checkRateLimit(resInv);
       }
 
       if (allOk) {
@@ -388,6 +388,11 @@ export class SyncManager {
       }
     } finally {
       this.syncInProgress = false;
+    }
+  }
+  private checkRateLimit(res: Response) {
+    if (res.status === 429) {
+      throw new Error("Rate limit exceeded");
     }
   }
 }
