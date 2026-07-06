@@ -459,7 +459,7 @@ async fn create_page(
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if let Err(err) = jobs::enqueue_publish_site_job(&pool, tenant_id, site_id).await {
-        tracing::warn!("Failed to enqueue publish job for site {}: {}", site_id, err);
+        tracing::error!("Failed to enqueue publish job for site {}: {}", site_id, err);
     }
 
     Ok(Json(PageResponse {
@@ -559,7 +559,7 @@ async fn create_block(
             let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
 
             if let Err(err) = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id, site_id).await {
-                tracing::warn!("Failed to enqueue publish job for site {}: {}", site_id, err);
+                tracing::error!("Failed to enqueue publish job for site {}: {}", site_id, err);
             }
         }
     });
@@ -611,7 +611,7 @@ async fn update_block(
             let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
 
             if let Err(err) = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id, site_id).await {
-                tracing::warn!("Failed to enqueue publish job for site {}: {}", site_id, err);
+                tracing::error!("Failed to enqueue publish job for site {}: {}", site_id, err);
             }
         }
     });
@@ -1294,11 +1294,11 @@ Only return the JSON. No markdown formatting, no explanations."#,
     let business_context: BusinessContext = if ai_call_succeeded {
         let cleaned_advisor = clean_model_json(&ai_res_advisor);
         serde_json::from_str(cleaned_advisor).unwrap_or_else(|e| {
-            tracing::warn!("Failed to parse JSON from Advisor AI, using heuristic context: {}", e);
+            tracing::error!("Failed to parse JSON from Advisor AI, using heuristic context: {}", e);
             infer_business_context(&payload.description, active_brand_dna.clone())
         })
     } else {
-        tracing::warn!("Advisor AI unavailable, using heuristic context");
+        tracing::error!("Advisor AI unavailable, using heuristic context");
         infer_business_context(&payload.description, active_brand_dna.clone())
     };
 
@@ -1391,12 +1391,12 @@ Only return the JSON. No markdown formatting, no explanations. Make sure the blo
         Ok(promoter_response) => {
             let cleaned_response = clean_model_json(&promoter_response);
             serde_json::from_str(cleaned_response).unwrap_or_else(|e| {
-                tracing::warn!("Failed to parse JSON from Promoter AI, using heuristic storefront: {}", e);
+                tracing::error!("Failed to parse JSON from Promoter AI, using heuristic storefront: {}", e);
                 synthesize_store_profile(&payload.description, active_brand_dna)
             })
         },
         Err(e) => {
-            tracing::warn!("Promoter AI unavailable, using heuristic storefront: {}", e);
+            tracing::error!("Promoter AI unavailable, using heuristic storefront: {}", e);
             synthesize_store_profile(&payload.description, active_brand_dna)
         }
     };
@@ -1480,7 +1480,7 @@ async fn publish_store_profile(
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if let Err(err) = jobs::enqueue_publish_site_job(pool, tenant_id, site.id).await {
-        tracing::warn!("Failed to enqueue publish job for site {}: {}", site.id, err);
+        tracing::error!("Failed to enqueue publish job for site {}: {}", site.id, err);
     }
 
     Ok(site)
