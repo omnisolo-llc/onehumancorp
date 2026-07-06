@@ -687,6 +687,15 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let dl_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE payload LIKE '%stuck_running_pg%'")
             .fetch_one(&pg_pool).await.unwrap();
         assert_eq!(dl_pg.0, 1);
+
+        // Verify dead letters were created for queued jobs
+        let dl_queued_sqlite: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE payload LIKE '%stuck_queued_sqlite%'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(dl_queued_sqlite.0, 1);
+
+        let dl_queued_pg: (i64,) = sqlx::query_as("SELECT count(*) FROM department_dead_letters WHERE payload LIKE '%stuck_queued_pg%'")
+            .fetch_one(&pg_pool).await.unwrap();
+        assert_eq!(dl_queued_pg.0, 1);
     }
 
     #[tokio::test]

@@ -114,8 +114,6 @@ impl AutoDreamWorker {
                 }
              };
 
-             db.inject_truth("system", &format!("session-summary-{}", id), &summary, &embedding).await?;
-
              db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
 
         }
