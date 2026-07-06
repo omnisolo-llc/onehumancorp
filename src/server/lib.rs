@@ -5258,6 +5258,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "event_source": row.get::<String, _>("event_source"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                     })
                 }).collect::<Vec<_>>())
             } else {
@@ -5297,6 +5298,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "event_source": row.get::<String, _>("event_source"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                     })
                 }).collect::<Vec<_>>())
             } else {
