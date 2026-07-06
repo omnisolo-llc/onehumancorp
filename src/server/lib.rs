@@ -4803,7 +4803,13 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                     } else {
                         "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS text) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
                     };
-                    if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(&db1.pool).await {
+                    if let Ok(rows) = match sqlx::query(query_str).bind(&t_id1).fetch_all(&db1.pool).await {
+                        Ok(rows) => Ok(rows),
+                        Err(e) => {
+                            tracing::error!("Failed to fetch triage items for postgres: {:?}", e);
+                            Err(e)
+                        }
+                    } {
                         for row in rows {
                             use sqlx::Row;
                             let item = if mobile_optimized {
