@@ -967,7 +967,7 @@ export default function OnboardingWizard() {
           </div>
         </div>
         {/* Progress Bar */}
-        <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
+        <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
           <div
             className="h-full bg-[#0066FF] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-[0_0_10px_rgba(0,102,255,0.5)]"
             style={{ width: `${getProgress()}%` }}
@@ -1109,7 +1109,7 @@ export default function OnboardingWizard() {
                       {msg.image_url && (
                         <>
                           <br />
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className="text-xs text-gray-500 dark:text-[#A1A1A6]">
                             [Attached Image: {msg.image_url}]
                           </span>
                         </>
@@ -1810,7 +1810,7 @@ export default function OnboardingWizard() {
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                     Business Name
                   </label>
                   <input
@@ -1834,7 +1834,7 @@ export default function OnboardingWizard() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                     Business Type
                   </label>
                   <input
@@ -1857,7 +1857,7 @@ export default function OnboardingWizard() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                     Categories (Comma separated)
                   </label>
                   <input
@@ -1876,7 +1876,7 @@ export default function OnboardingWizard() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                       First Product
                     </label>
                     <input
@@ -1890,7 +1890,7 @@ export default function OnboardingWizard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
                       Price
                     </label>
                     <input
@@ -2020,7 +2020,7 @@ export default function OnboardingWizard() {
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2 hide-scrollbar">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
                     Website Template
                   </label>
                   <div className="grid grid-cols-2 gap-3">
@@ -2043,7 +2043,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/20 dark:border-[rgba(255,255,255,0.1)]">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
                     Web Address
                   </label>
                   <div className="grid grid-cols-2 gap-3 mb-2">
@@ -2073,12 +2073,12 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/20 dark:border-[rgba(255,255,255,0.1)]">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
                     Account Setup
                   </label>
                   <div className="space-y-3 mb-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] mb-1">
                         Admin Name
                       </label>
                       <input
@@ -2113,7 +2113,7 @@ export default function OnboardingWizard() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] mb-1">
                         Admin Email
                       </label>
                       <input
@@ -2153,7 +2153,7 @@ export default function OnboardingWizard() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] mb-1">
                         Admin Password
                       </label>
                       <input
@@ -2195,7 +2195,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2 border-t border-white/20 dark:border-[rgba(255,255,255,0.1)]">
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
                     Auto-Configured AI Departments
                   </label>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mb-2">
@@ -2212,7 +2212,7 @@ export default function OnboardingWizard() {
                           className={`cursor-pointer p-3 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]  border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_2px_8px_rgba(0,102,255,0.15)]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control hover:border-gray-400 dark:hover:border-gray-500"}`}
                         >
                           <div
-                            className={`flex items-center justify-center w-10 h-10 rounded-full text-lg ${isActive ? "bg-[#0066FF]/20" : "bg-gray-100 dark:bg-gray-800"}`}
+                            className={`flex items-center justify-center w-10 h-10 rounded-full text-lg ${isActive ? "bg-[#0066FF]/20" : "bg-[rgba(255,255,255,0.2)] dark:bg-[rgba(255,255,255,0.05)]"}`}
                           >
                             {agent.icon}
                           </div>
@@ -2267,7 +2267,7 @@ export default function OnboardingWizard() {
                       }
                     />
                     <div
-                      className={`w-10 h-6 rounded-full transition-colors ${aiAutoRespond ? "bg-[#34C759]" : "bg-gray-300 dark:bg-gray-600"} relative`}
+                      className={`w-10 h-6 rounded-full transition-colors ${aiAutoRespond ? "bg-[#34C759]" : "bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(255,255,255,0.1)]"} relative`}
                     >
                       <div
                         className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${aiAutoRespond ? "translate-x-5" : "translate-x-1"}`}
@@ -2340,7 +2340,7 @@ export default function OnboardingWizard() {
               <div className="space-y-3 w-full max-w-xs text-left">
                 <div className="flex items-center gap-3">
                   <svg
-                    className={`w-5 h-5 transition-colors ${loadingProgress > 25 ? "text-[#34C759]" : "text-gray-300 dark:text-gray-600"}`}
+                    className={`w-5 h-5 transition-colors ${loadingProgress > 25 ? "text-[#34C759]" : "text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.2)]"}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -2360,7 +2360,7 @@ export default function OnboardingWizard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <svg
-                    className={`w-5 h-5 transition-colors ${loadingProgress > 50 ? "text-[#34C759]" : "text-gray-300 dark:text-gray-600"}`}
+                    className={`w-5 h-5 transition-colors ${loadingProgress > 50 ? "text-[#34C759]" : "text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.2)]"}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -2380,7 +2380,7 @@ export default function OnboardingWizard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <svg
-                    className={`w-5 h-5 transition-colors ${loadingProgress > 75 ? "text-[#34C759]" : "text-gray-300 dark:text-gray-600"}`}
+                    className={`w-5 h-5 transition-colors ${loadingProgress > 75 ? "text-[#34C759]" : "text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.2)]"}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -2400,7 +2400,7 @@ export default function OnboardingWizard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <svg
-                    className={`w-5 h-5 transition-colors ${loadingProgress > 90 ? "text-[#34C759]" : "text-gray-300 dark:text-gray-600"}`}
+                    className={`w-5 h-5 transition-colors ${loadingProgress > 90 ? "text-[#34C759]" : "text-[rgba(255,255,255,0.4)] dark:text-[rgba(255,255,255,0.2)]"}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

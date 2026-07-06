@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
 interface SafeToSpend {
-  current_balance: number;
-  tax_reserve: number;
-  upcoming_liabilities: number;
-  safe_to_spend: number;
+  money_in: number;
+  money_out: number;
+  tax_safe: number;
 }
 
 export const CFOAgentCard: React.FC = () => {
@@ -33,30 +32,29 @@ export const CFOAgentCard: React.FC = () => {
     return <div className="glass-card animate-pulse h-32" />;
   }
 
-  if (!data || typeof data.safe_to_spend !== 'number' || typeof data.current_balance !== 'number' || typeof data.tax_reserve !== 'number' || typeof data.upcoming_liabilities !== 'number') {
+  if (!data || typeof data.money_in !== 'number' || typeof data.money_out !== 'number' || typeof data.tax_safe !== 'number') {
     return null;
   }
 
   return (
     <div className="glass-card p-6 flex flex-col gap-4">
-      <div className="text-xl font-bold text-gray-800 font-outfit">Safe to Spend</div>
-      <div className="text-4xl font-extrabold text-blue-600">${data.safe_to_spend.toFixed(2)}</div>
+      <div className="text-xl font-bold text-gray-800 font-outfit">Profit & Tax Card</div>
 
       <div className="flex flex-col gap-2 mt-4 text-sm text-gray-600">
         <div className="flex justify-between items-center border-b pb-2">
-          <span>Current Balance</span>
-          <span className="font-semibold">${data.current_balance.toFixed(2)}</span>
+          <span>Money In</span>
+          <span className="font-semibold text-green-600">${data.money_in.toFixed(2)}</span>
         </div>
         <div className="flex justify-between items-center border-b pb-2">
-          <span className="flex items-center gap-1">
-            Reserved for Taxes
-            <span title="Automated 15% withholding rule" className="text-gray-400 cursor-help">ℹ️</span>
-          </span>
-          <span className="font-semibold text-[#FF3B30]">-${data.tax_reserve.toFixed(2)}</span>
+          <span>Money Out</span>
+          <span className="font-semibold text-[#FF3B30]">${data.money_out.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between items-center">
-          <span>Upcoming Bills (Next 7 Days)</span>
-          <span className="font-semibold text-[#FF3B30]">-${data.upcoming_liabilities.toFixed(2)}</span>
+        <div className="flex justify-between items-center bg-gray-50/50 p-3 rounded-lg border border-gray-100 mt-2">
+          <span className="flex items-center gap-1 font-semibold">
+            Estimated Tax Safe
+            <span title="Automated tax reservation based on net income" className="text-gray-400 cursor-help font-normal">ℹ️</span>
+          </span>
+          <span className="font-bold text-blue-600">${data.tax_safe.toFixed(2)}</span>
         </div>
       </div>
     </div>

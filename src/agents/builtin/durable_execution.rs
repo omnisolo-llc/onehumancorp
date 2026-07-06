@@ -1,8 +1,8 @@
+use serde::{Deserialize, Serialize};
 /// SOTA Harness Patterns (2025-2026): 2. Code-native execution -> preserving execution state and rich data structures
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum StepStatus {
@@ -66,7 +66,12 @@ impl DurableExecutionEngine {
         }
     }
 
-    pub async fn update_step(&self, workflow_id: &str, step_id: &str, status: StepStatus) -> Result<(), String> {
+    pub async fn update_step(
+        &self,
+        workflow_id: &str,
+        step_id: &str,
+        status: StepStatus,
+    ) -> Result<(), String> {
         let mut store = self.state_store.lock().await;
         if let Some(state) = store.get_mut(workflow_id) {
             state.set_step_status(step_id, status);
@@ -108,7 +113,12 @@ impl DurableExecutionEngine {
     }
 
     // New code-native capabilities to store arbitrary structured data across boundaries
-    pub async fn set_context_var(&self, workflow_id: &str, key: &str, value: &str) -> Result<(), String> {
+    pub async fn set_context_var(
+        &self,
+        workflow_id: &str,
+        key: &str,
+        value: &str,
+    ) -> Result<(), String> {
         let mut store = self.state_store.lock().await;
         if let Some(state) = store.get_mut(workflow_id) {
             state.context.insert(key.to_string(), value.to_string());
@@ -145,28 +155,45 @@ mod tests {
         let engine = DurableExecutionEngine::new();
         engine.start_or_resume_workflow("wf-2").await;
 
-        let res = engine.update_step("wf-2", "step-1", StepStatus::Completed("Success".to_string())).await;
+        let res = engine
+            .update_step(
+                "wf-2",
+                "step-1",
+                StepStatus::Completed("Success".to_string()),
+            )
+            .await;
         assert!(res.is_ok());
 
         let state = engine.get_workflow_state("wf-2").await.unwrap();
-        assert_eq!(state.get_step_status("step-1"), Some(&StepStatus::Completed("Success".to_string())));
+        assert_eq!(
+            state.get_step_status("step-1"),
+            Some(&StepStatus::Completed("Success".to_string()))
+        );
     }
 
     #[tokio::test]
     async fn test_resume_existing_workflow() {
         let engine = DurableExecutionEngine::new();
         engine.start_or_resume_workflow("wf-3").await;
-        engine.update_step("wf-3", "step-1", StepStatus::Completed("Done".to_string())).await.unwrap();
+        engine
+            .update_step("wf-3", "step-1", StepStatus::Completed("Done".to_string()))
+            .await
+            .unwrap();
 
         // Resume should return existing state
         let state = engine.start_or_resume_workflow("wf-3").await;
-        assert_eq!(state.get_step_status("step-1"), Some(&StepStatus::Completed("Done".to_string())));
+        assert_eq!(
+            state.get_step_status("step-1"),
+            Some(&StepStatus::Completed("Done".to_string()))
+        );
     }
 
     #[tokio::test]
     async fn test_update_nonexistent_workflow() {
         let engine = DurableExecutionEngine::new();
-        let res = engine.update_step("invalid-wf", "step-1", StepStatus::Running).await;
+        let res = engine
+            .update_step("invalid-wf", "step-1", StepStatus::Running)
+            .await;
         assert!(res.is_err());
     }
 
@@ -175,16 +202,37 @@ mod tests {
         let engine = DurableExecutionEngine::new();
         engine.start_or_resume_workflow("wf-4").await;
 
-        assert_eq!(engine.determine_workflow_status("wf-4").await, Some(WorkflowStatus::InProgress));
+        assert_eq!(
+            engine.determine_workflow_status("wf-4").await,
+            Some(WorkflowStatus::InProgress)
+        );
 
-        engine.update_step("wf-4", "step-1", StepStatus::Completed("Done".to_string())).await.unwrap();
-        assert_eq!(engine.determine_workflow_status("wf-4").await, Some(WorkflowStatus::Completed));
+        engine
+            .update_step("wf-4", "step-1", StepStatus::Completed("Done".to_string()))
+            .await
+            .unwrap();
+        assert_eq!(
+            engine.determine_workflow_status("wf-4").await,
+            Some(WorkflowStatus::Completed)
+        );
 
-        engine.update_step("wf-4", "step-2", StepStatus::Pending).await.unwrap();
-        assert_eq!(engine.determine_workflow_status("wf-4").await, Some(WorkflowStatus::InProgress));
+        engine
+            .update_step("wf-4", "step-2", StepStatus::Pending)
+            .await
+            .unwrap();
+        assert_eq!(
+            engine.determine_workflow_status("wf-4").await,
+            Some(WorkflowStatus::InProgress)
+        );
 
-        engine.update_step("wf-4", "step-2", StepStatus::Failed("Err".to_string())).await.unwrap();
-        assert_eq!(engine.determine_workflow_status("wf-4").await, Some(WorkflowStatus::Failed("Err".to_string())));
+        engine
+            .update_step("wf-4", "step-2", StepStatus::Failed("Err".to_string()))
+            .await
+            .unwrap();
+        assert_eq!(
+            engine.determine_workflow_status("wf-4").await,
+            Some(WorkflowStatus::Failed("Err".to_string()))
+        );
     }
 
     #[tokio::test]

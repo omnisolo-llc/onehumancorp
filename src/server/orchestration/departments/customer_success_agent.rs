@@ -37,7 +37,9 @@ impl Department for CustomerSuccessAgent {
             "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
             "tenant.subscription.check_predictive_restock".to_string(),
+            "tenant.subscription.churn_risk".to_string(),
             "tenant.subscription.action.requested".to_string(),
+            "tenant.subscription.at_risk".to_string(),
             "job_status_updates".to_string(),
         ]
     }
@@ -260,6 +262,50 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
+
+        if event.event_type == "tenant.subscription.churn_risk" {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("");
+            let subscription_id = event.payload.get("subscription_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            if customer_id.is_empty() {
+                return Err("customer_id is required".to_string());
+            }
+
+            let prompt = format!(
+                "Draft a concise, personalized win-back message for customer {} (ID: {}) who hasn't booked or ordered anything in the last 30 days and their subscription is approaching renewal. Offer a small perk like a free consultation or a small discount.",
+                customer_name, customer_id
+            );
+            let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+
+            let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                Ok("minimax") => {
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't booked a session lately. Want to schedule a free 15-minute catch-up to keep the momentum going?".to_string())
+                }
+                _ => {
+                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't booked a session lately. Want to schedule a free 15-minute catch-up to keep the momentum going?".to_string())
+                }
+            };
+
+            let action_payload = serde_json::json!({
+                "feature_type": "subscription_churn_risk",
+                "generated_response": generated_response,
+                "customer_id": customer_id,
+                "subscription_id": subscription_id,
+            });
+
+            let _ = self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                "Subscription Churn Risk Draft".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                action_payload,
+            ).await;
+
+            return Ok(());
+        }
+
         if event.event_type == "tenant.subscription.check_predictive_restock" {
             let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
             if customer_id.is_empty() {
@@ -321,6 +367,30 @@ impl Department for CustomerSuccessAgent {
                 ActionRisk::AutoExecute,
                 proposed_action,
             ).await.map_err(|e| e.to_string())?;
+
+            return Ok(());
+        }
+
+
+        if event.event_type == "tenant.subscription.at_risk" {
+            let subscriber_id = event.payload.get("subscriber_id").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let health_score = event.payload.get("health_score").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            let prompt = format!("You are The Ambassador for tenant {}. A subscriber (Customer ID: {}) is at risk of churning due to a low health score of {}. Write a concise, personalized win-back message offering a free 15-minute consultation to get them back on track. Keep it warm and friendly.", event.tenant_id, customer_id, health_score);
+            let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+
+            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
+                Ok("minimax") => { let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string()); crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't been active lately. We'd love to offer a free 15-minute consultation to get you back on track!".to_string()) },
+                _ => { crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't been active lately. We'd love to offer a free 15-minute consultation to get you back on track!".to_string()) }
+            };
+
+            let description = format!("The Ambassador identified subscriber {} as at-risk and drafted a win-back offer.", subscriber_id);
+            let action_payload = serde_json::json!({
+                "feature_type": "subscription_win_back", "subscriber_id": subscriber_id, "customer_id": customer_id, "health_score": health_score, "generated_response": generated_response, "draft_reply": generated_response,
+            });
+
+            let _approval_req = self.orchestrator.execute_action(crate::orchestration::departments::types::DepartmentType::CustomerSuccess, description, event.tenant_id.clone(), crate::orchestration::departments::types::ActionRisk::DraftForReview, action_payload.clone()).await.map_err(|e| e.to_string())?;
 
             return Ok(());
         }
@@ -620,6 +690,7 @@ mod tests {
         assert!(events.contains(&"tenant.omnichannel.message.received".to_string()));
         assert!(events.contains(&"tenant.order.fulfillment_ready".to_string()));
         assert!(events.contains(&"agent:customer_success:approved".to_string()));
+        assert!(events.contains(&"tenant.subscription.at_risk".to_string()));
         assert!(events.contains(&"job_status_updates".to_string()));
     }
 

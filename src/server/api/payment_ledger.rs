@@ -58,10 +58,16 @@ pub struct BalanceResponse {
 
 #[derive(Serialize)]
 pub struct SafeToSpendResponse {
-    pub current_balance: f64,
-    pub tax_reserve: f64,
-    pub upcoming_liabilities: f64,
-    pub safe_to_spend: f64,
+    pub money_in: f64,
+    pub money_out: f64,
+    pub tax_safe: f64,
+}
+
+#[derive(Deserialize)]
+pub struct SnapReceiptRequest {
+    pub file_name: Option<String>,
+    pub vendor: String,
+    pub amount: f64,
 }
 
 pub fn router() -> Router<AppState> {
@@ -70,6 +76,7 @@ pub fn router() -> Router<AppState> {
         .route("/api/payments/webhook", post(stripe_webhook))
         .route("/api/ledger/balance", get(get_balance))
         .route("/api/finance/safe-to-spend", get(get_safe_to_spend))
+        .route("/api/finance/receipt", post(process_receipt))
 }
 
 async fn create_payment_intent(
@@ -140,7 +147,6 @@ async fn stripe_webhook(
 
     let payment_intent = payload.data.object;
 
-    // In a real app we'd verify the signature, for this implementation we rely on the metadata
     let tenant_id = payment_intent.metadata.get("tenant_id").cloned().unwrap_or_default();
     let idempotency_key = payment_intent.metadata.get("idempotency_key").cloned().unwrap_or_default();
 
@@ -150,7 +156,6 @@ async fn stripe_webhook(
 
     let pool = crate::db::get_pool();
 
-    // Check if we already processed it
     let existing: Option<(String,)> = sqlx::query_as("SELECT status FROM payment_intents WHERE idempotency_key = $1 AND tenant_id = $2")
         .bind(&idempotency_key)
         .bind(&tenant_id)
@@ -165,8 +170,10 @@ async fn stripe_webhook(
         return StatusCode::NOT_FOUND.into_response();
     }
 
-    // Process success
-    let mut tx = pool.begin().await.unwrap();
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
 
     let update_res = sqlx::query("UPDATE payment_intents SET status = 'succeeded', stripe_payment_intent_id = $1 WHERE idempotency_key = $2 AND tenant_id = $3")
         .bind(&payment_intent.id)
@@ -180,70 +187,91 @@ async fn stripe_webhook(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    // Update Ledger (Create transaction and entry)
-    let payment_info: (f64, String) = sqlx::query_as("SELECT amount, currency FROM payment_intents WHERE idempotency_key = $1")
+    let payment_info_res = sqlx::query_as::<_, (f64, String)>("SELECT amount, currency FROM payment_intents WHERE idempotency_key = $1")
         .bind(&idempotency_key)
         .fetch_one(&mut *tx)
-        .await.unwrap();
+        .await;
+
+    let payment_info = match payment_info_res {
+        Ok(info) => info,
+        Err(_) => {
+            let _ = tx.rollback().await;
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
 
     let tx_id = Uuid::new_v4().to_string();
-    let _ = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
+    if sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
         .bind(&tenant_id)
         .bind(&tx_id)
         .bind(payment_info.0)
         .bind(&payment_info.1)
         .execute(&mut *tx)
-        .await;
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
     let tax_rate = 0.15;
     let tax_amount = payment_info.0 * tax_rate;
 
-    // ensure account exists for tenant
     let account_id = "default_revenue";
-    let _ = sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+    if sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
         .bind(&tenant_id)
         .bind(account_id)
         .bind(&payment_info.1)
         .bind(0.0)
         .execute(&mut *tx)
-        .await;
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
     let entry_id = Uuid::new_v4().to_string();
-    let _ = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
+    if sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
         .bind(&tenant_id)
         .bind(&entry_id)
         .bind(&tx_id)
         .bind(account_id)
         .bind(payment_info.0)
         .execute(&mut *tx)
-        .await;
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
-    let _ = sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
+    if sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
         .bind(payment_info.0)
         .bind(&tenant_id)
         .bind(account_id)
         .execute(&mut *tx)
-        .await;
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
-    // ensure tax reserve exists for tenant
     let tax_envelope_id = "default_tax";
-    let _ = sqlx::query("INSERT INTO ledger_reserves (tenant_id, envelope_id, envelope_type, balance) VALUES ($1, $2, 'tax', $3) ON CONFLICT DO NOTHING")
+    if sqlx::query("INSERT INTO ledger_reserves (tenant_id, envelope_id, envelope_type, balance) VALUES ($1, $2, 'tax', $3) ON CONFLICT DO NOTHING")
         .bind(&tenant_id)
         .bind(tax_envelope_id)
         .bind(0.0)
         .execute(&mut *tx)
-        .await;
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
-    let _ = sqlx::query("UPDATE ledger_reserves SET balance = balance + $1 WHERE tenant_id = $2 AND envelope_id = $3")
+    if sqlx::query("UPDATE ledger_reserves SET balance = balance + $1 WHERE tenant_id = $2 AND envelope_id = $3")
         .bind(tax_amount)
         .bind(&tenant_id)
         .bind(tax_envelope_id)
         .execute(&mut *tx)
-        .await;
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
-
-    // Notify Finance Agent
-    let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'payment_ledger', 'finance', 'payment_succeeded', $3, 'pending')")
+    if sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'payment_ledger', 'finance', 'payment_succeeded', $3, 'pending')")
         .bind(Uuid::new_v4().to_string())
         .bind(&tenant_id)
         .bind(serde_json::json!({
@@ -254,10 +282,12 @@ async fn stripe_webhook(
             "tax_reserve_deducted": tax_amount
         }))
         .execute(&mut *tx)
-        .await;
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
 
     let _ = tx.commit().await;
-
     StatusCode::OK.into_response()
 }
 
@@ -297,12 +327,25 @@ async fn get_safe_to_spend(
     }
 
     let pool = crate::db::get_pool();
-    let balance: Option<(f64,)> = sqlx::query_as("SELECT balance FROM ledger_accounts WHERE tenant_id = $1 AND account_id = 'default_revenue'")
+
+    // Money In (Sum of CREDIT entries for default_revenue)
+    let credit_balance: Option<(f64,)> = sqlx::query_as("SELECT SUM(amount) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT' AND account_id = 'default_revenue'")
         .bind(&tenant_id)
         .fetch_optional(&pool)
         .await.unwrap_or(None);
 
-    let current_balance = match balance {
+    let money_in = match credit_balance {
+        Some((b,)) => b,
+        None => 0.0
+    };
+
+    // Money Out (Sum of DEBIT entries for default_expense)
+    let debit_balance: Option<(f64,)> = sqlx::query_as("SELECT SUM(amount) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'DEBIT' AND account_id = 'default_expense'")
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await.unwrap_or(None);
+
+    let money_out = match debit_balance {
         Some((b,)) => b,
         None => 0.0
     };
@@ -312,28 +355,147 @@ async fn get_safe_to_spend(
         .fetch_optional(&pool)
         .await.unwrap_or(None);
 
-    let tax_reserve = match tax_balance {
+    let tax_safe = match tax_balance {
         Some((b,)) => b,
         None => 0.0
     };
-
-    let liability_balance: Option<(f64,)> = sqlx::query_as("SELECT SUM(balance) FROM ledger_reserves WHERE tenant_id = $1 AND envelope_type = 'liability'")
-        .bind(&tenant_id)
-        .fetch_optional(&pool)
-        .await.unwrap_or(None);
-
-    let upcoming_liabilities = match liability_balance {
-        Some((b,)) => b,
-        None => 0.0
-    };
-
-    let safe_to_spend = current_balance - tax_reserve - upcoming_liabilities;
 
     (StatusCode::OK, Json(SafeToSpendResponse {
-        current_balance,
-        tax_reserve,
-        upcoming_liabilities,
-        safe_to_spend,
+        money_in,
+        money_out,
+        tax_safe,
+    })).into_response()
+}
+
+#[derive(Serialize)]
+pub struct ReceiptProcessedResponse {
+    pub vendor: String,
+    pub amount: f64,
+    pub category: String,
+}
+
+async fn process_receipt(
+    State(_state): State<AppState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<SnapReceiptRequest>,
+) -> impl IntoResponse {
+    let tenant_id = auth_info.org_id;
+    if tenant_id.is_empty() {
+        return (StatusCode::UNAUTHORIZED, "Missing tenant ID").into_response();
+    }
+
+    let pool = crate::db::get_pool();
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    };
+
+    let tx_id = Uuid::new_v4().to_string();
+    let currency = "USD".to_string();
+
+    // In a real app this would call the LLM agent via department orchestration.
+    // For this implementation, we take the provided test data to avoid hardcoded DB values.
+    let amount = payload.amount;
+    let vendor = payload.vendor;
+
+    // Simple mock logic for categorization instead of LLM
+    let category = if vendor.to_lowercase().contains("depot") || vendor.to_lowercase().contains("hardware") {
+        "Supplies".to_string()
+    } else {
+        "General Expense".to_string()
+    };
+
+    if sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
+        .bind(&tenant_id)
+        .bind(&tx_id)
+        .bind(amount)
+        .bind(&currency)
+        .execute(&mut *tx)
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    // ensure expense account exists for tenant
+    let expense_account_id = "default_expense";
+    if sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+        .bind(&tenant_id)
+        .bind(expense_account_id)
+        .bind(&currency)
+        .bind(0.0)
+        .execute(&mut *tx)
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    let entry_id_debit = Uuid::new_v4().to_string();
+    if sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'DEBIT', $5)")
+        .bind(&tenant_id)
+        .bind(&entry_id_debit)
+        .bind(&tx_id)
+        .bind(expense_account_id)
+        .bind(amount)
+        .execute(&mut *tx)
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    if sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
+        .bind(amount)
+        .bind(&tenant_id)
+        .bind(expense_account_id)
+        .execute(&mut *tx)
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    // To balance double-entry ledger, deduct from cash account (CREDIT cash)
+    let cash_account_id = "default_cash";
+    if sqlx::query("INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+        .bind(&tenant_id)
+        .bind(cash_account_id)
+        .bind(&currency)
+        .bind(0.0)
+        .execute(&mut *tx)
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    let entry_id_credit = Uuid::new_v4().to_string();
+    if sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
+        .bind(&tenant_id)
+        .bind(&entry_id_credit)
+        .bind(&tx_id)
+        .bind(cash_account_id)
+        .bind(amount) // Positive value, direction is CREDIT
+        .execute(&mut *tx)
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    if sqlx::query("UPDATE ledger_accounts SET balance = balance - $1 WHERE tenant_id = $2 AND account_id = $3")
+        .bind(amount)
+        .bind(&tenant_id)
+        .bind(cash_account_id)
+        .execute(&mut *tx)
+        .await.is_err() {
+        let _ = tx.rollback().await;
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    if tx.commit().await.is_err() {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    (StatusCode::OK, Json(ReceiptProcessedResponse {
+        vendor,
+        amount,
+        category,
     })).into_response()
 }
 
