@@ -435,7 +435,7 @@ pub struct DepositRequirement {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow, serde::Serialize, serde::Deserialize)]
 pub struct SocialPostProposal {
     pub id: String,
     pub tenant_id: String,

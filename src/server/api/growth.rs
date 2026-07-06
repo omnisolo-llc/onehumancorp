@@ -356,6 +356,8 @@ where
         .route("/milestone", get(handle_get_milestone))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/promoter/generate", post(handle_promoter_generate))
+        .route("/promoter/proposals", get(handle_promoter_proposals_list))
+        .route("/promoter/proposals/:id", axum::routing::patch(handle_promoter_proposals_update))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
         .route("/affiliate/stats", get(handle_affiliate_stats))
@@ -835,6 +837,52 @@ async fn handle_generate_review(
     Json(GenerateReviewResponse {
         message: generated,
     })
+}
+
+#[derive(serde::Deserialize)]
+pub struct UpdateProposalRequest {
+    pub status: String,
+}
+
+async fn handle_promoter_proposals_list(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<Vec<crate::domain::repository::models::SocialPostProposal>>, StatusCode> {
+    let tenant_id = &auth_info.org_id;
+
+    let proposals = sqlx::query_as::<_, crate::domain::repository::models::SocialPostProposal>(
+        "SELECT * FROM social_post_proposals WHERE tenant_id = $1 ORDER BY created_at_unix DESC"
+    )
+    .bind(tenant_id)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch proposals: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(proposals))
+}
+
+async fn handle_promoter_proposals_update(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    Json(req): Json<UpdateProposalRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let tenant_id = &auth_info.org_id;
+    let repo = crate::domain::repository::social_post_proposal_repo::SocialPostProposalRepository::new(state.pool.clone());
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+
+    repo.update_status(tenant_id, &id, &req.status, now).await.map_err(|e| {
+        tracing::error!("Failed to update proposal status: {:?}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "message": "Proposal status updated"
+    })))
 }
 
 async fn handle_promoter_generate(
@@ -3554,6 +3602,39 @@ mod tests {
         // without API keys/mock adapters and thus variants will be empty causing the method to return Err.
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[tokio::test]
+    async fn test_promoter_proposals_list() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+
+        let auth = ::server_auth::orchestration::AuthInfo { org_id: "test-tenant-123".to_string(), agent_id: "test-agent".to_string(), spiffe_id: "spiffe://local".to_string() };
+        let res = handle_promoter_proposals_list(Extension(state.clone()), axum::extract::Extension(auth)).await;
+
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_promoter_proposals_update() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
+
+        let auth = ::server_auth::orchestration::AuthInfo { org_id: "test-tenant-123".to_string(), agent_id: "test-agent".to_string(), spiffe_id: "spiffe://local".to_string() };
+        let req = UpdateProposalRequest { status: "approved".to_string() };
+        let res = handle_promoter_proposals_update(Extension(state.clone()), axum::extract::Extension(auth), axum::extract::Path("proposal-1".to_string()), Json(req)).await;
+
+        assert!(res.is_ok());
     }
 
     #[tokio::test]

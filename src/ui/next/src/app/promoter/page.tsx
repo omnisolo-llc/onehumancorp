@@ -17,10 +17,38 @@ interface SocialPostProposal {
 export default function PromoterPage() {
   const [proposals, setProposals] = useState<SocialPostProposal[]>([]);
   const [selectedProposal, setSelectedProposal] = useState<SocialPostProposal | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This is mocked for now
+    fetch('/api/v1/growth/promoter/proposals')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          // Show pending proposals or whatever status we care about
+          setProposals(data.filter((p: SocialPostProposal) => p.status === 'pending' || p.status === 'generated'));
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
   }, []);
+
+  const updateProposalStatus = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`/api/v1/growth/promoter/proposals/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        setProposals(prev => prev.filter(p => p.id !== id));
+        setSelectedProposal(null);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   if (selectedProposal) {
     return (
@@ -39,9 +67,9 @@ export default function PromoterPage() {
                 </div>
             </details>
             <div className="flex gap-2">
-                <button className="flex-1 bg-blue-500 text-white py-2 rounded">Approve & Publish</button>
+                <button onClick={() => updateProposalStatus(selectedProposal.id, 'approved')} className="flex-1 bg-blue-500 text-white py-2 rounded">Approve & Publish</button>
                 <button className="flex-1 bg-gray-200 text-gray-800 py-2 rounded">Edit</button>
-                <button className="flex-1 bg-red-100 text-red-600 py-2 rounded">Discard</button>
+                <button onClick={() => updateProposalStatus(selectedProposal.id, 'discarded')} className="flex-1 bg-red-100 text-red-600 py-2 rounded">Discard</button>
             </div>
         </div>
       </div>
@@ -52,7 +80,9 @@ export default function PromoterPage() {
     <div className="p-4 max-w-sm mx-auto">
       <h1 className="text-2xl font-bold mb-4">The Promoter</h1>
       <div className="space-y-4">
-        {proposals.length === 0 ? (
+        {loading ? (
+          <p className="text-gray-500 text-sm">Loading proposals...</p>
+        ) : proposals.length === 0 ? (
           <p className="text-gray-500 text-sm">No new proposals generated.</p>
         ) : (
           proposals.map((p) => (
