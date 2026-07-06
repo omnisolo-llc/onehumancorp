@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use futures::future::join_all;
-use crate::llm::LlmClient;
-use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use crate::agent::{Agent, AgentRunConfig};
+use crate::llm::LlmClient;
+use futures::future::join_all;
+use ohc_builtin_agent_core::types::{ChatRequest, Message};
+use std::sync::Arc;
 
 /// DeerFlow Unique Harness Innovations: Sub-agent orchestration:
 /// Lead agent decomposes tasks, spawns parallel sub-agents, synthesizes results.
@@ -59,7 +59,11 @@ impl DeerFlowOrchestrator {
         let sub_tasks: Vec<String> = match serde_json::from_str(clean_json) {
             Ok(tasks) => tasks,
             Err(e) => {
-                return Err(format!("Failed to parse sub-tasks from lead agent output: {}. Output was: {}", e, sub_tasks_json).into());
+                return Err(format!(
+                    "Failed to parse sub-tasks from lead agent output: {}. Output was: {}",
+                    e, sub_tasks_json
+                )
+                .into());
             }
         };
 
@@ -76,7 +80,9 @@ impl DeerFlowOrchestrator {
 
             let fut = async move {
                 let mut on_event = |_| {};
-                sub_agent.run(&config_clone, &sub_task_clone, &mut on_event).await
+                sub_agent
+                    .run(&config_clone, &sub_task_clone, &mut on_event)
+                    .await
             };
             futures.push(fut);
         }
@@ -89,10 +95,14 @@ impl DeerFlowOrchestrator {
             let sub_task_desc = &sub_tasks[i];
             match res {
                 Ok(output) => {
-                    combined_results.push_str(&format!("Sub-task '{}' result:\n{}\n\n", sub_task_desc, output));
+                    combined_results.push_str(&format!(
+                        "Sub-task '{}' result:\n{}\n\n",
+                        sub_task_desc, output
+                    ));
                 }
                 Err(e) => {
-                    combined_results.push_str(&format!("Sub-task '{}' failed:\n{}\n\n", sub_task_desc, e));
+                    combined_results
+                        .push_str(&format!("Sub-task '{}' failed:\n{}\n\n", sub_task_desc, e));
                 }
             }
         }
@@ -107,7 +117,9 @@ impl DeerFlowOrchestrator {
 
         let synthesize_req = ChatRequest {
             model: "default".to_string(),
-            system: "You are a lead agent that synthesizes results from sub-agents into a final answer.".to_string(),
+            system:
+                "You are a lead agent that synthesizes results from sub-agents into a final answer."
+                    .to_string(),
             messages: vec![Message::user(synthesize_prompt)],
             tools: vec![],
             max_tokens: 2000,
@@ -131,7 +143,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlm {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             let content = if !resps.is_empty() {
                 resps.remove(0)
@@ -170,8 +185,14 @@ mod tests {
         let orchestrator = DeerFlowOrchestrator::new(lead_llm, factory);
         let config = AgentRunConfig::default();
 
-        let final_result = orchestrator.execute_task("Do complex thing", &config).await.unwrap();
+        let final_result = orchestrator
+            .execute_task("Do complex thing", &config)
+            .await
+            .unwrap();
 
-        assert_eq!(final_result, "Final synthesized answer based on sub-task results");
+        assert_eq!(
+            final_result,
+            "Final synthesized answer based on sub-task results"
+        );
     }
 }
