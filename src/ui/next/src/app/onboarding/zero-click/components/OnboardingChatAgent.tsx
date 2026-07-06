@@ -1,26 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-interface ChatMessage {
+type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
-}
+};
 
-interface IntakeData {
+type IntakeProduct = {
+  name: string;
+  price: string;
+  description?: string;
+  variants?: any[];
+};
+
+type IntakeData = {
+  location?: string;
+  target_audience?: string;
   business_name: string;
   business_type: string;
   categories: string[];
-  location?: string;
-  target_audience?: string;
-  initial_products: { name: string; price: string }[];
-}
+  initial_products: IntakeProduct[];
+  initial_tasks?: string[];
+  sample_customer_name?: string;
+  sample_customer_email?: string;
+  deposit_percentage?: number;
+  lead_time_days?: number;
+};
 
-interface OnboardingChatAgentProps {
-  onComplete: (data: any) => void;
-}
-
-export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
+export const OnboardingChatAgent = ({ onComplete }: { onComplete: (data: any) => void }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: "Hi there! I'm your OHC setup assistant. What kind of business do you want to build or manage today?" }
+    { role: 'assistant', content: "Hi! I'm your OHC setup agent. In one sentence, tell me about the business you want to build." }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +49,6 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     scrollToBottom();
   }, [messages, isLoading, isProvisioning]);
 
-
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!input.trim() || isLoading || isProvisioning) return;
@@ -53,97 +60,27 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/v1/onboarding/chat', {
+      const response = await fetch('/api/v1/onboarding/start_zero_click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ prompt: newMessages.filter(m => m.role === 'user').map(m => m.content).join(" ") }),
       });
 
       if (!response.ok) throw new Error('Failed to communicate with setup agent');
 
       const data = await response.json();
 
-      if (data.is_complete) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-        setIsLoading(false);
-        setIsProvisioning(true);
-        // Map the intake data to the expected format and provision
-        if (data.intake_data) {
-           await handleProvisioning(data.intake_data, newMessages.filter(m => m.role === 'user').map(m => m.content).join(" "));
-        } else {
-           // Fallback if no intake data returned
-           setTimeout(() => {
-             setIsProvisioning(false);
-             onComplete({});
-           }, 1500);
-        }
-      } else {
-        setIsLoading(false);
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-      }
+      setIsLoading(false);
+      setIsProvisioning(true);
+
+      setTimeout(() => {
+        setIsProvisioning(false);
+        onComplete(data);
+      }, 1500);
     } catch (error) {
       console.error("Provisioning error:", error);
       setIsLoading(false);
       setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I ran into an issue processing that. Please try again." }]);
-    }
-  };
-
-  const handleProvisioning = async (intakeData: IntakeData, fullPrompt: string) => {
-
-    try {
-      const firstProduct = intakeData.initial_products?.[0] || { name: 'Standard Service', price: '10.00' };
-
-      const payload = {
-        business_type: intakeData.business_type || 'Service Business',
-        company_name: intakeData.business_name || 'My New Business',
-        company_description: fullPrompt,
-        selling_categories: intakeData.categories || [],
-        payment_pref: 'online',
-        admin_email: `owner_${Math.floor(Math.random() * 10000)}@example.com`,
-        admin_name: 'Owner',
-        admin_password: 'Password123!',
-        website_template: 'Modern',
-        first_product_name: firstProduct.name,
-        first_product_price: firstProduct.price,
-        domain_choice: 'subdomain',
-        price_type: 'fixed',
-        location: intakeData.location || 'Online',
-        target_audience: intakeData.target_audience || 'Everyone',
-        initial_products: intakeData.initial_products.map((p: any) => ({
-          name: p.name,
-          price: p.price,
-          description: p.description || '',
-          variants: p.variants || []
-        })),
-        ai_agents: [],
-        ai_auto_respond: false
-      };
-
-      const res = await fetch('/api/v1/onboarding/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) throw new Error('Provisioning failed');
-
-      const provisionedData = await res.json();
-
-      // Complete immediately in tests to avoid timeout issues
-      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') {
-         setIsProvisioning(false);
-         onComplete(provisionedData);
-      } else {
-        setTimeout(() => {
-          setIsProvisioning(false);
-          onComplete(provisionedData);
-        }, 1500);
-      }
-
-    } catch (error) {
-      console.error("Provisioning error:", error);
-      setIsProvisioning(false);
-      setMessages(prev => [...prev, { role: 'assistant', content: "I have the details, but failed to create the account. Please try again later." }]);
     }
   };
 
@@ -250,4 +187,4 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
       </div>
     </div>
   );
-}
+};

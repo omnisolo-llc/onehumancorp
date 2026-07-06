@@ -24,6 +24,10 @@ const nextConfig = {
         destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/v1/dashboard/:path*` : 'http://localhost:8080/api/v1/dashboard/:path*',
       },
       {
+        source: '/api/v1/onboarding/:path*',
+        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/v1/onboarding/:path*` : 'http://localhost:8080/api/v1/onboarding/:path*',
+      },
+      {
         source: '/api/billing/:path*',
         destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/billing/:path*` : 'http://localhost:8080/api/billing/:path*',
       },
