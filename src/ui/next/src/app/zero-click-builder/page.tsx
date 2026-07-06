@@ -112,7 +112,7 @@ export default function ZeroClickBuilderPage() {
               </p>
             </div>
 
-            <div className="w-full aspect-[9/16] bg-gray-100 dark:bg-gray-900 rounded-[12px] overflow-hidden border border-gray-200 dark:border-gray-800 shadow-inner relative">
+            <div className="w-full aspect-[9/16] bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-inner relative">
                 <div className="absolute inset-0 flex items-center justify-center text-gray-400">Loading Preview...</div>
                 <iframe
                     title="Live Storefront Preview"

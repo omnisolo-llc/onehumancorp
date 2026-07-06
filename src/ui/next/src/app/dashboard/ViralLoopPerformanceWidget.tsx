@@ -46,19 +46,19 @@ export function ViralLoopPerformanceWidget() {
       </div>
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-[12px] shadow-sm hover:shadow-md transition-shadow">
+          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="text-sm font-medium mb-2 text-indigo-800 dark:text-indigo-300">Invites Sent</div>
             <div className="text-3xl font-bold font-outfit text-indigo-900 dark:text-indigo-100">{invitesSent}</div>
           </div>
-          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-[12px] shadow-sm hover:shadow-md transition-shadow">
+          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="text-sm font-medium mb-2 text-indigo-800 dark:text-indigo-300">Active Referrals</div>
             <div className="text-3xl font-bold font-outfit text-indigo-900 dark:text-indigo-100">{activeReferrals}</div>
           </div>
-          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-[12px] shadow-sm hover:shadow-md transition-shadow">
+          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="text-sm font-medium mb-2 text-indigo-800 dark:text-indigo-300">Revenue from Referrals</div>
             <div className="text-3xl font-bold font-outfit text-indigo-900 dark:text-indigo-100">${revenue.toFixed(2)}</div>
           </div>
-          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-[12px] shadow-sm hover:shadow-md transition-shadow">
+          <div className="app-card bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%] border border-white/30 dark:border-white/5 flex flex-col justify-between p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="text-sm font-medium mb-2 text-indigo-800 dark:text-indigo-300">Pending Rewards</div>
             <div className="text-3xl font-bold font-outfit text-indigo-900 dark:text-indigo-100">${pendingRewards.toFixed(2)}</div>
           </div>

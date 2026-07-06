@@ -171,7 +171,7 @@ export function WorkTriageFeed({
             </div>
 
             {item.action_type && (
-              <div className="p-4 rounded-[12px] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 flex flex-col gap-2 border border-[#0066FF]/20 dark:border-[#0066FF]/30">
+              <div className="p-4 rounded-xl bg-[#0066FF]/5 dark:bg-[#0066FF]/10 flex flex-col gap-2 border border-[#0066FF]/20 dark:border-[#0066FF]/30">
                 <div className="text-xs uppercase tracking-wider font-semibold text-[#0066FF] dark:text-[#3388FF]">
                   Proposed Action: {item.action_type}
                 </div>

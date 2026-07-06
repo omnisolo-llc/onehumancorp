@@ -386,7 +386,7 @@ export default function StorefrontBuilderPage() {
               </div>
               <div className="mt-auto relative">
                   <textarea
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-[12px] p-4 pr-12 text-sm focus:ring-2 focus:ring-[#0066FF] outline-none resize-none"
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 pr-12 text-sm focus:ring-2 focus:ring-[#0066FF] outline-none resize-none"
                       placeholder="e.g. Add a new product..."
                       rows={3}
                       value={chatMessage}

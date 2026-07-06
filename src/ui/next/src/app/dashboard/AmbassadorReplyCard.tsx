@@ -16,7 +16,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({ approv
       <div className="text-gray-900 dark:text-gray-100 font-bold mb-2">1 New Message from {(approval.payload?.source || (approval.proposed_action || approval.context_payload)?.source || (approval.proposed_action || approval.context_payload)?.original_payload?.source || approval.payload?.original_payload?.source || "unknown").replace("_", " ")}</div>
 
       {(pastOrders || contextUsed) && (
-        <div className="bg-blue-50/50 dark:bg-blue-900/20 rounded-[12px] p-3 border border-blue-100 dark:border-blue-800/30">
+        <div className="bg-blue-50/50 dark:bg-blue-900/20 rounded-xl p-3 border border-blue-100 dark:border-blue-800/30">
           <div className="flex items-center gap-2 mb-2">
              <svg className="w-4 h-4 text-[#0066FF] dark:text-[#3388FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

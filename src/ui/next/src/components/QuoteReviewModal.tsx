@@ -102,7 +102,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
                         type="number"
                         value={item.quantity}
                         onChange={(e) => handleUpdateItem(idx, 'quantity', parseInt(e.target.value) || 1)}
-                        className="w-16 p-2 text-sm bg-gray-100 dark:bg-white/5 rounded-[12px] text-center outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-16 p-2 text-sm bg-gray-100 dark:bg-white/5 rounded-xl text-center outline-none focus:ring-2 focus:ring-[#0066FF]"
                       />
                     </div>
                     <div className="flex-1 flex items-center gap-2">
@@ -112,7 +112,7 @@ export function QuoteReviewModal({ isOpen, onClose, onApprove, initialPayload }:
                         step="0.01"
                         value={(item.unit_price_cents / 100).toFixed(2)}
                         onChange={(e) => handleUpdateItem(idx, 'unit_price_cents', Math.round(parseFloat(e.target.value || '0') * 100))}
-                        className="w-full p-2 text-sm bg-gray-100 dark:bg-white/5 rounded-[12px] text-right outline-none focus:ring-2 focus:ring-[#0066FF]"
+                        className="w-full p-2 text-sm bg-gray-100 dark:bg-white/5 rounded-xl text-right outline-none focus:ring-2 focus:ring-[#0066FF]"
                       />
                     </div>
                   </div>
