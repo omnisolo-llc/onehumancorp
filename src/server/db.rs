@@ -534,7 +534,7 @@ impl DB {
                     Ok(p) => break p,
                     Err(e) => {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             return Err(e.into());
                         }
                         tracing::debug!(
@@ -787,7 +787,7 @@ impl DB {
 
                     if is_sqlite_lock || is_postgres_lock || is_connection_err {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             let _ = ::server_telemetry::record_sqlite_retry_exhausted(
                                 &self.pool, operation,
                             )

@@ -91,7 +91,7 @@ impl SipDB {
                         return Err(err);
                     }
                     attempt += 1;
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         return Err(err);
                     }
                     tokio::time::sleep(backoff).await;
@@ -99,7 +99,7 @@ impl SipDB {
                 }
                 Err(_) => {
                     attempt += 1;
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "handoff_mission timed out")));
                     }
                     tokio::time::sleep(backoff).await;
@@ -164,7 +164,7 @@ impl SipDB {
 
                     if retry {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;
@@ -265,7 +265,7 @@ impl SipDB {
 
                     if retry {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;
@@ -278,7 +278,7 @@ impl SipDB {
                 }
                 Err(timeout_err) => {
                     attempt += 1;
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
                     }
                     tokio::time::sleep(backoff).await;
@@ -318,7 +318,7 @@ impl SipDB {
 
                     if retry {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;
@@ -459,7 +459,7 @@ impl SipDB {
                     let err_str = err.to_string().to_lowercase();
                     if is_retryable_sqlx_error(&err) || err_str.contains("connection refused") || err_str.contains("connection reset") {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
                                 let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, "upsert_mission").await;
                             }
@@ -481,7 +481,7 @@ impl SipDB {
                         crate::telemetry::record_postgres_lock_contention("upsert_mission");
                     }
                     attempt += 1;
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
                     }
                     tokio::time::sleep(backoff).await;
