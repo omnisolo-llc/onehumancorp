@@ -18,6 +18,9 @@ export function FloatingActionButton() {
           <Link href="/services/new" className="px-4 py-2 glassmorphism text-gray-900 dark:text-gray-100 rounded-full shadow-lg font-semibold whitespace-nowrap">
             📅 New Service
           </Link>
+          <Link href="/dashboard/receipt" className="px-4 py-2 glassmorphism text-gray-900 dark:text-gray-100 rounded-full shadow-lg font-semibold whitespace-nowrap" data-testid="snap-receipt-fab">
+            📸 Snap Receipt
+          </Link>
           <Link href="/pos/terminal" className="px-4 py-2 bg-[#0066FF] text-white rounded-full shadow-lg font-bold border border-blue-400 hover:bg-blue-700 whitespace-nowrap">
             📱 Quick Charge (POS)
           </Link>
