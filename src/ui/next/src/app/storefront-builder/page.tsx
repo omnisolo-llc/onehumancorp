@@ -55,7 +55,11 @@ export default function StorefrontBuilderPage() {
     // Only save to server if there's actual state to save that deviates from idle
     if (status !== 'idle' || bio !== '' || blocks.length > 0) {
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-      const userId = localStorage.getItem('user_id') || 'test-user';
+            let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
+      if (!userId && typeof localStorage !== 'undefined') {
+        userId = crypto.randomUUID();
+        localStorage.setItem('user_id', userId);
+      }
 
       const payload = {
         builderState: { bio, blocks, status }
@@ -87,7 +91,11 @@ export default function StorefrontBuilderPage() {
   // Read state from server on mount
   useEffect(() => {
     const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-    const userId = localStorage.getItem('user_id') || 'test-user';
+          let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
+      if (!userId && typeof localStorage !== 'undefined') {
+        userId = crypto.randomUUID();
+        localStorage.setItem('user_id', userId);
+      }
     fetch('/api/onboarding/state', {
       headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
     })

@@ -1336,7 +1336,7 @@ impl HubService for MyHubService {
             0.0
         };
 
-        let storage_cost_cents = crate::pricing::calculator::calculate_storage_cost_cents(storage_bytes, &crate::pricing::calculator::CostConfig { cost_per_gb_month: auditor.get_cost_per_gb_month(), ..Default::default() });
+        let storage_cost_cents: i64 = trend.iter().map(|d| d.storage_cost).sum();
         let storage_cost_f64 = storage_cost_cents as f64 / 100.0;
 
         let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
@@ -5258,6 +5258,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "event_source": row.get::<String, _>("event_source"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
                     })
                 }).collect::<Vec<_>>())
             } else {
@@ -5297,6 +5298,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         "id": row.get::<String, _>("id"),
                         "event_source": row.get::<String, _>("event_source"),
                         "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                     })
                 }).collect::<Vec<_>>())
             } else {

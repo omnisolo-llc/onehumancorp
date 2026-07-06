@@ -1,39 +1,54 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VoiceAssistant } from './VoiceAssistant';
 import { TooltipProvider } from './TooltipRegistry';
 import '@testing-library/jest-dom';
 
-// Mock window.MediaRecorder
-const mockMediaRecorderInstance = {
-  start: vi.fn(),
-  stop: vi.fn(),
-  ondataavailable: null,
-  onstop: null,
-  stream: {
-    getTracks: () => [{ stop: vi.fn() }]
+const mockStart = vi.fn();
+const mockStop = vi.fn();
+const mockGetTracks = vi.fn().mockReturnValue([{ stop: vi.fn() }]);
+
+class MockMediaRecorder {
+  start = mockStart;
+  stop = mockStop;
+  ondataavailable: any = null;
+  onstop: any = null;
+  stream = { getTracks: mockGetTracks };
+  constructor(stream: any) {
+    this.stream = stream;
   }
-};
-
-const MockMediaRecorder = vi.fn().mockImplementation(function() { return mockMediaRecorderInstance; });
-(global as any).MediaRecorder = MockMediaRecorder;
-
-global.navigator.mediaDevices = {
-  getUserMedia: vi.fn().mockResolvedValue(mockMediaRecorderInstance.stream)
-} as any;
-
-global.fetch = vi.fn().mockImplementation(() =>
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve("")
-  })
-);
+}
 
 describe('VoiceAssistant', () => {
+  let originalMediaRecorder: any;
+  let originalMediaDevices: any;
+  let originalFetch: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    originalMediaRecorder = (global as any).MediaRecorder;
+    (global as any).MediaRecorder = MockMediaRecorder;
+
+    originalMediaDevices = global.navigator.mediaDevices;
+    global.navigator.mediaDevices = {
+      getUserMedia: vi.fn().mockResolvedValue({ getTracks: mockGetTracks })
+    } as any;
+
+    originalFetch = global.fetch;
+    global.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+        text: () => Promise.resolve("")
+      })
+    );
+  });
+
+  afterEach(() => {
+    (global as any).MediaRecorder = originalMediaRecorder;
+    global.navigator.mediaDevices = originalMediaDevices;
+    global.fetch = originalFetch;
   });
 
   const renderWithProvider = (ui: React.ReactElement) => {
@@ -58,11 +73,7 @@ describe('VoiceAssistant', () => {
 
     await waitFor(() => {
       expect(global.navigator.mediaDevices.getUserMedia).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
-        expect(MockMediaRecorder).toHaveBeenCalled();
-        expect(mockMediaRecorderInstance.start).toHaveBeenCalled();
+      expect(mockStart).toHaveBeenCalled();
     });
   });
 
@@ -73,13 +84,13 @@ describe('VoiceAssistant', () => {
     fireEvent.mouseDown(button);
 
     await waitFor(() => {
-      expect(mockMediaRecorderInstance.start).toHaveBeenCalled();
+      expect(mockStart).toHaveBeenCalled();
     });
 
     fireEvent.mouseUp(button);
 
     await waitFor(() => {
-        expect(mockMediaRecorderInstance.stop).toHaveBeenCalled();
+        expect(mockStop).toHaveBeenCalled();
     });
   });
 });

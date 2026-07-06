@@ -91,7 +91,7 @@ impl SipDB {
                         return Err(err);
                     }
                     attempt += 1;
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         return Err(err);
                     }
                     tokio::time::sleep(backoff).await;
@@ -99,7 +99,7 @@ impl SipDB {
                 }
                 Err(_) => {
                     attempt += 1;
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "handoff_mission timed out")));
                     }
                     tokio::time::sleep(backoff).await;
@@ -129,9 +129,9 @@ impl SipDB {
 
                 let is_standalone = crate::is_standalone_runtime();
                 let query_str = if is_standalone {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 } else {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload::text, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload::text, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 };
                 sqlx::query(query_str)
                     .bind(threshold_time.naive_utc())
@@ -139,7 +139,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("DELETE FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("DELETE FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(threshold_time.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -164,7 +164,7 @@ impl SipDB {
 
                     if retry {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;
@@ -199,9 +199,9 @@ impl SipDB {
 
                 let is_standalone = crate::is_standalone_runtime();
                 let query_str = if is_standalone {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stuck', 'agent_missions', payload, '[cleanup] Mission became stuck' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stuck', 'agent_missions', payload, '[cleanup] Mission became stuck' FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 } else {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stuck', 'agent_missions', payload, '[cleanup] Mission became stuck' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stuck', 'agent_missions', payload, '[cleanup] Mission became stuck' FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 };
                 sqlx::query(query_str)
                     .bind(stuck_threshold.naive_utc())
@@ -209,7 +209,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -265,7 +265,7 @@ impl SipDB {
 
                     if retry {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;
@@ -278,7 +278,7 @@ impl SipDB {
                 }
                 Err(timeout_err) => {
                     attempt += 1;
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
                     }
                     tokio::time::sleep(backoff).await;
@@ -318,7 +318,7 @@ impl SipDB {
 
                     if retry {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;
@@ -459,7 +459,7 @@ impl SipDB {
                     let err_str = err.to_string().to_lowercase();
                     if is_retryable_sqlx_error(&err) || err_str.contains("connection refused") || err_str.contains("connection reset") {
                         attempt += 1;
-                        if attempt >= max_attempts {
+                        if attempt > max_attempts {
                             if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
                                 let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, "upsert_mission").await;
                             }
@@ -481,7 +481,7 @@ impl SipDB {
                         crate::telemetry::record_postgres_lock_contention("upsert_mission");
                     }
                     attempt += 1;
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
                     }
                     tokio::time::sleep(backoff).await;

@@ -442,8 +442,8 @@ impl HybridSyncDaemon {
     }
 
     pub async fn prune_stuck_agent_missions(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const SQLITE_WHERE_CLAUSE: &str = "(status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < datetime('now', '-1 hours') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hours')))";
-        const PG_WHERE_CLAUSE: &str = "(status = 'IN_PROGRESS' OR status = 'RUNNING' OR status = 'STUCK' OR status = 'PENDING' OR status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))";
+        const SQLITE_WHERE_CLAUSE: &str = "status IN ('IN_PROGRESS', 'RUNNING', 'STUCK', 'PENDING', 'CLOUD_ESCALATION', 'BURSTING') AND (last_synced_at < datetime('now', '-1 hours') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hours')))";
+        const PG_WHERE_CLAUSE: &str = "status IN ('IN_PROGRESS', 'RUNNING', 'STUCK', 'PENDING', 'CLOUD_ESCALATION', 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))";
 
         let sqlite_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stuck', 'agent_missions', COALESCE(payload, '{{}}'), '[cleanup] Mission became stuck' FROM agent_missions WHERE {}", SQLITE_WHERE_CLAUSE);
         let sqlite_update = format!("UPDATE agent_missions SET status = 'FAILED' WHERE {}", SQLITE_WHERE_CLAUSE);

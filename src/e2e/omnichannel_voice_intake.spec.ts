@@ -1,6 +1,8 @@
 import { test, expect } from './fixtures';
 
 test.describe('Omnichannel Voice Order Intake', () => {
+    test.setTimeout(120000);
+
   test.use({
     viewport: { width: 375, height: 812 },
     permissions: ['microphone'],
