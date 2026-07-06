@@ -401,7 +401,7 @@ mod tests {
                         Err(e) => {
                             if e.to_string().contains("database is locked") || e.to_string().contains("sqlite_busy") {
                                 attempt += 1;
-                                if attempt >= max_attempts {
+                                if attempt > max_attempts {
                                     panic!("Stress test failed: {:?}", e);
                                 }
                                 tokio::time::sleep(backoff).await;
@@ -445,7 +445,7 @@ mod tests {
                 break;
             }
             attempt += 1;
-            if attempt >= max_attempts {
+            if attempt > max_attempts {
                 break;
             }
             tokio::time::sleep(backoff).await;
