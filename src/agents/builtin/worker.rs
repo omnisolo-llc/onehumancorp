@@ -219,6 +219,11 @@ impl TaskWorker {
                     }
                 }
 
+                // ML-Resilience: Resilient to malformed or unexpected LLM responses
+                if let Err(_) = serde_json::from_str::<serde_json::Value>(&last_content) {
+                    tracing::warn!("Agent response was malformed JSON. Treating as string response.");
+                }
+
                 Ok::<String, String>(last_content)
             }).await;
 

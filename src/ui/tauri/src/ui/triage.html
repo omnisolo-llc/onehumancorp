@@ -567,7 +567,15 @@
           renderUI();
         } catch (e) {
           console.error(e);
-          listEl.innerHTML = `<div class="app-empty" style="color:var(--text-danger)">Failed to load items. ${e.message}</div>`;
+          // OHC Glassmorphism: Light/Dark mode glass styling for failure reports
+          const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const bg = isDarkMode ? 'rgba(22, 22, 26, 0.7)' : 'rgba(255, 255, 255, 0.65)';
+          const border = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.4)';
+
+          listEl.innerHTML = `<div class="app-empty" style="background: ${bg}; backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid ${border}; border-radius: 12px; padding: 24px; color:var(--text-danger)">
+              <h3 style="margin-top: 0; font-size: 16px; font-weight: 600;">System Offline or Degraded</h3>
+              <p style="margin: 8px 0 0 0; font-size: 14px;">Failed to load triage items. ${e.message}</p>
+          </div>`;
         }
       }
 
