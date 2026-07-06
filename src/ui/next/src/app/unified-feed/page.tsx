@@ -34,9 +34,25 @@ interface FeedItem {
 
 export default function UnifiedFeed() {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+
+  const getSourceStyle = (source: string) => {
+    const s = source.toLowerCase();
+    if (s.includes('operation') || s.includes('ops')) {
+      return { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400', icon: '🔧' };
+    } else if (s.includes('market') || s.includes('promoter')) {
+      return { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-400', icon: '📈' };
+    } else if (s.includes('customer') || s.includes('instagram dm') || s.includes('chat')) {
+      return { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', icon: '💬' };
+    } else if (s.includes('payment') || s.includes('stripe') || s.includes('billing')) {
+      return { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400', icon: '💰' };
+    }
+    return { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', icon: '🔔' };
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraftText, setEditDraftText] = useState<string>('');
 
   const fetchFeed = async () => {
     try {
@@ -96,13 +112,17 @@ export default function UnifiedFeed() {
     fetchFeed();
   }, []);
 
-  const handleAction = async (itemId: string, action: string) => {
+  const handleAction = async (itemId: string, action: string, editedPayload?: string) => {
     setProcessingId(itemId);
     try {
+      const payload: any = { state: action };
+      if (editedPayload) {
+        payload.edited_payload = editedPayload;
+      }
       const res = await fetch(`/api/agent-feed/${itemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: action })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         setFeedItems(prev => prev.filter(i => i.workItem.id !== itemId));
@@ -117,9 +137,15 @@ export default function UnifiedFeed() {
   const handleApprove = (itemId: string) => handleAction(itemId, 'APPROVED');
   const handleReject = (itemId: string) => handleAction(itemId, 'DISMISSED');
 
-  const handleEdit = (itemId: string) => {
-    // Basic stub for edit flow
-    alert('Edit draft triggered for ' + itemId);
+  const handleEdit = (item: FeedItem) => {
+    setEditingId(item.workItem.id);
+    setEditDraftText(item.draft?.response || '');
+  };
+
+  const handleSaveEditAndApprove = (itemId: string) => {
+    handleAction(itemId, 'APPROVED', editDraftText);
+    setEditingId(null);
+    setEditDraftText('');
   };
 
   if (loading) return <div className="p-4 text-center">Loading feed...</div>;
@@ -145,7 +171,8 @@ export default function UnifiedFeed() {
             <div key={item.workItem.id} className="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300" data-testid="agent-feed-card">
               <div className="p-4 pb-3 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#0066FF]/20 px-2.5 py-1 rounded-full">
+                      <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1 ${getSourceStyle(item.workItem.source).bg} ${getSourceStyle(item.workItem.source).text}`}>
+                        <span>{getSourceStyle(item.workItem.source).icon}</span>
                         {item.workItem.source}
                       </span>
                   </div>
@@ -189,35 +216,68 @@ export default function UnifiedFeed() {
               )}
               {item.draft && item.draft.action_type !== 'subscription_win_back' && (
                 <div className="p-4 pt-3 bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100/50 dark:border-gray-700/50 flex flex-col gap-4">
-                   <div className="w-full text-[13px] leading-relaxed text-gray-700 dark:text-gray-300 italic border-l-2 border-[#0066FF] pl-3 py-1">
-                     "{item.draft.response}"
-                   </div>
-                   <div className="flex gap-2 w-full">
-                     <button
-                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
-                       onClick={() => handleReject(item.workItem.id)}
-                       disabled={processingId === item.workItem.id}
-                       data-testid="unified-feed-reject-btn"
-                     >
-                       Reject
-                     </button>
-                     <button
-                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
-                       onClick={() => handleEdit(item.workItem.id)}
-                       disabled={processingId === item.workItem.id}
-                       data-testid="edit-proposal"
-                     >
-                       Edit
-                     </button>
-                     <button
-                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-[#0066FF] text-white rounded-xl hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all"
-                       onClick={() => handleApprove(item.workItem.id)}
-                       disabled={processingId === item.workItem.id}
-                       data-testid="feed-approve-btn"
-                     >
-                       {processingId === item.workItem.id ? '...' : 'Approve & Send'}
-                     </button>
-                   </div>
+                   {editingId === item.workItem.id ? (
+                     <div className="w-full text-[13px] leading-relaxed">
+                       <textarea
+                         className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/50 resize-y min-h-[100px]"
+                         value={editDraftText}
+                         onChange={(e) => setEditDraftText(e.target.value)}
+                         data-testid="edit-draft-textarea"
+                       />
+                     </div>
+                   ) : (
+                     <div className="w-full text-[13px] leading-relaxed text-gray-700 dark:text-gray-300 italic border-l-2 border-[#0066FF] pl-3 py-1">
+                       "{item.draft.response}"
+                     </div>
+                   )}
+
+                   {editingId === item.workItem.id ? (
+                     <div className="flex gap-2 w-full">
+                       <button
+                         className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
+                         onClick={() => { setEditingId(null); setEditDraftText(''); }}
+                         disabled={processingId === item.workItem.id}
+                         data-testid="cancel-edit-btn"
+                       >
+                         Cancel
+                       </button>
+                       <button
+                         className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-[#0066FF] text-white rounded-xl hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all"
+                         onClick={() => handleSaveEditAndApprove(item.workItem.id)}
+                         disabled={processingId === item.workItem.id}
+                         data-testid="save-edit-approve-btn"
+                       >
+                         {processingId === item.workItem.id ? '...' : 'Save & Approve'}
+                       </button>
+                     </div>
+                   ) : (
+                     <div className="flex gap-2 w-full">
+                       <button
+                         className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
+                         onClick={() => handleReject(item.workItem.id)}
+                         disabled={processingId === item.workItem.id}
+                         data-testid="unified-feed-reject-btn"
+                       >
+                         Reject
+                       </button>
+                       <button
+                         className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
+                         onClick={() => handleEdit(item)}
+                         disabled={processingId === item.workItem.id}
+                         data-testid="edit-proposal"
+                       >
+                         Edit
+                       </button>
+                       <button
+                         className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-[#0066FF] text-white rounded-xl hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all"
+                         onClick={() => handleApprove(item.workItem.id)}
+                         disabled={processingId === item.workItem.id}
+                         data-testid="feed-approve-btn"
+                       >
+                         {processingId === item.workItem.id ? '...' : 'Approve & Send'}
+                       </button>
+                     </div>
+                   )}
                 </div>
               )}
               )}
