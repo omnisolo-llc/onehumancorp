@@ -393,6 +393,47 @@ mod tests {
             PermissionArchitecture::Permissive
         );
     }
+
+    #[test]
+    fn test_format_llm_recoverable_error() {
+        let result = format_llm_recoverable_error("test_tool", "test error message");
+        assert!(result.contains("LLM-Recoverable Tool Error (test_tool): test error message"));
+        assert!(result.contains("SOTA Recovery Protocol:"));
+    }
+
+    #[test]
+    fn test_format_pydantic_error_string() {
+        let msg = format_pydantic_error_string("manual check failed", Some("{\"arg\": 1}"), Some("custom string"));
+        assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+        assert!(msg.contains("manual check failed"));
+        assert!(msg.contains("custom string"));
+
+        let msg_default = format_pydantic_error_string("manual error", None, None);
+        assert!(msg_default.contains("Please strictly follow the tool's JSON schema"));
+    }
+
+    #[test]
+    fn test_human_in_loop_spectrum_display() {
+        assert_eq!(HumanInLoopSpectrum::Autonomous.to_string(), "Autonomous");
+        assert_eq!(HumanInLoopSpectrum::ApprovalOnMutate.to_string(), "ApprovalOnMutate");
+        assert_eq!(HumanInLoopSpectrum::ApprovalOnAll.to_string(), "ApprovalOnAll");
+        assert_eq!(HumanInLoopSpectrum::CollaborativeEdit.to_string(), "CollaborativeEdit");
+        assert_eq!(HumanInLoopSpectrum::Supervisory.to_string(), "Supervisory");
+    }
+
+    #[test]
+    fn test_permission_architecture_display() {
+        assert_eq!(PermissionArchitecture::Permissive.to_string(), "Permissive");
+        assert_eq!(PermissionArchitecture::Restrictive.to_string(), "Restrictive");
+    }
+
+    #[test]
+    fn test_new_llm_recoverable() {
+        let tr = ToolResult::new_llm_recoverable("call_1".to_string(), "my_tool", "my_error");
+        assert_eq!(tr.tool_call_id, "call_1");
+        assert_eq!(tr.content, "");
+        assert!(tr.error.contains("LLM-Recoverable Tool Error (my_tool): my_error"));
+    }
 }
 
 #[cfg(test)]

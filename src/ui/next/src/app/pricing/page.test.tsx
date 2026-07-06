@@ -207,4 +207,278 @@ describe('PricingPage', () => {
       expect(window.location.href).toBe(mockPortalUrl);
     });
   });
+
+  it('renders loading state correctly', async () => {
+    // Keep fetch promise pending to test loading state
+    let resolveFetch;
+    (global.fetch as any).mockImplementation(() => new Promise((resolve) => {
+        resolveFetch = resolve;
+    }));
+
+    render(<PricingPage />);
+
+    // Test that the loading button appears
+    expect(screen.getAllByText('Loading...').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /loading/i }).length).toBe(4);
+
+    resolveFetch({ ok: true, json: async () => ({ current_plan: 'Free' }) });
+  });
+
+  it('handles manage billing portal errors gracefully', async () => {
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Starter' }),
+        };
+      }
+      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+        throw new Error('Network error');
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    let manageButton;
+    await waitFor(() => {
+       manageButton = screen.getAllByText('Manage Plan')[0];
+    });
+
+    await act(async () => {
+       fireEvent.click(manageButton!);
+    });
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith('Failed to initiate billing portal. Please try again.');
+    });
+
+    alertMock.mockRestore();
+    consoleSpy.mockRestore();
+  });
+
+  it('renders business plan upgrade states', async () => {
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Business' }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    let manageButton;
+    await waitFor(() => {
+       manageButton = screen.getAllByText('Manage Plan')[0];
+    });
+
+    // Check we get current plan status for Business
+    expect(screen.getByText('My Plan: Business')).toBeDefined();
+  });
+
+  it('renders business plan handleUpgrade state', async () => {
+    const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Free' }),
+        };
+      }
+      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+        return {
+          ok: true,
+          json: async () => ({ checkout_url: mockCheckoutUrl }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    let upgradeButton;
+    await waitFor(() => {
+       upgradeButton = screen.getByText('Upgrade to Business via Stripe');
+    });
+
+    await act(async () => {
+       fireEvent.click(upgradeButton!);
+    });
+
+    // Wait for the async logic to finish
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tier: 'Business' }),
+      });
+      expect(window.location.href).toBe(mockCheckoutUrl);
+    });
+  });
+
+  it('renders pro plan handleUpgrade state', async () => {
+    const mockCheckoutUrl = 'https://checkout.stripe.com/pay/test_session_123';
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Free' }),
+        };
+      }
+      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+        return {
+          ok: true,
+          json: async () => ({ checkout_url: mockCheckoutUrl }),
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    let upgradeButton;
+    await waitFor(() => {
+       upgradeButton = screen.getByText('Upgrade to Pro via Stripe');
+    });
+
+    await act(async () => {
+       fireEvent.click(upgradeButton!);
+    });
+
+    // Wait for the async logic to finish
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tier: 'Pro' }),
+      });
+      expect(window.location.href).toBe(mockCheckoutUrl);
+    });
+  });
+
+  it('handles plan fetch errors gracefully', async () => {
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+         throw new Error('Network plan error');
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+    });
+
+    consoleSpy.mockRestore();
+  });
+
+  it('handles manage billing portal not ok gracefully', async () => {
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Starter' }),
+        };
+      }
+      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+        return {
+          ok: false,
+          json: async () => ({})
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    let manageButton;
+    await waitFor(() => {
+       manageButton = screen.getAllByText('Manage Plan')[0];
+    });
+
+    await act(async () => {
+       fireEvent.click(manageButton!);
+    });
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith('Failed to initiate billing portal. Please try again.');
+    });
+
+    alertMock.mockRestore();
+    consoleSpy.mockRestore();
+  });
+
+  it('handles upgrade not ok gracefully', async () => {
+    (global.fetch as any).mockImplementation(async (url, options) => {
+      if (url === '/api/billing/my-plan') {
+        return {
+          ok: true,
+          json: async () => ({ current_plan: 'Free' }),
+        };
+      }
+      if (url === '/api/billing/create-checkout-session' && options?.method === 'POST') {
+        return {
+          ok: false,
+          json: async () => ({})
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await act(async () => {
+      render(<PricingPage />);
+    });
+
+    let upgradeButton;
+    await waitFor(() => {
+       upgradeButton = screen.getByText('Upgrade to Pro via Stripe');
+    });
+
+    await act(async () => {
+       fireEvent.click(upgradeButton!);
+    });
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+      expect(alertMock).toHaveBeenCalledWith('Failed to initiate upgrade. Please try again.');
+    });
+
+    alertMock.mockRestore();
+    consoleSpy.mockRestore();
+  });
 });

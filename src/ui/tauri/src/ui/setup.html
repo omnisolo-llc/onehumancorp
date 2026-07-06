@@ -60,6 +60,7 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
       }
 
@@ -107,7 +108,7 @@
       textarea:focus,
       select:focus {
         outline: none;
-        border-color: #0071e3;
+        border-color: #0071E3;
         background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
@@ -146,7 +147,7 @@
           border-radius: 8px !important;
         }
       }
-      button {
+      button, .btn-primary {
         min-width: 44px;
         background-color: #0066FF;
         color: white;
@@ -161,10 +162,10 @@
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
       }
-      button:hover {
+      button:hover, .btn-primary:hover {
         background-color: #0052cc;
       }
-      button:active {
+      button:active, .btn-primary:active {
         transform: scale(0.98);
       }
 
@@ -320,6 +321,7 @@
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         .context-card,
         .toggle-row {
@@ -370,7 +372,7 @@
         input:focus,
         textarea:focus,
         select:focus {
-          border-color: #0071e3;
+          border-color: #0071E3;
           background: rgba(22, 22, 26, 0.7);
         }
       }
@@ -449,9 +451,11 @@
         animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .chat-message.assistant {
+        border-radius: 16px 16px 16px 0;
         align-self: flex-start;
       }
       .chat-message.user {
+        border-radius: 16px 16px 0 16px;
         align-self: flex-end;
       }
       .chat-bubble {
@@ -517,7 +521,7 @@
 
       .step-indicator.active {
         background: #0066FF;
-        border-color: #0071e3;
+        border-color: #0071E3;
         transform: scale(1.3);
         box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
       }
@@ -605,6 +609,7 @@
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         .context-card,
         .toggle-row {
@@ -695,7 +700,7 @@
       select:focus,
       textarea:focus {
         outline: none;
-        border-color: #0071e3;
+        border-color: #0071E3;
         background: rgba(255, 255, 255, 0.65);
         box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
       }
@@ -727,7 +732,7 @@
         transform: translateY(-2px);
       }
       .context-card.selected {
-        border-color: #0071e3;
+        border-color: #0071E3;
         background: rgba(0, 102, 255, 0.1);
         box-shadow:
           0 0 0 1px #0066FF,
@@ -943,6 +948,7 @@
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         .context-card,
         .toggle-row {
@@ -976,7 +982,7 @@
         input:focus,
         select:focus,
         textarea:focus {
-          border-color: #0071e3;
+          border-color: #0071E3;
           background: rgba(22, 22, 26, 0.7);
         }
         .radio-option {
@@ -1056,7 +1062,7 @@
         }
         h1 { font-size: 20px; }
         p { font-size: 13px; }
-        select, textarea, input, button {
+        select, textarea, input, button, .btn-primary {
           font-size: 14px;
         }
       }
@@ -1270,6 +1276,7 @@
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         .context-card,
         .toggle-row {
@@ -1369,7 +1376,7 @@
           <button
             id="generate-storefront-btn"
             data-testid="generate-storefront-btn"
-            style="width: 100%; min-height: 44px; border-radius: 8px; background: #0066FF; color: white; font-weight: 600; border: none; font-size: 16px; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);"
+            class="btn-primary" style="width: 100%;"
             disabled
           >
             Generate My Workspace
@@ -1391,7 +1398,7 @@
           </button>
           <button
             type="button"
-            class="btn-secondary next-step-btn"
+            class="btn-primary next-step-btn"
             data-testid="next-step-btn"
             data-next="step-context"
             style="width: 100%;"
@@ -1623,7 +1630,7 @@
               data-testid="chat-input"
               class="glass-control glassmorphism"
               placeholder="Type a message..."
-              enterkeyhint="send"
+
               autocomplete="off"
               style="
                 margin-bottom: 0;
@@ -1631,7 +1638,7 @@
                 min-height: 44px;
                 border-radius: 8px;
               "
-            />
+             enterkeyhint="next" />
             <button
               id="chat-send-btn"
               data-testid="chat-send-btn"
@@ -1821,7 +1828,7 @@
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -1857,7 +1864,7 @@
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -1899,8 +1906,7 @@
           inputmode="text"
           autocomplete="organization"
           autocapitalize="words"
-          enterkeyhint="next"
-        />
+           enterkeyhint="next" />
         <div id="name-error" class="error-msg" aria-live="polite">
           Business Name is required.
         </div>
@@ -1913,12 +1919,11 @@
           placeholder="Tagline (optional)"
           inputmode="text"
           autocomplete="off"
-          enterkeyhint="next"
-        />
+           enterkeyhint="next" />
 
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2051,7 +2056,7 @@
 
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2339,7 +2344,7 @@
 
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2387,7 +2392,7 @@
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2428,14 +2433,13 @@
           placeholder="e.g. Portland, OR"
           inputmode="text"
           autocomplete="off"
-          enterkeyhint="next"
-        />
+           enterkeyhint="next" />
         <div id="location-error" class="error-msg" aria-live="polite">
           Please tell us your location.
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2476,14 +2480,13 @@
           placeholder="e.g. Local families, Tech startups"
           inputmode="text"
           autocomplete="off"
-          enterkeyhint="next"
-        />
+           enterkeyhint="next" />
         <div id="target-audience-error" class="error-msg" aria-live="polite">
           Please tell us your target audience.
         </div>
         <div class="btn-group">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -2534,9 +2537,9 @@
             autocomplete="off"
             autocapitalize="none"
             autocorrect="off"
-            enterkeyhint="done"
+
             style="margin-bottom: 0; text-align: right; padding-right: 4px"
-          />
+           enterkeyhint="next" />
           <span
             style="
               font-size: 18px;
@@ -2557,7 +2560,7 @@
         </div>
         <div class="btn-group" style="margin-top: 20px">
           <button
-            class="next-step-btn"
+            class="btn-primary next-step-btn"
             aria-label="Next Step"
             title="Next Step"
             data-testid="next-step-btn"
@@ -3954,6 +3957,7 @@
           const imageUrlInput = document.getElementById("instant-image-url");
           const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : "";
           if (!bioInput.trim()) {
+            delete generateStorefrontBtn.dataset.submitting;
             instantErrorEl.innerText = "Please tell us about your business.";
             instantErrorEl.style.display = "block";
             instantErrorEl.classList.add("animate-shake");

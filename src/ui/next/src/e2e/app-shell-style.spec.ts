@@ -35,7 +35,7 @@ test.describe('App shell visual consistency', () => {
         '.app-main .app-card',
         '.app-main .app-panel',
         '.app-main .glassmorphism',
-        '.app-main [class*="rounded-[12px]"]',
+        '.app-main [class*="rounded-xl"]',
         '.app-main [class*="rounded-[16px]"]',
         '.app-main [class*="rounded-[24px]"]',
         '.app-main [class*="rounded-xl"]',
