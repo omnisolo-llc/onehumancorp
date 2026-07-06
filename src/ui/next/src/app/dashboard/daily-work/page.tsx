@@ -30,7 +30,7 @@ export default function DailyWorkFeed() {
       // Optimistic UI update
       setItems((prev) => prev.filter((item) => item.id !== id));
 
-      await fetch(`/api/ui/dashboard/daily-work/action?id=${id}`, {
+      await fetch(`/api/ui/dashboard/daily-work/action/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action_status: actionStatus }),
@@ -43,28 +43,31 @@ export default function DailyWorkFeed() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] p-4 sm:p-6 lg:p-8 font-inter">
-      <div className="max-w-3xl mx-auto">
-        <header className="mb-6">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] p-4 sm:p-6 lg:p-8 font-inter w-full overflow-x-hidden">
+      <div className="max-w-[375px] mx-auto sm:max-w-md w-full">
+        <header className="mb-6 px-2">
           <h1 className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-            Today's Focus
+            Work Feed
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            AI Autonomous Work Triage
+            AI-Prioritized Tasks & Actions
           </p>
         </header>
 
         {loading ? (
           <div className="flex justify-center p-8">
-            <span className="text-gray-500">Loading your work feed...</span>
+            <span className="text-gray-500 animate-pulse">Loading your work feed...</span>
           </div>
         ) : items.length === 0 ? (
-          <div className="glassmorphism p-8 text-center border border-gray-200 dark:border-gray-800">
+          <div className="glassmorphism p-8 text-center border border-gray-200 dark:border-gray-800 rounded-xl mx-2">
+            <div className="w-16 h-16 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-3xl mx-auto mb-4">
+              ✨
+            </div>
             <h2 className="text-lg font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
-              You're all caught up!
+              Inbox Zero!
             </h2>
             <p className="text-sm text-gray-500 mt-2">
-              No new work items need your attention right now.
+              No pending tasks, messages, or alerts.
             </p>
           </div>
         ) : (
