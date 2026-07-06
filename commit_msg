@@ -1,8 +1,9 @@
-Security: Fix PostgreSQL tenant connection leak via auth_utils
+Wizard: Fix validation errors not clearing upon user selection
 
-The previous change introduced a critical IDOR vulnerability by
-scoping `set_config` for `app.current_tenant` to the session instead
-of the transaction. This patch reverts the `auth_utils.rs` `set_config`
-third argument back to `true` (transaction-scoped) and securely fixes
-the `revoke_token` vulnerability by checking `is_multitenant_mode` and
-`should_bypass` when performing garbage collection sweeps on tokens.
+Persona: Non-technical business owner (e.g. Maya the baker).
+Browser/Playwright flow attempted: Starting on `setup.html`, proceed to the "Set up your Assistant" step. Click "Next" without selecting a team or a tone to trigger validation errors. Then, select a team and a tone.
+CUJ gap observed: After making a selection, the validation error message and the red border around the input remained visible, confusing the user into thinking their selection was invalid.
+UX reason for fix: Immediate feedback is crucial for form validation. Users should not have to click "Next" again just to see if their action fixed the error.
+Post-fix flow: Following the same steps, selecting a team now immediately clears the "Please select an AI agent team." error and the red border. Similarly, selecting a tone immediately clears the "Please select a tone." error and its red border. E2E tests have been added to verify this behavior, and the test suite has been repaired from a broken state caused by earlier debugging.
+
+Loaded superpowers: none.

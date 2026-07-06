@@ -120,7 +120,7 @@ mod additional_network_chaos {
     }
 
     #[tokio::test]
-    async fn test_sentry_chaos_network_partition_thin_client_sim() {
+    async fn test_sentry_chaos_network_partition() {
         // Condition: SQLite fallback mode encounters invalid remote sync endpoints.
         // Verification: Missions correctly persist as PENDING rather than erroring out and dropping data.
         let sync_endpoint = "http://invalid-endpoint.local";
