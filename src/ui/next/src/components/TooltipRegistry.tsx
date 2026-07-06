@@ -88,6 +88,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       <AnimatePresence>
       {activeTooltip && tooltipRect && (
         <motion.div
+          role="tooltip"
           initial={{ opacity: 0, y: 5, x: "-50%" }}
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0 }}
