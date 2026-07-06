@@ -248,7 +248,16 @@ export default function TriagePage() {
             </div>
           </div>
         ) : (
-          items.map((item) => {
+          [...items].sort((a, b) => {
+            const priorityScore = (p?: string) => {
+              const pLow = (p || '').toLowerCase();
+              if (pLow.includes('urgent') || pLow.includes('high')) return 3;
+              if (pLow.includes('medium') || pLow.includes('action needed')) return 2;
+              if (pLow.includes('low') || pLow.includes('fyi')) return 0;
+              return 1;
+            };
+            return priorityScore(b.priority) - priorityScore(a.priority);
+          }).map((item) => {
             const isProcessing = processingId === item.id;
             const isSelected = selectedItemId === item.id;
 
@@ -256,7 +265,7 @@ export default function TriagePage() {
               <div
                 key={item.id}
                 data-testid={`triage-card-${item.id}`}
-                className="ohc-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
+                className="ohc-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
               >
                 {/* Header Context */}
                 <div
@@ -301,7 +310,7 @@ export default function TriagePage() {
                         <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
                           Proposed Action: {item.action_type}
                         </div>
-                        <div className="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
+                        <div className="proposed-action rounded-[8px] border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
                           {item.action_payload || "No specific payload"}
                         </div>
                       </div>
@@ -319,7 +328,7 @@ export default function TriagePage() {
                         <textarea
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/80 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-[12px] p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y"
+                          className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/80 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-[8px] p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y"
                           data-testid={`triage-edit-textarea-${item.id}`}
                           placeholder="Edit the draft payload..."
                         />
@@ -327,7 +336,7 @@ export default function TriagePage() {
                           <button
                             onClick={() => handleDecision(item.id, true, editValue)}
                             disabled={isProcessing}
-                            className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                            className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
                             data-testid={`triage-save-btn-${item.id}`}
                           >
                             {isProcessing ? "Processing..." : "Save & Send"}
@@ -338,7 +347,7 @@ export default function TriagePage() {
                               setEditValue("");
                             }}
                             disabled={isProcessing}
-                            className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                            className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
                             data-testid={`triage-cancel-btn-${item.id}`}
                           >
                             Cancel
@@ -351,7 +360,7 @@ export default function TriagePage() {
                           <>
                             <button
                               disabled={isProcessing}
-                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
                               data-testid={`triage-review-btn-${item.id}`}
                               onClick={() => {
                                 setEditingId(item.id);
@@ -362,7 +371,7 @@ export default function TriagePage() {
                             </button>
                             <button
                               disabled={isProcessing}
-                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
                               data-testid={`triage-approve-${item.id}`}
                               onClick={() => handleDecision(item.id, true)}
                             >
@@ -372,7 +381,7 @@ export default function TriagePage() {
                         ) : (
                           <button
                             disabled={isProcessing}
-                            className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                            className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
                             data-testid={`triage-approve-${item.id}`}
                             onClick={() => handleDecision(item.id, true)}
                           >
@@ -381,7 +390,7 @@ export default function TriagePage() {
                         )}
                         <button
                           disabled={isProcessing}
-                          className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
+                          className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
                           data-testid={`triage-dismiss-${item.id}`}
                           onClick={() => handleDecision(item.id, false)}
                         >
