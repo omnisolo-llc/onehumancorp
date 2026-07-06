@@ -123,6 +123,7 @@ impl ClaudeSubagentSpawner {
                 ));
                 sub_config.developer_instructions = worktree_instructions;
                 sub_config.project_trusted = true; // Typically worktrees require trust to commit.
+                sub_config.workspace_path = Some(worktree_dir.to_string_lossy().to_string());
 
                 let result = self.execute_and_summarize(task, &sub_config).await?;
 
