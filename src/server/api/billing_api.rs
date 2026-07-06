@@ -169,7 +169,7 @@ pub async fn create_billing_portal_session_handler(
         if r.starts_with("http") {
             let mut parts = r.splitn(4, '/');
             let scheme = parts.next()?;
-            let empty = parts.next()?;
+            let _empty = parts.next()?;
             let host = parts.next()?;
             Some(format!("{}//{}", scheme, host))
         } else {

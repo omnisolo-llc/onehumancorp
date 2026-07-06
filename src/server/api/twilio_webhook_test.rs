@@ -66,3 +66,44 @@ async fn test_twilio_webhook_post_handler_success() {
     let response_media = app.oneshot(request_media).await.unwrap();
     assert_eq!(response_media.status(), StatusCode::OK);
 }
+
+#[tokio::test]
+async fn test_twilio_voice_webhook_handler_success() {
+    let pool = crate::db::get_pool();
+    let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+    let _ = sqlx::query("INSERT OR IGNORE INTO settings (tenant_id, sms_critical_phone, voice_receptionist_number) VALUES ('test_tenant', '+1234567890', '+1234567890')")
+        .execute(&pool)
+        .await;
+
+    let transport = crate::mesh::local::LocalMeshTransport::new();
+    let node = Arc::new(crate::mesh::CentrifugeNode::new(transport));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), node));
+    let hub = Arc::new(Hub::new());
+
+    let state = TwilioWebhookState {
+        hub,
+        db: db.clone(),
+        orchestrator,
+        voice_engine: Arc::new(crate::voice::VoiceAIEdgeEngine::new()),
+        voice_router: Arc::new(crate::voice::VoiceContextRouter::new()),
+        voice_sessions: Arc::new(dashmap::DashMap::new()),
+    };
+
+    let app = axum::Router::new()
+        .route("/api/v1/webhooks/twilio/voice", axum::routing::post(crate::api::twilio_webhook::twilio_voice_webhook_handler))
+        .with_state(state);
+
+    let body = Body::from("CallSid=CA123&From=%2B1234567890&To=%2B0987654321");
+
+    let request = Request::builder()
+        .method("POST")
+        .uri("/api/v1/webhooks/twilio/voice")
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(body)
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+}
