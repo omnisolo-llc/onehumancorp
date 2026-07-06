@@ -483,12 +483,12 @@ impl HybridSyncDaemon {
         let sqlite_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_stuck', 'sub_agent_queue', json_object('id', id, 'payload', json(COALESCE(payload, '{{}}'))), '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM sub_agent_queue WHERE {}", SQLITE_RUNNING_WHERE);
         let sqlite_running_update = format!("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_RUNNING_WHERE);
         let sqlite_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'sub_agent_queue', json_object('id', id, 'payload', json(COALESCE(payload, '{{}}'))), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE {}", SQLITE_QUEUED_WHERE);
-        let sqlite_queued_delete = format!("DELETE FROM sub_agent_queue WHERE {}", SQLITE_QUEUED_WHERE);
+        let sqlite_queued_delete = format!("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_QUEUED_WHERE);
 
         let pg_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_stuck', 'sub_agent_queue', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{{}}'::jsonb))::text, '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM sub_agent_queue WHERE {}", PG_RUNNING_WHERE);
         let pg_running_update = format!("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_RUNNING_WHERE);
         let pg_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'sub_agent_queue', json_build_object('id', id, 'payload', COALESCE(payload::jsonb, '{{}}'::jsonb))::text, '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM sub_agent_queue WHERE {}", PG_QUEUED_WHERE);
-        let pg_queued_delete = format!("DELETE FROM sub_agent_queue WHERE {}", PG_QUEUED_WHERE);
+        let pg_queued_delete = format!("UPDATE sub_agent_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_QUEUED_WHERE);
 
         // SQLite queue
         if let Err(e) = sqlx::query(&sqlite_running_insert).execute(&self.sqlite_pool).await {

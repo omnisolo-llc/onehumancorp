@@ -23,18 +23,9 @@ export default function ChaosReportPage() {
       });
   }, []);
 
-  const glassStyle = isDarkMode ? {
-    background: 'rgba(22, 22, 26, 0.7)',
-    backdropFilter: 'blur(30px) saturate(210%)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-  } : {
-    background: 'rgba(255, 255, 255, 0.65)',
-    backdropFilter: 'blur(30px) saturate(210%)',
-    border: '1px solid rgba(255, 255, 255, 0.4)',
-  };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-[#F5F5F7] text-[#1D1D1F]'} p-8 font-inter transition-colors duration-300`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark bg-gray-900 text-white' : 'bg-[#F5F5F7] text-[#1D1D1F]'} p-8 font-inter transition-colors duration-300`}>
       <header className="mb-10 max-w-6xl mx-auto flex justify-between items-center">
         <div>
           <h1 className="text-4xl font-bold font-outfit tracking-tight">System Reliability Report</h1>
@@ -49,7 +40,7 @@ export default function ChaosReportPage() {
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <section className="col-span-1 lg:col-span-2 mb-8 p-6 rounded-2xl shadow-lg transition-all duration-300 relative overflow-hidden" style={glassStyle}>
+        <section className={"premium-glass col-span-1 lg:col-span-2 mb-8 p-6 rounded-2xl shadow-lg transition-all duration-300 relative overflow-hidden"}>
             <h2 className="text-xl font-bold mb-4 tracking-tight">Chaos Resilience Metrics</h2>
             <div className="space-y-3 font-mono text-sm opacity-90">
                 <div className="flex items-center gap-2">
@@ -68,8 +59,7 @@ export default function ChaosReportPage() {
         </section>
 
         <section
-          className="p-8 rounded-3xl shadow-lg transition-all duration-300 relative overflow-hidden"
-          style={glassStyle}
+          className={"premium-glass p-8 rounded-3xl shadow-lg transition-all duration-300 relative overflow-hidden"}
         >
           <div className="absolute top-0 right-0 p-6 opacity-20">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -105,8 +95,7 @@ export default function ChaosReportPage() {
         </section>
 
         <section
-          className="p-8 rounded-3xl shadow-lg transition-all duration-300 relative overflow-hidden"
-          style={glassStyle}
+          className={"premium-glass p-8 rounded-3xl shadow-lg transition-all duration-300 relative overflow-hidden"}
         >
           <div className="absolute top-0 right-0 p-6 opacity-20">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

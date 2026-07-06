@@ -3301,6 +3301,17 @@
           "legendFormat": "{{error}}",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(ohc_error_signals_total[5m])) by (category)",
+          "legendFormat": "Error Signal: {{category}}",
+          "range": true,
+          "refId": "B"
         }
       ]
     },
@@ -3830,6 +3841,17 @@
           "legendFormat": "{{error}}",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(ohc_error_signals_total[5m])) by (category)",
+          "legendFormat": "Error Signal: {{category}}",
+          "range": true,
+          "refId": "B"
         }
       ],
       "options": {
