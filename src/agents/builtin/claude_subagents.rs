@@ -268,7 +268,7 @@ impl ClaudeSubagentSpawner {
         // UNLESS it's already very small, then we might still want to just return it or summarize it.
         // The instructions say: "Subagents return 1k-2k token condensed summaries".
         // Let's do one final pass if it wasn't condensed yet (i.e. length was <= TARGET_CHARS_MAX but we still want a clean summary).
-        if raw_output.len() == current_text.len() {
+        if raw_output.len() == current_text.len() && current_text.len() > 1000 {
             let req = ohc_builtin_agent_core::types::ChatRequest {
                 model: config.model.clone(),
                 system: ::server_pricing::compression::reduce_tokens(system_prompt),
@@ -401,9 +401,10 @@ mod tests {
         });
         let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
 
+        let long_output = "Long raw output from subagent in fork mode...".repeat(100);
         let sub_client = Arc::new(MockLlmClient {
             responses: std::sync::Mutex::new(vec![
-                "Long raw output from subagent in fork mode...".to_string(),
+                long_output.clone(),
             ]),
         });
         let subagent = Arc::new(Agent::new(sub_client, vec![]));
@@ -428,8 +429,9 @@ mod tests {
         });
         let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
 
+        let long_output = "Long raw output from teammate...".repeat(100);
         let sub_client = Arc::new(MockLlmClient {
-            responses: std::sync::Mutex::new(vec!["Long raw output from teammate...".to_string()]),
+            responses: std::sync::Mutex::new(vec![long_output.clone()]),
         });
         let subagent = Arc::new(Agent::new(sub_client, vec![]));
 
@@ -464,8 +466,9 @@ mod tests {
         });
         let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
 
+        let long_output = "Long raw output from worktree...".repeat(100);
         let sub_client = Arc::new(MockLlmClient {
-            responses: std::sync::Mutex::new(vec!["Long raw output from worktree...".to_string()]),
+            responses: std::sync::Mutex::new(vec![long_output.clone()]),
         });
         let subagent = Arc::new(Agent::new(sub_client, vec![]));
 
@@ -541,8 +544,9 @@ mod tests {
         });
         let _parent_agent = Arc::new(Agent::new(parent_client.clone(), vec![]));
 
+        let long_output = "Long raw output from worktree...".repeat(100);
         let sub_client = Arc::new(MockLlmClient {
-            responses: std::sync::Mutex::new(vec!["Long raw output from worktree...".to_string()]),
+            responses: std::sync::Mutex::new(vec![long_output.clone()]),
         });
         let subagent = Arc::new(Agent::new(sub_client, vec![]));
 

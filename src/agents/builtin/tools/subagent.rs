@@ -72,7 +72,7 @@ impl SubagentExecutor {
             current_text = next_text;
         }
 
-        if raw_output.len() == current_text.len() {
+        if raw_output.len() == current_text.len() && current_text.len() > 1000 {
             let req = ohc_builtin_agent_core::types::ChatRequest {
                 model: "gpt-4o-mini".to_string(),
                 system: ::server_pricing::compression::reduce_tokens(&system_prompt),
