@@ -130,20 +130,21 @@ impl AgentProtocolServer {
     pub async fn list_tasks(&self) -> serde_json::Value {
         let mut tasks = Vec::new();
         if let Some(cp) = &self.runner.core.agent.checkpointer
-            && let Ok(threads) = cp.list_threads().await {
-                for thread_id in threads {
-                    let status = match cp.list_checkpoints(&thread_id).await {
-                        Ok(cps) if !cps.is_empty() => "Running",
-                        _ => "Created or Not Found",
-                    };
-                    tasks.push(Task {
-                        task_id: thread_id.clone(),
-                        input: Some(format!("State from checkpoint: {}", status)),
-                        additional_input: None,
-                        artifacts: vec![],
-                    });
-                }
+            && let Ok(threads) = cp.list_threads().await
+        {
+            for thread_id in threads {
+                let status = match cp.list_checkpoints(&thread_id).await {
+                    Ok(cps) if !cps.is_empty() => "Running",
+                    _ => "Created or Not Found",
+                };
+                tasks.push(Task {
+                    task_id: thread_id.clone(),
+                    input: Some(format!("State from checkpoint: {}", status)),
+                    additional_input: None,
+                    artifacts: vec![],
+                });
             }
+        }
 
         let total_items = tasks.len();
         let resp = TaskListResponse {
@@ -183,20 +184,21 @@ impl AgentProtocolServer {
     pub async fn list_steps(&self, task_id: &str) -> serde_json::Value {
         let mut steps = Vec::new();
         if let Some(cp) = &self.runner.core.agent.checkpointer
-            && let Ok(checkpoints) = cp.list_checkpoints(task_id).await {
-                for (i, checkpoint) in checkpoints.into_iter().enumerate() {
-                    steps.push(Step {
-                        task_id: task_id.to_string(),
-                        step_id: checkpoint.checkpoint_id.clone(),
-                        name: Some(format!("Step {}", i + 1)),
-                        status: StepStatus::Completed,
-                        output: Some("Completed step from checkpoint".to_string()),
-                        additional_output: Some(checkpoint.data),
-                        artifacts: vec![],
-                        is_last: i == 0, // Since checkpoints are usually sorted DESC
-                    });
-                }
+            && let Ok(checkpoints) = cp.list_checkpoints(task_id).await
+        {
+            for (i, checkpoint) in checkpoints.into_iter().enumerate() {
+                steps.push(Step {
+                    task_id: task_id.to_string(),
+                    step_id: checkpoint.checkpoint_id.clone(),
+                    name: Some(format!("Step {}", i + 1)),
+                    status: StepStatus::Completed,
+                    output: Some("Completed step from checkpoint".to_string()),
+                    additional_output: Some(checkpoint.data),
+                    artifacts: vec![],
+                    is_last: i == 0, // Since checkpoints are usually sorted DESC
+                });
             }
+        }
 
         let total_items = steps.len();
         let resp = TaskStepsListResponse {
@@ -214,19 +216,20 @@ impl AgentProtocolServer {
     /// GET /ap/v1/agent/tasks/{task_id}/steps/{step_id}
     pub async fn get_step(&self, task_id: &str, step_id: &str) -> serde_json::Value {
         if let Some(cp) = &self.runner.core.agent.checkpointer
-            && let Ok(Some(checkpoint)) = cp.get_checkpoint(task_id, step_id).await {
-                let step = Step {
-                    task_id: task_id.to_string(),
-                    step_id: checkpoint.checkpoint_id.clone(),
-                    name: None,
-                    status: StepStatus::Completed,
-                    output: Some("Completed step from checkpoint".to_string()),
-                    additional_output: Some(checkpoint.data),
-                    artifacts: vec![],
-                    is_last: true, // simplified
-                };
-                return serde_json::to_value(&step).unwrap();
-            }
+            && let Ok(Some(checkpoint)) = cp.get_checkpoint(task_id, step_id).await
+        {
+            let step = Step {
+                task_id: task_id.to_string(),
+                step_id: checkpoint.checkpoint_id.clone(),
+                name: None,
+                status: StepStatus::Completed,
+                output: Some("Completed step from checkpoint".to_string()),
+                additional_output: Some(checkpoint.data),
+                artifacts: vec![],
+                is_last: true, // simplified
+            };
+            return serde_json::to_value(&step).unwrap();
+        }
 
         serde_json::to_value(&ErrorResponse {
             error: "Step not found".to_string(),

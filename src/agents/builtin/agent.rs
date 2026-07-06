@@ -402,7 +402,9 @@ impl Agent {
             native_env: Arc::new(tokio::sync::RwLock::new(
                 ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new(),
             )),
-            durable_engine: Some(Arc::new(crate::durable_execution::DurableExecutionEngine::new())),
+            durable_engine: Some(Arc::new(
+                crate::durable_execution::DurableExecutionEngine::new(),
+            )),
             sona_matcher: None,
             skill_trace: Arc::new(tokio::sync::Mutex::new(
                 crate::expert_team::SkillTrace::new(),
@@ -465,7 +467,9 @@ impl Agent {
         let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
         if let Some(engine) = &self.durable_engine {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
-            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+            let _ = engine
+                .set_context_var(&workflow_id, "initial_message", initial_message)
+                .await;
         }
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
@@ -918,10 +922,11 @@ impl Agent {
         let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
         if let Some(engine) = &self.durable_engine {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
-            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+            let _ = engine
+                .set_context_var(&workflow_id, "initial_message", initial_message)
+                .await;
         }
         on_event(AgentEvent::RunStarted { iteration: 0 });
-
 
         let session_id = cfg
             .thread_id
@@ -1610,7 +1615,9 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
-            durable_engine: Some(std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new())),
+            durable_engine: Some(std::sync::Arc::new(
+                crate::durable_execution::DurableExecutionEngine::new(),
+            )),
             sona_matcher: self.sona_matcher.clone(),
             skill_trace: self.skill_trace.clone(),
         });
@@ -1678,14 +1685,22 @@ impl Agent {
         let cfg = &active_cfg_cloned;
 
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
-        // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
-        if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
-            let err_msg =
-                "Task requires multi-agent split: >10 overlapping tools provided".to_string();
-
-            // Workaround to call the generic closure since on_event is a generic F.
-            // Wait, we can just return the error directly.
-            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+        // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10 or clear domain separation exists.
+        if cfg.enable_single_agent_maximization {
+            let mut distinct_domains = std::collections::HashSet::new();
+            for tool in &session_tools {
+                if let Some(domain) = tool.name.split('_').next() {
+                    distinct_domains.insert(domain.to_string());
+                }
+            }
+            if session_tools.len() > 10 {
+                let err_msg =
+                    "Task requires multi-agent split: >10 overlapping tools provided".to_string();
+                return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+            } else if distinct_domains.len() > 3 {
+                let err_msg = "Task requires multi-agent split: clear domain separation exists (>3 distinct tool domains)".to_string();
+                return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+            }
         }
 
         // Add initial message if needed
@@ -2209,7 +2224,9 @@ impl Agent {
         let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
         if let Some(engine) = &self.durable_engine {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
-            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+            let _ = engine
+                .set_context_var(&workflow_id, "initial_message", initial_message)
+                .await;
         }
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
@@ -2394,10 +2411,11 @@ impl Agent {
         let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
         if let Some(engine) = &self.durable_engine {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
-            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+            let _ = engine
+                .set_context_var(&workflow_id, "initial_message", initial_message)
+                .await;
         }
         on_event(AgentEvent::RunStarted { iteration: 0 });
-
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_structured");
 
@@ -2452,10 +2470,11 @@ impl Agent {
         let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
         if let Some(engine) = &self.durable_engine {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
-            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+            let _ = engine
+                .set_context_var(&workflow_id, "initial_message", initial_message)
+                .await;
         }
         on_event(AgentEvent::RunStarted { iteration: 0 });
-
 
         if let Some(guardrails) = &cfg.guardrails
             && let Err(e) = guardrails.check_input(initial_message)
@@ -3027,7 +3046,9 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
-            durable_engine: Some(std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new())),
+            durable_engine: Some(std::sync::Arc::new(
+                crate::durable_execution::DurableExecutionEngine::new(),
+            )),
             sona_matcher: self.sona_matcher.clone(),
             skill_trace: self.skill_trace.clone(),
         };
@@ -3271,8 +3292,10 @@ impl Agent {
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
                 native_env: self.native_env.clone(),
-                durable_engine: Some(std::sync::Arc::new(crate::durable_execution::DurableExecutionEngine::new())),
-            sona_matcher: dynamic_sona_matcher,
+                durable_engine: Some(std::sync::Arc::new(
+                    crate::durable_execution::DurableExecutionEngine::new(),
+                )),
+                sona_matcher: dynamic_sona_matcher,
                 skill_trace: self.skill_trace.clone(),
             };
             self_with_memory = &owned_agent;
@@ -3394,21 +3417,33 @@ impl Agent {
                 active_tools_clone.clone(),
                 std::sync::Arc::new(available_tools_names),
             ));
-            session_tools.push(crate::tools::lazy_load::unload_tool(
-                active_tools_clone,
-            ));
+            session_tools.push(crate::tools::lazy_load::unload_tool(active_tools_clone));
             // Tool Scoping (Claude Lazy-loading): Achieves 95% context reduction via lazy-loading.
         }
 
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
-        // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
-        if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
-            let err_msg =
-                "Task requires multi-agent split: >10 overlapping tools provided".to_string();
-            on_event(AgentEvent::TaskError {
-                error: err_msg.clone(),
-            });
-            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+        // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10 or clear domain separation exists.
+        if cfg.enable_single_agent_maximization {
+            let mut distinct_domains = std::collections::HashSet::new();
+            for tool in session_tools.iter() {
+                if let Some(domain) = tool.name.split('_').next() {
+                    distinct_domains.insert(domain.to_string());
+                }
+            }
+            if session_tools.len() > 10 {
+                let err_msg =
+                    "Task requires multi-agent split: >10 overlapping tools provided".to_string();
+                on_event(AgentEvent::TaskError {
+                    error: err_msg.clone(),
+                });
+                return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+            } else if distinct_domains.len() > 3 {
+                let err_msg = "Task requires multi-agent split: clear domain separation exists (>3 distinct tool domains)".to_string();
+                on_event(AgentEvent::TaskError {
+                    error: err_msg.clone(),
+                });
+                return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+            }
         }
 
         // OpenAI Mechanic: Input Guardrails
@@ -3421,7 +3456,9 @@ impl Agent {
         let workflow_id = format!("workflow-{}", uuid::Uuid::new_v4());
         if let Some(engine) = &self.durable_engine {
             let _ = engine.start_or_resume_workflow(&workflow_id).await;
-            let _ = engine.set_context_var(&workflow_id, "initial_message", initial_message).await;
+            let _ = engine
+                .set_context_var(&workflow_id, "initial_message", initial_message)
+                .await;
         }
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
@@ -11455,13 +11492,13 @@ mod fail_fast_tests {
 #[tokio::test]
 async fn test_agent_loop_llm_recoverable() {
     use crate::agent::{Agent, AgentRunConfig};
-    use crate::types::{Message, ToolCall, ChatRequest, ChatResponse, Usage};
     use crate::llm::LlmClient;
     use crate::tools::Tool;
+    use crate::types::{ChatRequest, ChatResponse, Message, ToolCall, Usage};
+    use async_trait::async_trait;
     use ohc_builtin_agent_core::types::ToolError;
     use std::sync::Arc;
     use tokio::sync::Mutex;
-    use async_trait::async_trait;
 
     struct MockFailingLlm {
         call_count: Mutex<usize>,
@@ -11469,7 +11506,10 @@ async fn test_agent_loop_llm_recoverable() {
 
     #[async_trait]
     impl LlmClient for MockFailingLlm {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut count = self.call_count.lock().await;
             *count += 1;
 
@@ -11517,7 +11557,9 @@ async fn test_agent_loop_llm_recoverable() {
     #[async_trait]
     impl ohc_builtin_agent_tools::ToolExecutor for DummyFailExecutor {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-            Err(ToolError::LlmRecoverable("Validation Error (Pydantic-first tool schema): missing fixed field".to_string()))
+            Err(ToolError::LlmRecoverable(
+                "Validation Error (Pydantic-first tool schema): missing fixed field".to_string(),
+            ))
         }
     }
 
@@ -11529,7 +11571,9 @@ async fn test_agent_loop_llm_recoverable() {
         }
     }
 
-    let llm: Arc<dyn LlmClient> = Arc::new(MockFailingLlm { call_count: Mutex::new(0) });
+    let llm: Arc<dyn LlmClient> = Arc::new(MockFailingLlm {
+        call_count: Mutex::new(0),
+    });
     let tool_fail = Tool {
         name: "dummy_fail".to_string(),
         description: "fails".to_string(),
@@ -11546,10 +11590,61 @@ async fn test_agent_loop_llm_recoverable() {
     };
 
     let agent = Agent::new(llm, vec![tool_fail, tool_success]);
-    let cfg = AgentRunConfig { max_retries: 3, ..Default::default() };
+    let cfg = AgentRunConfig {
+        max_retries: 3,
+        ..Default::default()
+    };
 
     let mut on_event = |_| {};
     let final_resp = agent.run(&cfg, "Do the task", &mut on_event).await.unwrap();
 
     assert_eq!(final_resp, "Done");
+}
+
+#[cfg(test)]
+mod multi_agent_split_tests {
+    use super::*;
+    use crate::tools::{Tool, ToolExecutor};
+    use crate::types::ToolError;
+
+    struct MockToolExecutor;
+    #[async_trait::async_trait]
+    impl ToolExecutor for MockToolExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Ok("".to_string())
+        }
+    }
+
+    fn create_mock_tool(name: &str) -> Tool {
+        Tool {
+            name: name.to_string(),
+            description: "".to_string(),
+            is_read_only: true,
+            parameters: serde_json::json!({}),
+            execute: std::sync::Arc::new(MockToolExecutor),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_domain_separation_split() {
+        let tools = vec![
+            create_mock_tool("fs_read"),
+            create_mock_tool("git_commit"),
+            create_mock_tool("db_query"),
+            create_mock_tool("network_fetch"),
+        ];
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_single_agent_maximization = true;
+
+        let client = std::sync::Arc::new(crate::llm::openai::OpenAIClient::new("fake")); // It won't actually be called
+        let agent = Agent::new(client, tools);
+
+        let mut events = vec![];
+        let res = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
+
+        assert!(res.is_err());
+        let err_str = res.unwrap_err().to_string();
+        assert!(err_str.contains("Task requires multi-agent split: clear domain separation exists (>3 distinct tool domains)"));
+    }
 }

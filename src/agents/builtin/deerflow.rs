@@ -14,14 +14,24 @@ pub trait ObservabilityBackend: Send + Sync {
 pub struct LangSmithMock;
 impl ObservabilityBackend for LangSmithMock {
     fn record_trace(&self, agent_id: &str, task: &str, _result: &str, duration_ms: u64) {
-        tracing::info!("[LangSmith] trace recorded for agent {}: task length {}, duration {}ms", agent_id, task.len(), duration_ms);
+        tracing::info!(
+            "[LangSmith] trace recorded for agent {}: task length {}, duration {}ms",
+            agent_id,
+            task.len(),
+            duration_ms
+        );
     }
 }
 
 pub struct LangfuseMock;
 impl ObservabilityBackend for LangfuseMock {
     fn record_trace(&self, agent_id: &str, _task: &str, result: &str, duration_ms: u64) {
-        tracing::info!("[Langfuse] trace recorded for agent {}: result length {}, duration {}ms", agent_id, result.len(), duration_ms);
+        tracing::info!(
+            "[Langfuse] trace recorded for agent {}: result length {}, duration {}ms",
+            agent_id,
+            result.len(),
+            duration_ms
+        );
     }
 }
 
@@ -36,10 +46,18 @@ pub struct DeerFlowOrchestrator {
 
 impl DeerFlowOrchestrator {
     pub fn new(lead_agent: Arc<Agent>, config: AgentRunConfig) -> Self {
-        Self { lead_agent, sub_agent_factory: None, config, observability: vec![] }
+        Self {
+            lead_agent,
+            sub_agent_factory: None,
+            config,
+            observability: vec![],
+        }
     }
 
-    pub fn with_factory(mut self, factory: impl Fn(String) -> Arc<Agent> + Send + Sync + 'static) -> Self {
+    pub fn with_factory(
+        mut self,
+        factory: impl Fn(String) -> Arc<Agent> + Send + Sync + 'static,
+    ) -> Self {
         self.sub_agent_factory = Some(Box::new(factory));
         self
     }
@@ -49,7 +67,10 @@ impl DeerFlowOrchestrator {
         self
     }
 
-    pub async fn orchestrate(&self, task: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn orchestrate(
+        &self,
+        task: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let start_time = std::time::Instant::now();
 
         // Step 1: Decompose task
@@ -60,7 +81,10 @@ impl DeerFlowOrchestrator {
         );
 
         let mut on_event = |_| {};
-        let subtasks_json = self.lead_agent.run(&self.config, &decompose_prompt, &mut on_event).await?;
+        let subtasks_json = self
+            .lead_agent
+            .run(&self.config, &decompose_prompt, &mut on_event)
+            .await?;
 
         // Extract json array if it's wrapped in markdown
         let mut clean_json = subtasks_json.trim();
@@ -93,12 +117,18 @@ impl DeerFlowOrchestrator {
 
             futures.push(tokio::spawn(async move {
                 let mut local_on_event = |_| {};
-                let result = agent_clone.run(&config_clone, &subtask, &mut local_on_event).await.unwrap_or_else(|e| format!("Error: {}", e));
+                let result = agent_clone
+                    .run(&config_clone, &subtask, &mut local_on_event)
+                    .await
+                    .unwrap_or_else(|e| format!("Error: {}", e));
 
                 // Enforce condensed summary (1k-2k tokens)
                 let max_length = 2000;
                 let condensed = if result.chars().count() > max_length {
-                    format!("{}... [Condensed]", result.chars().take(max_length).collect::<String>())
+                    format!(
+                        "{}... [Condensed]",
+                        result.chars().take(max_length).collect::<String>()
+                    )
                 } else {
                     result
                 };
@@ -124,7 +154,10 @@ impl DeerFlowOrchestrator {
             task, combined_results
         );
 
-        let final_result = self.lead_agent.run(&self.config, &synthesize_prompt, &mut on_event).await?;
+        let final_result = self
+            .lead_agent
+            .run(&self.config, &synthesize_prompt, &mut on_event)
+            .await?;
 
         let duration_ms = start_time.elapsed().as_millis() as u64;
         for backend in &self.observability {
@@ -148,7 +181,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockDeerFlowLlm {
-        async fn chat(&self, req: crate::types::ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            req: crate::types::ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut count = self.call_count.lock().await;
             *count += 1;
 
@@ -168,7 +204,10 @@ mod tests {
             })
         }
 
-        async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+        async fn generate_embedding(
+            &self,
+            _text: &str,
+        ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
             Ok(vec![])
         }
     }
@@ -186,27 +225,35 @@ mod tests {
 
     #[tokio::test]
     async fn test_deerflow_orchestration_with_observability() {
-        let llm = Arc::new(MockDeerFlowLlm { call_count: Mutex::new(0) });
+        let llm = Arc::new(MockDeerFlowLlm {
+            call_count: Mutex::new(0),
+        });
         let agent = Arc::new(Agent::new(llm, vec![]));
         let config = AgentRunConfig::default();
 
         let recorded_flag = Arc::new(std::sync::Mutex::new(false));
-        let backend = Arc::new(MockBackend { recorded: recorded_flag.clone() });
+        let backend = Arc::new(MockBackend {
+            recorded: recorded_flag.clone(),
+        });
 
-        let orchestrator = DeerFlowOrchestrator::new(agent, config)
-            .with_observability(backend);
+        let orchestrator = DeerFlowOrchestrator::new(agent, config).with_observability(backend);
 
         let result = orchestrator.orchestrate("Do a complex task").await.unwrap();
 
         assert_eq!(result, "Final synthesized result");
 
         let was_recorded = *recorded_flag.lock().unwrap();
-        assert!(was_recorded, "Observability backend should have been called");
+        assert!(
+            was_recorded,
+            "Observability backend should have been called"
+        );
     }
 
     #[tokio::test]
     async fn test_deerflow_subagent_factory() {
-        let llm = Arc::new(MockDeerFlowLlm { call_count: Mutex::new(0) });
+        let llm = Arc::new(MockDeerFlowLlm {
+            call_count: Mutex::new(0),
+        });
         let lead_agent = Arc::new(Agent::new(llm, vec![]));
         let config = AgentRunConfig::default();
 

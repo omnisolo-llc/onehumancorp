@@ -1,7 +1,7 @@
 pub mod claude_subagents;
 pub mod compaction;
-pub mod omni_context;
 pub mod durable_execution;
+pub mod omni_context;
 pub mod plugins;
 pub mod scalable_multi_agent;
 // ohc-builtin-agent: Rust reimplementation of the OHC builtin agent.
@@ -390,7 +390,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 pub mod aider_repomap;
-pub mod jit_retrieval;
-pub mod microagent;
 pub mod deerflow;
 pub mod deerflow_subagents;
+pub mod jit_retrieval;
+pub mod microagent;
