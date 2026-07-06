@@ -25,11 +25,7 @@ impl InvoiceService for InvoiceServiceImpl {
         let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // Set tenant context for RLS
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&req.tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let invoice_id = uuid::Uuid::new_v4().to_string();
         let total_amount: f64 = req.line_items.iter().map(|item| item.amount).sum();
@@ -124,11 +120,7 @@ impl InvoiceService for InvoiceServiceImpl {
         let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // Set tenant context for RLS
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&req.tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         use sqlx::Row;
 
@@ -221,11 +213,7 @@ impl InvoiceService for InvoiceServiceImpl {
         let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // Set tenant context for RLS
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&req.tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         use sqlx::Row;
 
@@ -274,11 +262,7 @@ impl InvoiceService for InvoiceServiceImpl {
         let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // Set tenant context for RLS
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&req.tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         sqlx::query("UPDATE invoices SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
             .bind(&req.status)

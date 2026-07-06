@@ -37,6 +37,17 @@ impl MetaClientWrapper for RealMetaClient {
                     "text": body
                 }
             })
+        } else if platform == "whatsapp" {
+            serde_json::json!({
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": to,
+                "type": "text",
+                "text": {
+                    "preview_url": false,
+                    "body": body
+                }
+            })
         } else {
             serde_json::json!({
                 "recipient": {

@@ -231,3 +231,34 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
   });
 
 });
+
+test.describe('OHC Setup Wizard Dark Mode', () => {
+  test.beforeEach(async ({ page }) => {
+    const fs = require('fs');
+    const path = require('path');
+    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    await page.route('**/setup.html', async route => {
+        const htmlContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: htmlContent });
+    });
+    await page.route('**/api/tooltips', async route => { await route.fulfill({ status: 200, body: JSON.stringify({}) }); });
+  });
+
+  test('should render Dark Mode Translucent Glass styling correctly', async ({ page }) => {
+    // Emulate dark color scheme
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('http://mock/setup.html');
+
+    // Check container dark mode background
+    const container = page.locator('.container.glassmorphism').first();
+    await expect(container).toHaveCSS('background-color', 'rgba(22, 22, 26, 0.7)');
+
+    // Playwright evaluates body background color as rgb(0, 0, 0)
+    const body = page.locator('body');
+    await expect(body).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+
+    // Check text input dark mode styling
+    const textInput = page.locator('#instant-bio');
+    await expect(textInput).toHaveCSS('background-color', 'rgba(22, 22, 26, 0.7)');
+  });
+});

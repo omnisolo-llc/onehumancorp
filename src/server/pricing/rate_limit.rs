@@ -74,7 +74,7 @@ impl PlanTier {
             }
 
         match self {
-            PlanTier::Free => Some(2048), // 2048MB
+            PlanTier::Free => Some(500), // 500MB
             PlanTier::Starter => Some(5120), // 5GB
             PlanTier::Pro => Some(51200),    // 50GB
             PlanTier::Business => Some(512000),      // 500GB
@@ -490,7 +490,7 @@ mod tests {
         assert_eq!(PlanTier::Free.agent_action_limit(), Some(20));
         assert_eq!(PlanTier::Starter.agent_action_limit(), Some(200));
 
-        assert_eq!(PlanTier::Free.storage_limit_mb(), Some(2048));
+        assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
         assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5120));
         assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(51200));
         assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
@@ -633,7 +633,7 @@ mod tests {
                 let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
                 let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
 
-                // Set tier to Free (2048MB limit)
+                // Set tier to Free (500MB limit)
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.expect("failed to unwrap");
 
                 // Increment storage by a small amount (100MB)
@@ -642,12 +642,12 @@ mod tests {
                 assert!(status.is_allowed);
                 assert!(!status.soft_limit_reached);
 
-                // Increment storage by an amount crossing the 2048MB limit
-                let large_delta: i64 = 2000 * 1024 * 1024;
+                // Increment storage by an amount crossing the 500MB limit
+                let large_delta: i64 = 500 * 1024 * 1024;
                 let status = limiter.check_storage_quota(tenant_id, large_delta).await.expect("failed to unwrap");
                 assert!(status.is_allowed);
                 assert!(status.soft_limit_reached); // But flag is set
-                assert!(status.user_message.expect("failed to unwrap").contains("2048MB storage"));
+                assert!(status.user_message.expect("failed to unwrap").contains("500MB storage"));
             }
     }
 

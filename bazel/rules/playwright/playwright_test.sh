@@ -430,6 +430,12 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     export REDIS_URL="$RD_URL"
   fi
   export DATABASE_URL="$DB_URL"
+
+  if [[ "$DATABASE_URL" == *"127.0.0.1:5432"* ]] || [[ "$DATABASE_URL" == *"localhost:5432"* ]]; then
+    echo "Error: DATABASE_URL is hardcoded to port 5432 ($DATABASE_URL)"
+    exit 1
+  fi
+
   DATABASE_URL="$DB_URL" \
   REDIS_URL="$RD_URL" \
   OHC_STANDALONE_MODE="$OHC_STANDALONE" \

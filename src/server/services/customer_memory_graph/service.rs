@@ -104,9 +104,7 @@ impl CustomerMemoryGraphService {
 
         // Temporarily bypass RLS to find jobs (or we process per tenant).
         // For simplicity, we bypass it for the queue worker.
-        sqlx::query("SELECT set_config('app.current_tenant', '', true)")
-            .execute(&mut *tx)
-            .await?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, "").await?;
 
         let jobs = sqlx::query(
             "SELECT job_id, tenant_id, interaction_event_id FROM interaction_event_jobs

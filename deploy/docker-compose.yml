@@ -364,6 +364,28 @@ services:
           cpus: "0.1"
           memory: 256M
 
+  edge-cache:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx-cache:/var/cache/nginx
+    depends_on:
+
+      - server
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
+
 volumes:
   # Persists the bootstrap marker so the admin-init script runs only once.
   server-init-data:
+  nginx-cache:

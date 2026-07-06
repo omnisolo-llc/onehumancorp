@@ -316,6 +316,9 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 let cache = crate::builder::edge::get_edge_cache();
                 let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                 let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+                let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+                cdn.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                cdn.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
 
                 let pool_clone = self.db.pool.clone();
                 let tenant_id_clone = uuid::Uuid::parse_str(&job.tenant_id).unwrap_or_default();
@@ -543,6 +546,9 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             let cache = crate::builder::edge::get_edge_cache();
                             let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                             let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+                            let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+                            cdn.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                            cdn.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
 
                             let pool_clone = self.db.pool.clone();
                             let tenant_id_clone = uuid::Uuid::parse_str(&job.tenant_id).unwrap_or_default();

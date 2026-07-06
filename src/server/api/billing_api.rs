@@ -697,10 +697,7 @@ async fn load_department_records(pool: &sqlx::PgPool, tenant_id: &str) -> Result
     use sqlx::Row;
 
     let mut tx = pool.begin().await?;
-    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-        .bind(tenant_id)
-        .execute(&mut *tx)
-        .await?;
+    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
 
     let rows = sqlx::query(
         "SELECT id, department_type FROM agent_departments WHERE tenant_id = $1 AND id IS NOT NULL AND id != '' AND department_type IS NOT NULL AND department_type != '' ORDER BY department_type",

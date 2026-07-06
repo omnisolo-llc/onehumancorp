@@ -13,12 +13,17 @@ export default function TestimonialWidgetGenerator() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [hasPro, setHasPro] = useState(false);
+  const [hideBranding, setHideBranding] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
+    // In a real app, we would fetch the user's plan here
+    // For now, we default to false to show the viral loop/paywall
   }, []);
 
-  const embedUrl = `https://ohc.app/api/v1/growth/testimonial/embed?tenant=${encodeURIComponent(tenant)}&authorName=${encodeURIComponent(authorName)}&reviewText=${encodeURIComponent(reviewText)}&rating=${rating}&theme=${theme}`;
+  const embedUrl = `https://ohc.app/api/v1/growth/testimonial/embed?tenant=${encodeURIComponent(tenant)}&authorName=${encodeURIComponent(authorName)}&reviewText=${encodeURIComponent(reviewText)}&rating=${rating}&theme=${theme}&branding=${!hideBranding}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="250" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
   const handleCopy = () => {
@@ -124,6 +129,27 @@ export default function TestimonialWidgetGenerator() {
                     />
                 </div>
 
+                <div className="flex items-center gap-2 mb-6 pt-4 border-t border-gray-200">
+                    <input
+                        type="checkbox"
+                        id="removeBranding"
+                        checked={hideBranding}
+                        onChange={(e) => {
+                            if (!hasPro) {
+                                e.preventDefault();
+                                setShowPaywall(true);
+                            } else {
+                                setHideBranding(e.target.checked);
+                            }
+                        }}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2 cursor-pointer">
+                        Remove "Powered by OHC" Badge
+                        {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
+                    </label>
+                </div>
+
                 <button
                     onClick={() => setShowModal(true)}
                     className="w-full py-3 bg-indigo-600 text-white font-medium min-h-[44px] min-w-[44px] hover:bg-indigo-700 transition-colors shadow-sm"
@@ -165,9 +191,11 @@ export default function TestimonialWidgetGenerator() {
                             {authorName}
                         </div>
 
-                        <div className={`mt-5 pt-4 border-t flex justify-center ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
-                            <PoweredByOHC tenantId={tenant} />
-                        </div>
+                        {!hideBranding && (
+                            <div className={`mt-5 pt-4 border-t flex justify-center ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
+                                <PoweredByOHC tenantId={tenant} />
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -227,6 +255,42 @@ export default function TestimonialWidgetGenerator() {
                     </button>
                 </div>
             </div>
+        </div>
+      )}
+
+      {/* Soft Paywall Modal */}
+      {showPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-end mb-2">
+              <button
+                aria-label="Close paywall"
+                onClick={() => setShowPaywall(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg mx-auto mb-6 text-white font-bold">
+              PRO
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+            </p>
+
+            <button
+              onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+            >
+              Upgrade to Pro
+            </button>
+          </div>
         </div>
       )}
 

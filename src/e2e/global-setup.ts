@@ -10,11 +10,11 @@ export default async function globalSetup(config: FullConfig) {
   // The Bazel test runner starts a local postgres instance on a random port and exports it via DATABASE_URL
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    console.log('DATABASE_URL is not set in the environment. Tests must run with a valid database.');
+    throw new Error('DATABASE_URL is not set in the environment. Tests must run with a valid database.');
   }
 
   // Ensure there are no hardcoded localhost:5432 ports in use
-  if (databaseUrl && databaseUrl.includes('localhost:5432') && process.env.CI) {
+  if (databaseUrl.includes('localhost:5432') && process.env.CI) {
     throw new Error('Playwright tests must use the Bazel-provided test database URL/port. Hard-coded localhost:5432 is not allowed.');
   }
 
