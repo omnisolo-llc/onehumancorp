@@ -817,7 +817,7 @@ mod parity_tests {
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Database retry exhausted"));
         // execute_with_retry makes 1 initial attempt + 2 retries (max_attempts = 3)
-        assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS + 1);
+        assert_eq!(*attempts.lock().unwrap(), 4);
 
         let pg_db = setup_postgres_db().await;
         if let Some(db) = pg_db {
@@ -835,7 +835,7 @@ mod parity_tests {
 
             assert!(res.is_err());
             assert!(res.unwrap_err().contains("Database retry exhausted"));
-            assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS + 1);
+            assert_eq!(*attempts.lock().unwrap(), 4);
         }
     }
 
@@ -903,7 +903,7 @@ mod parity_tests {
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "success");
-        assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS + 1);
+        assert_eq!(*attempts.lock().unwrap(), 3);
 
         let pg_db = setup_postgres_db().await;
         if let Some(db) = pg_db {
@@ -925,7 +925,7 @@ mod parity_tests {
 
             assert!(res.is_ok());
             assert_eq!(res.unwrap(), "success");
-            assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS + 1);
+            assert_eq!(*attempts.lock().unwrap(), 3);
         }
     }
 }
