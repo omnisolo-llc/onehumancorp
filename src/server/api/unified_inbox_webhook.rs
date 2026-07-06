@@ -193,6 +193,26 @@ pub async fn handle_unified_webhook(
 
     let resolved_customer = crate::api::inbox::identity::resolve_identity(&state.db, tenant_id, &payload.source, &payload.identifier).await;
     let customer_id = resolved_customer.unwrap_or_else(|| format!("cust-{}", Uuid::new_v4()));
+
+    let intent_id = Uuid::new_v4().to_string();
+    let _ = match &state.db.store {
+        crate::db::DbStore::Postgres => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())")
+            .bind(&intent_id)
+            .bind(tenant_id)
+            .bind(&payload.source)
+            .bind("customer_inquiry")
+            .bind(serde_json::json!({"message": payload.message, "identifier": payload.identifier, "customer_id": customer_id}))
+            .bind("PENDING")
+            .execute(&state.db.pool).await.map(|_| ()).map_err(|e| e),
+        crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            .bind(&intent_id)
+            .bind(tenant_id)
+            .bind(&payload.source)
+            .bind("customer_inquiry")
+            .bind(serde_json::json!({"message": payload.message, "identifier": payload.identifier, "customer_id": customer_id}).to_string())
+            .bind("PENDING")
+            .execute(sqlite_pool).await.map(|_| ()).map_err(|e| e),
+    };
     let thread_id = format!("thread-{}", Uuid::new_v4());
     let message_id = format!("msg-{}", Uuid::new_v4());
     let action_id = format!("action-{}", Uuid::new_v4());

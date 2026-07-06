@@ -3895,19 +3895,15 @@ pub async fn update_ui_triage_action_handler(
             let _ = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = $1 AND tenant_id = $2)")
                 .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
 
-            match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
-                Ok(_) => {
-                    let _ = tx.commit().await;
-                    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                    cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
-                    cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
-                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
-                },
-                Err(e) => {
-                    tracing::error!("Failed to update triage item: {:?}", e);
-                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
-                }
+            if let Err(e) = sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update triage item: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
             }
+            let _ = tx.commit().await;
+            let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+            cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let mut tx = match sqlite_pool.begin().await {
@@ -4158,19 +4154,15 @@ pub async fn update_ui_triage_action_handler(
             let _ = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = ? AND tenant_id = ?)")
                 .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
 
-            match sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
-                Ok(_) => {
-                    let _ = tx.commit().await;
-                    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                    cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
-                    cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
-                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
-                },
-                Err(e) => {
-                    tracing::error!("Failed to update triage item (sqlite): {:?}", e);
-                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
-                }
+            if let Err(e) = sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update triage item (sqlite): {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
             }
+            let _ = tx.commit().await;
+            let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+            cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
         }
     }
 }
@@ -6687,10 +6679,16 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/help.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
         }))
+        .route("/help", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
+        }))
         .route("/api/ui/help_article.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help_article.html"))
         }))
         .route("/api/ui/api-docs.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
+        }))
+        .route("/api-docs", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
         }))
         .route("/api/ui/swagger-ui.css", axum::routing::get(|| async {
@@ -6714,6 +6712,9 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/changelog.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/next/public/api/ui/changelog.html"))
         }))
+        .route("/changelog", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/changelog.html"))
+        }))
         .route("/onboarding", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/setup.html"))
         }))
@@ -6723,11 +6724,23 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
         }))
-        .route("/dashboard.html", axum::routing::get(|| async {
+        .route("/dashboard", axum::routing::get(|| async { axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html")) })).route("/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
         }))
         .route("/agent-audit-dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/agent-audit-dashboard.html"))
+        }))
+        .route("/api/ui/pos.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/pos.html"))
+        }))
+        .route("/pos.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/pos.html"))
+        }))
+        .route("/api/ui/assistant.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
+        }))
+        .route("/assistant.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
         }))
         .route("/calendar", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/calendar.html"))

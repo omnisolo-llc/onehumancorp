@@ -159,7 +159,7 @@ pub async fn handle_omnichannel_webhook(
     // Create ServiceLead if applicable
     let service_lead_id = uuid::Uuid::new_v4().to_string();
     if channel == "intake_form" || channel == "email_inquiry" || channel == "work_intake" || channel == "instagram_dm" || channel == "sms" || channel == "booking_form" {
-        match &state.db.store {
+        let _ = match &state.db.store {
             crate::db::DbStore::Postgres => {
                 let _ = sqlx::query("INSERT INTO service_leads (id, tenant_id, customer_id, description, source, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())")
                     .bind(&service_lead_id)
@@ -185,6 +185,26 @@ pub async fn handle_omnichannel_webhook(
 
     // 2. Persist Message into inbox_messages
     let inbox_id = Uuid::new_v4().to_string();
+    let intent_id = Uuid::new_v4().to_string();
+    let _ = match &state.db.store {
+        crate::db::DbStore::Postgres => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())")
+            .bind(&intent_id)
+            .bind(tenant_id)
+            .bind(channel)
+            .bind("customer_inquiry")
+            .bind(serde_json::json!({"message": message, "sender_id": sender_id, "customer_id": customer_id}))
+            .bind("PENDING")
+            .execute(&state.db.pool).await.map(|_| ()).map_err(|e| e),
+        crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+            .bind(&intent_id)
+            .bind(tenant_id)
+            .bind(channel)
+            .bind("customer_inquiry")
+            .bind(serde_json::json!({"message": message, "sender_id": sender_id, "customer_id": customer_id}).to_string())
+            .bind("PENDING")
+            .execute(sqlite_pool).await.map(|_| ()).map_err(|e| e),
+    };
+
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             let res = sqlx::query(

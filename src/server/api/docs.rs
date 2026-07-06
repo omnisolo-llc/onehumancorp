@@ -62,22 +62,28 @@ pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<Stri
     Json(steps)
 }
 
-pub async fn get_tooltips(headers: axum::http::HeaderMap) -> Json<std::collections::HashMap<String, String>> {
+pub async fn get_tooltips(headers: axum::http::HeaderMap) -> Result<Json<std::collections::HashMap<String, String>>, axum::http::StatusCode> {
     let tenant_id = headers
         .get("x-tenant-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("default");
     let pool = crate::db::get_pool();
     let mut tooltips = std::collections::HashMap::new();
-    if let Ok(rows) = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1").bind(tenant_id)
+    match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1").bind(tenant_id)
         .fetch_all(&pool)
         .await
     {
-        for row in rows {
-            use sqlx::Row;
-            let id: String = row.get("id");
-            let text: String = row.get("text");
-            tooltips.insert(id, text);
+        Ok(rows) => {
+            for row in rows {
+                use sqlx::Row;
+                let id: String = row.get("id");
+                let text: String = row.get("text");
+                tooltips.insert(id, text);
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch tooltips: {}", e);
+            return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -89,7 +95,7 @@ pub async fn get_tooltips(headers: axum::http::HeaderMap) -> Json<std::collectio
         tooltips.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
     }
 
-    Json(tooltips)
+    Ok(Json(tooltips))
 }
 
 #[derive(Deserialize)]
@@ -103,16 +109,22 @@ pub struct SuccessResponse {
     pub success: bool,
 }
 
-pub async fn update_tooltip(headers: axum::http::HeaderMap, axum::extract::Json(payload): axum::extract::Json<TooltipPayload>) -> Json<SuccessResponse> {
+pub async fn update_tooltip(headers: axum::http::HeaderMap, axum::extract::Json(payload): axum::extract::Json<TooltipPayload>) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
     let tenant_id = headers
         .get("x-tenant-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("default");
     let pool = crate::db::get_pool();
-    let _ = sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET text = EXCLUDED.text").bind(payload.id).bind(tenant_id).bind(payload.text)
+    match sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET text = EXCLUDED.text").bind(payload.id).bind(tenant_id).bind(payload.text)
         .execute(&pool)
-        .await;
-    Json(SuccessResponse { success: true })
+        .await
+    {
+        Ok(_) => Ok(Json(SuccessResponse { success: true })),
+        Err(e) => {
+            tracing::error!("Failed to update tooltip: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 
@@ -979,11 +991,11 @@ mod tests {
         // Update the tooltip
         let mut headers = axum::http::HeaderMap::new();
         headers.insert("x-tenant-id", axum::http::HeaderValue::from_static("test-tenant"));
-        let res = update_tooltip(headers.clone(), AxumJson(payload)).await;
+        let res = update_tooltip(headers.clone(), AxumJson(payload)).await.unwrap();
         assert!(res.0.success);
 
         // Fetch tooltips and verify the update
-        let tooltips_res = get_tooltips(headers).await;
+        let tooltips_res = get_tooltips(headers).await.unwrap();
         let tooltips = tooltips_res.0;
 
         assert_eq!(

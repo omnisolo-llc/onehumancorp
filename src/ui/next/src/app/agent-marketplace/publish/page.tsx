@@ -47,70 +47,70 @@ export default function PublishAgentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8 font-outfit">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-[#f4f6f8] p-8 font-outfit flex flex-col items-center">
+      <div className="max-w-3xl w-full">
         <header className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Publish New Agent</h1>
+          <h1 className="text-4xl font-bold text-[#18212f] mb-2">Publish New Agent</h1>
           <p className="text-xl text-gray-600">
             Add your custom pre-built agent to the Agent Marketplace. (AutoGPT Harness Mechanic)
           </p>
         </header>
 
         {error && (
-          <div className="p-4 mb-8 bg-red-100 text-red-700 border border-red-200 rounded-xl">
+          <div className="p-4 mb-8 bg-red-100 text-red-700 border border-red-200 rounded-[12px] animate-in fade-in slide-in-from-top-4">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-8 rounded-2xl shadow-sm">
+        <form onSubmit={handleSubmit} className="glassmorphism p-8 rounded-[16px] border border-white/40 shadow-sm backdrop-blur-[30px] saturate-[210%] bg-white/65">
           <div className="mb-6">
-            <label htmlFor="name" className="block text-gray-700 font-bold mb-2">Agent Name</label>
+            <label htmlFor="name" className="block text-[#18212f] font-semibold mb-2">Agent Name</label>
             <input
               id="name"
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-4 text-lg rounded-xl shadow-sm border outline-none"
+              className="w-full px-4 py-3 rounded-[12px] bg-white/80 border border-gray-200 outline-none focus:ring-2 focus:ring-[#007aff] transition-shadow shadow-sm"
               placeholder="e.g. Content Writer"
             />
           </div>
 
           <div className="mb-6">
-            <label htmlFor="description" className="block text-gray-700 font-bold mb-2">Description</label>
+            <label htmlFor="description" className="block text-[#18212f] font-semibold mb-2">Description</label>
             <input
               id="description"
               type="text"
               required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-4 text-lg rounded-xl shadow-sm border outline-none"
+              className="w-full px-4 py-3 rounded-[12px] bg-white/80 border border-gray-200 outline-none focus:ring-2 focus:ring-[#007aff] transition-shadow shadow-sm"
               placeholder="e.g. Writes engaging blog posts."
             />
           </div>
 
           <div className="mb-6">
-            <label htmlFor="role" className="block text-gray-700 font-bold mb-2">Role</label>
+            <label htmlFor="role" className="block text-[#18212f] font-semibold mb-2">Role</label>
             <input
               id="role"
               type="text"
               required
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full p-4 text-lg rounded-xl shadow-sm border outline-none"
+              className="w-full px-4 py-3 rounded-[12px] bg-white/80 border border-gray-200 outline-none focus:ring-2 focus:ring-[#007aff] transition-shadow shadow-sm"
               placeholder="e.g. Writer"
             />
           </div>
 
           <div className="mb-8">
-            <label htmlFor="systemPrompt" className="block text-gray-700 font-bold mb-2">System Prompt</label>
+            <label htmlFor="systemPrompt" className="block text-[#18212f] font-semibold mb-2">System Prompt</label>
             <textarea
               id="systemPrompt"
               required
               rows={4}
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
-              className="w-full p-4 text-lg rounded-xl shadow-sm border outline-none"
+              className="w-full px-4 py-3 rounded-[12px] bg-white/80 border border-gray-200 outline-none focus:ring-2 focus:ring-[#007aff] transition-shadow shadow-sm resize-y"
               placeholder="You are a helpful assistant..."
             />
           </div>
@@ -118,7 +118,7 @@ export default function PublishAgentPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 px-6 bg-[#0071E3] hover:bg-blue-700 text-white font-bold rounded-xl disabled:bg-blue-300"
+            className="w-full py-3 px-6 bg-[#007aff] hover:bg-[#005bb5] text-white font-semibold rounded-[12px] disabled:opacity-50 transition-colors shadow-sm focus:ring-4 focus:ring-blue-200"
           >
             {loading ? 'Publishing...' : 'Publish to Marketplace'}
           </button>

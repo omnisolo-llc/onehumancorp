@@ -28,7 +28,7 @@ test.describe('Triage Action Feed UI', () => {
         window.localStorage.setItem('tenant', t);
     }, tenantId);
 
-    await page.goto('/api/ui/triage.html');
+    await page.goto('/api/ui/triage');
 
     // We expect either the empty state or the list to eventually appear.
     const emptyState = page.locator('.app-empty').first();
