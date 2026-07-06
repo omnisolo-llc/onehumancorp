@@ -384,26 +384,26 @@ impl DB {
                         }
                     }
                 }
+                #[cfg(unix)]
+                {
+                    if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        let mut file_opts = std::fs::OpenOptions::new();
+                        file_opts.write(true).create(true).mode(0o600);
+                        #[cfg(target_os = "linux")]
+                        file_opts.custom_flags(0x00020000);
+                        #[cfg(target_os = "macos")]
+                        file_opts.custom_flags(0x0100);
+                        let _ = file_opts.open(&db_path);
+                    }
+                }
                 #[cfg(not(unix))]
                 {
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::fs::OpenOptionsExt;
-                            let mut file_opts = std::fs::OpenOptions::new();
-                            file_opts.write(true).create(true).mode(0o600);
-                            #[cfg(target_os = "linux")]
-                            file_opts.custom_flags(0x00020000);
-                            #[cfg(target_os = "macos")]
-                            file_opts.custom_flags(0x0100);
-                            let _ = file_opts.open(&db_path);
-                        }
-                        #[cfg(not(unix))]
-                        {
-                            let _ = std::fs::File::create(&db_path);
-                        }
+                        let _ = std::fs::File::create(&db_path);
                     }
                 }
+
             }
 
             // sqlite-vec is optional at runtime. The memory repository probes for
