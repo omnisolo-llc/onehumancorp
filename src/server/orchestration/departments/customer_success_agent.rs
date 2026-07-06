@@ -37,6 +37,7 @@ impl Department for CustomerSuccessAgent {
             "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
             "tenant.subscription.check_predictive_restock".to_string(),
+            "tenant.subscription.churn_risk".to_string(),
             "tenant.subscription.action.requested".to_string(),
             "job_status_updates".to_string(),
         ]
@@ -256,6 +257,50 @@ impl Department for CustomerSuccessAgent {
                 metadata: None,
             };
             self.orchestrator.write_long_term_memory(record).await.map_err(|e| e.to_string())?;
+
+            return Ok(());
+        }
+
+
+        if event.event_type == "tenant.subscription.churn_risk" {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_name = event.payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("");
+            let subscription_id = event.payload.get("subscription_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            if customer_id.is_empty() {
+                return Err("customer_id is required".to_string());
+            }
+
+            let prompt = format!(
+                "Draft a concise, personalized win-back message for customer {} (ID: {}) who hasn't booked or ordered anything in the last 30 days and their subscription is approaching renewal. Offer a small perk like a free consultation or a small discount.",
+                customer_name, customer_id
+            );
+            let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+
+            let generated_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                Ok("minimax") => {
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't booked a session lately. Want to schedule a free 15-minute catch-up to keep the momentum going?".to_string())
+                }
+                _ => {
+                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Hi! We noticed you haven't booked a session lately. Want to schedule a free 15-minute catch-up to keep the momentum going?".to_string())
+                }
+            };
+
+            let action_payload = serde_json::json!({
+                "feature_type": "subscription_churn_risk",
+                "generated_response": generated_response,
+                "customer_id": customer_id,
+                "subscription_id": subscription_id,
+            });
+
+            let _ = self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                "Subscription Churn Risk Draft".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::DraftForReview,
+                action_payload,
+            ).await;
 
             return Ok(());
         }
