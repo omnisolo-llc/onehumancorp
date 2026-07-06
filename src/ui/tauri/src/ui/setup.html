@@ -2712,6 +2712,13 @@
         instant_image_url: document.getElementById("instant-image-url"),
       };
 
+      Object.values(inputs).forEach(inputEl => {
+        if (inputEl && inputEl.addEventListener) {
+          inputEl.addEventListener("change", () => saveCurrentState());
+          inputEl.addEventListener("blur", () => saveCurrentState());
+        }
+      });
+
       const errors = {
         context: document.getElementById("context-error"),
         categories: document.getElementById("categories-error"),
@@ -3297,7 +3304,9 @@
             state.target_audience = inputs.target_audience.value.trim();
           }
         } else if (stepId === "step-domain") {
-          if (inputs.domain_name.value.trim().length < 3) {
+          const domainRegex = /^[a-z0-9-]+$/;
+          if (inputs.domain_name.value.trim().length < 3 || !domainRegex.test(inputs.domain_name.value.trim())) {
+            errors.domain_name.innerText = "Domain must be at least 3 characters and contain only lowercase letters, numbers, and hyphens.";
             errors.domain_name.style.display = "flex";
             inputs.domain_name.classList.add("invalid-input");
             isValid = false;
