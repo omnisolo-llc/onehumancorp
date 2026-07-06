@@ -22,6 +22,7 @@ pub fn router() -> Router<DeliveryState> {
     Router::new()
         .route("/{tenant_id}/{product_id}", get(get_storefront_product).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)))
         .route("/webhook/invalidate", post(invalidate_cache_webhook))
+        .route("/resolve", get(resolve_domain))
 }
 
 
@@ -264,5 +265,41 @@ mod tests {
     #[test]
     fn test_storefront_headers_dummy() {
         assert!(true);
+    }
+
+    #[tokio::test]
+    async fn test_resolve_domain_query_struct() {
+        let query = super::ResolveQuery { domain: "test.com".to_string() };
+        assert_eq!(query.domain, "test.com");
+    }
+
+}
+
+
+#[derive(Deserialize)]
+pub struct ResolveQuery {
+    pub domain: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct ResolveResponse {
+    pub tenant_id: String,
+}
+
+async fn resolve_domain(
+    State(state): State<DeliveryState>,
+    axum::extract::Query(query): axum::extract::Query<ResolveQuery>,
+) -> Result<Json<ResolveResponse>, StatusCode> {
+    let result = sqlx::query_scalar::<_, Uuid>(
+        "SELECT tenant_id FROM builder_sites WHERE domain = $1 ORDER BY created_at DESC LIMIT 1"
+    )
+    .bind(&query.domain)
+    .fetch_optional(&state.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    match result {
+        Some(tenant_id) => Ok(Json(ResolveResponse { tenant_id: tenant_id.to_string() })),
+        None => Err(StatusCode::NOT_FOUND),
     }
 }
