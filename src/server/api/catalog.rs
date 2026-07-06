@@ -38,6 +38,14 @@ pub struct ProductVariantRequest {
 }
 
 #[derive(Deserialize)]
+pub struct UpdateProductRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub price: Option<String>,
+    pub item_type: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct CreateProductRequest {
     pub name: String,
     pub price: String,
@@ -291,6 +299,19 @@ async fn handle_create_product(
 
     // Invalidate cache
     let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(client) = &hub.redis_client {
+        if let Ok(mut redis_conn) = client.get_multiplexed_async_connection().await {
+            let invalidation_topic = "cache_invalidation_events";
+            let invalidation_payload = serde_json::json!({
+                "event": "product.created",
+                "tags": [
+                    format!("tenant-id:{}", tenant_id),
+                    format!("entity:product:{}", product_id)
+                ]
+            }).to_string();
+            let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut redis_conn).await;
+        }
+    }
     cache.invalidate(&tenant_id).await;
 
     if let Err(e) = hub.tracker().record_product_added(&tenant_id).await {
@@ -438,11 +459,125 @@ async fn handle_generate_offering(
     (axum::http::StatusCode::OK, Json(response_json)).into_response()
 }
 
+pub async fn handle_update_product(
+    axum::extract::Path(product_id): axum::extract::Path<String>,
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(payload): Json<UpdateProductRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to acquire DB connection: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    let mut query_builder = String::from("UPDATE products SET ");
+    let mut bindings = Vec::new();
+    let mut param_index = 1;
+
+    if let Some(ref name) = payload.name {
+        query_builder.push_str(&format!("title = ${}, ", param_index));
+        bindings.push(name.clone());
+        param_index += 1;
+    }
+    if let Some(ref desc) = payload.description {
+        query_builder.push_str(&format!("description = ${}, ", param_index));
+        bindings.push(desc.clone());
+        param_index += 1;
+    }
+    if let Some(ref price) = payload.price {
+        query_builder.push_str(&format!("price_cents = ${}, ", param_index));
+        let price_cents = (price.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
+        bindings.push(price_cents.to_string());
+        param_index += 1;
+    }
+    if let Some(ref item_type) = payload.item_type {
+        query_builder.push_str(&format!("type = ${}, ", param_index));
+        bindings.push(item_type.clone());
+        param_index += 1;
+    }
+
+    if bindings.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: "BAD_REQUEST".to_string(),
+                message: "No fields to update".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    query_builder.truncate(query_builder.len() - 2);
+    query_builder.push_str(&format!(" WHERE id = ${} AND tenant_id = ${}", param_index, param_index + 1));
+
+    let mut query = sqlx::query(&query_builder);
+
+    for binding in bindings {
+        query = query.bind(binding);
+    }
+    query = query.bind(product_id.clone()).bind(tenant_id.clone());
+
+    let result = query.execute(&mut *conn).await;
+
+    if let Err(e) = result {
+        tracing::error!("Failed to update product: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "DATABASE_ERROR".to_string(),
+                message: "Failed to update product".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
+    cache.invalidate(&tenant_id).await;
+
+    if let Some(client) = &hub.redis_client {
+        if let Ok(mut redis_conn) = client.get_multiplexed_async_connection().await {
+            let invalidation_topic = "cache_invalidation_events";
+            let invalidation_payload = serde_json::json!({
+                "event": "product.updated",
+                "tags": [
+                    format!("tenant-id:{}", tenant_id),
+                    format!("entity:product:{}", product_id)
+                ]
+            }).to_string();
+            let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut redis_conn).await;
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(CreateProductResponse {
+            success: true,
+            message: Some(format!("Updated product {}", product_id)),
+        }),
+    )
+        .into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/products", get(handle_get_products))
         .route("/product", post(handle_create_product))
         .route("/generate", post(handle_generate_offering))
+        .route("/product/:id", axum::routing::put(handle_update_product))
         .layer(Extension(hub))
 }
 

@@ -217,6 +217,11 @@ async fn regenerate_storefront_product(
             }
 
             // Pre-warm the cache since SWR or cache miss just resolved
+            if let Some(body_end) = html.find("</body>") {
+                let hydration_str = format!("<div id=\"cart-hydration-data\" data-tenant-id=\"{}\" data-product-id=\"{}\"></div><script src=\"/static/hydration.js\" async defer></script>", tenant_id, product_id);
+                html.insert_str(body_end, &hydration_str);
+            }
+
             cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
 
             return Ok((html, tags));
