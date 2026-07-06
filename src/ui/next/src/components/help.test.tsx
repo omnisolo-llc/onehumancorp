@@ -90,7 +90,7 @@ describe('HelpWidget', () => {
 
   it('renders the help widget', async () => {
     render(<TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider>);
-    expect(screen.getByRole('button', { name: 'Help' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open help chat' })).toBeInTheDocument();
   });
 
   it('fetches dynamic walkthroughs when clicked and handles fallback data', async () => {
@@ -111,7 +111,7 @@ describe('HelpWidget', () => {
       </div>
     );
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     const tourBtn = screen.getByText('Tour: Set up your store');
@@ -136,7 +136,7 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     const chatTab = screen.getByText('Ask anything');
@@ -160,7 +160,7 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     const chatTab = screen.getByText('Ask anything');
@@ -174,7 +174,7 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     const videosTab = screen.getByText('Videos');
@@ -204,7 +204,7 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     const videosTab = screen.getByText('Videos');
@@ -233,7 +233,7 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     const videosTab = screen.getByText('Videos');
@@ -262,7 +262,7 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     const newTab = screen.getByText('New');
@@ -278,7 +278,7 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     await waitFor(() => {
@@ -299,7 +299,7 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     const closeBtn = screen.getByLabelText('Close Help Widget');
@@ -332,7 +332,7 @@ describe('HelpWidget', () => {
     const user = userEvent.setup();
     render(<div><TooltipProvider><WalkthroughProvider><HelpWidget /></WalkthroughProvider></TooltipProvider></div>);
 
-    const helpBtn = screen.getByRole('button', { name: 'Help' });
+    const helpBtn = screen.getByRole('button', { name: 'Open help chat' });
     await user.click(helpBtn);
 
     const chatTab = screen.getByText('Ask anything');
