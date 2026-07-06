@@ -30,6 +30,10 @@ test.describe('Onboarding Flow', () => {
       });
     });
 
+    await page.route('**/*success.html*', async route => {
+      await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Success</body></html>' });
+    });
+
     await page.route('**/*success.html', async route => {
       await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Success</body></html>' });
     });
