@@ -39,6 +39,7 @@ rust_library(
         "@crates//:tokio",
         "@crates//:dashmap",
         "@crates//:tracing",
+        "@crates//:urlencoding",
     ],
 )
 
@@ -54,5 +55,6 @@ rust_test(
     deps = [
         "@crates//:reqwest",
         "@crates//:tower",
+        "@crates//:temp-env",
     ],
 )

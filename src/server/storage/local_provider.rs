@@ -23,7 +23,13 @@ impl LocalProvider {
         if key.contains("..") {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "Path traversal detected (..)"));
         }
-        let path = self.base_path.join(key);
+
+        let mut normalized_key = key;
+        while normalized_key.starts_with('/') || normalized_key.starts_with('\\') {
+            normalized_key = &normalized_key[1..];
+        }
+
+        let path = self.base_path.join(normalized_key);
         
         if !path.starts_with(&self.base_path) {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "Path traversal detected"));
@@ -303,6 +309,31 @@ mod tests {
 
         let read_content = p.read_blob(&final_key).await.unwrap();
         assert_eq!(read_content, content);
+        cleanup(dir);
+    }
+
+    #[tokio::test]
+    async fn test_local_provider_path_traversal() {
+        let (p, dir) = new_test_provider();
+
+        // Attempt to write using `..` should fail
+        let res = p.write_blob("../test.txt", b"hack").await;
+        assert!(res.is_err());
+
+        // Attempt to write using absolute path should be securely stripped and placed inside base_dir
+        let res = p.write_blob("/absolute/path.txt", b"safe").await;
+        assert!(res.is_ok());
+
+        let url = p.get_blob_url("/absolute/path.txt").await.unwrap();
+        assert!(url.contains(&dir));
+        assert!(!url.starts_with("file:///absolute/path.txt"));
+
+        // Similarly for backslashes
+        let res2 = p.write_blob("\\windows\\path.txt", b"safe2").await;
+        assert!(res2.is_ok());
+        let url2 = p.get_blob_url("\\windows\\path.txt").await.unwrap();
+        assert!(url2.contains(&dir));
+
         cleanup(dir);
     }
 }
