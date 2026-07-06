@@ -118,7 +118,7 @@ pub async fn update_tooltip(headers: axum::http::HeaderMap, axum::extract::Json(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("default");
     let pool = crate::db::get_pool();
-    match sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (id) DO UPDATE SET text = EXCLUDED.text").bind(payload.id).bind(tenant_id).bind(payload.text)
+    match sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ($1, $2, $3) ON CONFLICT (tenant_id, id) DO UPDATE SET text = EXCLUDED.text").bind(payload.id).bind(tenant_id).bind(payload.text)
         .execute(&pool)
         .await
     {

@@ -2607,11 +2607,12 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     );
 
                     CREATE TABLE IF NOT EXISTS tooltips (
-                        id TEXT PRIMARY KEY,
+                        id TEXT NOT NULL,
                         tenant_id TEXT NOT NULL,
                         text TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, id)
                     );
 
                     CREATE TABLE IF NOT EXISTS unified_messages (

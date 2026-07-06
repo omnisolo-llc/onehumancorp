@@ -27,11 +27,12 @@ CREATE INDEX IF NOT EXISTS idx_video_tutorials_tenant_id ON video_tutorials(tena
 
 -- Create Tooltips Table
 CREATE TABLE IF NOT EXISTS tooltips (
-    id VARCHAR(255) PRIMARY KEY,
+    id VARCHAR(255) NOT NULL,
     tenant_id VARCHAR(255) NOT NULL,
     text TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (tenant_id, id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_tooltips_tenant_id ON tooltips(tenant_id);
