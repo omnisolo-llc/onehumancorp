@@ -81,7 +81,8 @@ impl JitContextRetriever {
                 let tf = freq as f64;
 
                 // Simplified BM25 formula component
-                let score = idf_proxy * (tf * (k1 + 1.0)) / (tf + k1 * (1.0 - b + b * (msg_len / avg_dl)));
+                let score =
+                    idf_proxy * (tf * (k1 + 1.0)) / (tf + k1 * (1.0 - b + b * (msg_len / avg_dl)));
                 (term, score)
             })
             .collect();
