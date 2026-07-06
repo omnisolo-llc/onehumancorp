@@ -67,6 +67,10 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub, minimax }
     }
 
+    pub fn db_pool(&self) -> &sqlx::PgPool {
+        &self.db.pool
+    }
+
     pub async fn process_chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, String> {
         let user_messages: Vec<&ChatMessage> = messages.iter().filter(|m| m.role == "user").collect();
 
