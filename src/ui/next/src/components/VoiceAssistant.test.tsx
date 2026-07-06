@@ -16,11 +16,7 @@ const mockMediaRecorderInstance = {
   }
 };
 
-class MockMediaRecorder {
-  constructor() {
-    return mockMediaRecorderInstance;
-  }
-}
+const MockMediaRecorder = vi.fn().mockImplementation(() => mockMediaRecorderInstance);
 (MockMediaRecorder as any).isTypeSupported = vi.fn().mockReturnValue(true);
 (global as any).MediaRecorder = MockMediaRecorder;
 
@@ -66,7 +62,7 @@ describe('VoiceAssistant', () => {
     });
 
     await waitFor(() => {
-        // expect(MockMediaRecorder).toHaveBeenCalled();
+        expect(MockMediaRecorder).toHaveBeenCalled();
         expect(mockMediaRecorderInstance.start).toHaveBeenCalled();
     });
   });

@@ -134,16 +134,16 @@ export default function UnifiedFeed() {
 
       <main className="flex-1 overflow-y-auto p-4 space-y-4" data-testid="agent-feed">
         {feedItems.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 flex flex-col items-center gap-3 glassmorphism shadow-sm opacity-90" data-testid="triage-feed-empty">
+          <div className="triage-card empty text-center text-gray-500 py-8 flex flex-col items-center gap-3 glassmorphism shadow-sm opacity-90" data-testid="triage-feed-empty">
              <div className="text-3xl mb-2">✨</div>
              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
-               All caught up!
+               No items need your attention right now. Great job!
              </h3>
           </div>
         ) : (
           feedItems.map((item) => (
-            <div key={item.workItem.id} className="w-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl overflow-hidden transition-all duration-300" data-testid="agent-feed-card">
-              <div className="p-4 pb-3 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center">
+            <div key={item.workItem.id} className="triage-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300" data-testid="agent-feed-card">
+              <div className="p-5 border-b border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] backdrop-blur-[30px] backdrop-saturate-[210%] flex justify-between items-center">
                   <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#0066FF]/20 px-2.5 py-1 rounded-full">
                         {item.workItem.source}
@@ -152,18 +152,19 @@ export default function UnifiedFeed() {
                   <span className="text-[11px] font-medium text-gray-400">Just now</span>
               </div>
               <div className="p-4">
-                 <p className="text-[14px] leading-relaxed text-gray-800 dark:text-gray-200">
+                 <p className="triage-context text-[15px] font-medium text-gray-900 dark:text-white leading-snug break-words line-clamp-2">
                    {item.workItem.payload?.msg || item.workItem.payload?.text || item.workItem.payload?.description || JSON.stringify(item.workItem.payload)}
                  </p>
               </div>
               {item.draft && (
-                <div className="p-4 pt-3 bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100/50 dark:border-gray-700/50 flex flex-col gap-4">
-                   <div className="w-full text-[13px] leading-relaxed text-gray-700 dark:text-gray-300 italic border-l-2 border-[#0066FF] pl-3 py-1">
+                <div className="p-5 pt-2 flex flex-col gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
+                   <div className="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words">
                      "{item.draft.response}"
                    </div>
-                   <div className="flex gap-2 w-full">
+                   <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF] mb-2">Draft Reply:</div>
+                   <div className="flex flex-col sm:flex-row gap-3 w-full">
                      <button
-                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
+                       className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
                        onClick={() => handleReject(item.workItem.id)}
                        disabled={processingId === item.workItem.id}
                        data-testid="unified-feed-reject-btn"
@@ -171,7 +172,7 @@ export default function UnifiedFeed() {
                        Reject
                      </button>
                      <button
-                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
+                       className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
                        onClick={() => handleEdit(item.workItem.id)}
                        disabled={processingId === item.workItem.id}
                        data-testid="edit-proposal"
@@ -179,7 +180,7 @@ export default function UnifiedFeed() {
                        Edit
                      </button>
                      <button
-                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-[#0066FF] text-white rounded-xl hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all"
+                       className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
                        onClick={() => handleApprove(item.workItem.id)}
                        disabled={processingId === item.workItem.id}
                        data-testid="feed-approve-btn"

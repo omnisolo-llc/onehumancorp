@@ -1058,30 +1058,59 @@
       function renderTriageItems(items) {
         triageQueue.innerHTML = items.map(item => {
           let priorityClass = '';
-          const p = (item.priority || '').toLowerCase();
-          if (['urgent', 'high'].includes(p)) priorityClass = 'urgent';
-          else if (['action needed', 'medium'].includes(p)) priorityClass = 'medium';
+          const p = (item.priority || item.status || '').toLowerCase();
+          if (p === 'urgent' || p === 'high') priorityClass = 'priority-high';
+          else if (p === 'medium') priorityClass = 'priority-medium';
+
+          let actionHtml = '';
+          if (item.action_type || item.proposed_action) {
+            const actionText = item.action_type || 'Draft Reply';
+            const actionPayload = item.action_payload || (item.proposed_action ? (item.proposed_action.draft_reply || JSON.stringify(item.proposed_action)) : 'Action details...');
+            actionHtml = `
+              <div class="triage-card-action">
+                <div class="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF] mb-2">${actionText}</div>
+                <div class="proposed-action border border-[#0066FF]/20 dark:border-[#0066FF]/30 bg-white/50 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] p-4 text-[13px] leading-relaxed text-gray-900 dark:text-white whitespace-pre-wrap break-words rounded-xl mb-3">
+                  ${actionPayload}
+                </div>
+                <div class="triage-actions flex flex-col sm:flex-row gap-3 w-full">
+                  <button class="triage-btn-dismiss w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center rounded-xl shadow-sm" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
+                  <button class="triage-btn-approve w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center rounded-xl" onclick="handleTriageAction('${item.id}', true)">Approve & Send</button>
+                </div>
+              </div>
+            `;
+          } else {
+             actionHtml = `
+               <div class="triage-actions flex flex-col sm:flex-row gap-3 w-full mt-3">
+                  <button class="triage-btn-dismiss w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center rounded-xl shadow-sm" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
+                  <button class="triage-btn-approve w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center rounded-xl" onclick="handleTriageAction('${item.id}', true)">Mark Done</button>
+                </div>
+             `;
+          }
+
+          const source = item.source || item.event_source || 'System';
+          let sourceIcon = '✉️';
+          if(source.toLowerCase().includes('instagram')) sourceIcon = '📸';
+          if(source.toLowerCase().includes('stripe') || source.toLowerCase().includes('payment')) sourceIcon = '💳';
+          if(source.toLowerCase().includes('booking')) sourceIcon = '📅';
 
           return `
-            <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
-              <div class="triage-header">
-                <div class="triage-source">${item.source || 'Unknown'}</div>
-                <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
-              </div>
-              <div class="triage-context">${item.context || ''}</div>
-              ${item.action_type ? `
-                <div class="triage-action">
-                  <div class="triage-action-title">${item.action_type}</div>
-                  <div>${item.action_payload || ''}</div>
+            <div class="triage-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300" data-testid="triage-card-${item.id}">
+              <div class="triage-header p-5 border-b border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] backdrop-blur-[30px] backdrop-saturate-[210%] flex justify-between items-start">
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">${sourceIcon}</span>
+                  <strong class="font-outfit font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm">${source}</strong>
                 </div>
-              ` : ''}
-              <div class="triage-controls">
-                <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)">Approve & Send</button>
-                <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
+                ${p ? `<span class="triage-priority ${priorityClass} px-2 py-1 rounded text-xs">${p}</span>` : ''}
+              </div>
+              <div class="p-5">
+                <div class="triage-context text-[15px] font-medium text-gray-900 dark:text-white leading-snug break-words mb-4">
+                  ${item.context || (item.context_payload ? (item.context_payload.msg || item.context_payload.text || JSON.stringify(item.context_payload)) : 'No details provided')}
+                </div>
+                ${actionHtml}
               </div>
             </div>
           `;
-        }).join('');
+      }).join('');
       }
 
       window.handleTriageAction = async function(id, approved) {
