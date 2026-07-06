@@ -129,6 +129,7 @@ where
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
         .route("/simulate-autonomous-booking-quote", post(simulate_autonomous_booking_quote))
         .route("/simulate-invoice-draft", post(simulate_invoice_draft))
+        .route("/simulate-lead-recovery", post(simulate_lead_recovery))
         .route("/stream", get(stream_agent_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
@@ -605,6 +606,37 @@ async fn simulate_autonomous_booking_quote(
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate autonomous booking quote: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
+async fn simulate_lead_recovery(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    let payload = serde_json::json!({
+        "feature_type": "lead_recovery",
+        "description": "A potential customer hasn't received a follow-up in over 2 hours.",
+        "draft_reply": "Hi there! This is Carlos's assistant. He's on a job right now, but how can we help? We can usually schedule a visit for tomorrow.",
+        "inbox_message_id": "msg-lead-recovery"
+    });
+
+    match orchestrator.execute_action(
+        crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+        "Follow up on missed lead".to_string(),
+        tenant_id,
+        crate::orchestration::departments::types::ActionRisk::DraftForReview,
+        payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate lead recovery: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
         }
     }

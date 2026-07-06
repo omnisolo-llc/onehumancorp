@@ -234,9 +234,11 @@ mod tests {
 
         let mut main_ts = File::create(root.join("main.ts")).unwrap();
         main_ts
-            .write_all(b"export interface Config {}\n\nclass App {}\n\nfunction start() {
+            .write_all(
+                b"export interface Config {}\n\nclass App {}\n\nfunction start() {
   // Implementation pending
-}\n")
+}\n",
+            )
             .unwrap();
 
         let repo_map = RepoMap::new(root);
