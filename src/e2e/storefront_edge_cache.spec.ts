@@ -19,10 +19,22 @@ test.describe('Storefront Edge Cache Invalidation & SEO', () => {
     expect(headers['cache-control']).toBeDefined();
     expect(headers['etag']).toBeDefined();
 
+    const etag = headers['etag'];
+
     // 3. Ensure our changes caused a HIT on next reload
     const res2 = await request.get(`/api/v1/storefront/${tenantId}/${productId}`);
     const headers2 = res2?.headers() || {};
     expect(headers2['x-cache']).toBe('HIT');
+
+    // 3.5. Ensure 304 Not Modified works when If-None-Match is sent
+    const res304 = await request.get(`/api/v1/storefront/${tenantId}/${productId}`, {
+      headers: {
+        'If-None-Match': etag
+      }
+    });
+    expect(res304?.status()).toBe(304);
+    const headers304 = res304?.headers() || {};
+    expect(headers304['x-cache']).toBe('HIT');
 
     // 4. Trigger cache invalidation via webhook
     const invalidateRes = await request.post(`/api/v1/storefront/webhook/invalidate`, {

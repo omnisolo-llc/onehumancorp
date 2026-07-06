@@ -37,9 +37,32 @@ pub async fn edge_caching_middleware(
 
     if is_get {
         if let Some((cached, _is_stale)) = cdn_cache.get_with_swr(&cache_key).await {
-            let body = Body::from(cached.body);
+            let mut if_none_match = None;
+            if let Some(inm) = req.headers().get(axum::http::header::IF_NONE_MATCH) {
+                if let Ok(s) = inm.to_str() {
+                    if_none_match = Some(s.to_string());
+                }
+            }
+
+            let mut cached_etag = None;
+            for (k, v) in &cached.headers {
+                if k.eq_ignore_ascii_case("etag") {
+                    cached_etag = Some(v.to_string());
+                    break;
+                }
+            }
+
+            let is_304 = if let (Some(inm), Some(etag)) = (if_none_match, cached_etag) {
+                inm == etag
+            } else {
+                false
+            };
+
+            let status = if is_304 { 304 } else { cached.status };
+            let body = if is_304 { Body::empty() } else { Body::from(cached.body) };
+
             let mut response = Response::builder()
-                .status(cached.status)
+                .status(status)
                 .body(body)
                 .unwrap();
 
@@ -48,7 +71,11 @@ pub async fn edge_caching_middleware(
                     response.headers_mut().insert(hk, hv);
                 }
             }
-            response.headers_mut().insert("X-Cache", "HIT".parse().unwrap());
+            if _is_stale {
+                response.headers_mut().insert("X-Cache", "STALE".parse().unwrap());
+            } else {
+                response.headers_mut().insert("X-Cache", "HIT".parse().unwrap());
+            }
             return Ok(response.into_response());
         }
     }
@@ -122,4 +149,60 @@ pub async fn edge_caching_middleware(
     let new_body = Body::from(bytes.to_vec());
     let new_response = Response::from_parts(parts, new_body);
     Ok(new_response.into_response())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        routing::get,
+        Router,
+    };
+    use http::{Request, StatusCode, header};
+    use tower::ServiceExt; // for `oneshot`
+    use axum::body::Body;
+
+    async fn mock_handler() -> impl IntoResponse {
+        "Hello, World!"
+    }
+
+    #[tokio::test]
+    async fn test_edge_caching_middleware() {
+        let app = Router::new()
+            .route("/test", get(mock_handler))
+            .layer(axum::middleware::from_fn(edge_caching_middleware));
+
+        // 1. First request should be a MISS
+        let req1 = Request::builder()
+            .uri("/test")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let res1 = app.clone().oneshot(req1).await.unwrap();
+        assert_eq!(res1.status(), StatusCode::OK);
+        assert_eq!(res1.headers().get("X-Cache").unwrap(), "MISS");
+
+        let etag = res1.headers().get(header::ETAG).unwrap().clone();
+
+        // 2. Second request should be a HIT
+        let req2 = Request::builder()
+            .uri("/test")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+        let res2 = app.clone().oneshot(req2).await.unwrap();
+        assert_eq!(res2.status(), StatusCode::OK);
+        assert_eq!(res2.headers().get("X-Cache").unwrap(), "HIT");
+
+        // 3. Conditional request should be 304 Not Modified
+        let req3 = Request::builder()
+            .uri("/test")
+            .method("GET")
+            .header(header::IF_NONE_MATCH, etag)
+            .body(Body::empty())
+            .unwrap();
+        let res3 = app.clone().oneshot(req3).await.unwrap();
+        assert_eq!(res3.status(), StatusCode::NOT_MODIFIED);
+        assert_eq!(res3.headers().get("X-Cache").unwrap(), "HIT");
+    }
 }
