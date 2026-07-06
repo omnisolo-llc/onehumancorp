@@ -133,7 +133,7 @@ export function WorkTriageFeed({
                 className="w-full px-6 py-2.5 min-h-[44px] min-w-[44px] bg-[#FF9500] hover:bg-orange-600 text-white font-medium shadow-sm transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                 data-testid={`triage-approve-${item.id}`}
               >
-                Approve & Execute
+                Approve & Send
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}
@@ -187,7 +187,7 @@ export function WorkTriageFeed({
                 className="w-full flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium shadow-md transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                 data-testid={`triage-approve-${item.id}`}
               >
-                ✨ Approve & Execute
+                ✨ Approve & Send
               </button>
               <button
                 onClick={() => onDecision(item.id, false)}

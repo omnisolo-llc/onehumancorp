@@ -587,6 +587,7 @@ Output JSON format:
                         return Ok(false);
                     }
 
+                    let _ = sqlx::query("UPDATE work_intents SET status = 'COMPLETED', updated_at = NOW() WHERE payload->>'message' = $1 AND tenant_id = $2").bind(customer_message).bind(&tenant_id).execute(&self.db.pool).await;
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
                         .bind(&job_id)
                         .execute(&self.db.pool).await;
@@ -715,6 +716,7 @@ Output JSON format:
                         return Ok(false);
                     }
 
+                    let _ = sqlx::query("UPDATE work_intents SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE json_extract(payload, '$.message') = ? AND tenant_id = ?").bind(customer_message).bind(&tenant_id).execute(&*sqlite_pool).await;
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&job_id)
                         .execute(&*sqlite_pool).await;

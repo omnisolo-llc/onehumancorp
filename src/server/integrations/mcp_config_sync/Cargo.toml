@@ -9,6 +9,7 @@ reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 server_integrations_core = { path = "../core" }
+server_common = { path = "../../common" }
 tokio = { workspace = true }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 tracing = "0.1"
