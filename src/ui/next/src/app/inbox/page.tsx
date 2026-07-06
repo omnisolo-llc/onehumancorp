@@ -84,6 +84,31 @@ function CustomerContextCard({ customerId, tenantId }: { customerId: string; ten
   );
 }
 
+function renderContentWithMedia(content: string) {
+  if (!content) return null;
+  const mediaRegex = /\[Media: (\S+) - (https?:\/\/[^\]]+)\]/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = mediaRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<span key={lastIndex}>{content.slice(lastIndex, match.index)}</span>);
+    }
+    const type = match[1];
+    const url = match[2];
+    if (type.startsWith("image/")) {
+      parts.push(<img key={match.index} src={url} alt="Attached Media" className="max-w-full h-auto mt-2 rounded-lg" style={{ maxHeight: "300px" }} />);
+    } else {
+      parts.push(<a key={match.index} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline mt-2 block">Attachment ({type})</a>);
+    }
+    lastIndex = mediaRegex.lastIndex;
+  }
+  if (lastIndex < content.length) {
+    parts.push(<span key={lastIndex}>{content.slice(lastIndex)}</span>);
+  }
+  return <div className="flex flex-col">{parts}</div>;
+}
+
 function InboxWorkspace({
   messages,
   sourceLabel,
@@ -95,6 +120,7 @@ function InboxWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
+  const [attachmentUrl, setAttachmentUrl] = useState("");
 
   const selected = useMemo(() => {
     if (messages.length === 0) return null;
@@ -181,7 +207,7 @@ function InboxWorkspace({
       const approveRes = await fetch(`/api/agents/approvals/${approval.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ approved: true })
+        body: JSON.stringify({ approved: true, attachment_url: attachmentUrl })
       });
 
       if (approveRes.ok) {
@@ -227,6 +253,7 @@ function InboxWorkspace({
                   onClick={() => {
                     setSelectedId(message.id);
                     setShowOriginal(false);
+                    setAttachmentUrl("");
                   }}
                   className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-xl transition-all backdrop-filter ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
                 >
@@ -282,13 +309,23 @@ function InboxWorkspace({
                     )}
                   </div>
                   <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
-                    {(showOriginal ? selected.original_content : selected.content) || "Empty message"}
+                    {renderContentWithMedia((showOriginal ? selected.original_content : selected.content) || "Empty message")}
                   </div>
                 </div>
                 <div className="mb-4">
                   <div className="app-metric-label">Draft Reply</div>
+                  <div className="mt-2 mb-4">
+                    <label className="app-metric-label block mb-1">Attach Photo URL (Optional)</label>
+                    <input
+                      type="text"
+                      value={attachmentUrl}
+                      onChange={(e) => setAttachmentUrl(e.target.value)}
+                      placeholder="https://example.com/photo.jpg"
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm"
+                    />
+                  </div>
                   <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
-                    {selected.draft_reply || "No draft reply stored for this message."}
+                    {renderContentWithMedia(selected.draft_reply || "No draft reply stored for this message.")}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">

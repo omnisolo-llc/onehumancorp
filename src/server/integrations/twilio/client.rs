@@ -3,7 +3,7 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait TwilioClientWrapper: Send + Sync {
     async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String>;
-    async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String>;
+    async fn send_whatsapp(&self, to: &str, from: &str, body: &str, media_url: Option<&str>) -> Result<(), String>;
     async fn provision_number(&self, area_code: &str) -> Result<String, String>;
 }
 
@@ -114,17 +114,21 @@ impl TwilioClientWrapper for RealTwilioClient {
         Ok(phone_number.to_string())
     }
 
-    async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+    async fn send_whatsapp(&self, to: &str, from: &str, body: &str, media_url: Option<&str>) -> Result<(), String> {
         let url = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", self.account_sid);
 
         let formatted_to = if to.starts_with("whatsapp:") { to.to_string() } else { format!("whatsapp:{}", to) };
         let formatted_from = if from.starts_with("whatsapp:") { from.to_string() } else { format!("whatsapp:{}", from) };
 
-        let params = [
+        let mut params = vec![
             ("To", formatted_to.as_str()),
             ("From", formatted_from.as_str()),
             ("Body", body),
         ];
+
+        if let Some(m_url) = media_url {
+            params.push(("MediaUrl", m_url));
+        }
 
         let mut retries = 3;
         while retries > 0 {

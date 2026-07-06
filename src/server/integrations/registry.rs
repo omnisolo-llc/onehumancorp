@@ -138,7 +138,7 @@ impl IntegrationsRegistry {
                              let client = client.clone();
                              tokio::spawn(async move {
                                 let result = if to.starts_with("whatsapp:") || from.starts_with("whatsapp:") {
-                                    client.send_whatsapp(&to, &from, &text).await
+                                    client.send_whatsapp(&to, &from, &text, None).await
                                 } else {
                                     client.send_sms(&to, &from, &text).await
                                 };
@@ -466,14 +466,14 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn send_whatsapp(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
+    pub async fn send_whatsapp(&self, integration_id: &str, to: &str, from: &str, body: &str, media_url: Option<&str>) -> Result<(), String> {
         if integration_id == "twilio" {
             let client = {
                 let clients = self.twilio_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             };
             if let Some(c) = client {
-                return c.send_whatsapp(to, from, body).await;
+                return c.send_whatsapp(to, from, body, media_url).await;
             }
         } else if integration_id == "meta" || integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
             let client = {
@@ -612,7 +612,7 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             let res = if integration_id == "twilio" && (to.starts_with("whatsapp:") || from.starts_with("whatsapp:")) {
-                let r = c.send_whatsapp(to, from, body).await;
+                let r = c.send_whatsapp(to, from, body, None).await;
                 if r.is_ok() {
                     let _ = ::server_telemetry::record_api_call_cost(&crate::db::get_pool(), "unknown", "twilio_whatsapp", 0.015).await;
                 }

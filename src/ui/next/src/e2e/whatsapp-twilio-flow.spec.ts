@@ -84,7 +84,7 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
 
     await page.goto('/inbox');
     await expect(page.getByText(/Look at this cake/i).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/Media: image\/jpeg - https:\/\/example.com\/image.jpg/i).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('img[src="https://example.com/image.jpg"]')).toBeVisible({ timeout: 15000 });
   });
 
   test('Webhook processes message gracefully and falls back to test_tenant for unknown number', async ({ request }) => {
@@ -116,6 +116,8 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
     // In our system, message_triage job handles the ai drafting.
     // It might take a bit of time for the job queue to process and populate the draft.
     // The E2E tests just need to verify the message appears, and potentially the draft UI element.
+    await expect(page.getByPlaceholder('https://example.com/photo.jpg')).toBeVisible({ timeout: 15000 });
+    await page.getByPlaceholder('https://example.com/photo.jpg').fill('https://example.com/myphoto.jpg');
     await expect(page.getByText(/Draft Reply/i).first()).toBeVisible({ timeout: 15000 }).catch(() => {
       // If AI isn't mocking properly in E2E, we can gracefully catch it,
       // but ideally we'd expect some kind of AI state

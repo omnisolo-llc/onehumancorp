@@ -50,12 +50,12 @@ impl TwilioProvider {
         self.client.send_sms(to, from, body).await
     }
 
-    pub async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+    pub async fn send_whatsapp(&self, to: &str, from: &str, body: &str, media_url: Option<&str>) -> Result<(), String> {
         // Mock checking opt-out status
         if self.is_opted_out(to).await {
             return Err("User opted out".to_string());
         }
-        self.client.send_whatsapp(to, from, body).await
+        self.client.send_whatsapp(to, from, body, media_url).await
     }
 
     pub async fn provision_number(&self, area_code: &str) -> Result<String, String> {
@@ -81,7 +81,7 @@ mod tests {
             Ok(())
         }
 
-        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str, _media_url: Option<&str>) -> Result<(), String> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }

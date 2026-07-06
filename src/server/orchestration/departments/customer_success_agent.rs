@@ -188,7 +188,7 @@ impl Department for CustomerSuccessAgent {
                             }
                             let twilio_from = from_phone;
                             let twilio_to = if sender_id.starts_with("whatsapp:") { sender_id.clone() } else { format!("whatsapp:{}", sender_id) };
-                            if let Err(e) = provider.send_whatsapp(&twilio_to, &twilio_from, &text).await {
+                            if let Err(e) = provider.send_whatsapp(&twilio_to, &twilio_from, &text, None).await {
                                 tracing::error!("Failed to send whatsapp message via Twilio integration: {}", e);
                             } else {
                                 tracing::info!("Successfully sent whatsapp message via Twilio integration");

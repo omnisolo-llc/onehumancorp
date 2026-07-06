@@ -13,6 +13,7 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
             .await?;
 
         let draft_reply = payload.get("generated_response").or_else(|| payload.get("draft_reply")).and_then(|v| v.as_str()).unwrap_or("");
+        let media_url = payload.get("attachment_url").and_then(|v| v.as_str()).filter(|s| !s.is_empty()).map(|s| s.to_string());
         tracing::info!("Approved Ambassador draft reply for inbox_id: {}", inbox_id);
         sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
             .bind(draft_reply)
@@ -41,6 +42,9 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
 
                 let draft_reply_clone = draft_reply.to_string();
                 let sender_id_clone = sender_id.to_string();
+                let media_url_clone = media_url.clone();
+                let media_url_clone2 = media_url.clone();
+                let media_url_clone3 = media_url.clone();
 
                 if let Some((integration_id, bot_token_opt, api_token_opt, from_phone_opt)) = creds_row {
                     let bot_token = bot_token_opt.unwrap_or_default();
@@ -49,7 +53,7 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
                     if integration_id == "whatsapp" {
                         tokio::spawn(async move {
                             let provider = crate::integrations::twilio::provider::TwilioProvider::new(bot_token, api_token);
-                            if let Err(e) = provider.send_whatsapp(&sender_id_clone, &from_phone, &draft_reply_clone).await {
+                            if let Err(e) = provider.send_whatsapp(&sender_id_clone, &from_phone, &draft_reply_clone, media_url_clone.as_deref()).await {
                                 tracing::error!("Failed to send Twilio WhatsApp reply: {}", e);
                             } else {
                                 tracing::info!("Successfully sent Twilio WhatsApp reply to {}", sender_id_clone);
@@ -58,7 +62,7 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
                     } else {
                         let registry = crate::integrations::registry::IntegrationsRegistry::new();
                         tokio::spawn(async move {
-                            if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
+                            if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone, media_url_clone2.as_deref()).await {
                                 tracing::error!("Failed to send WhatsApp Cloud API reply: {}", e);
                             } else {
                                 tracing::info!("Successfully sent WhatsApp Cloud API reply to {}", sender_id_clone);
@@ -68,7 +72,7 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
                 } else {
                     let registry = crate::integrations::registry::IntegrationsRegistry::new();
                     tokio::spawn(async move {
-                        if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
+                        if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone, media_url_clone3.as_deref()).await {
                             tracing::error!("Failed to send WhatsApp reply: {}", e);
                         } else {
                             tracing::info!("Successfully sent WhatsApp reply to {}", sender_id_clone);

@@ -162,7 +162,7 @@ mod tests {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
-        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str, _media_url: Option<&str>) -> Result<(), String> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
