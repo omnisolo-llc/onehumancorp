@@ -358,8 +358,24 @@ mod tests {
         }
     }
 
-    // Removing test_subagent_fork_mode because it attempts to make a real gRPC call
-    // to 127.0.0.1:50051 which will fail in the sandboxed test environment unless mocked.
+    #[tokio::test]
+    async fn test_subagent_fork_mode() {
+        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        runner.push_response(Ok(crate::runner::mock::mock_output(0, "I completed the fork task", "")));
+
+        let executor = SubagentExecutor { runner, llm: None };
+        let args = json!({
+            "task": "Do this fork task",
+            "mode": "fork"
+        });
+
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
+        assert!(result.is_ok(), "Expected Ok for fork mode");
+        let msg = result.unwrap();
+
+        assert!(msg.contains("[Subagent (Fork)] Completed task: Do this fork task"), "msg was: {}", msg);
+        assert!(msg.contains("I completed the fork task"), "Message should contain the agent output");
+    }
 
     #[test]
     fn test_subagent_teammate_mode() {
