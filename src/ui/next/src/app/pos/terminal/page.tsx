@@ -9,6 +9,17 @@ import { SyncManager } from '../../../lib/sync/SyncManager';
 const t = (text: string) => text;
 
 export default function POSTerminal() {
+  const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const [walkthroughSteps, setWalkthroughSteps] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/walkthrough/pos")
+      .then(res => res.json())
+      .then(data => {
+        setWalkthroughSteps(data || []);
+      })
+      .catch(e => console.error(e));
+  }, []);
   const [pin, setPin] = useState('');
   const [locked, setLocked] = useState(true);
   const [clockedIn, setClockedIn] = useState(false);
