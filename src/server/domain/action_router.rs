@@ -45,6 +45,12 @@ pub async fn dispatch_action(
                 .await
                 .map_err(|e| e.to_string())?;
         }
+        "lead_recovery" => {
+            tracing::info!("Approved and recovered lead for tenant: {}", tenant_id);
+            if let Some(msg) = payload.get("draft_reply").and_then(|v| v.as_str()) {
+                tracing::info!("Lead Recovery Engine sent reply: {}", msg);
+            }
+        }
         "dispute_resolution" => {
 
             tracing::info!("Approved and resolved dispute for tenant: {}", tenant_id); // pii-safe

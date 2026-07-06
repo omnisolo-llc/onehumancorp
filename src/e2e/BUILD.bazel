@@ -4,6 +4,7 @@ load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
 _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/test_viewport.spec.ts",
+
     "//src/ui/next:src/e2e/viral_powered_by_ohc_widget.spec.ts",
     "//src/ui/next:src/e2e/calendar.spec.ts",
     "//src/ui/next:src/e2e/exit-intent-builder.spec.ts",
@@ -17,6 +18,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/real_estate_onboarding.spec.ts",
     "//src/ui/next:src/e2e/viral-loop-dashboard.spec.ts",
     "//src/ui/next:src/e2e/missed_lead_recovery.spec.ts",
+
     "//src/ui/next:src/e2e/app-shell-style.spec.ts",
     "//src/ui/next:src/e2e/work_intake_widget.spec.ts",
     "//src/ui/next:src/e2e/documentation_features.spec.ts",
