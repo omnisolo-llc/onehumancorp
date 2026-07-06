@@ -196,8 +196,8 @@ export default function Integrations() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             integration_id: 'whatsapp_cloud_api',
-            api_token: token || 'mock_token',
-            display_phone_number: displayPhoneNumber || 'mock_phone',
+            api_token: token,
+            display_phone_number: displayPhoneNumber,
           })
         });
 
@@ -219,12 +219,12 @@ export default function Integrations() {
             doBackendConnect(response.authResponse.accessToken, "tenant-whatsapp-id");
           } else {
             // User cancelled login or did not fully authorize. We fallback for E2E purposes.
-            doBackendConnect();
+            setStatusMessage("WhatsApp Cloud API connection cancelled.");
           }
         }, { scope: 'whatsapp_business_management,whatsapp_business_messaging' });
       } else {
         // Fallback if SDK fails to load or for E2E tests not evaluating the actual popup
-        await doBackendConnect();
+        setStatusMessage("Facebook SDK not loaded. Unable to connect WhatsApp Cloud API.");
       }
     } catch (e) {
       setStatusMessage("Failed to connect WhatsApp Cloud API.");

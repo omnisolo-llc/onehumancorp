@@ -26,7 +26,7 @@ async function proxyToAgent(method: string, params: any) {
       return data.result;
     }
 
-    // Explicitly NO mocks are allowed in this project based on PR rejection rules!
+    // Explicitly NO fake data are allowed in this project based on PR rejection rules!
     throw new Error(`Failed to call agent RPC: ${res.status}`);
   } catch (e: any) {
     throw e;
