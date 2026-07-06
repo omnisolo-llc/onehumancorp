@@ -138,7 +138,7 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
             <div className="flex flex-col items-center gap-2 relative">
               {workflowBlocks.map((block, index) => (
                 <React.Fragment key={block.id}>
-                  <div className="w-full max-w-sm flex items-center justify-between border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] p-3 shadow-sm" data-testid={`canvas-block-${index}`}>
+                  <div className="w-full max-w-sm flex items-center justify-between border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] rounded-[12px] p-3 shadow-sm" data-testid={`canvas-block-${index}`}>
                     <div>
                       <span className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">{block.type}</span>
                       <p className="font-semibold text-zinc-900 dark:text-zinc-100">{block.label}</p>

@@ -64,6 +64,26 @@ export default function UnifiedFeed() {
            } : undefined
          };
       });
+
+      // Sort by urgency/priority
+      mappedItems.sort((a, b) => {
+        // Higher priority sources first
+        const isPaymentA = a.workItem.source.toLowerCase().includes('payment') || a.workItem.source.toLowerCase().includes('stripe');
+        const isPaymentB = b.workItem.source.toLowerCase().includes('payment') || b.workItem.source.toLowerCase().includes('stripe');
+
+        if (isPaymentA && !isPaymentB) return -1;
+        if (!isPaymentA && isPaymentB) return 1;
+
+        // Then unread/urgent messages
+        const isUrgentA = a.workItem.payload?.priority === 'high' || a.workItem.payload?.priority === 'urgent';
+        const isUrgentB = b.workItem.payload?.priority === 'high' || b.workItem.payload?.priority === 'urgent';
+
+        if (isUrgentA && !isUrgentB) return -1;
+        if (!isUrgentA && isUrgentB) return 1;
+
+        return 0; // Maintain order otherwise
+      });
+
       setFeedItems(mappedItems);
     } catch (err: any) {
       setError(err.message);
@@ -80,9 +100,9 @@ export default function UnifiedFeed() {
     setProcessingId(itemId);
     try {
       const res = await fetch(`/api/agent-feed/${itemId}`, {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ state: action })
       });
       if (res.ok) {
         setFeedItems(prev => prev.filter(i => i.workItem.id !== itemId));

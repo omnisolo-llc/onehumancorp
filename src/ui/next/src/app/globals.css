@@ -717,8 +717,32 @@ html.dark .glass-control {
 .app-shell .app-card,
 .app-shell .app-panel,
 .app-shell .glassmorphism,
-.app-shell .glass-card,
+.app-shell .glass-card {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
 
+@media (prefers-color-scheme: dark) {
+  .app-shell .app-card,
+  .app-shell .app-panel,
+  .app-shell .glassmorphism,
+  .app-shell .glass-card {
+    background: rgba(22, 22, 26, 0.7);
+    backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+html.dark .app-shell .app-card,
+html.dark .app-shell .app-panel,
+html.dark .app-shell .glassmorphism,
+html.dark .app-shell .glass-card {
+  background: rgba(22, 22, 26, 0.7);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
 .app-shell [class*="bg-gradient"] {
   background-image: none !important;

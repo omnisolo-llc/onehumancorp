@@ -123,7 +123,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
             body: JSON.stringify({ amount_cents: amount, tenant_id: tenantId, product_id: productId })
         });
         const intentData = await intentRes.json();
-        intentSecret = intentData.client_secret || 'pi_mock_123_secret';
+        intentSecret = intentData.client_secret; if (!intentSecret) { setStatus('Failed to fetch payment intent secret'); return; }
     } catch (e) {
         setStatus('Failed to fetch payment intent');
         return;
