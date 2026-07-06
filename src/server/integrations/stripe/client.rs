@@ -217,7 +217,7 @@ impl StripeClient {
     }
 
 
-    pub async fn create_billing_portal_session(&self, customer_id: &str) -> Result<String, String> {
+    pub async fn create_billing_portal_session(&self, customer_id: &str, return_url_base: Option<&str>) -> Result<String, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {
             return Ok("/pricing".to_string());
@@ -226,7 +226,9 @@ impl StripeClient {
 
         let mut form = std::collections::HashMap::new();
         form.insert("customer".to_string(), customer_id.to_string());
-        let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string());
+        let base_url = return_url_base
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string()));
         form.insert("return_url".to_string(), format!("{}/pricing", base_url));
 
         let res = reqwest::Client::new()
