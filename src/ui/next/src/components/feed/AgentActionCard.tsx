@@ -2,7 +2,8 @@ import { ShiftReassignmentCard } from "../../app/dashboard/ShiftReassignmentCard
 import { InstagramDMCard } from "../../app/dashboard/InstagramDMCard";
 import { AmbassadorReplyCard } from "../../app/dashboard/AmbassadorReplyCard";
 import { ReviewFeedCard } from "../../app/dashboard/ReviewFeedCard";
-import React from "react";
+import React, { useState } from "react";
+import { BottomSheet } from "../BottomSheet";
 
 type AgentFeedItem = {
   id: string;
@@ -49,7 +50,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   handleDecision,
 }) => {
   const [loadingAction, setLoadingAction] = React.useState<string | null>(null);
-  const [isDraftExpanded, setIsDraftExpanded] = React.useState(false);
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [bottomSheetContent, setBottomSheetContent] = useState<React.ReactNode>(null);
+  const [bottomSheetTitle, setBottomSheetTitle] = useState<string>("");
 
   const wrapDecision = async (
     id: string,
@@ -2199,45 +2202,37 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
         ) : (approval.proposed_action || approval.context_payload)?.context
             ?.weekly_health_report === true ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
-            {!isDraftExpanded ? (
-              <button
-                onClick={() => setIsDraftExpanded(true)}
-                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
-                aria-label="Draft it"
-                data-testid="feed-approve-btn"
-              >
-                Yes, draft it!
-              </button>
-            ) : (
-              <div className="flex flex-col gap-2 w-full">
-                <div className="p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-sm">
-                  <p className="font-medium text-gray-700 dark:text-gray-300">Drafted Content:</p>
-                  <p className="mt-1 text-gray-600 dark:text-gray-400">
-                    {(approval.proposed_action || approval.context_payload).context.actionable_suggestion || "Here is the drafted content..."}
-                  </p>
-                </div>
-                <button
-                  onClick={() =>
-                    handleDecision(
-                      approval.id,
-                      true,
-                      undefined,
-                      approval.event_source,
-                    )
-                  }
-                  className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
-                  aria-label="Approve & Send"
-                  data-testid="feed-approve-btn"
-                  disabled={loadingAction !== null}
-                >
-                  {isActionLoading("approve") ? (
-                    <span className="animate-pulse">Loading...</span>
-                  ) : (
-                    "Approve & Send"
-                  )}
-                </button>
-              </div>
-            )}
+            <button
+              onClick={() => {
+                setBottomSheetTitle("Review Draft");
+                setBottomSheetContent(
+                  <div className="flex flex-col gap-4 w-full">
+                    <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm">
+                      <p className="font-medium text-gray-700 dark:text-gray-300 mb-2">Drafted Content</p>
+                      <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                        {(approval.proposed_action || approval.context_payload)?.context?.actionable_suggestion || "Here is the drafted content..."}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setIsBottomSheetOpen(false);
+                        handleDecision(approval.id, true, undefined, approval.event_source);
+                      }}
+                      className="w-full min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                      data-testid="feed-approve-btn"
+                    >
+                      Approve & Send
+                    </button>
+                  </div>
+                );
+                setIsBottomSheetOpen(true);
+              }}
+              className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
+              aria-label="Draft it"
+              data-testid="feed-approve-btn"
+            >
+              Yes, draft it!
+            </button>
             <button
               onClick={() =>
                 handleDecision(
@@ -2464,6 +2459,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           </>
         )}
       </div>
+<BottomSheet isOpen={isBottomSheetOpen} onClose={() => setIsBottomSheetOpen(false)} title={bottomSheetTitle}>
+          {bottomSheetContent}
+        </BottomSheet>
     </div>
   );
 };

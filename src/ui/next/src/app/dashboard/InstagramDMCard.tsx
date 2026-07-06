@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { BottomSheet } from '../../components/BottomSheet';
 
 type InstagramDMCardProps = {
   onApprove?: () => void;
@@ -7,6 +8,10 @@ type InstagramDMCardProps = {
 };
 
 export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval, onApprove, onDismiss }) => {
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [bottomSheetContent, setBottomSheetContent] = useState<React.ReactNode>(null);
+  const [bottomSheetTitle, setBottomSheetTitle] = useState<string>("");
+
   return (
     <div className="mb-4 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] flex flex-col gap-3 shadow-sm" data-testid="instagram-dm-card">
       <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm">
@@ -18,22 +23,40 @@ export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval, onAp
       <div className="text-xs text-gray-500 dark:text-gray-400 font-medium break-words">
         Customer: <div className="triage-context inline break-words">{(approval.proposed_action || approval.context_payload)?.customer_message || (approval.proposed_action || approval.context_payload)?.original_message || (approval.proposed_action || approval.context_payload)?.description}</div>
       </div>
-      <div className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 p-3 rounded-[8px] break-words shadow-sm">
-        <div className="font-semibold text-xs uppercase mb-1 block">Draft Reply:</div>
-        <div className="whitespace-pre-wrap">{(approval.proposed_action || approval.context_payload)?.draft_reply || (approval.proposed_action || approval.context_payload)?.generated_response}</div>
-      </div>
+
 
       <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
         {onApprove && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onApprove();
+              setBottomSheetTitle("Review Draft");
+              setBottomSheetContent(
+                <div className="flex flex-col gap-4 w-full">
+                  <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-sm">
+                    <p className="font-medium text-gray-700 dark:text-gray-300 mb-2">Draft Reply</p>
+                    <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                      {(approval.proposed_action || approval.context_payload)?.draft_reply || (approval.proposed_action || approval.context_payload)?.generated_response}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsBottomSheetOpen(false);
+                      onApprove();
+                    }}
+                    className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-pink-600 text-white font-medium hover:bg-pink-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                    data-testid="feed-approve-btn"
+                  >
+                    Send Draft
+                  </button>
+                </div>
+              );
+              setIsBottomSheetOpen(true);
             }}
             className="triage-btn-approve flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-pink-600 text-white font-medium hover:bg-pink-700 transition-all duration-200 shadow-md flex items-center justify-center"
             aria-label="Approve & Send" data-testid="approve-instagram-dm" id="approve-instagram-dm"
           >
-            Send Draft
+            Review Draft
           </button>
         )}
         {onDismiss && (
@@ -50,6 +73,9 @@ export const InstagramDMCard: React.FC<InstagramDMCardProps> = ({ approval, onAp
           </button>
         )}
       </div>
+<BottomSheet isOpen={isBottomSheetOpen} onClose={() => setIsBottomSheetOpen(false)} title={bottomSheetTitle}>
+        {bottomSheetContent}
+      </BottomSheet>
     </div>
   );
 };
