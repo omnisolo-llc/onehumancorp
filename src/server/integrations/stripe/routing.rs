@@ -205,3 +205,29 @@ mod mercadopago_tests {
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "mxn"), PaymentMethod::MercadoPago);
     }
 }
+
+#[cfg(test)]
+mod cost_analysis_tests {
+    use super::*;
+
+    #[test]
+    fn test_cost_analysis_large_payment_ach_vs_card() {
+        // Scenario: A single large payment of $5,000.
+        let amount_usd = 5000.0;
+
+        let card_fee = (amount_usd * PaymentRouter::CARD_FEE_PERCENTAGE) + PaymentRouter::CARD_FEE_FIXED;
+        let ach_fee = (amount_usd * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP);
+
+        // Assert actual computed fees with precision tolerance
+        assert!((card_fee - 145.30).abs() < 1e-6, "Expected 145.30, got {}", card_fee);
+        assert!((ach_fee - 5.00).abs() < 1e-6, "Expected 5.00, got {}", ach_fee);
+
+        // Total Savings
+        let savings = card_fee - ach_fee;
+        assert!((savings - 140.30).abs() < 1e-6, "Expected 140.30, got {}", savings);
+
+        // Assert the routing logic matches
+        assert_eq!(PaymentRouter::optimize_payment_method(amount_usd), PaymentMethod::Ach);
+        assert!((PaymentRouter::calculate_fee_savings(amount_usd) - 140.30).abs() < 1e-6, "Expected fee savings 140.30");
+    }
+}
