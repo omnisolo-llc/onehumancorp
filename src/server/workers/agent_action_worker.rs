@@ -136,8 +136,6 @@ impl AgentActionWorker {
 
 mod tests {
     // use super::*
-    use super::*;
-    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_ml_resilience_agent_action_timeout() {

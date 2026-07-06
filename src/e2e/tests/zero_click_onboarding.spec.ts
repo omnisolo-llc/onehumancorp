@@ -25,7 +25,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await expect(page.locator('text=Building Your Business...')).toBeVisible({ timeout: 15000 });
 
     // Since this uses the real backend, the UI will eventually redirect to /dashboard
-    await expect(page.getByRole('heading', { name: /Your business is live!/ })).toBeVisible({ timeout: 60000 });
+    await expect(page.getByRole('heading', { name: /You're Live!/ })).toBeVisible({ timeout: 60000 });
 
     // Check horizontal scroll by verifying document width equals window innerWidth
     const hasHorizontalScroll = await page.evaluate(() => {

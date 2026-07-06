@@ -149,6 +149,7 @@ mod tests {
         let cache = LocalEmbeddingCache::new(Duration::from_millis(100));
         
         cache.set("prompt1", "response1");
+        std::thread::sleep(std::time::Duration::from_millis(10));
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         assert_eq!(cache.get("prompt2"), None);
         
@@ -180,6 +181,7 @@ mod tests {
         let cache = CompressedEmbeddingCache::new(Duration::from_millis(100));
         
         cache.set("prompt1", "response1");
+        std::thread::sleep(std::time::Duration::from_millis(10));
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         
         // Wait for expiration

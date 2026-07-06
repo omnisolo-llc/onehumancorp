@@ -6,6 +6,16 @@ use axum::{
 };
 use serde_json::json;
 
+fn is_multitenant_mode() -> bool {
+    #[cfg(test)]
+    {
+        if let Ok(val) = std::env::var("OHC_MULTITENANT") {
+            return val == "true";
+        }
+    }
+    ::server_config::get().multitenant
+}
+
 pub async fn tenant_middleware(req: Request, next: Next) -> Response {
     // Unauthenticated/Whitelisted paths could be ignored here, but typically
     // auth middleware runs first. This middleware runs AFTER auth middleware.
@@ -29,7 +39,7 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
         if tenant_id.is_empty() || tenant_id == "system" {
             // For now, allow "system" or empty for backwards compatibility in standalone mode
             // or if it's explicitly needed, but the design doc says reject.
-            if ::server_config::get().multitenant {
+            if is_multitenant_mode() {
                  return (
                     StatusCode::FORBIDDEN,
                     axum::Json(json!({
@@ -41,14 +51,15 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
         }
 
         // Validate query parameters to prevent Tenant Leakage (IDOR)
-        if ::server_config::get().multitenant {
+        if is_multitenant_mode() {
             if let Some(query_str) = req.uri().query() {
                 for part in query_str.split('&') {
                     let mut kv = part.splitn(2, '=');
                     if let (Some(k), Some(v)) = (kv.next(), kv.next()) {
-                        if k == "tenant_id" || k == "tenant" {
-                            // Basic comparison without url-decoding (since UUIDs are alphanumeric)
-                            if !v.trim().is_empty() && v.trim() != tenant_id {
+                        let decoded_k = urlencoding::decode(k).unwrap_or(std::borrow::Cow::Borrowed(k));
+                        let decoded_v = urlencoding::decode(v).unwrap_or(std::borrow::Cow::Borrowed(v));
+                        if decoded_k == "tenant_id" || decoded_k == "tenant" {
+                            if !decoded_v.trim().is_empty() && decoded_v.trim() != tenant_id {
                                 return (
                                     StatusCode::FORBIDDEN,
                                     axum::Json(json!({
@@ -184,5 +195,54 @@ mod tests {
 
         let response = app.oneshot(req).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_url_encoded_tenant_id_spoofing() {
+        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+            let app = setup_router(true);
+
+            // Attempting to spoof `tenant_1` with URL encoding
+            let mut req = Request::builder()
+                .uri("/api/protected_with_query?%74enant_id=tenant_2")
+                .body(Body::empty())
+                .unwrap();
+
+            req.extensions_mut().insert(::server_common::Claims {
+                sub: "user_1".to_string(),
+                organization_id: Some("tenant_1".to_string()),
+                exp: 10000000000,
+                iat: 0,
+                session_id: Some("1".to_string()),
+                roles: vec![],
+                username: "test@example.com".to_string(),
+                jti: "a".to_string(),
+                email: "test@example.com".to_string(),
+            });
+
+            let response = app.clone().oneshot(req).await.unwrap();
+            assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+            // Another variant
+            let mut req2 = Request::builder()
+                .uri("/api/protected_with_query?tenant_id=tenant_2%20")
+                .body(Body::empty())
+                .unwrap();
+
+            req2.extensions_mut().insert(::server_common::Claims {
+                sub: "user_1".to_string(),
+                organization_id: Some("tenant_1".to_string()),
+                exp: 10000000000,
+                iat: 0,
+                session_id: Some("1".to_string()),
+                roles: vec![],
+                username: "test@example.com".to_string(),
+                jti: "a".to_string(),
+                email: "test@example.com".to_string(),
+            });
+
+            let response2 = app.clone().oneshot(req2).await.unwrap();
+            assert_eq!(response2.status(), StatusCode::FORBIDDEN);
+        }).await;
     }
 }
