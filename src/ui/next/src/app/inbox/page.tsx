@@ -1,4 +1,5 @@
 "use client";
+import DOMPurify from 'isomorphic-dompurify';
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -30,6 +31,34 @@ function badgeTone(status?: string) {
   if (["open", "pending", ""].includes(normalized)) return "warn";
   if (["failed", "blocked"].includes(normalized)) return "bad";
   return "";
+}
+
+
+function renderMessageContent(content: string) {
+  if (!content) return "Empty message";
+
+  // Basic XSS mitigation - encode HTML tags
+  let safeContent = content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  // Format Twilio Media tags e.g. [Media: image/jpeg - https://example.com/image.jpg]
+  safeContent = safeContent.replace(/\[Media:\s*([^-]+?)\s*-\s*(https?:\/\/[^\]]+)\]/g, (match, type, url) => {
+    if (type.startsWith('image/')) {
+      // url is sanitized via DOMPurify below
+      return `<div class="my-2"><img src="${url}" alt="${type}" class="max-w-full h-auto rounded-md shadow-sm" style="max-height: 300px;" /></div>`;
+    }
+    return `<div class="my-2"><a href="${url}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">Attached Media (${type})</a></div>`;
+  });
+
+  // Format standard Markdown images e.g. ![Alt text](https://example.com/image.jpg)
+  safeContent = safeContent.replace(/!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, (match, alt, url) => {
+    return `<div class="my-2"><img src="${url}" alt="${alt}" class="max-w-full h-auto rounded-md shadow-sm" style="max-height: 300px;" /></div>`;
+  });
+
+  // Format basic line breaks
+  safeContent = safeContent.replace(/\n/g, '<br />');
+
+  // Sanitize the final HTML using DOMPurify
+  return DOMPurify.sanitize(safeContent);
 }
 
 function formatStatus(status?: string) {
@@ -95,6 +124,8 @@ function InboxWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
+  const [manualReply, setManualReply] = useState("");
+
 
   const selected = useMemo(() => {
     if (messages.length === 0) return null;
@@ -159,6 +190,39 @@ function InboxWorkspace({
     } finally {
       setTimeout(() => setActionStatus(""), 3000);
     }
+  }
+
+
+  async function handleSendManualReply(inboxMessageId: string) {
+    if (!manualReply.trim()) return;
+    try {
+      setActionStatus("Sending reply...");
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`/api/ui/omni_inbox/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({
+          message_id: inboxMessageId,
+          approved: true,
+          edited_reply: manualReply
+        })
+      });
+      if (res.ok) {
+        setActionStatus("Manual reply sent.");
+        setManualReply("");
+      } else {
+        setActionStatus("Failed to send manual reply.");
+      }
+    } catch (e) {
+      console.error(e);
+      setActionStatus("Error sending manual reply.");
+    }
+  }
+
+  function handleAttachPhoto() {
+    // Mock attaching a photo by appending an image markdown URL
+    const mockImageUrl = "https://example.com/mock-upload.jpg";
+    setManualReply(prev => prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + `![Image](${mockImageUrl})`);
   }
 
   async function handleApproveAndSend(inboxMessageId: string) {
@@ -238,7 +302,36 @@ function InboxWorkspace({
                 </button>
               ))}
             </div>
-          </section>
+
+                {/* Manual Reply Box */}
+                {selected.status !== "resolved" && selected.status !== "dismissed" && (
+                  <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="app-metric-label mb-2">Manual Reply</div>
+                    <textarea
+                      className="w-full min-h-[100px] p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 mb-3"
+                      placeholder="Type your reply here..."
+                      value={manualReply}
+                      onChange={(e) => setManualReply(e.target.value)}
+                    />
+                    <div className="flex gap-3 mt-4 flex-wrap">
+                      <button
+                        onClick={() => handleSendManualReply(selected.id)}
+                        className="app-btn-primary"
+                        disabled={!manualReply.trim()}
+                      >
+                        Send Reply
+                      </button>
+                      <button
+                        onClick={handleAttachPhoto}
+                        className="app-btn-secondary flex items-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        Attach Photo
+                      </button>
+                    </div>
+                  </div>
+                )}
+\n          </section>
 
           <section className="app-panel glassmorphism overflow-hidden">
             <div className="app-panel-header border-b border-gray-200/50 dark:border-white/10 p-4">
@@ -282,13 +375,13 @@ function InboxWorkspace({
                     )}
                   </div>
                   <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
-                    {(showOriginal ? selected.original_content : selected.content) || "Empty message"}
+                    <div dangerouslySetInnerHTML={{ __html: renderMessageContent((showOriginal ? selected.original_content : selected.content) || "Empty message") }} />
                   </div>
                 </div>
                 <div className="mb-4">
                   <div className="app-metric-label">Draft Reply</div>
                   <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
-                    {selected.draft_reply || "No draft reply stored for this message."}
+                    <div dangerouslySetInnerHTML={{ __html: renderMessageContent(selected.draft_reply || "No draft reply stored for this message.") }} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
