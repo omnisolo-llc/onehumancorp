@@ -22,7 +22,7 @@ pub async fn dispatch_action(
             tracing::info!("Approved and dispatched supply order via Quartermaster Agent for tenant: {}", tenant_id); // pii-safe
             // Simulating outbound communication to vendor via omnichannel dispatcher
             if let Some(msg) = payload.get("draft_message").and_then(|v| v.as_str()) {
-                tracing::info!("Omnichannel Dispatcher sent: {}", msg);
+                tracing::info!("Omnichannel Dispatcher sent [REDACTED]");
             }
         }
         "social_post_draft" => {
@@ -46,16 +46,16 @@ pub async fn dispatch_action(
                 .map_err(|e| e.to_string())?;
         }
         "lead_recovery" => {
-            tracing::info!("Approved and recovered lead for tenant: {}", tenant_id);
+            tracing::info!("Approved and recovered lead for tenant: {}", tenant_id); // pii-safe
             if let Some(msg) = payload.get("draft_reply").and_then(|v| v.as_str()) {
-                tracing::info!("Lead Recovery Engine sent reply: {}", msg);
+                tracing::info!("Lead Recovery Engine sent reply [REDACTED]");
             }
         }
         "dispute_resolution" => {
 
             tracing::info!("Approved and resolved dispute for tenant: {}", tenant_id); // pii-safe
             if let Some(msg) = payload.get("generated_response").and_then(|v| v.as_str()) {
-                tracing::info!("Dispute Resolution Engine sent reply: {}", msg);
+                tracing::info!("Dispute Resolution Engine sent reply [REDACTED]");
             }
             if let Some(refund) = payload.get("refund_amount").and_then(|v| v.as_f64()) {
                 tracing::info!("Dispute Resolution Engine processed simulated refund: ${}", refund);

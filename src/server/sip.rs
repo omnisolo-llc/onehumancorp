@@ -134,20 +134,20 @@ impl SipDB {
                     "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload::text, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 };
                 sqlx::query(query_str)
-                    .bind(threshold_time.naive_utc())
+                    .bind(threshold_time)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 sqlx::query("DELETE FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-                    .bind(threshold_time.naive_utc())
+                    .bind(threshold_time)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 let dead_letter_threshold = Utc::now() - chrono::Duration::days(7);
                 sqlx::query("DELETE FROM department_dead_letters WHERE created_at < $1 AND tenant_id = $2")
-                    .bind(dead_letter_threshold.naive_utc())
+                    .bind(dead_letter_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
