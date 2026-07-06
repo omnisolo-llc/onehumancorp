@@ -322,6 +322,21 @@ pub async fn handle_conversational_execute(
     }))
 }
 
+pub async fn handle_generate_cross_sell(
+    Extension(state): Extension<GrowthState>,
+) -> impl IntoResponse {
+    let cross_sell_id = uuid::Uuid::new_v4().to_string();
+
+    // Log telemetry
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.cross_sell_generated",
+        "id": cross_sell_id
+    }));
+    state.hub.append_recent_event(msg);
+
+    Json(serde_json::json!({ "success": true, "cross_sell_link": cross_sell_id }))
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>, viral_loop_tracker: std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -388,6 +403,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/seasonal-promo/generate", post(handle_promo_generate))
+        .route("/cross-sell/generate", post(handle_generate_cross_sell))
         .route("/referrals/milestones/status", get(handle_get_referral_milestones))
 
         .route("/reputation/simulate-event", post(handle_simulate_event))

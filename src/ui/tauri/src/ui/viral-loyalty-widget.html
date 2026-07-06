@@ -88,60 +88,6 @@
     }
 
     .card-preview {
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 25px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      border: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .stamp-grid {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .stamp {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: 2px dashed #ccc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #999;
-      font-size: 18px;
-      transition: all 0.3s;
-    }
-
-    .stamp.free {
-      background-color: #f0f7ff;
-      border-color: #0066FF;
-      color: #0066FF;
-      font-size: 14px;
-    }
-
-    .stamp.filled {
-      background-color: #0066FF;
-      border-color: #0066FF;
-      color: white;
-    }
-
-    @media (max-width: 375px) {
-      .stamp {
-        width: 40px;
-        height: 40px;
-        font-size: 14px;
-      }
-      .stamp.free {
-        font-size: 11px;
-      }
-    }
-
-    .card-preview {
       background: rgba(255, 255, 255, 0.65);
       backdrop-filter: blur(30px) saturate(210%);
       -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -392,18 +338,6 @@
         btn.disabled = false;
         btn.textContent = 'Generate Loyalty Program';
       }
-    });
-
-    document.getElementById('share-twitter-btn').addEventListener('click', () => {
-        const urlInput = document.getElementById('share-link').value;
-        const text = encodeURIComponent('Join our loyalty program! 🎁');
-        window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(urlInput)}`, '_blank');
-    });
-
-    document.getElementById('share-whatsapp-btn').addEventListener('click', () => {
-        const urlInput = document.getElementById('share-link').value;
-        const text = encodeURIComponent('Join our loyalty program! 🎁 ' + urlInput);
-        window.open(`https://wa.me/?text=${text}`, '_blank');
     });
 
     document.getElementById('share-twitter-btn').addEventListener('click', () => {
