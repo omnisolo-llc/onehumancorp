@@ -6,8 +6,8 @@ test.describe('Unified Agent Feed Viewport Constraint', () => {
   test('should render properly and not exceed 375px', async ({ page }) => {
     test.setTimeout(180000);
 
-    await page.goto('/dashboard');
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+    await page.goto('/triage');
+    await expect(page.locator('h1', { hasText: 'Work Triage' }).first()).toBeVisible({ timeout: 25000 });
 
     const feedContainer = page.locator('.glassmorphism').first();
     await expect(feedContainer).toBeVisible({ timeout: 15000 });

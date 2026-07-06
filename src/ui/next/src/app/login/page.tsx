@@ -14,7 +14,7 @@ export default function Login() {
         // ignore
       }
     }
-    router.push('/dashboard');
+    router.push('/triage');
   };
 
   return (
