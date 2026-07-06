@@ -1,3 +1,4 @@
+use axum::http;
 use axum::{
     body::{Body, to_bytes},
     extract::Request,
@@ -154,11 +155,12 @@ pub async fn edge_caching_middleware(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{
+    use axum::http;
+use axum::{
         routing::get,
         Router,
     };
-    use http::{Request, StatusCode, header};
+    use axum::http::{Request, StatusCode, header};
     use tower::ServiceExt; // for `oneshot`
     use axum::body::Body;
 

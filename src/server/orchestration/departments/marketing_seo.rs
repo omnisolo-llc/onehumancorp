@@ -19,7 +19,8 @@ impl SeoClient for RuntimeSeoClient {
 "
         );
         let prompt = format!(
-            "{prompt} {{"title": "SEO Title (max 60 chars)", "description": "SEO Description (max 160 chars)", "schema": {{"@context": "https://schema.org/", "@type": "{item_type}", "name": "{name}", "description": "...", "offers": {{"@type": "Offer", "price": {price}, "priceCurrency": "USD"}}}}}}"
+            "{} {{\"title\": \"SEO Title (max 60 chars)\", \"description\": \"SEO Description (max 160 chars)\", \"schema\": {{\"@context\": \"https://schema.org/\", \"@type\": \"{}\", \"name\": \"{}\", \"description\": \"...\", \"offers\": {{\"@type\": \"Offer\", \"price\": {}, \"priceCurrency\": \"USD\"}}}}}}",
+            prompt, item_type, name, price
         );
 
         let raw_response = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
@@ -29,15 +30,6 @@ impl SeoClient for RuntimeSeoClient {
                     crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_default()
                 } else {
                     let client = crate::minimax::MinimaxClient::new(api_key);
-                    client.reason(&prompt).await.unwrap_or_default()
-                }
-            },
-            Ok("openai") => {
-                let api_key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
-                if api_key.is_empty() {
-                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_default()
-                } else {
-                    let client = crate::openai::OpenAIClient::new(api_key);
                     client.reason(&prompt).await.unwrap_or_default()
                 }
             },
