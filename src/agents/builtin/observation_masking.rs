@@ -118,7 +118,7 @@ impl JetBrainsObservationMasker {
                 let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
 
                 if original_len > current_limit {
-                    let priority_keys = [
+                                        let priority_keys = [
                         "error",
                         "stack_trace",
                         "message",
@@ -129,6 +129,12 @@ impl JetBrainsObservationMasker {
                         "id",
                         "success",
                         "result",
+                        "summary",
+                        "data",
+                        "file",
+                        "path",
+                        "description",
+                        "title",
                     ];
                     let mut sorted_keys: Vec<String> = obj.keys().cloned().collect();
                     sorted_keys.sort_by_cached_key(|k| {

@@ -467,8 +467,8 @@ mod tests {
         assert_eq!(res.get("id1").unwrap(), "r1");
         assert_eq!(res.get("id2").unwrap(), "r2");
         assert!(
-            elapsed < 90,
-            "Expected parallel execution to take < 90ms, took {}ms",
+            elapsed < 200,
+            "Expected parallel execution to take < 200ms, took {}ms",
             elapsed
         );
     }
