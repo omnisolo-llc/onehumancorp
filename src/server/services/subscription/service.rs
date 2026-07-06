@@ -154,6 +154,9 @@ impl SubscriptionService {
             current_period_end: Utc::now().timestamp() + 30 * 24 * 60 * 60, // 30 days
             created_at: Utc::now().timestamp(),
             predicted_restock_date: None,
+            health_score: Some(100),
+            last_health_check_at: None,
+            churn_risk_status: Some("healthy".to_string()),
         };
 
         self.ensure_subscription_schema().await?;
