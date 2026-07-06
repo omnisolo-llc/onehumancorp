@@ -319,7 +319,7 @@ export default function TriagePage() {
                         <textarea
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/80 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-[12px] p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y"
+                          className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/80 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y"
                           data-testid={`triage-edit-textarea-${item.id}`}
                           placeholder="Edit the draft payload..."
                         />

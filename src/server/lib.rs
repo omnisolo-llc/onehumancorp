@@ -3895,19 +3895,15 @@ pub async fn update_ui_triage_action_handler(
             let _ = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = $1 AND tenant_id = $2)")
                 .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
 
-            match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
-                Ok(_) => {
-                    let _ = tx.commit().await;
-                    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                    cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
-                    cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
-                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
-                },
-                Err(e) => {
-                    tracing::error!("Failed to update triage item: {:?}", e);
-                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
-                }
+            if let Err(e) = sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update triage item: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
             }
+            let _ = tx.commit().await;
+            let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+            cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let mut tx = match sqlite_pool.begin().await {
@@ -4158,19 +4154,15 @@ pub async fn update_ui_triage_action_handler(
             let _ = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = ? AND tenant_id = ?)")
                 .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
 
-            match sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
-                Ok(_) => {
-                    let _ = tx.commit().await;
-                    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                    cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
-                    cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
-                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
-                },
-                Err(e) => {
-                    tracing::error!("Failed to update triage item (sqlite): {:?}", e);
-                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
-                }
+            if let Err(e) = sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update triage item (sqlite): {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
             }
+            let _ = tx.commit().await;
+            let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+            cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
         }
     }
 }
@@ -4798,69 +4790,43 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
             let mut legacy_rows_json = Vec::new();
             match &db1.store {
                 crate::db::DbStore::Postgres => {
-                    let query_str = if mobile_optimized {
-                        "SELECT id, status, CAST(created_at AS text) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
-                    } else {
-                        "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS text) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
-                    };
+                    let query_str = "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS text) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = $1 AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
                     if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(&db1.pool).await {
                         for row in rows {
                             use sqlx::Row;
-                            let item = if mobile_optimized {
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                    })
-                            } else {
-                                serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                                    })
-                            };
+                            let item = serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                                    "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                    "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                                    "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                                    "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                    "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                    "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                    "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                            });
                             legacy_rows_json.push(item);
                         }
                     }
                 }
                 crate::db::DbStore::Sqlite(pool) => {
-                    let query_str = if mobile_optimized {
-                        "SELECT id, status, CAST(created_at AS TEXT) AS created_at, action_type FROM (SELECT t.id, t.tenant_id, t.status, t.created_at, a.action_type FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, a.status, a.created_at, a.action_type FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
-                    } else {
-                        "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS TEXT) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50"
-                    };
+                    let query_str = "SELECT id, tenant_id, customer_id, source, priority, context, status, CAST(created_at AS TEXT) AS created_at, action_type, action_payload FROM (SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id UNION ALL SELECT a.id, a.tenant_id, t.customer_id, t.channel AS source, 'normal' AS priority, (SELECT content FROM unified_messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) AS context, a.status, a.created_at, a.action_type, a.action_payload FROM unified_triage_actions a JOIN unified_threads t ON a.thread_id = t.id) sub WHERE tenant_id = ? AND status != 'resolved' AND status != 'dismissed' ORDER BY created_at DESC LIMIT 50";
                     if let Ok(rows) = sqlx::query(query_str).bind(&t_id1).fetch_all(pool).await {
                         for row in rows {
                             use sqlx::Row;
-                            let item = if mobile_optimized {
-                                    serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                    })
-                            } else {
-                                serde_json::json!({
-                                        "id": row.get::<String, _>("id"),
-                                        "tenant_id": row.get::<String, _>("tenant_id"),
-                                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
-                                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                                    })
-                            };
+                            let item = serde_json::json!({
+                                    "id": row.get::<String, _>("id"),
+                                    "tenant_id": row.get::<String, _>("tenant_id"),
+                                    "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                                    "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                    "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                                    "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                                    "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                    "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                    "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                    "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                            });
                             legacy_rows_json.push(item);
                         }
                     }
@@ -6687,10 +6653,16 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/help.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
         }))
+        .route("/help", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/help.html"))
+        }))
         .route("/api/ui/help_article.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/help_article.html"))
         }))
         .route("/api/ui/api-docs.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
+        }))
+        .route("/api-docs", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
         }))
         .route("/api/ui/swagger-ui.css", axum::routing::get(|| async {
@@ -6714,6 +6686,9 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/changelog.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/next/public/api/ui/changelog.html"))
         }))
+        .route("/changelog", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/changelog.html"))
+        }))
         .route("/onboarding", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/setup.html"))
         }))
@@ -6723,11 +6698,23 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
         }))
-        .route("/dashboard.html", axum::routing::get(|| async {
+        .route("/dashboard", axum::routing::get(|| async { axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html")) })).route("/dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/dashboard.html"))
         }))
         .route("/agent-audit-dashboard.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/agent-audit-dashboard.html"))
+        }))
+        .route("/api/ui/pos.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/pos.html"))
+        }))
+        .route("/pos.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/pos.html"))
+        }))
+        .route("/api/ui/assistant.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
+        }))
+        .route("/assistant.html", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/assistant.html"))
         }))
         .route("/calendar", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/calendar.html"))

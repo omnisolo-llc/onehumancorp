@@ -21,11 +21,18 @@ declare global {
   }
 }
 
+export const DEFAULT_TOOLTIPS: Record<string, string> = {
+  "help-nav-tooltip": "Open the Help Center to find guides, videos, and contact support.",
+  "api-docs-tooltip": "Direct API access is for developers.",
+  "changelog-nav-tooltip": "See what's new in the latest OneHumanCorp updates.",
+  "dashboard-walkthrough-btn": "Take a quick tour of the dashboard."
+};
+
 export function TooltipProvider({ children }: { children: ReactNode }) {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
   const [tooltipText, setTooltipText] = useState<string>("");
-  const [tooltips, setTooltips] = useState<Record<string, string>>({});
+  const [tooltips, setTooltips] = useState<Record<string, string>>(DEFAULT_TOOLTIPS);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -88,6 +95,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       <AnimatePresence>
       {activeTooltip && tooltipRect && (
         <motion.div
+          role="tooltip"
           initial={{ opacity: 0, y: 5, x: "-50%" }}
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0 }}

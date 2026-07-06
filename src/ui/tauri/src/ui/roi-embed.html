@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROI Calculator Embed</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: transparent;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+      color: #1d1d1f;
+    }
+    .widget-container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      max-width: 100%;
+      text-align: center;
+    }
+    h2 {
+      font-size: 20px;
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+    p {
+      color: #86868b;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .slider-group {
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    .slider-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #0066FF;
+    }
+    .result-box {
+      background: #f3f4f6;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .result-label {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .result-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: #10b981;
+    }
+    button {
+      width: 100%;
+      background-color: #111827;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background-color: #374151; }
+
+    .powered-by {
+      margin-top: 16px;
+      font-size: 12px;
+    }
+    .powered-by a {
+      color: #86868b;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .powered-by a:hover {
+      text-decoration: underline;
+    }
+
+    /* Dark Mode */
+    @media (prefers-color-scheme: dark) {
+      body { color: #F5F5F7; }
+      .widget-container {
+        background: rgba(30, 30, 30, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      p { color: #a1a1a6; }
+      .result-box { background: #1c1c1e; }
+      button { background-color: #0066FF; }
+      button:hover { background-color: #0055DD; }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <h2 id="service-title">ROI Calculator</h2>
+    <p>See the potential value we can deliver for your business.</p>
+
+    <div class="slider-group">
+      <label>
+        <span>Your Monthly Investment</span>
+        <span id="investment-display">$1,000</span>
+      </label>
+      <input type="range" id="investment-slider" min="100" max="10000" step="100" value="1000">
+    </div>
+
+    <div class="result-box">
+      <div class="result-label">Estimated Monthly Return</div>
+      <div class="result-value" id="roi-result">$3,000</div>
+    </div>
+
+    <button id="cta-btn">Get Started</button>
+
+    <div class="powered-by" id="branding-container">
+      <a href="#" id="branding-link" target="_blank">⚡ Powered by OHC</a>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const serviceName = urlParams.get('service') || 'Our Service';
+    const baseInvStr = urlParams.get('inv') || '1000';
+    const multStr = urlParams.get('mult') || '3';
+    const tenantId = urlParams.get('tenant') || 'default-tenant';
+    const showBranding = urlParams.get('branding') !== 'false';
+
+    const mult = parseFloat(multStr) || 3;
+    let currentInv = parseFloat(baseInvStr) || 1000;
+
+    document.getElementById('service-title').innerText = `${serviceName} ROI`;
+
+    const slider = document.getElementById('investment-slider');
+    slider.value = currentInv;
+
+    // Adjust max dynamically if base is higher
+    if (currentInv > parseInt(slider.max)) {
+        slider.max = currentInv * 2;
+    }
+
+    const invDisplay = document.getElementById('investment-display');
+    const resultDisplay = document.getElementById('roi-result');
+
+    function updateCalculations() {
+        const val = parseInt(slider.value);
+        invDisplay.innerText = '$' + val.toLocaleString();
+
+        const ret = val * mult;
+        resultDisplay.innerText = '$' + ret.toLocaleString();
+    }
+
+    slider.addEventListener('input', updateCalculations);
+    updateCalculations();
+
+    const brandingContainer = document.getElementById('branding-container');
+    if (!showBranding) {
+        brandingContainer.style.display = 'none';
+    } else {
+        const baseUrl = window.location.origin.includes('localhost') ? 'http://127.0.0.1:18789' : 'https://ohc.app';
+        document.getElementById('branding-link').href = `${baseUrl}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}&source=roi_calculator_embed`;
+    }
+
+    document.getElementById('cta-btn').addEventListener('click', () => {
+        alert(`Lead captured! They are interested in ${serviceName} at $${slider.value}/mo.`);
+    });
+  </script>
+</body>
+</html>
