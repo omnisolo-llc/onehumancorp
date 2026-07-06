@@ -285,7 +285,6 @@ impl UserRepository for SqliteUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .bind(org_id)
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?
