@@ -572,7 +572,8 @@ fn test_redact_interface_pii_edge_cases() {
             [
                 { "nested_array_obj_ip_address": "127.0.0.1" },
                 { "mac_address": "00:00:00:00:00:00" },
-                "test@test.com" // string pattern match for email
+                "test@test.com", // string pattern match for email
+                { "latitude": "12.345", "longitude": "67.890" }
             ]
         ],
         "non_sensitive_parent": {
@@ -584,7 +585,13 @@ fn test_redact_interface_pii_edge_cases() {
             "phONe": "555-1234",
             "medical_history": "hypertension",
             "social_security_num": "987-65-4321",
-            "tax_ID_number": "123456789"
+            "tax_ID_number": "123456789",
+            "gps_location": "34.05,-118.25",
+            "device_ID_hash": "xyz789",
+            "salary_range": "100k-120k",
+            "routing_num": "012345678",
+            "healthCondition": "good",
+            "passport_no": "A1234567"
         }
     });
 
@@ -598,6 +605,8 @@ fn test_redact_interface_pii_edge_cases() {
     assert_eq!(redacted_mixed["mixed_array"][4][0]["nested_array_obj_ip_address"], "[REDACTED]");
     assert_eq!(redacted_mixed["mixed_array"][4][1]["mac_address"], "[REDACTED]");
     assert_eq!(redacted_mixed["mixed_array"][4][2], "[EMAIL_REDACTED]");
+    assert_eq!(redacted_mixed["mixed_array"][4][3]["latitude"], "[REDACTED]");
+    assert_eq!(redacted_mixed["mixed_array"][4][3]["longitude"], "[REDACTED]");
 
     assert_eq!(redacted_mixed["non_sensitive_parent"]["userEmail"], "[REDACTED]");
     assert_eq!(redacted_mixed["non_sensitive_parent"]["CREDIT_CARD"], "[REDACTED]");
@@ -608,6 +617,12 @@ fn test_redact_interface_pii_edge_cases() {
     assert_eq!(redacted_mixed["non_sensitive_parent"]["medical_history"], "[REDACTED]");
     assert_eq!(redacted_mixed["non_sensitive_parent"]["social_security_num"], "[REDACTED]");
     assert_eq!(redacted_mixed["non_sensitive_parent"]["tax_ID_number"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["gps_location"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["device_ID_hash"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["salary_range"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["routing_num"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["healthCondition"], "[REDACTED]");
+    assert_eq!(redacted_mixed["non_sensitive_parent"]["passport_no"], "[REDACTED]");
 }
 
 #[test]
@@ -628,7 +643,8 @@ fn test_redact_interface_pii_highly_nested() {
                                             { "health_condition": "stable" },
                                             { "safe_array_val": true },
                                             "123-45-6789", // pattern match test inside array
-                                            { "nested_again": { "passport": "AB12345" } }
+                                            { "nested_again": { "passport": "AB12345" } },
+                                            { "deeply_nested_bank_account": { "routing": "987654321", "iban": "XX123456" } }
                                         ]
                                     }
                                 }
@@ -648,6 +664,8 @@ fn test_redact_interface_pii_highly_nested() {
     assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["level7"]["level8"]["level9"][1]["safe_array_val"], true);
     assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["level7"]["level8"]["level9"][2], "[REDACTED]");
     assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["level7"]["level8"]["level9"][3]["nested_again"]["passport"], "[REDACTED]");
+    assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["level7"]["level8"]["level9"][4]["deeply_nested_bank_account"]["routing"], "[REDACTED]");
+    assert_eq!(redacted["level1"]["level2"]["level3"]["level4"]["level5"]["level6"]["level7"]["level8"]["level9"][4]["deeply_nested_bank_account"]["iban"], "[REDACTED]");
 }
 
 #[test]
