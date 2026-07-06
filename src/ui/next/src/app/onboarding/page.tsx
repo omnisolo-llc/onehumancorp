@@ -108,10 +108,14 @@ export default function OnboardingWizard() {
           localStorage.getItem("tenant") ||
           "storefront"
         : "storefront";
-    const userId =
-      typeof localStorage !== "undefined"
-        ? localStorage.getItem("user_id") || "test-user"
-        : "test-user";
+          let userId = "guest";
+      if (typeof localStorage !== "undefined") {
+        userId = localStorage.getItem("user_id") || "";
+        if (!userId) {
+          userId = crypto.randomUUID();
+          localStorage.setItem("user_id", userId);
+        }
+      }
 
     const wizardState = {
       step,
@@ -185,10 +189,14 @@ export default function OnboardingWizard() {
             localStorage.getItem("tenant") ||
             "storefront"
           : "storefront";
-      const userId =
-        typeof localStorage !== "undefined"
-          ? localStorage.getItem("user_id") || "test-user"
-          : "test-user";
+            let userId = "guest";
+      if (typeof localStorage !== "undefined") {
+        userId = localStorage.getItem("user_id") || "";
+        if (!userId) {
+          userId = crypto.randomUUID();
+          localStorage.setItem("user_id", userId);
+        }
+      }
 
       const wizardState = {
         step,
@@ -242,10 +250,14 @@ export default function OnboardingWizard() {
           localStorage.getItem("tenant") ||
           "storefront"
         : "storefront";
-    const userId =
-      typeof localStorage !== "undefined"
-        ? localStorage.getItem("user_id") || "test-user"
-        : "test-user";
+          let userId = "guest";
+      if (typeof localStorage !== "undefined") {
+        userId = localStorage.getItem("user_id") || "";
+        if (!userId) {
+          userId = crypto.randomUUID();
+          localStorage.setItem("user_id", userId);
+        }
+      }
 
     Promise.all([
       fetchWithRetry("/api/onboarding/draft", {
@@ -335,10 +347,14 @@ export default function OnboardingWizard() {
           localStorage.getItem("tenant") ||
           "storefront"
         : "storefront";
-    const userId =
-      typeof localStorage !== "undefined"
-        ? localStorage.getItem("user_id") || "test-user"
-        : "test-user";
+          let userId = "guest";
+      if (typeof localStorage !== "undefined") {
+        userId = localStorage.getItem("user_id") || "";
+        if (!userId) {
+          userId = crypto.randomUUID();
+          localStorage.setItem("user_id", userId);
+        }
+      }
 
     const wizardState = {
       step,
@@ -412,10 +428,14 @@ export default function OnboardingWizard() {
             localStorage.getItem("tenant") ||
             "storefront"
           : "storefront";
-      const userId =
-        typeof localStorage !== "undefined"
-          ? localStorage.getItem("user_id") || "test-user"
-          : "test-user";
+            let userId = "guest";
+      if (typeof localStorage !== "undefined") {
+        userId = localStorage.getItem("user_id") || "";
+        if (!userId) {
+          userId = crypto.randomUUID();
+          localStorage.setItem("user_id", userId);
+        }
+      }
 
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
       updateState({ bio: combinedDescription });
@@ -550,10 +570,14 @@ export default function OnboardingWizard() {
               localStorage.getItem("tenant") ||
               "storefront"
             : "storefront";
-        const userId =
-          typeof localStorage !== "undefined"
-            ? localStorage.getItem("user_id") || "test-user"
-            : "test-user";
+              let userId = "guest";
+      if (typeof localStorage !== "undefined") {
+        userId = localStorage.getItem("user_id") || "";
+        if (!userId) {
+          userId = crypto.randomUUID();
+          localStorage.setItem("user_id", userId);
+        }
+      }
 
         // Pre-fill state values so we don't need to manually type everything
         updateState({
@@ -681,10 +705,14 @@ export default function OnboardingWizard() {
             localStorage.getItem("tenant") ||
             "storefront"
           : "storefront";
-      const userId =
-        typeof localStorage !== "undefined"
-          ? localStorage.getItem("user_id") || "test-user"
-          : "test-user";
+            let userId = "guest";
+      if (typeof localStorage !== "undefined") {
+        userId = localStorage.getItem("user_id") || "";
+        if (!userId) {
+          userId = crypto.randomUUID();
+          localStorage.setItem("user_id", userId);
+        }
+      }
 
       // Navigate to the loading state immediately
       updateState({ step: 4 });
@@ -794,10 +822,14 @@ export default function OnboardingWizard() {
             localStorage.getItem("tenant") ||
             "storefront"
           : "storefront";
-      const userId =
-        typeof localStorage !== "undefined"
-          ? localStorage.getItem("user_id") || "test-user"
-          : "test-user";
+            let userId = "guest";
+      if (typeof localStorage !== "undefined") {
+        userId = localStorage.getItem("user_id") || "";
+        if (!userId) {
+          userId = crypto.randomUUID();
+          localStorage.setItem("user_id", userId);
+        }
+      }
 
       const startRes = await fetchWithRetry("/api/onboarding/start", {
         method: "POST",

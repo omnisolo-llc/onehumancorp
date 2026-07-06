@@ -45,7 +45,11 @@ export default function WebsiteBuilderPage() {
     try {
       const state = useWebsiteBuilderStore.getState();
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+            let user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
+      if (!user && typeof localStorage !== 'undefined') {
+        user = crypto.randomUUID();
+        localStorage.setItem('user_id', user);
+      }
 
       const res = await fetch('/api/onboarding/draft', {
         method: 'POST',
@@ -89,7 +93,11 @@ export default function WebsiteBuilderPage() {
   useEffect(() => {
     const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
     setTenantId(tenantIdStr);
-    const userId = localStorage.getItem('user_id') || 'test-user';
+          let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
+      if (!userId && typeof localStorage !== 'undefined') {
+        userId = crypto.randomUUID();
+        localStorage.setItem('user_id', userId);
+      }
 
     Promise.all([
       fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId } })
@@ -156,7 +164,11 @@ export default function WebsiteBuilderPage() {
     // Only save if there's actual state
     if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
       const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-      const userId = localStorage.getItem('user_id') || 'test-user';
+            let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
+      if (!userId && typeof localStorage !== 'undefined') {
+        userId = crypto.randomUUID();
+        localStorage.setItem('user_id', userId);
+      }
 
       const wizardState = {
         step: wizardStep,
@@ -612,7 +624,11 @@ export default function WebsiteBuilderPage() {
                       onClick={async () => {
                         setStatus('generating');
                         const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                        const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+                                                let userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
+                        if (!userIdStr && typeof localStorage !== 'undefined') {
+                            userIdStr = crypto.randomUUID();
+                            localStorage.setItem('user_id', userIdStr);
+                        }
                         try {
                             const startRes = await fetch('/api/onboarding/start', {
                               method: 'POST',
@@ -688,7 +704,11 @@ export default function WebsiteBuilderPage() {
                         const controller = new AbortController();
                         const abortTimeout = window.setTimeout(() => controller.abort(), 4500);
                         const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                        const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+                                                let userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || '' : '';
+                        if (!userIdStr && typeof localStorage !== 'undefined') {
+                            userIdStr = crypto.randomUUID();
+                            localStorage.setItem('user_id', userIdStr);
+                        }
                         try {
 
                           const res = await fetch('/api/onboarding/intake', {
