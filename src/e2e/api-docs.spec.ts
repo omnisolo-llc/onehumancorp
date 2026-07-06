@@ -15,7 +15,7 @@ test.describe('API Documentation', () => {
     await tooltipTarget.waitFor({ state: "visible", timeout: 10000 });
     await tooltipTarget.hover();
 
-    const tooltipElement = page.locator('.animate-fade-in-up');
+    const tooltipElement = page.locator('[role="tooltip"]');
     await expect(tooltipElement).toBeVisible();
     await expect(tooltipElement).toContainText('Direct API access is only for custom integrations.');
 
