@@ -53,15 +53,15 @@ impl WorkerPool {
                                     match result {
                                         Ok(Ok(Ok(()))) => {
                                             if let Err(e) = queue_clone.complete(&job_id).await {
-                                                ::server_telemetry::record_error_signal("[bug] Failed to complete job ");
+                                                ::server_telemetry::record_error_signal("[bug] Failed to complete job");
                                                 tracing::trace!("Failed to complete job {}: {}", job_id, e);
                                             }
                                         }
                                         Ok(Ok(Err(e))) => {
-                                            ::server_telemetry::record_error_signal("[bug] Job handler returned error for ");
+                                            ::server_telemetry::record_error_signal("[bug] Job handler returned error");
                                             tracing::trace!("Job handler returned error for {}: {}", job_id, e);
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3, &e).await {
-                                                ::server_telemetry::record_error_signal("[bug] Failed to register fail for job ");
+                                                ::server_telemetry::record_error_signal("[bug] Failed to register fail for job");
                                                 tracing::trace!("Failed to register fail for job {}: {}", job_id, fail_err);
                                             }
                                         }
@@ -69,16 +69,16 @@ impl WorkerPool {
                                             ::server_telemetry::record_error_signal("[bug] Job panicked/join error");
                                             tracing::trace!("Job {} panicked/join error: {}", job_id, e);
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3, &e.to_string()).await {
-                                                ::server_telemetry::record_error_signal("[bug] Failed to register fail for job ");
+                                                ::server_telemetry::record_error_signal("[bug] Failed to register fail for job");
                                                 tracing::trace!("Failed to register fail for job {}: {}", job_id, fail_err);
                                             }
                                         }
                                         Err(_) => {
-                                            ::server_telemetry::record_error_signal("[bug] Job timed out after ms");
+                                            ::server_telemetry::record_error_signal("[bug] Job timed out");
                                             tracing::trace!("Job {} timed out after {} ms", job_id, timeout_ms);
                                             join_handle.abort();
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3, "Agent execution exceeded 60-second ML-Resilience timeout rule").await {
-                                                ::server_telemetry::record_error_signal("[bug] Failed to register fail for timed out job ");
+                                                ::server_telemetry::record_error_signal("[bug] Failed to register fail for timed out job");
                                                 tracing::trace!("Failed to register fail for timed out job {}: {}", job_id, fail_err);
                                             }
                                         }
