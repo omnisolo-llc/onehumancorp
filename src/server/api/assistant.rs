@@ -1912,8 +1912,6 @@ mod real_feature_state_tests {
         crate::db::secure_pg_pool_options()
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
-                    use sqlx::Executor;
-
                     ::server_common::auth_utils::set_org_context(&mut *conn, "").await?;
                     Ok(true)
                 })
