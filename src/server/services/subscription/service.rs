@@ -154,6 +154,8 @@ impl SubscriptionService {
             current_period_end: Utc::now().timestamp() + 30 * 24 * 60 * 60, // 30 days
             created_at: Utc::now().timestamp(),
             predicted_restock_date: None,
+            health_score: Some(100),
+            last_health_check_at: None,
         };
 
         self.ensure_subscription_schema().await?;
@@ -170,8 +172,8 @@ impl SubscriptionService {
             DbStore::Postgres => {
                 sqlx::query(
                     "INSERT INTO subscribers
-                        (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status, created_at, updated_at, predicted_restock_date)
-                     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $7)",
+                        (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status, created_at, updated_at, predicted_restock_date, health_score)
+                     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $7, $8)",
                 )
                 .bind(&subscriber.id)
                 .bind(&subscriber.tenant_id)
@@ -180,6 +182,7 @@ impl SubscriptionService {
                 .bind(&subscriber.stripe_subscription_id)
                 .bind(status_str)
                 .bind(subscriber.predicted_restock_date)
+                .bind(subscriber.health_score)
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -187,8 +190,8 @@ impl SubscriptionService {
             DbStore::Sqlite(pool) => {
                 sqlx::query(
                     "INSERT INTO subscribers
-                        (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status, created_at, updated_at, predicted_restock_date)
-                     VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)",
+                        (id, tenant_id, subscription_plan_id, customer_id, stripe_subscription_id, status, created_at, updated_at, predicted_restock_date, health_score)
+                     VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?)",
                 )
                 .bind(&subscriber.id)
                 .bind(&subscriber.tenant_id)
@@ -197,6 +200,7 @@ impl SubscriptionService {
                 .bind(&subscriber.stripe_subscription_id)
                 .bind(status_str)
                 .bind(subscriber.predicted_restock_date)
+                .bind(subscriber.health_score)
                 .execute(pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -468,7 +472,9 @@ impl SubscriptionService {
                         stripe_subscription_id TEXT,
                         created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        predicted_restock_date BIGINT
+                        predicted_restock_date BIGINT,
+                        health_score INTEGER DEFAULT 100,
+                        last_health_check_at TIMESTAMPTZ
                     )",
                 )
                 .execute(&self.db.pool)
@@ -518,7 +524,9 @@ impl SubscriptionService {
                         stripe_subscription_id TEXT,
                         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        predicted_restock_date INTEGER
+                        predicted_restock_date INTEGER,
+                        health_score INTEGER DEFAULT 100,
+                        last_health_check_at TEXT
                     )",
                 )
                 .execute(pool)

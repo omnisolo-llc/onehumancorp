@@ -124,6 +124,7 @@ where
         .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
+        .route("/simulate-subscription-churn-winback", post(simulate_subscription_churn_winback))
         .route("/simulate-promoter-draft", post(simulate_promoter_draft))
         .route("/simulate-dispute-resolution", post(simulate_dispute_resolution))
         .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
@@ -314,6 +315,32 @@ async fn simulate_dispute_resolution(
         Err(e) => {
             tracing::error!("Failed to simulate dispute resolution: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
+async fn simulate_subscription_churn_winback(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "e2e-tenant".to_string());
+
+    let pool = orchestrator.db().pool.clone();
+    let service = crate::services::agent_feed::service::AgentFeedService::new(pool);
+    let payload = serde_json::json!({
+        "feature_type": "subscription_churn_winback",
+        "description": "The Ambassador identified Alex as an at-risk subscriber (Health Score: 30).",
+        "health_score": 30,
+        "action_type": "send_message",
+        "draft_reply": "Hi Alex, we noticed you haven't booked a lesson in a few weeks. Is everything okay? We'd love to offer you 10% off your next package to keep the momentum going!",
+        "customer_id": "cust_simulated_123"
+    });
+
+    match service.process_event(&tenant_id, "Customer Success", &payload).await {
+        Ok(item) => (StatusCode::OK, Json(serde_json::json!({ "success": true, "item": item }))).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate subscription churn winback: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Internal Server Error" }))).into_response()
         }
     }
 }

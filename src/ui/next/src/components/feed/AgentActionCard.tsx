@@ -150,7 +150,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "instagram_dm" ||
           (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "subscription_replenishment") && (
+            ?.feature_type === "subscription_replenishment" ||
+          (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "subscription_churn_winback") && (
           <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "incident_resolution" && (
@@ -763,7 +765,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 </div>
               </div>
             ) : (approval.proposed_action || approval.context_payload)
-                ?.feature_type === "subscription_replenishment" ? (
+            ?.feature_type === "subscription_replenishment" ||
+         (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "subscription_churn_winback" ? (
               <div className="flex flex-col gap-2">
                 <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
                   Autopilot Recommendation
@@ -1537,7 +1541,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "subscription_replenishment" ? (
+            ?.feature_type === "subscription_replenishment" ||
+            (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "subscription_churn_winback" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
               onClick={() =>
@@ -1575,7 +1581,9 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             </button>
           </div>
         ) : (approval.proposed_action || approval.context_payload)
-            ?.feature_type === "subscription_replenishment" ? (
+            ?.feature_type === "subscription_replenishment" ||
+         (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "subscription_churn_winback" ? (
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center">
               <span className="text-gray-500 dark:text-gray-400">Action:</span>
