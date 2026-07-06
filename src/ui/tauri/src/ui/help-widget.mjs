@@ -1,3 +1,183 @@
+// --- Global Tooltip & Walkthrough Logic ---
+
+    // Tooltips
+    if (!window.OHC_TOOLTIPS) {
+    window.OHC_TOOLTIPS = {};
+    fetch("/api/tooltips").then(r => r.json()).then(data => {
+        Object.assign(window.OHC_TOOLTIPS, data);
+    }).catch(e => {
+        console.error(e);
+    });
+}
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    if (document.body) document.body.appendChild(tooltipEl);
+    else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(tooltipEl));
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[data-tooltip], [id]') ? e.target.closest('[data-tooltip], [id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
+            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
+            if (text) {
+                showTooltip(e, text);
+            }
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[data-tooltip], [id]');
+        if (target) {
+            hideTooltip();
+        }
+    });
+
+
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[id], [data-tooltip]');
+        if (target) {
+            const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
+            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
+            if (text) {
+                window.touchTimer = setTimeout(() => {
+                    showTooltip(e.touches ? e.touches[0] : e, text);
+                }, 500); // 500ms long press
+            }
+        }
+    });
+
+    document.addEventListener('touchend', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchcancel', (e) => {
+        clearTimeout(window.touchTimer);
+        hideTooltip();
+    });
+
+    // Walkthroughs
+    if (!window.startWalkthrough) {
+        window.startWalkthrough = function(steps) {
+            if (!steps || steps.length === 0) return;
+
+            let currentStep = 0;
+
+            const overlay = document.createElement('div');
+            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+            document.body.appendChild(overlay);
+
+            const bubble = document.createElement('div');
+            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+            bubble.setAttribute('role', 'dialog');
+            bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px;';
+            bubble.classList.add('glassmorphism');
+            document.body.appendChild(bubble);
+
+            function renderStep() {
+                const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } bubble.setAttribute('aria-label', (step.title || 'Tour') + ' walkthrough step');
+
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight', 'glassmorphism');
+                    el.style.position = '';
+                    el.style.zIndex = '';
+                el.style.pointerEvents = '';
+                });
+
+                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
+
+                bubble.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                        <button id="wt-close" class="ohc-walkthrough-close" aria-label="Close walkthrough" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    </div>
+                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                        ${currentStep > 0 ? '<button id="wt-prev" class="glassmorphism" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 8px; cursor: pointer;">Back</button>' : ''}
+                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #2563eb; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                    </div>
+                `;
+
+                document.getElementById('wt-close').onclick = closeWalkthrough;
+                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+                document.getElementById('wt-next').onclick = () => {
+                    if (currentStep === steps.length - 1) {
+                        closeWalkthrough();
+                    } else {
+                        currentStep++;
+                        renderStep();
+                    }
+                };
+
+                if (target) {
+                    target.classList.add('walkthrough-highlight');
+                    target.classList.add('glassmorphism');
+                    target.style.position = 'relative';
+                    target.style.zIndex = '99999';
+                    target.style.pointerEvents = 'none';
+
+                    const rect = target.getBoundingClientRect();
+                    if (rect.bottom + 200 < window.innerHeight) {
+                        bubble.style.top = (rect.bottom + 10) + 'px';
+                    } else {
+                        bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                    }
+                    bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+                } else {
+                    bubble.style.top = '50%';
+                    bubble.style.left = '50%';
+                    bubble.style.transform = 'translate(-50%, -50%)';
+                }
+            }
+
+            function closeWalkthrough() {
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight', 'glassmorphism');
+                    el.style.position = '';
+                    el.style.zIndex = '';
+                el.style.pointerEvents = '';
+                });
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+            }
+
+            renderStep();
+        };
+    }
+
 document.addEventListener('DOMContentLoaded', () => {
 // Inject floating widget styles
     const style = document.createElement('style');
@@ -433,186 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatSend.disabled = e.target.value.trim() === '';
     });
 
-    // --- Global Tooltip & Walkthrough Logic ---
 
-    // Tooltips
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[data-tooltip], [id]') ? e.target.closest('[data-tooltip], [id]').getBoundingClientRect() : e.target.getBoundingClientRect();
-
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
-
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip], [id]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                showTooltip(e, text);
-            }
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[data-tooltip], [id]');
-        if (target) {
-            hideTooltip();
-        }
-    });
-
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchmove', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    // Walkthroughs
-    if (!window.startWalkthrough) {
-        window.startWalkthrough = function(steps) {
-            if (!steps || steps.length === 0) return;
-
-            let currentStep = 0;
-
-            const overlay = document.createElement('div');
-            overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
-            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-            document.body.appendChild(overlay);
-
-            const bubble = document.createElement('div');
-            bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
-            bubble.setAttribute('role', 'dialog');
-            bubble.style.cssText = 'position: fixed; z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif; padding: 16px; border-radius: 16px;';
-            bubble.classList.add('glassmorphism');
-            document.body.appendChild(bubble);
-
-            function renderStep() {
-                const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } bubble.setAttribute('aria-label', (step.title || 'Tour') + ' walkthrough step');
-
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight', 'glassmorphism');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                el.style.pointerEvents = '';
-                });
-
-                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
-
-                bubble.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" class="ohc-walkthrough-close" aria-label="Close walkthrough" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                    </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" class="glassmorphism" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 8px; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 8px; background: #2563eb; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                    </div>
-                `;
-
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
-                    if (currentStep === steps.length - 1) {
-                        closeWalkthrough();
-                    } else {
-                        currentStep++;
-                        renderStep();
-                    }
-                };
-
-                if (target) {
-                    target.classList.add('walkthrough-highlight');
-                    target.classList.add('glassmorphism');
-                    target.style.position = 'relative';
-                    target.style.zIndex = '99999';
-                    target.style.pointerEvents = 'none';
-
-                    const rect = target.getBoundingClientRect();
-                    if (rect.bottom + 200 < window.innerHeight) {
-                        bubble.style.top = (rect.bottom + 10) + 'px';
-                    } else {
-                        bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
-                    }
-                    bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
-                } else {
-                    bubble.style.top = '50%';
-                    bubble.style.left = '50%';
-                    bubble.style.transform = 'translate(-50%, -50%)';
-                }
-            }
-
-            function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight', 'glassmorphism');
-                    el.style.position = '';
-                    el.style.zIndex = '';
-                el.style.pointerEvents = '';
-                });
-                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
-            }
-
-            renderStep();
-        };
-    }
 });
 
 // Help widget logic globally initialized.

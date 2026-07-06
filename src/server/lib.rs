@@ -6748,7 +6748,7 @@ async fn create_ui_bom_item_handler(
                 ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
                 ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
                 ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
-                ("api", "Interactive API reference for integrations."),
+                ("api", "If you use custom tools, you can connect them to our system here. This is for advanced users."),
             ];
 
             let query = req.message.to_lowercase();
