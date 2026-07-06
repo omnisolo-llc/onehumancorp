@@ -16,7 +16,7 @@ const mockMediaRecorderInstance = {
   }
 };
 
-const MockMediaRecorder = vi.fn().mockImplementation(() => mockMediaRecorderInstance);
+const MockMediaRecorder = vi.fn().mockImplementation(function() { return mockMediaRecorderInstance; });
 (global as any).MediaRecorder = MockMediaRecorder;
 
 global.navigator.mediaDevices = {
