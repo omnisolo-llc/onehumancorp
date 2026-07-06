@@ -21,12 +21,12 @@ test.describe('Quote Feed e2e', () => {
 
     await expect(page).toHaveURL(/\/quoting\?id=.*/);
 
-    await expect(page.getByText('Quote Details')).toBeVisible();
+    await expect(page.getByText('Quote Summary')).toBeVisible();
 
     // Tap approve on the quoting page
-    await page.getByRole('button', { name: 'Pay Deposit with Pay' }).click();
+    await page.getByRole('button', { name: 'Approve & Send' }).click();
 
     // Assert quote is accepted
-    await expect(page.getByText('Deposit Paid')).toBeVisible();
+    await expect(page.getByText('Proposal Accepted')).toBeVisible();
   });
 });
