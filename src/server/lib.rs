@@ -2465,7 +2465,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let _ = consolidation_worker.spawn_background_task();
 
     let replenishment_job = crate::workers::subscription_replenishment_job::SubscriptionReplenishmentJob::new(db.clone());
+    let health_job = crate::workers::subscription_health_job::SubscriptionHealthJob::new(db.clone());
     replenishment_job.start();
+    health_job.start();
     // Start Subscription Replenishment Worker
     let replenishment_worker = std::sync::Arc::new(crate::workers::subscription_replenishment_worker::SubscriptionReplenishmentWorker::new(db.clone()));
     replenishment_worker.start();
@@ -2610,6 +2612,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
+    let health_worker = std::sync::Arc::new(crate::workers::subscription_health_worker::SubscriptionHealthWorker::new(db.clone()).with_orchestrator(dept_orchestrator.clone()));
+    health_worker.start();
     let agent_action_worker = std::sync::Arc::new(crate::workers::agent_action_worker::AgentActionWorker::new(db.pool.clone(), std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string())));
     agent_action_worker.start();
     let _ = crate::workers::invoice_followup_worker::start_invoice_followup_worker(db.clone(), dept_orchestrator.clone());

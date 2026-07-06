@@ -363,6 +363,8 @@ SERVER_RS_SRCS = [
     "//src/server/workers:mod.rs",
     "//src/server/workers:agent_action_worker.rs",
     "//src/server/workers:subscription_replenishment_job.rs",
+    "//src/server/workers:subscription_health_job.rs",
+    "//src/server/workers:subscription_health_worker.rs",
     "//src/server/workers:subscription_replenishment_worker.rs",
     "//src/server/workers:daily_ops_routine_worker.rs",
     "//src/server/voice:mod.rs",
