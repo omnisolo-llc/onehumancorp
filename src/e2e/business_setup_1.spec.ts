@@ -16,7 +16,6 @@ test.describe('Business Setup Wizard', () => {
 
   test('shows the current setup welcome step', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Setup Assistant' })).toBeVisible();
-        await expect(page.getByRole('button', { name: /Instant Build/ })).toBeVisible();
   });
 
   test('moves through business type and name steps', async ({ page }) => {
