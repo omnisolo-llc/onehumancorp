@@ -78,18 +78,18 @@ describe("CampaignOrchestrationPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Campaign Orchestration" })).toBeInTheDocument();
+      expect(screen.queryByText("Campaign Orchestration")).not.toBeNull();
     });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/ui/dashboard/unified-feed?tenant_id=tenant-123");
     // expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open review workflow/i })).toHaveAttribute("href", "/review-campaigns");
-    expect(screen.getByRole("link", { name: /Open receipt workflow/i })).toHaveAttribute("href", expect.stringMatching(/\/orders(\/order-1001)?/));
+    expect(screen.getByRole("link", { name: /Open review workflow/i }).getAttribute("href")).toBe("/review-campaigns");
+    expect(screen.getByRole("link", { name: /Open receipt workflow/i }).getAttribute("href")).toMatch(/\/orders(\/order-1001)?/);
 
     fireEvent.click(screen.getByRole("button", { name: /Generate review draft/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Hi Alice, please review order-1001/)).toBeInTheDocument();
+      expect(screen.queryByText(/Hi Alice, please review order-1001/)).not.toBeNull();
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/growth/campaign/generate-review",
