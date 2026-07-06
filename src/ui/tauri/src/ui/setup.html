@@ -3945,6 +3945,7 @@
           const imageUrlInput = document.getElementById("instant-image-url");
           const imageUrl = imageUrlInput ? imageUrlInput.value.trim() : "";
           if (!bioInput.trim()) {
+            delete generateStorefrontBtn.dataset.submitting;
             instantErrorEl.innerText = "Please tell us about your business.";
             instantErrorEl.style.display = "block";
             instantErrorEl.classList.add("animate-shake");
