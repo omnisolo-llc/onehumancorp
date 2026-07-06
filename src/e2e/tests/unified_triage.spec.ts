@@ -92,7 +92,7 @@ test.describe('Unified Multi-Channel Work Triage & AI Inbox Engine', () => {
 
     await page.goto('/api/ui/dashboard.html');
 
-    const emptyMessage = page.locator('.triage-card.empty', { hasText: 'No recent activity found' });
+    const emptyMessage = page.locator('.triage-card.empty', { hasText: 'No items need your attention right now' });
     await expect(emptyMessage).toBeVisible();
   });
 
