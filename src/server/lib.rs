@@ -2464,6 +2464,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, Some(cb)));
     let _ = consolidation_worker.spawn_background_task();
 
+    let retention_job = crate::workers::subscription_retention_job::SubscriptionRetentionJob::new(db.clone());
+    retention_job.start();
+
     let replenishment_job = crate::workers::subscription_replenishment_job::SubscriptionReplenishmentJob::new(db.clone());
     replenishment_job.start();
     // Start Subscription Replenishment Worker
