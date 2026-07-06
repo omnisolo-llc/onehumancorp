@@ -312,24 +312,39 @@ impl DB {
                     use std::os::unix::fs::PermissionsExt;
 
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                        let mut opts = OpenOptions::new();
-                        opts.read(true).write(true).create(true).mode(0o600);
-                        #[cfg(target_os = "linux")]
-                        opts.custom_flags(0x00020000); // O_NOFOLLOW
-                        #[cfg(target_os = "macos")]
-                        opts.custom_flags(0x0100); // O_NOFOLLOW
+                                if !db_path.exists() {
+                                    let file = OpenOptions::new()
+                                        .read(true)
+                                        .write(true)
+                                        .create_new(true)
+                                        .mode(0o600)
+                                        .open(&db_path)?;
+                                    let metadata = file.metadata()?;
+                                    let mut perms = metadata.permissions();
+                                    if (perms.mode() & 0o777) != 0o600 {
+                                        perms.set_mode(0o600);
+                                        file.set_permissions(perms)?;
+                                    }
+                                } else {
+                                    let mut opts = OpenOptions::new();
+                                    opts.read(true).write(true);
+                                    #[cfg(target_os = "linux")]
+                                    opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                    #[cfg(target_os = "macos")]
+                                    opts.custom_flags(0x0100); // O_NOFOLLOW
 
-                        let file = opts.open(&db_path)?;
-                        let metadata = file.metadata()?;
-                        let mut perms = metadata.permissions();
-                        if (perms.mode() & 0o777) != 0o600 {
-                            perms.set_mode(0o600);
-                            if let Err(e) = file.set_permissions(perms) {
-                                tracing::error!(
-                                    "Failed to securely update existing standalone database file permissions: {}",
-                                    e
-                                );
-                                return Err(e.into());
+                                    let file = opts.open(&db_path)?;
+                                    let metadata = file.metadata()?;
+                                    let mut perms = metadata.permissions();
+                                    if (perms.mode() & 0o777) != 0o600 {
+                                        perms.set_mode(0o600);
+                                        if let Err(e) = file.set_permissions(perms) {
+                                            tracing::error!(
+                                                "Failed to securely update existing standalone database file permissions: {}",
+                                                e
+                                            );
+                                            return Err(e.into());
+                                        }
                             }
                         }
 
@@ -339,12 +354,30 @@ impl DB {
                         let shm_path = format!("{}-shm", db_path.display());
 
                         for ext_path in [&wal_path, &shm_path] {
-                            if let Ok(file) = opts.open(ext_path) {
-                                if let Ok(metadata) = file.metadata() {
-                                    let mut p = metadata.permissions();
-                                    if (p.mode() & 0o777) != 0o600 {
-                                        p.set_mode(0o600);
-                                        let _ = file.set_permissions(p);
+                                    if !std::path::Path::new(ext_path).exists() {
+                                        if let Ok(file) = OpenOptions::new().read(true).write(true).create_new(true).mode(0o600).open(ext_path) {
+                                            if let Ok(metadata) = file.metadata() {
+                                                let mut p = metadata.permissions();
+                                                if (p.mode() & 0o777) != 0o600 {
+                                                    p.set_mode(0o600);
+                                                    let _ = file.set_permissions(p);
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        let mut opts = OpenOptions::new();
+                                        opts.read(true).write(true);
+                                        #[cfg(target_os = "linux")]
+                                        opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                        #[cfg(target_os = "macos")]
+                                        opts.custom_flags(0x0100); // O_NOFOLLOW
+                                        if let Ok(file) = opts.open(ext_path) {
+                                            if let Ok(metadata) = file.metadata() {
+                                                let mut p = metadata.permissions();
+                                                if (p.mode() & 0o777) != 0o600 {
+                                                    p.set_mode(0o600);
+                                                    let _ = file.set_permissions(p);
+                                                }
                                     }
                                 }
                             }
@@ -2607,11 +2640,12 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     );
 
                     CREATE TABLE IF NOT EXISTS tooltips (
-                        id TEXT PRIMARY KEY,
+                        id TEXT NOT NULL,
                         tenant_id TEXT NOT NULL,
                         text TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, id)
                     );
 
                     CREATE TABLE IF NOT EXISTS unified_messages (

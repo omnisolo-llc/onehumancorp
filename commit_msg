@@ -1,9 +1,6 @@
-Wizard: Fix validation errors not clearing upon user selection
+Fixed Tenant Leakage and Local Data Exposure Vulnerabilities
 
-Persona: Non-technical business owner (e.g. Maya the baker).
-Browser/Playwright flow attempted: Starting on `setup.html`, proceed to the "Set up your Assistant" step. Click "Next" without selecting a team or a tone to trigger validation errors. Then, select a team and a tone.
-CUJ gap observed: After making a selection, the validation error message and the red border around the input remained visible, confusing the user into thinking their selection was invalid.
-UX reason for fix: Immediate feedback is crucial for form validation. Users should not have to click "Next" again just to see if their action fixed the error.
-Post-fix flow: Following the same steps, selecting a team now immediately clears the "Please select an AI agent team." error and the red border. Similarly, selecting a tone immediately clears the "Please select a tone." error and its red border. E2E tests have been added to verify this behavior, and the test suite has been repaired from a broken state caused by earlier debugging.
-
-Loaded superpowers: none.
+* Fixed TOCTOU vulnerability in `src/server/db.rs` during SQLite database creation by enforcing `create_new(true)` and applying strict `0600` file permissions to the database and its auxiliary files (`-wal` and `-shm`).
+* Ensured strict Row-Level Security (RLS) enforcement in `src/server/db.rs`'s `search_workspace` function by explicitly validating `app.current_tenant` context within the database query, rather than relying solely on query bindings that could bypass the Postgres-level RLS config context.
+* Fixed similar missing explicit context validations in `src/server/auth/postgres_store.rs` by updating `update_user` and `get_by_*` methods to rely on PostgreSQL's global session state (`current_setting('app.current_tenant')::text`) enforcing strict multi-tenant boundaries.
+* Updated `DISCARD ALL` in `PgPoolOptions::after_release` to properly reset postgres tenant variables by utilizing `sqlx::Executor::execute(conn, ...)` directly.

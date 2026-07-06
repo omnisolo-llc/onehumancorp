@@ -154,7 +154,7 @@ pub struct CreateCheckoutSessionResponse {
 }
 
 pub async fn create_billing_portal_session_handler(
-    _headers: HeaderMap,
+    headers: HeaderMap,
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Result<Json<CreateBillingPortalSessionResponse>, StatusCode> {
@@ -164,16 +164,33 @@ pub async fn create_billing_portal_session_handler(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
+    let origin = headers.get("origin").and_then(|h| h.to_str().ok());
+    let referer = headers.get("referer").and_then(|h| h.to_str().ok()).and_then(|r| {
+        if r.starts_with("http") {
+            let mut parts = r.splitn(4, '/');
+            let scheme = parts.next()?;
+            let empty = parts.next()?;
+            let host = parts.next()?;
+            Some(format!("{}//{}", scheme, host))
+        } else {
+            None
+        }
+    });
+
+    let return_url_base = origin.or(referer.as_deref());
+
     let customer_id = format!("cus_{}", tenant_id); // Basic fallback to avoid DB join here for simplicity
 
     if let Some(client) = &hub.tracker().stripe_client {
-        match client.create_billing_portal_session(&customer_id).await {
+        match client.create_billing_portal_session(&customer_id, return_url_base).await {
             Ok(url) => Ok(Json(CreateBillingPortalSessionResponse { url })),
             Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
         }
     } else {
         // Fallback if Stripe config is missing
-        let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string());
+        let base_url = return_url_base
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string()));
         Ok(Json(CreateBillingPortalSessionResponse { url: format!("{}/pricing", base_url) }))
     }
 }
