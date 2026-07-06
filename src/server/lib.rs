@@ -3895,19 +3895,15 @@ pub async fn update_ui_triage_action_handler(
             let _ = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = $1 AND tenant_id = $2)")
                 .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
 
-            match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
-                Ok(_) => {
-                    let _ = tx.commit().await;
-                    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                    cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
-                    cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
-                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
-                },
-                Err(e) => {
-                    tracing::error!("Failed to update triage item: {:?}", e);
-                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
-                }
+            if let Err(e) = sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update triage item: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
             }
+            let _ = tx.commit().await;
+            let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+            cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let mut tx = match sqlite_pool.begin().await {
@@ -4158,19 +4154,15 @@ pub async fn update_ui_triage_action_handler(
             let _ = sqlx::query("UPDATE unified_threads SET status = 'resolved' WHERE id = (SELECT thread_id FROM unified_triage_actions WHERE id = ? AND tenant_id = ?)")
                 .bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await;
 
-            match sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
-                Ok(_) => {
-                    let _ = tx.commit().await;
-                    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                    cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
-                    cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
-                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
-                },
-                Err(e) => {
-                    tracing::error!("Failed to update triage item (sqlite): {:?}", e);
-                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
-                }
+            if let Err(e) = sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                tracing::error!("Failed to update triage item (sqlite): {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
             }
+            let _ = tx.commit().await;
+            let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+            cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
         }
     }
 }
