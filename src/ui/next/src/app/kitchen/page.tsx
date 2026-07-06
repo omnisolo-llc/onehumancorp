@@ -19,7 +19,7 @@ export default function KitchenView() {
 
         // Fetch active orders (simulate using pos orders or ui orders if backend supports it)
         // Here we try to fetch orders via POS endpoint which might exist.
-        // We'll just try to get anything, if fails, we show empty state correctly without mock.
+        // We'll just try to get anything, if fails, we show empty state correctly without fake data.
         const ordersRes = await fetch("/api/pos/orders", {
           headers: { "x-tenant-id": tenantId }
         });

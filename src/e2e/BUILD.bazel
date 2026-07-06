@@ -50,7 +50,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/unified_agent_feed_interaction.spec.ts",
 
     "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",
-    "//src/ui/next:src/e2e/regression_audit_mock_fixes.spec.ts",
+    "//src/ui/next:src/e2e/regression_audit_fake_data_fixes.spec.ts",
     "//src/ui/next:e2e/agents.spec.ts",
     "//src/ui/next:e2e/builder_ui.spec.ts",
     "//src/ui/next:e2e/checkout.spec.ts",
