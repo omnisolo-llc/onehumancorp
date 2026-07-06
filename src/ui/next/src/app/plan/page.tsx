@@ -142,7 +142,7 @@ export default function MyPlanPage() {
                 <button
                     onClick={handleManageBilling}
                     disabled={isManagingBilling}
-                    className="w-full sm:w-auto px-6 py-3 bg-[#0f766e]/10 hover:bg-[#0f766e]/20 text-[#0f766e] rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm">
+                    className="w-full sm:w-auto px-6 py-3 glass-card backdrop-blur-xl bg-white/60 hover:bg-white/80 border border-white/40 shadow-sm rounded-xl font-medium transition-all hover:shadow-md hover:-translate-y-0.5 duration-300 text-center disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm">
                     {isManagingBilling ? "Redirecting..." : "Manage Billing"}
                 </button>
                 <button
