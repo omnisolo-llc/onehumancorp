@@ -1336,7 +1336,7 @@ impl HubService for MyHubService {
             0.0
         };
 
-        let storage_cost_cents = crate::pricing::calculator::calculate_storage_cost_cents(storage_bytes, &crate::pricing::calculator::CostConfig { cost_per_gb_month: auditor.get_cost_per_gb_month(), ..Default::default() });
+        let storage_cost_cents: i64 = trend.iter().map(|d| d.storage_cost).sum();
         let storage_cost_f64 = storage_cost_cents as f64 / 100.0;
 
         let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
