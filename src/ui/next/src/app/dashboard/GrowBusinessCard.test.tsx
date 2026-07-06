@@ -19,8 +19,11 @@ describe('GrowBusinessCard', () => {
     const groupBuyLink = screen.getByRole('link', { name: /Group Buy/i });
     expect(groupBuyLink).toHaveAttribute('href', '/group-buy-widget');
 
-    const widgetLink = screen.getByRole('link', { name: /Viral Widget/i });
+    const widgetLink = screen.getByRole('link', { name: 'Viral Widget' });
     expect(widgetLink).toHaveAttribute('href', '/viral-powered-by-ohc-widget');
+
+    const productWidgetLink = screen.getByRole('link', { name: 'Viral Product Widget' });
+    expect(productWidgetLink).toHaveAttribute('href', '/viral-product-widget');
 
     const bizCardLink = screen.getByRole('link', { name: /Digital Business Card/i });
     expect(bizCardLink).toHaveAttribute('href', '/digital-business-card');

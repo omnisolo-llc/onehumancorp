@@ -48,6 +48,13 @@ export function GrowBusinessCard() {
               Viral Widget
             </Link>
             <Link
+              id="viral-product-widget-btn"
+              href="/viral-product-widget"
+              className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Viral Product Widget
+            </Link>
+            <Link
               id="digital-business-card-btn"
               href="/digital-business-card"
               className="px-4 py-2 bg-pink-50 hover:bg-pink-100 text-pink-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"

@@ -11,6 +11,7 @@ export default function ViralPoweredByOHCWidgetPage() {
   const [copied, setCopied] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [hideBranding, setHideBranding] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -27,10 +28,12 @@ export default function ViralPoweredByOHCWidgetPage() {
     if (!hasPro) {
       e.preventDefault();
       setShowPaywall(true);
+      return;
     }
+    setHideBranding(e.target.checked);
   };
 
-  const embedUrl = `https://ohc.app/api/v1/growth/viral-widget/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&branding=${!hasPro}`;
+  const embedUrl = `https://ohc.app/api/v1/growth/viral-widget/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&branding=${!hideBranding}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
   const handleCopy = () => {
@@ -62,7 +65,7 @@ export default function ViralPoweredByOHCWidgetPage() {
                 <input
                     type="checkbox"
                     id="removeBranding"
-                    checked={hasPro}
+                    checked={hideBranding}
                     onChange={handleRemoveBranding}
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
@@ -87,7 +90,7 @@ export default function ViralPoweredByOHCWidgetPage() {
         <div className="flex-1 flex flex-col p-8">
            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Live Preview</h2>
            <div className="flex-1 bg-gray-100 rounded-2xl shadow-inner border-2 border-dashed border-gray-300 relative overflow-hidden flex items-center justify-center p-6 min-h-[400px]">
-              <iframe src={`/api/v1/growth/viral-widget/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&branding=${!hasPro}`} className="w-full h-full border-none rounded-xl" />
+              <iframe src={`/api/v1/growth/viral-widget/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&branding=${!hideBranding}`} className="w-full h-full border-none rounded-xl" />
            </div>
         </div>
       </div>
