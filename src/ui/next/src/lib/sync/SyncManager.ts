@@ -176,10 +176,7 @@ export class SyncManager {
           },
           body: JSON.stringify({ deltas: crdtDeltas })
         });
-        if (!resCrdt.ok) {
-          allOk = false;
-          throw new Error(`CRDT Sync failed with status ${resCrdt.status}`);
-        }
+        checkRateLimit(resCrdt);
       }
 
       // Sync Quote Actions
@@ -190,10 +187,7 @@ export class SyncManager {
           headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
           body: JSON.stringify(update.payload)
         });
-        if (!res.ok) {
-          allOk = false;
-          throw new Error(`Quote update failed with status ${res.status}`);
-        }
+        checkRateLimit(res);
       }
 
       const quoteApprovals = generalMutations.filter(m => m.type === 'approve_quote');
@@ -202,10 +196,7 @@ export class SyncManager {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
         });
-        if (!res.ok) {
-          allOk = false;
-          throw new Error(`Quote approval failed with status ${res.status}`);
-        }
+        checkRateLimit(res);
       }
 
       // Sync POS transactions
@@ -222,10 +213,7 @@ export class SyncManager {
             transactions: posTransactions
           })
         });
-        if (!resPos.ok) {
-          allOk = false;
-          throw new Error(`POS Sync failed with status ${resPos.status}`);
-        }
+        checkRateLimit(resPos);
         try {
           const resPosData = await resPos.json();
           if (resPosData.pending_reconciliation && resPosData.pending_reconciliation.length > 0) {
@@ -249,10 +237,7 @@ export class SyncManager {
           },
           body: JSON.stringify({ mutations: generalGenMutations })
         });
-        if (!resGen.ok) {
-          allOk = false;
-          throw new Error(`General Sync failed with status ${resGen.status}`);
-        }
+        checkRateLimit(resGen);
         try {
           const resGenData = await resGen.json();
           if (resGenData.pending_reconciliation && resGenData.pending_reconciliation.length > 0) {
@@ -279,6 +264,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
+            try { checkRateLimit(res); } catch(e) {}
             console.error(`Triage Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOk = false;
           }
@@ -302,6 +288,7 @@ export class SyncManager {
             body: JSON.stringify({ approved: action.payload.approved })
           });
           if (!res.ok) {
+            try { checkRateLimit(res); } catch(e) {}
             console.error(`Advisory Action Sync failed with status ${res.status}`);
             if (res.status >= 500) allOk = false;
           }
@@ -326,6 +313,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
+            try { checkRateLimit(res); } catch(e) {}
             console.error(`Generate Invoice Sync failed with status ${res.status}`);
             if (res.status >= 500) allOk = false;
           }
@@ -349,6 +337,7 @@ export class SyncManager {
             body: JSON.stringify(action.payload)
           });
           if (!res.ok) {
+            try { checkRateLimit(res); } catch(e) {}
             console.error(`Field Ops Status Sync failed with status ${res.status}`);
             if (res.status >= 500) allOk = false;
           }
@@ -366,10 +355,7 @@ export class SyncManager {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderEvents)
         });
-        if (!resOrder.ok) {
-          allOk = false;
-          throw new Error(`Order Sync failed with status ${resOrder.status}`);
-        }
+        checkRateLimit(resOrder);
       }
 
       const inventoryEvents = generalMutations.filter(m => m.type === 'TOGGLE_SOLD_OUT');
@@ -379,10 +365,7 @@ export class SyncManager {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(inventoryEvents)
         });
-        if (!resInv.ok) {
-          allOk = false;
-          throw new Error(`Inventory Sync failed with status ${resInv.status}`);
-        }
+        checkRateLimit(resInv);
       }
 
       if (allOk) {
