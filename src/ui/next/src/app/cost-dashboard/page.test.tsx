@@ -1,10 +1,13 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import React from 'react';
 import CostDashboardPage from './page';
 import { useRouter } from 'next/navigation';
 import { expect, test, vi, describe, beforeEach, afterEach } from 'vitest';
 
 // Mock next/navigation
+let originalWindowLocation: any;
+beforeEach(() => { originalWindowLocation = window.location; delete (window as any).location; window.location = { ...originalWindowLocation, href: '' } as any; });
+afterEach(() => { window.location = originalWindowLocation; });
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
   usePathname: () => '/cost-dashboard',
@@ -348,5 +351,324 @@ describe('CostDashboardPage', () => {
 
     expect(screen.getAllByText(/\/ Unlimited/)[0]).toBeDefined();
     expect(screen.getAllByText(/\/ Unlimited/).length).toBe(2);
+  });
+
+  test('handles manage billing portal correctly', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+    const mockPortalUrl = 'https://billing.stripe.com/p/session/test_123';
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: mockPortalUrl }) });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const manageButton = screen.getByText('Manage Billing');
+    await act(async () => {
+      fireEvent.click(manageButton);
+    });
+
+    await waitFor(() => {
+      expect(window.location.href).toBe(mockPortalUrl);
+    });
+  });
+
+  test('handles manage billing portal error', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const manageButton = screen.getByText('Manage Billing');
+    await act(async () => {
+      fireEvent.click(manageButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to initiate billing portal. Please try again.')).toBeDefined();
+    });
+  });
+
+  test('handles cancel subscription correctly', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      if (url === '/api/billing/cancel-subscription' && options?.method === 'POST') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const cancelButton = screen.getByText('Cancel Subscription');
+    await act(async () => {
+      fireEvent.click(cancelButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Subscription canceled successfully.')).toBeDefined();
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  test('handles cancel subscription error', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      if (url === '/api/billing/cancel-subscription' && options?.method === 'POST') {
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const cancelButton = screen.getByText('Cancel Subscription');
+    await act(async () => {
+      fireEvent.click(cancelButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to cancel subscription.')).toBeDefined();
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  test('handles cancel subscription catch error', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      if (url === '/api/billing/cancel-subscription' && options?.method === 'POST') {
+        return Promise.reject(new Error('Network err'));
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const cancelButton = screen.getByText('Cancel Subscription');
+    await act(async () => {
+      fireEvent.click(cancelButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Error canceling subscription.')).toBeDefined();
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+
+  test('handles back to plan routing', async () => {
+    const mockPush = vi.fn();
+    (useRouter as any).mockReturnValue({ push: mockPush });
+
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const backButton = screen.getByRole('link', { name: /Back to My Plan/i });
+    expect(backButton.getAttribute('href')).toBe('/plan');
+  });
+
+  test('handles download invoice correctly', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+    const mockInvoiceUrl = 'https://billing.stripe.com/invoice/test_123';
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      if (url === '/api/billing/download-invoice' && options?.method === 'POST') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: mockInvoiceUrl }) });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const invoiceButton = screen.getByText('Download Invoice');
+    await act(async () => {
+      fireEvent.click(invoiceButton);
+    });
+
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledWith(mockInvoiceUrl, '_blank');
+      expect(screen.getByText('Invoice download is ready for your current billing period.')).toBeDefined();
+    });
+
+    openSpy.mockRestore();
+  });
+
+  test('handles download invoice error', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      if (url === '/api/billing/download-invoice' && options?.method === 'POST') {
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const invoiceButton = screen.getByText('Download Invoice');
+    await act(async () => {
+      fireEvent.click(invoiceButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to download invoice.')).toBeDefined();
+    });
+  });
+
+  test('handles download invoice catch error', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      if (url === '/api/billing/download-invoice' && options?.method === 'POST') {
+        return Promise.reject(new Error('Network err'));
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const invoiceButton = screen.getByText('Download Invoice');
+    await act(async () => {
+      fireEvent.click(invoiceButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Error downloading invoice.')).toBeDefined();
+    });
+  });
+  test('handles cost data fetch catch error', async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) return Promise.reject(new Error('Network err'));
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ current_plan: 'Starter' }) });
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    expect(consoleSpy).toHaveBeenCalledWith("Error fetching cost data", expect.any(Error));
+    consoleSpy.mockRestore();
+  });
+  test('handles upgrade routing', async () => {
+    const mockPush = vi.fn();
+    (useRouter as any).mockReturnValue({ push: mockPush });
+
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const upgradeButton = screen.getByRole('button', { name: /Upgrade/i });
+    await act(async () => {
+      fireEvent.click(upgradeButton);
+    });
+
+    expect(mockPush).toHaveBeenCalledWith('/pricing');
   });
 });
