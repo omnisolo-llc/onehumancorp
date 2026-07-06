@@ -56,12 +56,15 @@ static UI_ANALYTICS_CHAT_CACHE: std::sync::OnceLock<::server_utils::cache::Hybri
 static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
+static REDIS_CLIENT: std::sync::OnceLock<Option<redis::Client>> = std::sync::OnceLock::new();
+
 pub fn get_redis_client() -> Option<redis::Client> {
     if crate::is_standalone_runtime() {
-        None
-    } else {
-        std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
+        return None;
     }
+    REDIS_CLIENT.get_or_init(|| {
+        std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
+    }).clone()
 }
 
 #[cfg(test)]

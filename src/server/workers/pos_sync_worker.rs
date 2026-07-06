@@ -313,23 +313,19 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     }
                 }
 
-                let cache = crate::builder::edge::get_edge_cache();
-                let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
-                let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-                cdn.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                cdn.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
-
-                let pool_clone = self.db.pool.clone();
-                let tenant_id_clone = uuid::Uuid::parse_str(&job.tenant_id).unwrap_or_default();
-                tokio::spawn(async move {
-                    if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
-                        for site in sites {
-                            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
-                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
-                        }
+                if let Some(client) = crate::get_redis_client() {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let invalidation_topic = "cache_invalidation_events";
+                        let invalidation_payload = serde_json::json!({
+                            "event": "inventory.updated",
+                            "tags": [
+                                format!("tenant-id:{}", job.tenant_id),
+                                format!("entity:product:{}", product_id)
+                            ]
+                        }).to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                     }
-                });
+                }
             }
         }
 
@@ -543,23 +539,19 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 }
                             }
 
-                            let cache = crate::builder::edge::get_edge_cache();
-                            let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                            let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
-                            let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-                            cdn.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                            cdn.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
-
-                            let pool_clone = self.db.pool.clone();
-                            let tenant_id_clone = uuid::Uuid::parse_str(&job.tenant_id).unwrap_or_default();
-                            tokio::spawn(async move {
-                                if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
-                                    for site in sites {
-                                        let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
-                                        let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
-                                    }
+                            if let Some(client) = crate::get_redis_client() {
+                                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                    let invalidation_topic = "cache_invalidation_events";
+                                    let invalidation_payload = serde_json::json!({
+                                        "event": "inventory.updated",
+                                        "tags": [
+                                            format!("tenant-id:{}", job.tenant_id),
+                                            format!("entity:product:{}", product_id)
+                                        ]
+                                    }).to_string();
+                                    let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                                 }
-                            });
+                            }
                         }
                     }
                 }
