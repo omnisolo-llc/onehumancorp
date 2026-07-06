@@ -70,6 +70,81 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
     Ok(())
 }
 
+pub fn cleanup_stale_temp_files() {
+    let tmp_dir = std::env::temp_dir();
+
+    // Clean up .tmp files created by ohc-atomic-writes
+    let mut atomic_tmp = tmp_dir.clone();
+    atomic_tmp.push("ohc-atomic-writes");
+    if let Ok(entries) = std::fs::read_dir(&atomic_tmp) {
+        let now = std::time::SystemTime::now();
+        for entry in entries.flatten() {
+            if let Ok(meta) = entry.metadata() {
+                if let Ok(modified) = meta.modified() {
+                    if let Ok(duration) = now.duration_since(modified) {
+                        if duration.as_secs() > 3600 {
+                            let _ = std::fs::remove_file(entry.path());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Clean up .tmp_py_*.py, *.tmp.rs, and general *.tmp files in /tmp created by agents
+    if let Ok(entries) = std::fs::read_dir(&tmp_dir) {
+        let now = std::time::SystemTime::now();
+        for entry in entries.flatten() {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let mut should_delete = false;
+
+            if file_name.starts_with(".tmp_py_") && file_name.ends_with(".py") {
+                should_delete = true;
+            } else if file_name.ends_with(".tmp.rs") {
+                should_delete = true;
+            } else if file_name.ends_with(".tmp") {
+                should_delete = true;
+            } else if file_name.ends_with(".log") && file_name.starts_with("test_") {
+                 should_delete = true;
+            }
+
+            if should_delete {
+                if let Ok(meta) = entry.metadata() {
+                    if let Ok(modified) = meta.modified() {
+                        if let Ok(duration) = now.duration_since(modified) {
+                            if duration.as_secs() > 3600 {
+                                let _ = std::fs::remove_file(entry.path());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Clean up .tmp files created by agents/builtin/json_store.rs
+    let ohc_runtime_dir = std::env::var("OHC_RUNTIME_DIR").unwrap_or_else(|_| ".ohc/runtime".to_string());
+    let memory_dir = std::path::PathBuf::from(ohc_runtime_dir).join("memory");
+    if let Ok(entries) = std::fs::read_dir(&memory_dir) {
+        let now = std::time::SystemTime::now();
+        for entry in entries.flatten() {
+            if let Some(ext) = entry.path().extension() {
+                if ext == "tmp" {
+                    if let Ok(meta) = entry.metadata() {
+                        if let Ok(modified) = meta.modified() {
+                            if let Ok(duration) = now.duration_since(modified) {
+                                if duration.as_secs() > 3600 {
+                                    let _ = std::fs::remove_file(entry.path());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -102,45 +177,26 @@ mod tests {
 
         fs::remove_file(&filename).unwrap();
     }
-}
 
-pub fn cleanup_stale_temp_files() {
-    let mut tmp_dir = std::env::temp_dir();
-    tmp_dir.push("ohc-atomic-writes");
-    if let Ok(entries) = std::fs::read_dir(&tmp_dir) {
-        let now = std::time::SystemTime::now();
-        for entry in entries.flatten() {
-            if let Ok(meta) = entry.metadata() {
-                if let Ok(modified) = meta.modified() {
-                    if let Ok(duration) = now.duration_since(modified) {
-                        if duration.as_secs() > 3600 {
-                            let _ = std::fs::remove_file(entry.path());
-                        }
-                    }
-                }
-            }
-        }
-    }
+    #[test]
+    fn test_cleanup_stale_temp_files() {
+        let tmp_dir = std::env::temp_dir();
+        let atomic_tmp = tmp_dir.join("ohc-atomic-writes");
+        let _ = std::fs::create_dir_all(&atomic_tmp);
 
-    // Clean up .tmp files created by agents/builtin/json_store.rs
-    let ohc_runtime_dir = std::env::var("OHC_RUNTIME_DIR").unwrap_or_else(|_| ".ohc/runtime".to_string());
-    let memory_dir = std::path::PathBuf::from(ohc_runtime_dir).join("memory");
-    if let Ok(entries) = std::fs::read_dir(&memory_dir) {
-        let now = std::time::SystemTime::now();
-        for entry in entries.flatten() {
-            if let Some(ext) = entry.path().extension() {
-                if ext == "tmp" {
-                    if let Ok(meta) = entry.metadata() {
-                        if let Ok(modified) = meta.modified() {
-                            if let Ok(duration) = now.duration_since(modified) {
-                                if duration.as_secs() > 3600 {
-                                    let _ = std::fs::remove_file(entry.path());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        let fresh_atomic = atomic_tmp.join("fresh.tmp");
+        std::fs::write(&fresh_atomic, b"fresh").unwrap();
+
+        let fresh_rs = tmp_dir.join("fresh.tmp.rs");
+        std::fs::write(&fresh_rs, b"fresh_rs").unwrap();
+
+        super::cleanup_stale_temp_files();
+
+        assert!(fresh_atomic.exists(), "fresh atomic file should be kept");
+        assert!(fresh_rs.exists(), "fresh rs file should be kept");
+
+        // Clean up
+        let _ = std::fs::remove_file(fresh_atomic);
+        let _ = std::fs::remove_file(fresh_rs);
     }
 }
