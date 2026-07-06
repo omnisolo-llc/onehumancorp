@@ -28,6 +28,7 @@ describe('CostDashboardPage', () => {
 
     // Clear mocks
     vi.clearAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {

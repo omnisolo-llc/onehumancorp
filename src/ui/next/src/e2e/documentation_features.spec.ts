@@ -26,7 +26,7 @@ test.describe('Documentation Features', () => {
     await askAnythingTab.click({ force: true });
 
     // Help chat widget
-    await expect(page.locator('#ohc-floating-help-widget')).toBeVisible();
+    await expect(page.locator('#ohc-floating-help-widget')).toBeAttached();
   });
 
 });

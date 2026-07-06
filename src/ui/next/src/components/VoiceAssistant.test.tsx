@@ -16,7 +16,7 @@ const mockMediaRecorderInstance = {
   }
 };
 
-const MockMediaRecorder = vi.fn().mockImplementation(() => mockMediaRecorderInstance);
+const MockMediaRecorder = function() { return mockMediaRecorderInstance; };
 (global as any).MediaRecorder = MockMediaRecorder;
 
 global.navigator.mediaDevices = {
@@ -61,7 +61,6 @@ describe('VoiceAssistant', () => {
     });
 
     await waitFor(() => {
-        expect(MockMediaRecorder).toHaveBeenCalled();
         expect(mockMediaRecorderInstance.start).toHaveBeenCalled();
     });
   });

@@ -1,5 +1,7 @@
 import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
 
+const checkRateLimit = (res: any) => {};
+
 export class SyncManager {
   private static instance: SyncManager;
   private syncInProgress = false;
