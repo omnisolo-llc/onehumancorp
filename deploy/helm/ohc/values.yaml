@@ -1,10 +1,10 @@
 backend:
   autoscaling:
     enabled: true
-    maxReplicas: 200
+    maxReplicas: 100
     minReplicas: 2
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 70
   headless: false
   image: onehumancorp/server:latest
   multiTenant: true
@@ -13,11 +13,11 @@ backend:
   replicas: 2
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 1000m
+      memory: 1Gi
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 100m
+      memory: 256Mi
   service:
     port: 8080
   vpa:
@@ -26,10 +26,10 @@ chatwoot:
   adminEmail: admin@ohc.local
   autoscaling:
     enabled: true
-    maxReplicas: 200
+    maxReplicas: 50
     minReplicas: 2
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 70
   databaseUrl: ''
   enabled: true
   image: chatwoot/chatwoot:v3.15.1
@@ -39,11 +39,11 @@ chatwoot:
   replicas: 2
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 1000m
+      memory: 1Gi
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 100m
+      memory: 256Mi
   service:
     port: 3000
   vpa:
@@ -55,7 +55,7 @@ cnpg:
   instances: 3
   owner: ohc
   storage:
-    size: 10Gi
+    size: 20Gi
 fluentBit:
   enabled: true
   image: fluent/fluent-bit:latest
@@ -101,10 +101,10 @@ multiTenant:
 ohcCore:
   autoscaling:
     enabled: true
-    maxReplicas: 200
+    maxReplicas: 100
     minReplicas: 2
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 70
   enabled: true
   image: onehumancorp/mono-core:latest
   networkPolicy:
@@ -112,11 +112,11 @@ ohcCore:
   replicas: 2
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 1000m
+      memory: 1Gi
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 100m
+      memory: 256Mi
   service:
     port: 18789
   vpa:
@@ -124,10 +124,10 @@ ohcCore:
 powersync:
   autoscaling:
     enabled: true
-    maxReplicas: 200
+    maxReplicas: 100
     minReplicas: 2
-    targetCPUUtilizationPercentage: 80
-    targetMemoryUtilizationPercentage: 80
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 70
   enabled: true
   image: journeyapps/powersync-service:latest
   networkPolicy:
@@ -135,11 +135,11 @@ powersync:
   replicas: 2
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 1000m
+      memory: 1Gi
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 100m
+      memory: 256Mi
   service:
     port: 8081
     targetPort: 8080
@@ -149,21 +149,21 @@ powersync:
 resourceQuota:
   enabled: true
   limits:
-    cpu: '50'
-    ephemeralStorage: 200Gi
-    memory: 100Gi
-    pods: '100'
+    cpu: '100'
+    ephemeralStorage: 500Gi
+    memory: 200Gi
+    pods: '200'
   requests:
-    cpu: '10'
-    ephemeralStorage: 50Gi
-    memory: 20Gi
+    cpu: '20'
+    ephemeralStorage: 100Gi
+    memory: 40Gi
 valkey:
   dataStorage:
     accessModes:
     - ReadWriteOnce
     className: ''
     enabled: false
-    requestedSize: 1Gi
+    requestedSize: 10Gi
   enabled: true
   image:
     pullPolicy: IfNotPresent
@@ -178,8 +178,8 @@ valkey:
       type: RuntimeDefault
   resources:
     limits:
-      cpu: 1000m
-      memory: 2Gi
+      cpu: 2000m
+      memory: 4Gi
     requests:
       cpu: 500m
       memory: 1Gi

@@ -1197,6 +1197,8 @@ pub async fn buffer_metric_i64(
         return Ok(());
     }
 
+    let is_standalone = get_deployment_mode() == "Standalone";
+
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
@@ -1205,10 +1207,12 @@ pub async fn buffer_metric_i64(
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
+    let sync_status = if is_standalone { "synced" } else { "pending" };
+
     if let Some(tenant_id) = tenant_id {
         query(
-            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, tenant_id)
-             VALUES ($1, $2, $3, $4, $5, 'pending', $6)"
+            &format!("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, tenant_id)
+             VALUES ($1, $2, $3, $4, $5, '{}', $6)", sync_status)
         )
         .bind(metric_name)
         .bind(metric_type)
@@ -1220,8 +1224,8 @@ pub async fn buffer_metric_i64(
         .await?;
     } else {
         query(
-            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
-             VALUES ($1, $2, $3, $4, $5, 'pending')"
+            &format!("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+             VALUES ($1, $2, $3, $4, $5, '{}')", sync_status)
         )
         .bind(metric_name)
         .bind(metric_type)
@@ -1234,6 +1238,7 @@ pub async fn buffer_metric_i64(
 
     Ok(())
 }
+
 
 pub async fn buffer_metric(
     pool: &PgPool,
@@ -1242,12 +1247,15 @@ pub async fn buffer_metric(
     value: f32,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // In standalone mode, do not sync telemetry to cloud unless explicitly enabled
     let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
 
     if !is_telemetry_enabled {
         return Ok(());
     }
+
+    let is_standalone = get_deployment_mode() == "Standalone";
+    // For standalone mode, only buffer the metric locally, and don't try to sync unless strictly required by feature configs
+    // (This optimization focuses on lightweight Standalone wrappers, minimizing heavy telemetry)
 
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
@@ -1257,14 +1265,16 @@ pub async fn buffer_metric(
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
+    let sync_status = if is_standalone { "synced" } else { "pending" };
+
     if let Some(tenant_id) = tenant_id {
         query(
-            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, tenant_id)
-             VALUES ($1, $2, $3, $4, $5, 'pending', $6)"
+            &format!("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, tenant_id)
+             VALUES ($1, $2, $3, $4, $5, '{}', $6)", sync_status)
         )
         .bind(metric_name)
         .bind(metric_type)
-        .bind(value)
+        .bind(value as f64)
         .bind(labels_json)
         .bind(Utc::now())
         .bind(tenant_id)
@@ -1272,12 +1282,12 @@ pub async fn buffer_metric(
         .await?;
     } else {
         query(
-            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
-             VALUES ($1, $2, $3, $4, $5, 'pending')"
+            &format!("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+             VALUES ($1, $2, $3, $4, $5, '{}')", sync_status)
         )
         .bind(metric_name)
         .bind(metric_type)
-        .bind(value)
+        .bind(value as f64)
         .bind(labels_json)
         .bind(Utc::now())
         .execute(pool)
@@ -1286,6 +1296,7 @@ pub async fn buffer_metric(
 
     Ok(())
 }
+
 
 pub fn redact_interface_pii(val: Value) -> Value {
     match val {

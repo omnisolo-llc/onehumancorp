@@ -10,7 +10,7 @@ body, .main-view, .page-container, .panel-container, .sidemenu,
   -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   font-family: 'Outfit', 'Inter', sans-serif !important;
-  border-radius: 12px !important;
+  border-radius: 16px !important;
 }
 
 /* Dark Mode Translucent Glass */
@@ -28,7 +28,7 @@ body.theme-dark .grafana-app .grafana-tooltip {
   -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   font-family: 'Outfit', 'Inter', sans-serif !important;
-  border-radius: 12px !important;
+  border-radius: 16px !important;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,6 +38,6 @@ body.theme-dark .grafana-app .grafana-tooltip {
     -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     font-family: 'Outfit', 'Inter', sans-serif !important;
-    border-radius: 12px !important;
+    border-radius: 16px !important;
   }
 }
