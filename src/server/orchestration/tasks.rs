@@ -187,7 +187,7 @@ impl TaskDecompositionService {
                 Ok(Ok(res)) => return Ok(res),
                 Ok(Err(e)) => {
                     tracing::warn!("Error claiming task on attempt {}: {}", attempt, e);
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         tracing::warn!("Fail-safing task claim after {} attempts due to error.", max_attempts);
                         return Ok(None);
                     }
@@ -199,7 +199,7 @@ impl TaskDecompositionService {
                         );
                     }
                     tracing::warn!("Timeout claiming task on attempt {}", attempt);
-                    if attempt >= max_attempts {
+                    if attempt > max_attempts {
                         tracing::warn!("Fail-safing task claim after {} attempts due to timeout.", max_attempts);
                         return Ok(None);
                     }

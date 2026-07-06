@@ -169,7 +169,7 @@ pub async fn create_billing_portal_session_handler(
         if r.starts_with("http") {
             let mut parts = r.splitn(4, '/');
             let scheme = parts.next()?;
-            let empty = parts.next()?;
+            let _empty = parts.next()?;
             let host = parts.next()?;
             Some(format!("{}//{}", scheme, host))
         } else {
@@ -416,7 +416,7 @@ pub async fn my_plan_handler(
     let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
     let llm_cost_f64 = llm_cost_cents as f64 / 100.0;
-    let storage_cost_cents = ::server_pricing::calculator::calculate_storage_cost_cents(storage_used_bytes, &::server_pricing::calculator::CostConfig { cost_per_gb_month: auditor.get_cost_per_gb_month(), ..Default::default() });
+    let storage_cost_cents: i64 = trend.iter().map(|d| d.storage_cost).sum();
     let storage_cost_f64 = storage_cost_cents as f64 / 100.0;
 
     let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
@@ -581,7 +581,7 @@ pub async fn cost_dashboard_handler(
         0.0
     };
 
-    let storage_cost_cents = ::server_pricing::calculator::calculate_storage_cost_cents(storage_bytes, &::server_pricing::calculator::CostConfig { cost_per_gb_month: auditor.get_cost_per_gb_month(), ..Default::default() });
+    let storage_cost_cents: i64 = trend.iter().map(|d| d.storage_cost).sum();
     let storage_cost_f64 = storage_cost_cents as f64 / 100.0;
 
     let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();

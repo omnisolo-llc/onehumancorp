@@ -3564,7 +3564,7 @@
           btn.disabled = true;
 
           // Add a small delay to allow browser to render "Saving..."
-          await new Promise((r) => setTimeout(r, 100));
+
 
           saveCurrentState();
 
@@ -3721,21 +3721,21 @@
 
             if (window.__TAURI__ && window.__TAURI__.core) {
               const startReq = {
-                business_type: data.intake_data.business_type || "Other",
-                company_name: data.intake_data.business_name || "My Store",
-                company_description: bioInput,
-                selling_categories: data.intake_data.categories || ["Other"],
+                business_type: data.intake_data.business_type || state.work_context || "Other",
+                company_name: data.intake_data.business_name || state.business_name || "My Store",
+                company_description: bioInput || state.tagline,
+                selling_categories: data.intake_data.categories || [state.categories || "Other"],
                 payment_pref: "online",
-                admin_email: "e2e-admin-user@example.com",
-                admin_name: "Owner",
-                admin_password: "password123",
-                website_template: "Modern",
-                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : "First Offer",
+                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
+                admin_name: document.getElementById("admin-name")?.value || "Owner",
+                admin_password: document.getElementById("admin-password")?.value || "password123",
+                website_template: state.template_selection || "Modern",
+                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : (state.first_offer || "First Offer"),
                 first_product_price: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].price : "0.00",
-                domain_choice: "subdomain",
+                domain_choice: state.domain || "subdomain",
                 price_type: "fixed",
-                location: data.intake_data.location || "Global",
-                target_audience: data.intake_data.target_audience || "Everyone",
+                location: data.intake_data.location || state.location || "Global",
+                target_audience: data.intake_data.target_audience || state.target_audience || "Everyone",
                 initial_products: data.intake_data.initial_products || [],
                 ai_agents: [],
                 ai_auto_respond: false,
@@ -3761,9 +3761,7 @@
                   delete window.generateStorefrontLoadingInterval;
               }
 
-              setTimeout(() => {
-                window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
-              }, 1500);
+              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
               return;
             }
 
@@ -3773,39 +3771,50 @@
                 ? "http://127.0.0.1:18789"
                 : "";
 
-            const resZeroClick = await fetch(
-              `${backendUrl}/api/onboarding/start_zero_click`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Tenant-ID": "e2e-tenant",
-                  "X-User-ID": "e2e-admin-user",
-                },
-                body: JSON.stringify({
-                  prompt: bioInput,
-                  image_url: imageUrl ? imageUrl : undefined
-                }),
-              },
-            );
+            const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                business_type: data.intake_data.business_type || state.work_context || "Other",
+                company_name: data.intake_data.business_name || state.business_name || "My Store",
+                company_description: bioInput || state.tagline,
+                selling_categories: data.intake_data.categories || [state.categories || "Other"],
+                payment_pref: "online",
+                admin_email: document.getElementById("admin-email")?.value || "admin@example.com",
+                website_template: state.template_selection || "Modern",
+                domain_choice: state.domain || "subdomain",
+                admin_name: document.getElementById("admin-name")?.value || "Owner",
+                admin_password: document.getElementById("admin-password")?.value || "password123",
+                price_type: "fixed",
+                location: data.intake_data.location || state.location || "Global",
+                target_audience: data.intake_data.target_audience || state.target_audience || "Everyone",
+                initial_products: data.intake_data.initial_products || [],
+                first_product_name: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].name : (state.first_offer || "First Offer"),
+                first_product_price: data.intake_data.initial_products && data.intake_data.initial_products.length > 0 ? data.intake_data.initial_products[0].price : "0.00",
+                ai_agents: [],
+                ai_auto_respond: false,
+                deposit_percentage: data.intake_data.deposit_percentage,
+                lead_time_days: data.intake_data.lead_time_days
+              }),
+            });
 
-            if (!resZeroClick.ok) {
-              const errData = await resZeroClick.json().catch(() => ({}));
+            if (!startRes.ok) {
+              const errData = await startRes.json().catch(() => ({}));
               throw new Error(
                 errData.error ||
                   errData.message ||
-                  "Failed to generate storefront",
+                  "Failed to start onboarding",
               );
             }
 
-            const dataZeroClick = await resZeroClick.json();
+            const startData = await startRes.json();
 
-            if (dataZeroClick.organization_id) {
-              localStorage.setItem("tenant_id", dataZeroClick.organization_id);
-              localStorage.setItem("tenant", dataZeroClick.organization_id);
+            if (startData.organization_id) {
+              localStorage.setItem("tenant_id", startData.organization_id);
+              localStorage.setItem("tenant", startData.organization_id);
             }
-            if (dataZeroClick.user_id) {
-              localStorage.setItem("user_id", dataZeroClick.user_id);
+            if (startData.user_id) {
+              localStorage.setItem("user_id", startData.user_id);
             }
 
             localStorage.removeItem("onboardingState");
@@ -3816,9 +3825,7 @@
                 delete window.generateStorefrontLoadingInterval;
             }
 
-            setTimeout(() => {
-              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
-            }, 1500);
+            window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
           }
         } catch (e) {
           chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -4031,9 +4038,7 @@
                   delete window.generateStorefrontLoadingInterval;
               }
 
-              setTimeout(() => {
-                window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
-              }, 1500);
+              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
               return;
             }
 
@@ -4085,9 +4090,7 @@
                 delete window.generateStorefrontLoadingInterval;
             }
 
-            setTimeout(() => {
-              window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
-            }, 1500);
+            window.location.href = "success.html?tenant=" + encodeURIComponent(localStorage.getItem("tenant_id") || "e2e-tenant");
           } catch (err) {
             console.error(err);
             goToStep("step-initial");
