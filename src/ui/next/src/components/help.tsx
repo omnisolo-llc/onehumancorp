@@ -301,6 +301,9 @@ export function HelpWidget() {
                   <button onClick={() => { setOpen(false); fetch("/api/walkthrough/meeting-room").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "UltraPlan Protocol", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Set up your store", content: "Customize your offers, design, and settings to start accepting customers." }, { targetId: "help-widget-container", title: "Accept your first payment", content: "Connect your bank to receive funds securely." }, { targetId: "help-widget-container", title: "Activate your AI Support Agent", content: "Let our agents handle common questions and triage messages for you." }]); }} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                    <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Store Setup</span>
+                  </button>
                   <button
                     id="kairos-walkthrough-btn"
                     onClick={() => {
