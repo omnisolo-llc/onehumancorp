@@ -972,11 +972,16 @@ let db_for_products = self.db.clone();
 
                                 let pool_clone = db_for_products.pool.clone();
                                 let tenant_id_clone = uuid::Uuid::parse_str(&org_id).unwrap_or_default();
+                                let org_id_clone = org_id.clone();
+                                let pid_clone = product_id.clone();
                                 tokio::spawn(async move {
                                     if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
                                         for site in sites {
                                             let _ = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id_clone, site.id).await;
-
+                                            let pool_arc = std::sync::Arc::new(pool_clone.clone());
+                                            let job_queue = crate::orchestration::queue::OHCJobQueue::new(pool_arc);
+                                            let job_payload = serde_json::json!({ "product_id": pid_clone });
+                                            let _ = job_queue.enqueue(&org_id_clone, "RenderStorefrontToEdge", &job_payload).await;
                                         }
                                     }
                                 });
