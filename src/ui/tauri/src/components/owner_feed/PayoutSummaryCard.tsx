@@ -14,7 +14,7 @@ export const PayoutSummaryCard: React.FC<PayoutSummaryCardProps> = ({
   onViewDetails
 }) => {
   return (
-    <div className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-[16px] p-4 shadow-sm border border-white/40 dark:border-white/10">
+    <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] rounded-[16px] p-4 shadow-sm border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
       <div className="flex justify-between items-start mb-2">
         <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">Your Payout Summary is ready.</h3>
         <span className="inline-flex items-center rounded-[8px] bg-[#34C759]/10 px-2 py-1 text-xs font-medium text-[#34C759] ring-1 ring-inset ring-[#34C759]/20">Pending</span>
