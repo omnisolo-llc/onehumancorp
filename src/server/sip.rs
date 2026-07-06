@@ -129,9 +129,9 @@ impl SipDB {
 
                 let is_standalone = crate::is_standalone_runtime();
                 let query_str = if is_standalone {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 } else {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload::text, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', COALESCE(payload::text, '{}'), '[cleanup] Mission became stagnant' FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 };
                 sqlx::query(query_str)
                     .bind(threshold_time.naive_utc())
@@ -139,7 +139,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("DELETE FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("DELETE FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(threshold_time.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -199,9 +199,9 @@ impl SipDB {
 
                 let is_standalone = crate::is_standalone_runtime();
                 let query_str = if is_standalone {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stuck', 'agent_missions', payload, '[cleanup] Mission became stuck' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stuck', 'agent_missions', payload, '[cleanup] Mission became stuck' FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 } else {
-                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stuck', 'agent_missions', payload, '[cleanup] Mission became stuck' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
+                    "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stuck', 'agent_missions', payload, '[cleanup] Mission became stuck' FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2"
                 };
                 sqlx::query(query_str)
                     .bind(stuck_threshold.naive_utc())
@@ -209,7 +209,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status IN ('PENDING', 'BURSTING', 'STUCK', 'IN_PROGRESS', 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold.naive_utc())
                     .bind(&self.org_id)
                     .execute(&mut *tx)
