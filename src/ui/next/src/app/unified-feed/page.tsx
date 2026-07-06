@@ -60,7 +60,7 @@ export default function UnifiedFeed() {
              id: raw.id,
              response: raw.proposed_action.draft_reply || raw.proposed_action.summary || JSON.stringify(raw.proposed_action),
              status: 'draft',
-             action_type: raw.proposed_action.action_type
+             action_type: raw.proposed_action.action_type || raw.proposed_action.feature_type
            } : undefined
          };
       });
@@ -156,7 +156,38 @@ export default function UnifiedFeed() {
                    {item.workItem.payload?.msg || item.workItem.payload?.text || item.workItem.payload?.description || JSON.stringify(item.workItem.payload)}
                  </p>
               </div>
-              {item.draft && (
+              {item.draft && item.draft.action_type === 'subscription_win_back' && (
+                <div className="p-4 bg-orange-50/50 dark:bg-orange-900/20 border-t border-orange-100 dark:border-orange-900/50 flex flex-col gap-3">
+                   <div className="flex items-center gap-2 mb-1">
+                     <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-800 flex items-center justify-center text-orange-600 dark:text-orange-300">
+                       <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                     </div>
+                     <h4 className="text-sm font-semibold text-orange-900 dark:text-orange-100">At-Risk Subscriber Identified</h4>
+                   </div>
+                   <div className="w-full text-[13px] leading-relaxed text-gray-700 dark:text-gray-300 italic border-l-2 border-orange-500 pl-3 py-1 bg-white/50 dark:bg-gray-800/50 rounded-r-lg">
+                     "{item.draft.response}"
+                   </div>
+                   <div className="flex gap-2 w-full mt-2">
+                     <button
+                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
+                       onClick={() => handleReject(item.workItem.id)}
+                       disabled={processingId === item.workItem.id}
+                       data-testid="unified-feed-reject-btn"
+                     >
+                       Dismiss
+                     </button>
+                     <button
+                       className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-orange-500 text-white rounded-xl hover:bg-orange-600 shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all"
+                       onClick={() => handleApprove(item.workItem.id)}
+                       disabled={processingId === item.workItem.id}
+                       data-testid="feed-approve-btn"
+                     >
+                       {processingId === item.workItem.id ? 'Sending...' : 'Approve Offer'}
+                     </button>
+                   </div>
+                </div>
+              )}
+              {item.draft && item.draft.action_type !== 'subscription_win_back' && (
                 <div className="p-4 pt-3 bg-gray-50/50 dark:bg-gray-800/30 border-t border-gray-100/50 dark:border-gray-700/50 flex flex-col gap-4">
                    <div className="w-full text-[13px] leading-relaxed text-gray-700 dark:text-gray-300 italic border-l-2 border-[#0066FF] pl-3 py-1">
                      "{item.draft.response}"
@@ -188,6 +219,7 @@ export default function UnifiedFeed() {
                      </button>
                    </div>
                 </div>
+              )}
               )}
             </div>
           ))

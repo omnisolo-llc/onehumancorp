@@ -33,6 +33,8 @@ pub struct Subscriber {
     pub current_period_end: i64,
     pub created_at: i64,
     pub predicted_restock_date: Option<i64>,
+    pub health_score: i32,
+    pub last_engagement_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
