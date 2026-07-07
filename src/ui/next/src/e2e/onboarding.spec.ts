@@ -1,76 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('OnboardingWizard CUJ', () => {
-  let draftStore = {};
   test.beforeEach(async ({ page }) => {
-    draftStore = {}; // RESET DRAFT STORE!
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
       window.localStorage.clear();
-    });
-
-    // Mock API requests
-    await page.route('**/api/onboarding/intake', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          business_type: 'Test Business',
-          business_name: 'Mocked Business',
-          categories: ['physical'],
-          initial_products: [{ name: 'Test Product', price: '10' }]
-        })
-      });
-    });
-
-    await page.route('**/api/onboarding/start', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: "Success!", organization_id: "test-tenant" })
-      });
-    });
-
-    await page.route('**/api/onboarding/start_zero_click', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: "Success!", organization_id: "test-tenant" })
-      });
-    });
-
-    await page.route('**/api/onboarding/launch', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: "Launched!" })
-      });
-    });
-
-    await page.route('**/api/onboarding/state', route => {
-      if (route.request().method() === 'POST') {
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
-      } else {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ wizardState: {} })
-        });
-      }
-    });
-
-    await page.route('**/api/onboarding/draft', async route => {
-      if (route.request().method() === 'POST') {
-        const body = route.request().postDataJSON();
-        draftStore = body;
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
-      } else {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ wizardState: draftStore || {} })
-        });
-      }
     });
   });
 
@@ -79,13 +13,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-
-    try {
-      await expect(page.getByText("Setup Assistant")).toBeVisible({ timeout: 5000 });
-      await page.getByRole('button', { name: 'Start My Business' }).click();
-    } catch(e) {
-      // It might have skipped straight to the first question if state wasn't cleared fully
-    }
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
+    await page.getByRole('button', { name: 'Start My Business' }).click();
     await expect(page.getByText("What's the name of your business?")).toBeVisible();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Maya Bakery');
@@ -119,7 +48,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await expect(page.getByText("Setup Assistant")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Carlos Fixes It');
@@ -153,7 +82,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await expect(page.getByText("Setup Assistant")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Leo Guitar Lessons');
@@ -187,7 +116,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.goto('/onboarding');
-    await expect(page.getByText("Setup Assistant")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Fatima Halal Food');
@@ -222,7 +151,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     // 1. Start Wizard and Save Draft
     await page.goto('/onboarding');
-    await expect(page.getByText("Setup Assistant")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
 
     // Check for glassmorphism classes
     await expect(page.locator('#setup-screen')).toHaveClass(/.*glassmorphism.*/);
@@ -249,18 +178,9 @@ test.describe('OnboardingWizard CUJ', () => {
   });
 
   test('Validation errors prevent launching without complete admin info', async ({ page }) => {
-    // Override draft mock just for this test
-    await page.route('**/api/onboarding/draft', async route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ wizardState: {} })
-      });
-    });
-
 
     await page.goto('/onboarding');
-    await expect(page.getByText("Setup Assistant")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Test Business');
@@ -301,7 +221,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
   test('Submitting empty inputs displays validation errors with visual indicators', async ({ page }) => {
     await page.goto('/onboarding');
-    await expect(page.getByText("Setup Assistant")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     // Step 1: Empty Business Name
@@ -355,7 +275,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
   test('User can use Instant Build to launch storefront quickly', async ({ page }) => {
     await page.goto('/onboarding');
-    await expect(page.getByText("Setup Assistant")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Setup Assistant")).toBeVisible();
 
     await page.getByRole('button', { name: 'Instant Build' }).click();
     await expect(page.getByText("Tell us about your business")).toBeVisible();

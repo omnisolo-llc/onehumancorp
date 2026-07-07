@@ -15,20 +15,6 @@ test('Verify onboarding UI', async ({ page }) => {
     });
   });
 
-  await page.route('**/api/onboarding/launch', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: "Launched!" })
-    });
-  });
-  await page.route('**/api/onboarding/start_zero_click', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: "Success!" })
-    });
-  });
   await page.route('**/api/onboarding/start', route => {
     route.fulfill({
       status: 200,
@@ -90,20 +76,6 @@ test('Verify onboarding UI', async ({ page }) => {
 });
 
 test('Verify Instant Build UI', async ({ page }) => {
-  await page.route('**/api/onboarding/launch', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: "Launched!" })
-    });
-  });
-  await page.route('**/api/onboarding/start_zero_click', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: "Success!" })
-    });
-  });
   await page.route('**/api/onboarding/start', route => {
     route.fulfill({
       status: 200,
