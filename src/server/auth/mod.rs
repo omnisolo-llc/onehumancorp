@@ -250,7 +250,7 @@ impl Store {
                     use std::io::Write;
 
                     let mut options = std::fs::OpenOptions::new();
-                    options.write(true).create_new(true).mode(0o600);
+                    options.read(true).write(true).create_new(true).mode(0o600);
                     #[cfg(target_os = "linux")]
                     options.custom_flags(0x00020000); // O_NOFOLLOW
                     #[cfg(target_os = "macos")]
