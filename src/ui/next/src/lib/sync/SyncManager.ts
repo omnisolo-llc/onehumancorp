@@ -128,7 +128,7 @@ export class SyncManager {
     let queue = await this.getQueue();
     if (queue.length === 0) return;
 
-    this.syncInProgress = true;
+    this.syncInProgress = true; const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenant_id") || "default" : "default"; const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
     try {
       // Separate POS transactions from general offline sync
@@ -201,7 +201,7 @@ export class SyncManager {
       });
 
       const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
-      const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+
 
       let allOk = true;
 

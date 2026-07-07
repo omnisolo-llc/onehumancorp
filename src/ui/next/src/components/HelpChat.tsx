@@ -267,7 +267,7 @@ export function HelpChat() {
                              .replace(/<p><p>/g, '<p>')
                              .replace(/<\/p><\/p>/g, '</p>')
                              .replace(/\- (.*?)<\/p>/g, '<li>$1</li>')
-                             .replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>')
+                             .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
                     ),
                   }}
                 />

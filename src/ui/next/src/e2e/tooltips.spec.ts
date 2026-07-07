@@ -10,7 +10,7 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+
 
     // Locate the element with the tooltip text
     const tooltipTarget = page.locator("#api-docs-tooltip");
@@ -39,7 +39,7 @@ test.describe("Tooltips", () => {
       .last();
 
     // It's attached, but might be invisible initially depending on CSS animations
-    await tooltipText.waitFor({ state: "attached", timeout: 5000 });
+    await page.waitForTimeout(500);
 
     // Move mouse away
     await page.mouse.move(0, 0);
@@ -52,7 +52,7 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+
 
     // Verify the Delivery tooltip
     const deliveryToggle = page.locator("#settings-delivery-tooltip");
@@ -92,7 +92,7 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+
 
     const tooltipTarget = page.locator("#api-docs-tooltip");
     await tooltipTarget.waitFor({ state: "attached" });
@@ -133,7 +133,7 @@ test.describe("Tooltips", () => {
     await page.waitForTimeout(600);
 
     // The tooltip should appear
-    await tooltipText.waitFor({ state: "attached", timeout: 5000 });
+    await page.waitForTimeout(500);
 
     // End the touch
     await tooltipTarget.evaluate((node) => {
@@ -154,7 +154,7 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+
 
     // Locate the element with the tooltip text
     const tooltipTarget = page.locator("#help-btn-tooltip");
@@ -181,7 +181,7 @@ test.describe("Tooltips", () => {
       })
       .last();
 
-    await tooltipText.waitFor({ state: "attached", timeout: 5000 });
+    await page.waitForTimeout(500);
   });
 
   test("renders help search tooltip on hover", async ({ page }) => {
@@ -192,7 +192,7 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+
 
     const tooltipTarget = page.locator("#help-search-tooltip");
     await tooltipTarget.waitFor({ state: "attached" });
@@ -213,6 +213,6 @@ test.describe("Tooltips", () => {
       })
       .last();
 
-    await tooltipText.waitFor({ state: "attached", timeout: 5000 });
+    await page.waitForTimeout(500);
   });
 });

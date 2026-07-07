@@ -75,12 +75,12 @@ test.describe("Help Center", () => {
     ).toBeVisible({ timeout: 15000 });
 
     // Find and click the floating Ask anything button
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#ai-chat-trigger-btn');
     await expect(chatButton).toBeVisible();
     await chatButton.dispatchEvent("click");
 
     // Wait for the chat to open and be visible
-    const chatHeader = page.locator("#ai-chat-header");
+    const chatHeader = page.locator("#ai-chat-interface");
     await expect(chatHeader).toBeVisible();
 
     // Check if the chat input is present
@@ -108,7 +108,7 @@ test.describe("Help Center", () => {
     await page.goto("/help");
 
     // Check if the Help Widget floating button is present
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#ai-chat-trigger-btn');
     await expect(chatButton).toBeVisible();
   });
 
@@ -116,12 +116,12 @@ test.describe("Help Center", () => {
     await page.goto("/help");
 
     // Open the chat
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#ai-chat-trigger-btn');
     await expect(chatButton).toBeVisible();
     await chatButton.dispatchEvent("click");
 
     // Verify the blur style
-    const chatHeader = page.locator("#ai-chat-header");
+    const chatHeader = page.locator("#ai-chat-interface");
     await expect(chatHeader).toBeVisible();
   });
 
@@ -142,11 +142,11 @@ test.describe("Help Center", () => {
   test("should close the modal when pressing the close button", async ({ page }) => {
     await page.goto("/help");
 
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    const chatButton = page.locator('#ai-chat-trigger-btn');
     await expect(chatButton).toBeVisible();
     await chatButton.dispatchEvent("click");
 
-    const chatHeader = page.locator("#ai-chat-header");
+    const chatHeader = page.locator("#ai-chat-interface");
     await expect(chatHeader).toBeVisible();
 
     const closeButton = page.locator('button[aria-label="Close help chat"]');
