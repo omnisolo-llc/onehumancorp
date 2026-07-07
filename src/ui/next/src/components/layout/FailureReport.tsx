@@ -11,7 +11,7 @@ export const FailureReport = ({ title, message, errorRateData, latencyData }: {
   const maxLatencyCount = latencyData && latencyData.length > 0 ? Math.max(...latencyData.map(d => d.count)) : 100;
 
   return (
-    <div className="p-6 rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] mb-6">
+    <div className="p-6 rounded-[16px] backdrop-blur-[30px] backdrop-saturate-[210%] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-[0_4px_24px_rgba(0,0,0,0.04)] mb-6">
       {title && <h3 className="text-xl font-semibold mb-2 text-red-700 dark:text-red-400 font-outfit">{title}</h3>}
       <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-6">{message}</p>
 
