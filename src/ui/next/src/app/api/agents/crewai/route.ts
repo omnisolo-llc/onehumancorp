@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     // Simulate backend call to the Rust CrewAI module
     // In a real implementation this would make a gRPC or HTTP call to the ohc_builtin_agent
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+
 
     return NextResponse.json({
       status: 'success',
