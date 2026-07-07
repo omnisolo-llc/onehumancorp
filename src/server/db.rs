@@ -389,7 +389,7 @@ impl DB {
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
                         use std::os::unix::fs::OpenOptionsExt;
                         let mut file_opts = std::fs::OpenOptions::new();
-                        file_opts.write(true).create(true).mode(0o600);
+                        file_opts.read(true).write(true).create(true).mode(0o600);
                         #[cfg(target_os = "linux")]
                         file_opts.custom_flags(0x00020000);
                         #[cfg(target_os = "macos")]
@@ -462,7 +462,7 @@ impl DB {
                         use std::io::Write;
                         use std::os::unix::fs::OpenOptionsExt;
                         let mut options = std::fs::OpenOptions::new();
-                        options.write(true).create_new(true).mode(0o600);
+                        options.read(true).write(true).create_new(true).mode(0o600);
                         #[cfg(target_os = "linux")]
                         options.custom_flags(0x00020000); // O_NOFOLLOW
                         #[cfg(target_os = "macos")]
@@ -3480,7 +3480,7 @@ mod security_tests_final {
                         {
                             use std::os::unix::fs::OpenOptionsExt;
                             let mut file_opts = std::fs::OpenOptions::new();
-                            file_opts.write(true).create(true).mode(0o600);
+                            file_opts.read(true).write(true).create(true).mode(0o600);
                             #[cfg(target_os = "linux")]
                             file_opts.custom_flags(0x00020000);
                             #[cfg(target_os = "macos")]

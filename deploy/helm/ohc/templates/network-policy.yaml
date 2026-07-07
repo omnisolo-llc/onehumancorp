@@ -37,6 +37,13 @@ spec:
           podSelector:
             matchLabels:
               app: spire-agent
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.service.port }}
   egress:
     - to:
         - namespaceSelector:
@@ -242,6 +249,13 @@ spec:
           podSelector:
             matchLabels:
               app: spire-agent
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: {{ .Values.powersync.service.targetPort }}
   egress:
     - to:
         - namespaceSelector:
