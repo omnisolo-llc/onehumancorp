@@ -1,3 +1,4 @@
+import { cleanup } from '@testing-library/react';
 /* @vitest-environment jsdom */
 import { render, screen, waitFor, act } from "@testing-library/react";
 
@@ -23,8 +24,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("OnboardingWizard", () => {
-  const renderOnboardingWizard = async () => {
-    let view: ReturnType<typeof render> | undefined;
+    const renderOnboardingWizard = async () => {
+    let view: any;
     await act(async () => {
       view = render(
         <TooltipProvider>
@@ -63,17 +64,18 @@ describe("OnboardingWizard", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    cleanup();
   });
 
   it("Step 1: Renders initial screen correctly", async () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
     screen.getByText("What's the name of your business?");
-    const button = screen.getByText(/Next/i).closest("button")!;
+    const button = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     expect(button).not.toBeDisabled();
   });
 
@@ -105,7 +107,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -142,7 +144,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -162,7 +164,7 @@ describe("OnboardingWizard", () => {
     // Test validation with missing data
     await user.clear(sellInput);
 
-    const nextBtn2 = screen.getByText(/Next/i).closest("button")!;
+    const nextBtn2 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
 
     // Verify the button is enabled when empty
     expect(nextBtn2).not.toBeDisabled();
@@ -177,7 +179,7 @@ describe("OnboardingWizard", () => {
 
     await user.clear(locInput);
 
-    const nextBtn3 = screen.getByText(/Next/i).closest("button")!;
+    const nextBtn3 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
 
     // Verify the button is enabled when empty
     expect(nextBtn3).not.toBeDisabled();
@@ -195,7 +197,7 @@ describe("OnboardingWizard", () => {
       /Local families, Tech startups/i,
     );
     await user.type(targetAudienceInput, "Local families");
-    const generateBtn = screen.getByText(/Next/i).closest("button")!;
+    const generateBtn = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     expect(generateBtn).not.toBeDisabled();
     await user.click(generateBtn);
   });
@@ -234,7 +236,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -242,7 +244,7 @@ describe("OnboardingWizard", () => {
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, "Maya Bakery");
 
-    const nextBtn1 = screen.getByText(/Next/i).closest("button")!;
+    const nextBtn1 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.click(nextBtn1);
 
     // Chat Step 2
@@ -253,7 +255,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(sellInput, "Cakes");
 
-    const nextBtn2 = screen.getByText(/Next/i).closest("button")!;
+    const nextBtn2 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.type(sellInput, "{Enter}");
 
     // Chat Step 3
@@ -264,7 +266,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(locInput, "NY");
 
-    const button3 = screen.getByText(/Next/i).closest("button")!;
+    const button3 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     expect(button3).not.toBeDisabled();
     await user.click(button3);
 
@@ -277,7 +279,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(targetAudienceInput, "Local families");
 
-    const button = screen.getByText(/Next/i).closest("button")!;
+    const button = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     expect(button).not.toBeDisabled();
 
     // Step 1: Intake
@@ -308,9 +310,7 @@ describe("OnboardingWizard", () => {
     const passwordInput = screen.getByPlaceholderText(/••••••••/i);
     await user.type(passwordInput, "mypassword123");
 
-    const launchButton = screen.getByRole("button", {
-      name: /Approve & Publish/i,
-    });
+    const launchButton = screen.getAllByRole("button", { name: /Approve \& Publish/i }).pop()!;
     await user.click(launchButton);
 
     // Verify it transitions to Step 5 (Live Screen) on success
@@ -373,7 +373,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -381,7 +381,7 @@ describe("OnboardingWizard", () => {
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await user.type(nameInput, "Maya Bakery");
 
-    const nextBtn1 = screen.getByText(/Next/i).closest("button")!;
+    const nextBtn1 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.click(nextBtn1);
 
     // Chat Step 2
@@ -392,7 +392,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(sellInput, "Cakes");
 
-    const nextBtn2 = screen.getByText(/Next/i).closest("button")!;
+    const nextBtn2 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.type(sellInput, "{Enter}");
 
     // Chat Step 3
@@ -403,7 +403,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(locInput, "NY");
 
-    const button3 = screen.getByText(/Next/i).closest("button")!;
+    const button3 = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.click(button3);
 
     // Chat Step 4
@@ -415,7 +415,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(targetAudienceInput, "Local families");
 
-    const button = screen.getByText(/Next/i).closest("button")!;
+    const button = screen.getAllByRole("button", { name: /Next/i }).pop()!;
 
     await user.click(button);
 
@@ -467,13 +467,11 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
-    const launchButton = screen.getByRole("button", {
-      name: /Approve & Publish/i,
-    });
+    const launchButton = screen.getAllByRole("button", { name: /Approve \& Publish/i }).pop()!;
 
     await user.click(launchButton);
 
@@ -505,11 +503,11 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
-    const nextButton = screen.getByText(/Next/i).closest("button")!;
+    const nextButton = screen.getAllByRole("button", { name: /Next/i }).pop()!;
 
     await user.click(nextButton);
 
@@ -534,7 +532,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -574,7 +572,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -615,7 +613,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -644,7 +642,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -695,7 +693,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -741,13 +739,11 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
-    const saveDraftButton = await screen.findByRole("button", {
-      name: /Save Draft/i,
-    });
+    const saveDraftButton = await screen.findAllByRole("button", { name: /Save Draft/i }).then(els => els[0]);
     await user.click(saveDraftButton);
 
     await waitFor(
@@ -813,7 +809,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -822,7 +818,7 @@ describe("OnboardingWizard", () => {
     );
     await user.type(targetAudienceInput, "Local families");
 
-    const generateBtn = screen.getByText(/Next/i).closest("button")!;
+    const generateBtn = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     expect(generateBtn).not.toBeDisabled();
 
     // Note: handleIntake uses fetch which is either mocked or fails, but we just want to test
@@ -854,13 +850,11 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
-    const saveDraftButton = await screen.findByRole("button", {
-      name: /Save Draft/i,
-    });
+    const saveDraftButton = await screen.findAllByRole("button", { name: /Save Draft/i }).then(els => els[0]);
     expect(saveDraftButton).toBeDefined();
 
     await user.click(saveDraftButton);
@@ -893,7 +887,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -974,7 +968,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -983,7 +977,7 @@ describe("OnboardingWizard", () => {
     await user.type(nameInput, "Draft Bakery");
 
     // Proceed to Step 2
-    const nextBtn = screen.getByText(/Next/i).closest("button")!;
+    const nextBtn = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.click(nextBtn);
 
     // On step 2, wait for "What do you sell" or another input indicating step 2 is active
@@ -1008,7 +1002,7 @@ describe("OnboardingWizard", () => {
     }
 
     // Click Save Draft
-    const saveDraftBtn = screen.getByRole("button", { name: /Save Draft/i });
+    const saveDraftBtn = screen.getAllByRole("button", { name: /Save Draft/i }).pop()!;
     await user.click(saveDraftBtn);
 
     // Verify it saved
@@ -1084,7 +1078,7 @@ describe("OnboardingWizard", () => {
     const bioInput = await screen.findByTestId("instant-bio");
     await user.type(bioInput, "I consult startups in SF.");
 
-    const generateBtn = screen.getByRole("button", { name: "Generate Storefront" });
+    const generateBtn = screen.getAllByRole("button", { name: "Generate Storefront" })[0];
     await user.click(generateBtn);
 
     await waitFor(() => {
@@ -1124,7 +1118,7 @@ describe("OnboardingWizard", () => {
 
     await renderOnboardingWizard();
 
-    const generateBtn = screen.getByRole("button", { name: "Generate Storefront" });
+    const generateBtn = screen.getAllByRole("button", { name: "Generate Storefront" })[0];
     await user.click(generateBtn);
 
     await waitFor(() => {
@@ -1144,7 +1138,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
@@ -1173,14 +1167,14 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
 
     screen.getByText("Style & Team");
 
     // Get all back buttons and take the visible one
-    const backButton = screen.getAllByRole("button", { name: /Back/i })[0];
+    const backButton = screen.getAllByRole("button", { name: /Back/i }).pop()!;
     await user.click(backButton);
 
     screen.getByText("Review Details");
@@ -1197,13 +1191,13 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
     if (screen.queryByRole("button", { name: "Start My Business" })) {
       await user.click(
-        screen.getByRole("button", { name: "Start My Business" }),
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
       );
     }
     screen.getByText("What's the name of your business?");
 
     // Get all back buttons and take the visible one
-    const backButton = screen.getAllByRole("button", { name: /Back/i })[0];
+    const backButton = screen.getAllByRole("button", { name: /Back/i }).pop()!;
     await user.click(backButton);
 
     screen.getByText("Setup Assistant");
@@ -1250,9 +1244,7 @@ describe("OnboardingWizard", () => {
 
     await renderOnboardingWizard();
 
-    const launchButton = await screen.findByRole("button", {
-      name: /Approve & Publish/i,
-    });
+    const launchButton = await screen.findAllByRole("button", { name: /Approve \& Publish/i }).then(els => els[0]);
     await user.click(launchButton);
 
     expect(startRequestPayload).toBeDefined();
@@ -1274,20 +1266,13 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let view: ReturnType<typeof render> | undefined;
-    await act(async () => {
-      view = render(
-        <TooltipProvider>
-          <OnboardingWizard />
-        </TooltipProvider>
-      );
-    });
+    await renderOnboardingWizard();
 
-    const continueButton = screen.getByText(/Next/i).closest("button")!;
+    const continueButton = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.click(continueButton);
 
     await waitFor(() => {
-      screen.getByText("Please tell us your location.");
+      screen.getByText(/Please tell us your location/i);
     });
   });
 
@@ -1305,20 +1290,13 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let view: ReturnType<typeof render> | undefined;
-    await act(async () => {
-      view = render(
-        <TooltipProvider>
-          <OnboardingWizard />
-        </TooltipProvider>
-      );
-    });
+    await renderOnboardingWizard();
 
-    const continueButton = screen.getByText(/Next/i).closest("button")!;
+    const continueButton = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.click(continueButton);
 
     await waitFor(() => {
-      screen.getByText("Please tell us your target audience.");
+      screen.getByText(/Please tell us your target audience/i);
     });
   });
 
@@ -1334,20 +1312,13 @@ describe("OnboardingWizard", () => {
       });
     });
 
-    let view: ReturnType<typeof render> | undefined;
-    await act(async () => {
-      view = render(
-        <TooltipProvider>
-          <OnboardingWizard />
-        </TooltipProvider>
-      );
-    });
+    await renderOnboardingWizard();
 
-    const continueButton = screen.queryByRole("button", { name: /Next/i, hidden: true }) || screen.getAllByText(/Next/i)[screen.getAllByText(/Next/i).length - 1].closest("button")!;
+    const continueButton = screen.getAllByRole("button", { name: /Next/i }).pop()!;
     await user.click(continueButton);
 
     await waitFor(() => {
-      screen.getByText("Please tell us what you sell.");
+      screen.getByText(/Please tell us what you sell/i);
     });
   });
 
@@ -1381,7 +1352,7 @@ describe("OnboardingWizard", () => {
     await renderOnboardingWizard();
 
     // Intro screen
-    const startBtn = screen.getByRole("button", { name: "Start My Business" });
+    const startBtn = screen.getAllByRole("button", { name: "Start My Business" })[0];
     await user.click(startBtn);
 
     // Wait for the skip button on step 1

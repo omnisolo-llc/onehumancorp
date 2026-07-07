@@ -31,7 +31,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.waitForSelector("text=Review Details", { state: "visible", timeout: 30000 });
-    await page.locator('button:has-text("Continue")').click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByText('Modern').click();
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Maya Smith');
@@ -65,7 +65,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
 
     await page.waitForSelector("text=Review Details", { state: "visible", timeout: 30000 });
-    await page.locator('button:has-text("Continue")').click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByText('Minimal').click();
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Carlos');
@@ -99,7 +99,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.waitForSelector("text=Review Details", { state: "visible", timeout: 30000 });
     // Removed product assertion since fallback logic doesn't generate products
-    await page.locator('button:has-text("Continue")').click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByText('Classic').click();
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Leo Tutor');
@@ -132,7 +132,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.waitForSelector("text=Review Details", { state: "visible", timeout: 30000 });
-    await page.locator('button:has-text("Continue")').click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByText('Bold').click();
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Fatima');
@@ -196,7 +196,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.waitForSelector("text=Review Details", { state: "visible", timeout: 30000 });
-    await page.locator('button:has-text("Continue")').click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     // Do NOT fill out admin email and password initially
     await page.getByPlaceholder(/e.g. Maya Smith/i).fill('Test Admin');
