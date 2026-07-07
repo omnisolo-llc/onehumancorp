@@ -49,7 +49,6 @@ where
 use ohc_builtin_agent::gpt_researcher::{PlannerAgent, ResearcherLlmClient};
 use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
 
-// Let's use the real LLM here to match the inquiry against the pricing heuristics instead of basic keywords.
 struct LocalLlm;
 #[async_trait::async_trait]
 impl ResearcherLlmClient for LocalLlm {
@@ -117,7 +116,6 @@ async fn handle_client_intake(
             }
         }
 
-        // Use the LLM actually to generate the message
         let llm_request = ChatRequest {
             model: "default".to_string(),
             messages: vec![Message::user(format!("Write a personalized 2 sentence proposal message for {} based on inquiry: {}", service_name, payload.details))],
@@ -135,6 +133,65 @@ async fn handle_client_intake(
         }
     }
 
+    // Try to resolve customer
+    let mut resolved_customer_id = "temp-customer".to_string();
+    let existing_customer = sqlx::query("SELECT id FROM customers WHERE email = $1 AND tenant_id = $2")
+        .bind(&payload.email)
+        .bind(&tenant_id)
+        .fetch_optional(&state.orchestrator.db().pool)
+        .await;
+
+    if let Ok(Some(row)) = existing_customer {
+        use sqlx::Row;
+        resolved_customer_id = row.get("id");
+    } else {
+        let new_id = uuid::Uuid::new_v4().to_string();
+        if let Err(e) = sqlx::query("INSERT INTO customers (id, tenant_id, email, name, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'active', NOW(), NOW())")
+            .bind(&new_id)
+            .bind(&tenant_id)
+            .bind(&payload.email)
+            .bind(&payload.name)
+            .execute(&state.orchestrator.db().pool)
+            .await {
+            tracing::error!("Failed to insert customer: {:?}", e);
+            return axum::response::IntoResponse::into_response((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to insert customer"));
+        }
+        resolved_customer_id = new_id;
+    }
+
+    let proposal_id = uuid::Uuid::new_v4().to_string();
+    let insert_res = sqlx::query(
+        "INSERT INTO proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, NOW(), NOW())"
+    )
+    .bind(&proposal_id)
+    .bind(&tenant_id)
+    .bind(&resolved_customer_id)
+    .bind((suggested_price * 100.0) as i64)
+    .bind((suggested_price * 20.0) as i64)
+    .execute(&state.orchestrator.db().pool)
+    .await;
+
+    if let Err(e) = insert_res {
+        tracing::error!("Failed to insert drafted proposal: {:?}", e);
+        return axum::response::IntoResponse::into_response((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to insert drafted proposal"));
+    }
+
+    let line_item_id = uuid::Uuid::new_v4().to_string();
+    if let Err(e) = sqlx::query(
+        "INSERT INTO proposal_line_items (id, proposal_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
+    )
+    .bind(&line_item_id)
+    .bind(&proposal_id)
+    .bind(&service_name)
+    .bind((suggested_price * 100.0) as i64)
+    .bind(1)
+    .bind(false)
+    .execute(&state.orchestrator.db().pool)
+    .await {
+        tracing::error!("Failed to insert proposal line item: {:?}", e);
+        return axum::response::IntoResponse::into_response((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to insert proposal line item"));
+    }
+
     let action_payload = serde_json::json!({
         "feature_type": "quote_draft",
         "customer_inquiry": payload.details,
@@ -146,6 +203,7 @@ async fn handle_client_intake(
         "generated_response": drafted_message,
         "service": service_name,
         "price": suggested_price,
+        "quote_id": proposal_id,
     });
 
     match state.orchestrator.execute_action(
