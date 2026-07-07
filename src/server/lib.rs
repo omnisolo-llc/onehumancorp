@@ -50,6 +50,7 @@ static UI_OMNI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCac
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_UNIFIED_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_UNIFIED_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+static UI_LEDGER_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_TRIAGE_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_ANALYTICS_BRIEFING_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_ANALYTICS_CHAT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
@@ -3614,6 +3615,10 @@ pub async fn simulate_agent_feed_item_handler(
         }
     }
 
+    if let Some(cache) = UI_LEDGER_CACHE.get() {
+        cache.invalidate(&format!("ui_ledger:{}:mobile:false", tenant_id)).await;
+        cache.invalidate(&format!("ui_ledger:{}:mobile:true", tenant_id)).await;
+    }
     if let Some(cache) = UI_TRIAGE_CACHE.get() {
         cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
         cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
@@ -5434,7 +5439,17 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
                 }).await.unwrap_or_default()
             }
         }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.to_string(); async move { load_ui_ledger_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({
+            let db_clone = db.clone();
+            let t_clone = tenant_id.to_string();
+            let l_key = format!("ui_ledger:{}:mobile:{}", tenant_id, mobile_optimized);
+            async move {
+                let cache = UI_LEDGER_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                cache.get_or_fetch_with_swr(&l_key, std::time::Duration::from_secs(10), move || async move {
+                    load_ui_ledger_from_db(&db_clone, &t_clone, mobile_optimized).await.ok()
+                }).await.unwrap_or_default()
+            }
+        }),
         tokio::spawn({
             let db_clone = db.clone();
             let t_clone = tenant_id.to_string();
@@ -5449,7 +5464,7 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
     );
 
     let pending_approvals = approvals_res.unwrap_or_default();
-    let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let entries = ledger_res.unwrap_or_default();
     let agent_feed = agent_feed_res.unwrap_or_default();
 
     serde_json::json!({
