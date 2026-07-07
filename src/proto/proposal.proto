@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package ohc.proposal;
+
+message ProposalLineItem {
+  string id = 1;
+  string proposal_id = 2;
+  string description = 3;
+  int32 quantity = 4;
+  double unit_price = 5;
+  double amount = 6;
+}
+
+message Proposal {
+  string id = 1;
+  string tenant_id = 2;
+  string customer_id = 3;
+  string customer_name = 4;
+  string status = 5; // e.g., "draft", "sent", "approved", "rejected", "invoiced"
+  double total_amount = 6;
+  string currency = 7;
+  string deposit_link = 8;
+  repeated ProposalLineItem line_items = 9;
+  string invoice_id = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
+}
+
+message CreateProposalRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string customer_name = 3;
+  string currency = 4;
+  repeated ProposalLineItem line_items = 5;
+}
+
+message GetProposalRequest {
+  string tenant_id = 1;
+  string proposal_id = 2;
+}
+
+message ListProposalsRequest {
+  string tenant_id = 1;
+  string customer_id = 2; // Optional filter
+}
+
+message ListProposalsResponse {
+  repeated Proposal proposals = 1;
+}
+
+message UpdateProposalStatusRequest {
+  string tenant_id = 1;
+  string proposal_id = 2;
+  string status = 3;
+}
+
+message DraftProposalFromRequestRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string customer_name = 3;
+  string request_text = 4;
+}
+
+message DraftProposalFromRequestResponse {
+  Proposal draft = 1;
+}
+
+service ProposalService {
+  rpc CreateProposal(CreateProposalRequest) returns (Proposal);
+  rpc GetProposal(GetProposalRequest) returns (Proposal);
+  rpc ListProposals(ListProposalsRequest) returns (ListProposalsResponse);
+  rpc UpdateProposalStatus(UpdateProposalStatusRequest) returns (Proposal);
+  rpc DraftProposalFromRequest(DraftProposalFromRequestRequest) returns (DraftProposalFromRequestResponse);
+}
