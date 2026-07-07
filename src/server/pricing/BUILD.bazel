@@ -16,6 +16,7 @@ rust_library(
         "deduplication.rs",
         "rate_limit.rs",
         "cost_aggregator.rs",
+        "currency.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",

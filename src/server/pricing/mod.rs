@@ -10,3 +10,4 @@ pub mod prompt_caching;
 pub mod deduplication;
 pub mod rate_limit;
 pub mod cost_aggregator;
+pub mod currency;
