@@ -61,6 +61,13 @@ export function GrowBusinessCard() {
             >
               Review Storefront
             </Link>
+            <Link
+              id="event-rsvp-btn"
+              href="/event-rsvp-builder"
+              className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Event RSVP
+            </Link>
           </div>
         </div>
       </div>

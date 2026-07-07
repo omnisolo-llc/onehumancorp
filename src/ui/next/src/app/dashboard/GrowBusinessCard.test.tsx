@@ -27,5 +27,8 @@ describe('GrowBusinessCard', () => {
 
     const setupLink = screen.getByRole('link', { name: /Review Storefront/i });
     expect(setupLink).toHaveAttribute('href', '/edge-storefront-setup');
+
+    const eventRsvpLink = screen.getByRole('link', { name: /Event RSVP/i });
+    expect(eventRsvpLink).toHaveAttribute('href', '/event-rsvp-builder');
   });
 });
