@@ -340,6 +340,20 @@ impl Department for OperationsAgent {
 
             "tenant.order.created" => {
                 let notes = event.payload.get("notes").and_then(|v| v.as_str()).unwrap_or("");
+                // Staff Mesh Autonomous Assignment: Prepare Order
+                let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+                if !db_url.is_empty() && event.tenant_id != "system" {
+                    if let Ok(pool) = sqlx::PgPool::connect(&db_url).await {
+                        let task_id = format!("task_{}", uuid::Uuid::new_v4());
+                        let title = format!("Prepare Order");
+                        let _ = sqlx::query("INSERT INTO ohc_staff_tasks (id, tenant_id, title, priority, status) VALUES ($1, $2, $3, 'high', 'pending')")
+                            .bind(&task_id)
+                            .bind(&event.tenant_id)
+                            .bind(&title)
+                            .execute(&pool).await;
+                    }
+                }
+
                 if !notes.is_empty() {
                     // Extract tenant language preference here if available, defaulting to English/Arabic for now.
                     format!("Translate order notes to the tenant's preferred language for the kitchen: {}", notes)
@@ -358,6 +372,20 @@ impl Department for OperationsAgent {
             },
             "LowStockAlert" => {
                 let _product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                // Staff Mesh Autonomous Assignment: Alert Jun / Staff
+                let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+                if !db_url.is_empty() && event.tenant_id != "system" {
+                    if let Ok(pool) = sqlx::PgPool::connect(&db_url).await {
+                        let task_id = format!("task_{}", uuid::Uuid::new_v4());
+                        let title = format!("Low Supply: Product {}", _product_id);
+                        let _ = sqlx::query("INSERT INTO ohc_staff_tasks (id, tenant_id, title, priority, status) VALUES ($1, $2, $3, 'urgent', 'pending')")
+                            .bind(&task_id)
+                            .bind(&event.tenant_id)
+                            .bind(&title)
+                            .execute(&pool).await;
+                    }
+                }
+
                 let remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                 let _msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
 

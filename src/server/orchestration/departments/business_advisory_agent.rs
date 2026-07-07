@@ -18,7 +18,7 @@ impl Department for BusinessAdvisoryAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.report.weekly_health".to_string(), "tenant.inventory.analyze_stagnant".to_string()]
+        vec!["tenant.report.weekly_health".to_string(), "tenant.inventory.analyze_stagnant".to_string(), "tenant.shift.ended".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -33,7 +33,41 @@ impl Department for BusinessAdvisoryAgent {
             ActionRisk::DraftForReview
         };
 
-        if event.event_type == "tenant.inventory.analyze_stagnant" {
+
+        if event.event_type == "tenant.shift.ended" {
+            let shift_id = event.payload.get("shift_id").and_then(|v| v.as_str()).unwrap_or("unknown_shift");
+            let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+            if !db_url.is_empty() && event.tenant_id != "system" {
+                if let Ok(pool) = sqlx::PgPool::connect(&db_url).await {
+                    let mut tx = match pool.begin().await { Ok(tx) => tx, Err(_) => return Ok(()) };
+                    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &event.tenant_id).await;
+
+                    let completed_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_staff_tasks WHERE tenant_id = $1 AND status = 'completed'")
+                        .bind(&event.tenant_id)
+                        .fetch_one(&mut *tx).await.unwrap_or((0,));
+
+                    let escalated_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_staff_tasks WHERE tenant_id = $1 AND status = 'escalated'")
+                        .bind(&event.tenant_id)
+                        .fetch_one(&mut *tx).await.unwrap_or((0,));
+
+                    let summary_text = format!("Shift completed. {} tasks finished, {} issues escalated.", completed_count.0, escalated_count.0);
+                    let summary_id = format!("summary_{}", uuid::Uuid::new_v4());
+
+                    let _ = sqlx::query("INSERT INTO ohc_shift_summaries (id, tenant_id, shift_id, summary_text, issues_escalated, tasks_completed) VALUES ($1, $2, $3, $4, $5, $6)")
+                        .bind(&summary_id)
+                        .bind(&event.tenant_id)
+                        .bind(&shift_id)
+                        .bind(&summary_text)
+                        .bind(escalated_count.0 as i32)
+                        .bind(completed_count.0 as i32)
+                        .execute(&mut *tx).await;
+
+                    let _ = tx.commit().await;
+                }
+            }
+            return Ok(());
+        }
+if event.event_type == "tenant.inventory.analyze_stagnant" {
             // CRON-based inventory analysis pipeline to detect stagnant stock based on sales velocity
             // In a real scenario, this queries inventory and order_history tables.
             // For now, we simulate finding a stagnant product matching the smart pricing policy.

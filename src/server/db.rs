@@ -2226,6 +2226,59 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS ohc_staff_tasks (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT NOT NULL,
+
+                        staff_id TEXT,
+
+                        shift_id TEXT,
+
+                        title TEXT NOT NULL,
+
+                        description TEXT,
+
+                        priority TEXT NOT NULL DEFAULT 'medium',
+
+                        status TEXT NOT NULL DEFAULT 'pending',
+
+                        escalated_to TEXT,
+
+                        completed_at TIMESTAMP,
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                        _sync_status TEXT NOT NULL DEFAULT 'pending',
+
+                        version INTEGER NOT NULL DEFAULT 1
+
+                    );
+
+
+
+                    CREATE TABLE IF NOT EXISTS ohc_shift_summaries (
+
+                        id TEXT PRIMARY KEY,
+
+                        tenant_id TEXT NOT NULL,
+
+                        shift_id TEXT NOT NULL,
+
+                        summary_text TEXT NOT NULL,
+
+                        issues_escalated INTEGER NOT NULL DEFAULT 0,
+
+                        tasks_completed INTEGER NOT NULL DEFAULT 0,
+
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+                    );
+
+
                     CREATE TABLE IF NOT EXISTS ohc_staff_member (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,

@@ -423,7 +423,381 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
         .route("/", post(create_staff_handler).get(get_staff_handler))
         .route("/{id}/pin", post(set_staff_pin_handler))
         .route("/timecard", post(sync_timecard_handler).get(get_timecard_handler))
+        .route("/tasks", axum::routing::post(create_staff_task_handler).get(get_staff_tasks_handler))
+        .route("/tasks/sync", axum::routing::post(sync_staff_tasks_handler))
+        .route("/summaries", axum::routing::get(get_shift_summaries_handler))
+        .route("/summaries/generate", axum::routing::post(generate_shift_summary_handler))
         .with_state(db)
+}
+
+
+#[derive(Deserialize, Debug)]
+pub struct CreateStaffTaskRequest {
+    pub title: String,
+    pub description: Option<String>,
+    pub priority: Option<String>,
+    pub staff_id: Option<String>,
+    pub shift_id: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct StaffTaskResponse {
+    pub success: bool,
+    pub id: String,
+}
+
+pub async fn create_staff_task_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+    Json(payload): Json<CreateStaffTaskRequest>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+    let task_id = format!("task_{}", Uuid::new_v4());
+
+    let priority = payload.priority.unwrap_or_else(|| "medium".to_string());
+
+    match &db.store {
+        crate::db::DbStore::Sqlite(pool) => {
+            let res = sqlx::query(
+                "INSERT INTO ohc_staff_tasks (id, tenant_id, staff_id, shift_id, title, description, priority, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')",
+            )
+            .bind(&task_id)
+            .bind(&tenant_id)
+            .bind(&payload.staff_id)
+            .bind(&payload.shift_id)
+            .bind(&payload.title)
+            .bind(&payload.description)
+            .bind(&priority)
+            .execute(pool)
+            .await;
+            if let Err(e) = res {
+                tracing::error!("Failed to insert staff task: {:?}", e);
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                ).into_response();
+            }
+        }
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+                }
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                tracing::error!("Failed to set org context: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+            }
+            let res = sqlx::query(
+                "INSERT INTO ohc_staff_tasks (id, tenant_id, staff_id, shift_id, title, description, priority, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')",
+            )
+            .bind(&task_id)
+            .bind(&tenant_id)
+            .bind(&payload.staff_id)
+            .bind(&payload.shift_id)
+            .bind(&payload.title)
+            .bind(&payload.description)
+            .bind(&priority)
+            .execute(&mut *tx)
+            .await;
+            if let Err(e) = res {
+                tracing::error!("Failed to insert staff task: {:?}", e);
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                ).into_response();
+            }
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction: {:?}", e);
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                ).into_response();
+            }
+        }
+    }
+
+    (axum::http::StatusCode::OK, Json(StaffTaskResponse { success: true, id: task_id })).into_response()
+}
+
+pub async fn get_staff_tasks_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    let tasks = match &db.store {
+        crate::db::DbStore::Sqlite(pool) => {
+            let rows = sqlx::query(
+                "SELECT id, title, description, priority, status, staff_id, shift_id, escalated_to, CAST(created_at AS TEXT) AS created_at FROM ohc_staff_tasks WHERE tenant_id = ? AND status != 'completed' ORDER BY created_at DESC",
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await;
+            rows.map(|rows| rows.into_iter().map(|row| {
+                use sqlx::Row;
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "title": row.get::<String, _>("title"),
+                    "description": row.get::<Option<String>, _>("description"),
+                    "priority": row.get::<String, _>("priority"),
+                    "status": row.get::<String, _>("status"),
+                    "staff_id": row.get::<Option<String>, _>("staff_id"),
+                    "shift_id": row.get::<Option<String>, _>("shift_id"),
+                    "escalated_to": row.get::<Option<String>, _>("escalated_to"),
+                    "created_at": row.get::<String, _>("created_at"),
+                })
+            }).collect::<Vec<_>>()).unwrap_or_default()
+        }
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+                }
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                tracing::error!("Failed to set org context: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+            }
+            let rows = sqlx::query(
+                "SELECT id, title, description, priority, status, staff_id, shift_id, escalated_to, created_at::text AS created_at FROM ohc_staff_tasks WHERE tenant_id = $1 AND status != 'completed' ORDER BY created_at DESC",
+            )
+            .bind(&tenant_id)
+            .fetch_all(&mut *tx)
+            .await;
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction: {:?}", e);
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                ).into_response();
+            }
+
+            rows.map(|rows| rows.into_iter().map(|row| {
+                use sqlx::Row;
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "title": row.get::<String, _>("title"),
+                    "description": row.get::<Option<String>, _>("description"),
+                    "priority": row.get::<String, _>("priority"),
+                    "status": row.get::<String, _>("status"),
+                    "staff_id": row.get::<Option<String>, _>("staff_id"),
+                    "shift_id": row.get::<Option<String>, _>("shift_id"),
+                    "escalated_to": row.get::<Option<String>, _>("escalated_to"),
+                    "created_at": row.get::<String, _>("created_at"),
+                })
+            }).collect::<Vec<_>>()).unwrap_or_default()
+        }
+    };
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({ "tasks": tasks }))).into_response()
+}
+
+#[derive(Deserialize, Debug)]
+pub struct SyncStaffTasksRequest {
+    pub mutations: Vec<serde_json::Value>,
+}
+
+pub async fn sync_staff_tasks_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+    Json(payload): Json<SyncStaffTasksRequest>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    for mutation in payload.mutations {
+        let task_id = mutation.get("id").and_then(|v| v.as_str()).unwrap_or("");
+        let action = mutation.get("action").and_then(|v| v.as_str()).unwrap_or("");
+
+        if task_id.is_empty() || action.is_empty() {
+            continue;
+        }
+
+        match &db.store {
+            crate::db::DbStore::Sqlite(pool) => {
+                if action == "complete" {
+                    let _ = sqlx::query("UPDATE ohc_staff_tasks SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ? AND tenant_id = ?")
+                        .bind(task_id).bind(&tenant_id).execute(pool).await;
+                } else if action == "escalate" {
+                    let _ = sqlx::query("UPDATE ohc_staff_tasks SET status = 'escalated' WHERE id = ? AND tenant_id = ?")
+                        .bind(task_id).bind(&tenant_id).execute(pool).await;
+                } else if action == "create_alert" { // low supply
+                     let title = mutation.get("title").and_then(|v| v.as_str()).unwrap_or("Alert");
+                     let new_task_id = format!("task_{}", Uuid::new_v4());
+                     let _ = sqlx::query("INSERT INTO ohc_staff_tasks (id, tenant_id, title, priority, status) VALUES (?, ?, ?, 'urgent', 'escalated')")
+                        .bind(&new_task_id).bind(&tenant_id).bind(title).execute(pool).await;
+                }
+            }
+            crate::db::DbStore::Postgres => {
+                let mut tx = match db.pool.begin().await {
+                    Ok(tx) => tx,
+                    Err(_) => continue,
+                };
+                if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                    continue;
+                }
+                if action == "complete" {
+                    let _ = sqlx::query("UPDATE ohc_staff_tasks SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+                        .bind(task_id).bind(&tenant_id).execute(&mut *tx).await;
+                } else if action == "escalate" {
+                    let _ = sqlx::query("UPDATE ohc_staff_tasks SET status = 'escalated' WHERE id = $1 AND tenant_id = $2")
+                        .bind(task_id).bind(&tenant_id).execute(&mut *tx).await;
+                } else if action == "create_alert" {
+                     let title = mutation.get("title").and_then(|v| v.as_str()).unwrap_or("Alert");
+                     let new_task_id = format!("task_{}", Uuid::new_v4());
+                     let _ = sqlx::query("INSERT INTO ohc_staff_tasks (id, tenant_id, title, priority, status) VALUES ($1, $2, $3, 'urgent', 'escalated')")
+                        .bind(&new_task_id).bind(&tenant_id).bind(title).execute(&mut *tx).await;
+                }
+                let _ = tx.commit().await;
+            }
+        }
+    }
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response()
+}
+
+pub async fn get_shift_summaries_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    let summaries = match &db.store {
+        crate::db::DbStore::Sqlite(pool) => {
+            let rows = sqlx::query(
+                "SELECT id, shift_id, summary_text, issues_escalated, tasks_completed, CAST(created_at AS TEXT) AS created_at FROM ohc_shift_summaries WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 10",
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await;
+            rows.map(|rows| rows.into_iter().map(|row| {
+                use sqlx::Row;
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "shift_id": row.get::<String, _>("shift_id"),
+                    "summary_text": row.get::<String, _>("summary_text"),
+                    "issues_escalated": row.get::<i32, _>("issues_escalated"),
+                    "tasks_completed": row.get::<i32, _>("tasks_completed"),
+                    "created_at": row.get::<String, _>("created_at"),
+                })
+            }).collect::<Vec<_>>()).unwrap_or_default()
+        }
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+                }
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                tracing::error!("Failed to set org context: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+            }
+            let rows = sqlx::query(
+                "SELECT id, shift_id, summary_text, issues_escalated, tasks_completed, created_at::text AS created_at FROM ohc_shift_summaries WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 10",
+            )
+            .bind(&tenant_id)
+            .fetch_all(&mut *tx)
+            .await;
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction: {:?}", e);
+                return (
+                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "db_error"})),
+                ).into_response();
+            }
+
+            rows.map(|rows| rows.into_iter().map(|row| {
+                use sqlx::Row;
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "shift_id": row.get::<String, _>("shift_id"),
+                    "summary_text": row.get::<String, _>("summary_text"),
+                    "issues_escalated": row.get::<i32, _>("issues_escalated"),
+                    "tasks_completed": row.get::<i32, _>("tasks_completed"),
+                    "created_at": row.get::<String, _>("created_at"),
+                })
+            }).collect::<Vec<_>>()).unwrap_or_default()
+        }
+    };
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({ "summaries": summaries }))).into_response()
+}
+
+#[derive(Deserialize, Debug)]
+pub struct GenerateShiftSummaryRequest {
+    pub shift_id: String,
+}
+
+pub async fn generate_shift_summary_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+    Json(payload): Json<GenerateShiftSummaryRequest>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    let summary_id = format!("summary_{}", Uuid::new_v4());
+
+    // Generate a basic summary string internally (simulating the Business Advisory agent for now)
+    let summary_text = "Shift completed smoothly. Checked bathrooms and restocked front shelves.";
+
+    match &db.store {
+        crate::db::DbStore::Sqlite(pool) => {
+            let _ = sqlx::query(
+                "INSERT INTO ohc_shift_summaries (id, tenant_id, shift_id, summary_text, issues_escalated, tasks_completed) VALUES (?, ?, ?, ?, 0, 1)",
+            )
+            .bind(&summary_id)
+            .bind(&tenant_id)
+            .bind(&payload.shift_id)
+            .bind(summary_text)
+            .execute(pool)
+            .await;
+        }
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+                }
+            };
+            if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "db_error"}))).into_response();
+            }
+            let _ = sqlx::query(
+                "INSERT INTO ohc_shift_summaries (id, tenant_id, shift_id, summary_text, issues_escalated, tasks_completed) VALUES ($1, $2, $3, $4, 0, 1)",
+            )
+            .bind(&summary_id)
+            .bind(&tenant_id)
+            .bind(&payload.shift_id)
+            .bind(summary_text)
+            .execute(&mut *tx)
+            .await;
+            let _ = tx.commit().await;
+        }
+    }
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true, "id": summary_id }))).into_response()
 }
 
 #[cfg(test)]
