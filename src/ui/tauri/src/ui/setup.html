@@ -4121,7 +4121,7 @@
             window.__TAURI__.core
               .invoke("save_onboarding_state", { state, tenantId, userId })
               .then(() => {
-                e.target.innerText = "Saved!";
+                e.target.innerText = "Draft Saved!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
                   e.target.disabled = false;
@@ -4147,7 +4147,7 @@
             })
               .then((res) => {
                 if (res.ok) {
-                  e.target.innerText = "Saved!";
+                  e.target.innerText = "Draft Saved!";
                   setTimeout(() => {
                     e.target.innerText = originalText;
                     e.target.disabled = false;
