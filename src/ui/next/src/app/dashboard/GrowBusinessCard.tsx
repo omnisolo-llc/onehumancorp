@@ -18,7 +18,15 @@ export function GrowBusinessCard() {
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Deploy a zero-config edge-cached storefront for instant consumer discovery or build a viral widget.</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+
+            <Link
+              id="goal-tracker-btn"
+              href="/viral-goal-tracker"
+              className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Goal Tracker
+            </Link>
             <Link
               id="promoter-agent-generator-btn"
               href="/viral-post-generator"

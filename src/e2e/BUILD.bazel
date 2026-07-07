@@ -6,6 +6,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/test_viewport.spec.ts",
 
     "//src/ui/next:src/e2e/viral_powered_by_ohc_widget.spec.ts",
+    "//src/ui/next:src/e2e/viral_goal_tracker.spec.ts",
     "//src/ui/next:src/e2e/calendar.spec.ts",
     "//src/ui/next:src/e2e/exit-intent-builder.spec.ts",
     "//src/ui/next:src/e2e/cart-recovery.spec.ts",
