@@ -124,6 +124,8 @@ export class SyncManager {
 
   public async sync(retryCount = 0) {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
+    const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+    const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
     let queue = await this.getQueue();
     if (queue.length === 0) return;
@@ -179,6 +181,8 @@ export class SyncManager {
           }
         });
 
+      const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+      const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
       if (posSyncEvents.length > 0) {
         const resSyncEvents = await fetch('/api/v1/sync/events', {
           method: 'POST',
@@ -199,9 +203,6 @@ export class SyncManager {
             updated_at: new Date(m.timestamp || Date.now()).toISOString()
          };
       });
-
-      const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
-      const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
       let allOk = true;
 
