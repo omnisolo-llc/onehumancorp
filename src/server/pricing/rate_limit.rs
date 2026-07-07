@@ -252,6 +252,15 @@ impl RedisRateLimiter {
         let _ : () = redis::AsyncCommands::incr(&mut conn, &tenant_key, tokens).await.unwrap_or(());
         let _ : () = redis::AsyncCommands::incr(&mut conn, &model_key, tokens).await.unwrap_or(());
 
+        let cost_cents = crate::calculator::calculate_cost_cents(model, tokens, 0, 0);
+
+        if let Some(store) = &self.telemetry_store {
+            store.mission_cost_cents.add(
+                cost_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()), opentelemetry::KeyValue::new("model", model.to_string())],
+            );
+        }
+
         // Expire keys after ~2 months to save space
         let _ : () = redis::AsyncCommands::expire(&mut conn, &tenant_key, 60 * 60 * 24 * 60).await.unwrap_or(());
         let _ : () = redis::AsyncCommands::expire(&mut conn, &model_key, 60 * 60 * 24 * 60).await.unwrap_or(());
