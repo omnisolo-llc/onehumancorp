@@ -6,7 +6,7 @@ test.describe('Miser Cost Features E2E', () => {
     await loginAs(page, adminUser);
 
     // Navigate to the Cost Dashboard
-    await page.goto('/ui/cost-dashboard.html');
+    await page.goto('/cost-dashboard');
 
     // Wait for the main headings
     await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible({ timeout: 15000 });
@@ -154,7 +154,7 @@ test.describe('Miser Cost Features E2E', () => {
         }
     });
 
-    await page.goto('/ui/cost-dashboard.html');
+    await page.goto('/cost-dashboard');
 
     // The threshold should trigger given a $2,000 spend on the Starter plan.
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 15000 });
