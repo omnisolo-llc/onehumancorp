@@ -73,6 +73,48 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.locator('#step-assistant')).toBeVisible();
   });
 
+  test('Verifies capabilities can be toggled via click and keyboard', async ({ page }) => {
+    await page.goto('/setup.html');
+
+    // Click manual configuration
+    const startButton = page.getByRole('button', { name: 'Step-by-Step Setup' });
+    await startButton.click();
+    await page.waitForTimeout(500);
+
+    // Context Card Flow starts in step-context in Tauri
+    await expect(page.locator('#step-context')).toBeVisible();
+
+    const storefrontCard = page.getByTestId('context-storefront');
+    await expect(storefrontCard).toBeVisible();
+    await storefrontCard.click();
+    await page.locator('#step-context .next-step-btn').click();
+
+    // Step Categories
+    await expect(page.locator('#step-categories')).toBeVisible();
+    await page.locator('#business-categories').selectOption('Home Baker');
+    await page.locator('#step-categories .next-step-btn').click();
+
+    // Step Name
+    await expect(page.locator('#step-name')).toBeVisible();
+    const nameInput = page.locator('#business-name');
+    await nameInput.fill("Test Business");
+    await page.locator('#step-name .next-step-btn').click();
+
+    // Check we get to Assistant Step
+    await expect(page.locator('#step-assistant')).toBeVisible();
+
+    const inventoryToggle = page.locator('#cap-inventory');
+    await expect(inventoryToggle).not.toBeChecked();
+
+    await inventoryToggle.check({ force: true });
+    await expect(inventoryToggle).toBeChecked();
+
+    const toggleRow = inventoryToggle.locator('xpath=./ancestor::label[contains(@class, "toggle-row")]');
+    await toggleRow.focus();
+    await page.keyboard.press('Space');
+    await expect(inventoryToggle).not.toBeChecked();
+  });
+
   // Test 2: Validates the 44px minimum touch target size (via 44px min-height)
   test('Validates 44px touch targets on mobile sizes', async ({ page }) => {
     // Set a mobile viewport
