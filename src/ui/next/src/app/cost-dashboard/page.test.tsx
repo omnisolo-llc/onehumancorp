@@ -383,6 +383,35 @@ describe('CostDashboardPage', () => {
     });
   });
 
+  test('handles manage billing portal catch error', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      if (url === '/api/billing/create-billing-portal-session' && options?.method === 'POST') {
+        return Promise.reject(new Error('Network err'));
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    const manageButton = screen.getByText('Manage Billing');
+    await act(async () => {
+      fireEvent.click(manageButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to initiate billing portal. Please try again.')).toBeDefined();
+    });
+  });
+
   test('handles manage billing portal error', async () => {
     const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
     const mockPlanData = { current_plan: 'Starter' };

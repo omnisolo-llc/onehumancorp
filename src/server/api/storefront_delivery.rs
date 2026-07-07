@@ -11,7 +11,7 @@ use uuid::Uuid;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use crate::utils::cache::HybridCache;
-use crate::builder::edge::{get_edge_cache, regenerate_cache, get_ongoing_generation, inject_dynamic_inventory};
+use crate::builder::edge::{get_edge_cache, get_ongoing_generation, inject_dynamic_inventory};
 
 #[derive(Clone)]
 pub struct DeliveryState {

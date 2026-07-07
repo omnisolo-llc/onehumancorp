@@ -227,3 +227,12 @@ if (typeof navigator !== 'undefined' && navigator.locks) {
     }
   });
 }
+
+const originalWarn = console.warn;
+
+console.warn = (...args) => {
+  if (args[0] && typeof args[0] === 'string' && args[0].includes('Walkthrough target element not found')) {
+    return;
+  }
+  originalWarn(...args);
+};
