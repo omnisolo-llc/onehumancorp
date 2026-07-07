@@ -103,7 +103,7 @@ export default function PricingPage() {
         </div>
 
         {/* My Plan Section */}
-        <div className="mb-8 p-6 app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-indigo-200/50 shadow-xl rounded-2xl w-full">
+        <div className="mb-8 p-6 app-card ohc-growth-card glass-card shadow-xl rounded-2xl w-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900">My Plan: {currentPlan || 'Free'}</h2>
@@ -142,7 +142,7 @@ export default function PricingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 w-full">
           {/* Free Tier */}
-          <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
+          <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card shadow-lg rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Free</h3>
               <p className="text-xl font-semibold mb-4 text-gray-900">$0 <span className="text-sm font-normal text-gray-500">/ month</span></p>
@@ -172,7 +172,7 @@ export default function PricingPage() {
           </div>
 
           {/* Starter Tier */}
-          <div className="p-6 flex flex-col justify-between relative app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
+          <div className="p-6 flex flex-col justify-between relative app-card ohc-growth-card glass-card shadow-xl rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
             <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">Recommended</div>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Starter</h3>
@@ -201,7 +201,7 @@ export default function PricingPage() {
           </div>
 
           {/* Pro Tier */}
-          <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
+          <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card shadow-lg rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Pro</h3>
               <p className="text-xl font-semibold mb-4 text-gray-900">$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
@@ -228,7 +228,7 @@ export default function PricingPage() {
           </div>
 
           {/* Business Tier */}
-          <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
+          <div className="p-6 flex flex-col justify-between app-card ohc-growth-card glass-card shadow-lg rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full">
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Business</h3>
               <p className="text-xl font-semibold mb-4 text-gray-900">$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
