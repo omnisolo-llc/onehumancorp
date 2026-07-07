@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
+import { MutationService } from '../../../lib/sync/MutationService';
 
 export default function KDSPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -35,29 +36,39 @@ export default function KDSPage() {
   }, []);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
-    // Optimistic UI Update
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    // Find previous status for rollback
+    const oldOrder = orders.find(o => o.id === orderId);
+    const oldStatus = oldOrder ? oldOrder.status : '';
 
-    const event = {
-      type: 'UPDATE_ORDER_STATUS',
-      payload: { order_id: orderId, status: newStatus },
-      timestamp: new Date().toISOString(),
-    };
-
-    await SyncManager.getInstance().enqueue(event);
+    await MutationService.getInstance().executeMutation(
+      'UPDATE_ORDER_STATUS',
+      { order_id: orderId, status: newStatus },
+      () => {
+        // Optimistic UI Update
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      },
+      () => {
+        // Rollback
+        if (oldStatus) {
+           setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: oldStatus } : o));
+        }
+      }
+    );
   };
 
   const handleToggleSoldOut = async (itemId: string, isSoldOut: boolean) => {
-    // Optimistic UI Update
-    setInventory(prev => prev.map(i => i.id === itemId ? { ...i, is_sold_out: isSoldOut } : i));
-
-    const event = {
-      type: 'TOGGLE_SOLD_OUT',
-      payload: { item_id: itemId, is_sold_out: isSoldOut },
-      timestamp: new Date().toISOString(),
-    };
-
-    await SyncManager.getInstance().enqueue(event);
+    await MutationService.getInstance().executeMutation(
+      'TOGGLE_SOLD_OUT',
+      { item_id: itemId, is_sold_out: isSoldOut },
+      () => {
+        // Optimistic UI Update
+        setInventory(prev => prev.map(i => i.id === itemId ? { ...i, is_sold_out: isSoldOut } : i));
+      },
+      () => {
+        // Rollback
+        setInventory(prev => prev.map(i => i.id === itemId ? { ...i, is_sold_out: !isSoldOut } : i));
+      }
+    );
   };
 
   const toggleLanguage = () => {

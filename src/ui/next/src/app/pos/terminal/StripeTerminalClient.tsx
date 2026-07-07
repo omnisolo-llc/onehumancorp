@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
 import { SyncManager } from '../../../lib/sync/SyncManager';
+import { MutationService } from '../../../lib/sync/MutationService';
 import { WalkthroughTarget } from '../../../components/Walkthrough';
 
 interface StripeTerminalClientProps {
@@ -145,22 +146,22 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   };
 
   const processCashSale = async () => {
-     const syncManager = SyncManager.getInstance();
-     if (onOptimisticReserve) onOptimisticReserve();
-
-     cart?.forEach(item => {
-           SyncManager.getInstance().enqueue({
-           type: 'cash_sale',
-           product_id: item.product.id,
-           quantity: item.quantity,
-           payload: { amount_cents: item.product.price_cents * item.quantity }
-        });
-     });
-
-     setTimeout(() => {
-       setStatus('Cash sale recorded.');
-       if (onSuccess) onSuccess();
-     }, 500);
+     if (cart) {
+         for (const item of cart) {
+             await MutationService.getInstance().executeMutation(
+                 'cash_sale',
+                 { amount_cents: item.product.price_cents * item.quantity, product_id: item.product.id, quantity: item.quantity },
+                 () => {
+                     if (onOptimisticReserve) onOptimisticReserve();
+                 },
+                 () => {
+                     setStatus('Failed to enqueue cash sale locally.');
+                 }
+             );
+         }
+     }
+     setStatus('Cash sale recorded.');
+     if (onSuccess) onSuccess();
   };
 
   return (
@@ -274,14 +275,15 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                  setStatus('Recording...');
                  setReserving(true);
                  try {
-                   await fetch('/api/v1/checkout/session', {
+                   const res = await fetch('/api/v1/checkout/session', {
                      method: 'POST',
                      headers: { 'Content-Type': 'application/json' },
                      body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
                    });
+                   if (!res.ok) throw new Error("Failed to reach API");
                    await processCashSale();
                  } catch(e: any) {
-                   setStatus('Error: ' + e.message);
+                   await processCashSale();
                  } finally {
                    setReserving(false);
                  }

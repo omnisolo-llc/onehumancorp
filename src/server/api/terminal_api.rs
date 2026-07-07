@@ -475,6 +475,27 @@ pub async fn sync_offline_transactions_handler(
                                                 "shortage": (quantity as i32) - stock,
                                                 "timestamp": chrono::Utc::now().to_rfc3339()
                                             }));
+
+                                            // Trigger operations agent for conflict resolution
+                                            let task_id = uuid::Uuid::new_v4().to_string();
+                                            let ai_payload = serde_json::json!({
+                                                "sync_event_id": tx_id,
+                                                "entity_type": "product",
+                                                "entity_id": product_id,
+                                                "action_type": "offline_pos_sync",
+                                                "shortage": (quantity as i32) - stock,
+                                                "message": "A data synchronization conflict occurred while offline. Please review and resolve."
+                                            }).to_string();
+
+                                            let _ = sqlx::query(
+                                                "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                                                 VALUES ($1, $2, 'operations', 'pos.inventory.conflict', $3::jsonb, 'PENDING')"
+                                            )
+                                            .bind(&task_id)
+                                            .bind(&tenant_id)
+                                            .bind(&ai_payload)
+                                            .execute(&mut *db_tx)
+                                            .await;
                                         }
                                     }
                                 }
