@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Staff Shift & Tasks</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+    :root {
+      --bg-light: #f5f5f7;
+      --glass-bg: rgba(255, 255, 255, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.4);
+      --text-main: #1D1D1F;
+      --text-muted: #86868B;
+      --accent: #0066FF;
+      --success: #34C759;
+      --warning: #FF9500;
+      --critical: #FF3B30;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+    }
+
+    .app-container {
+      max-width: 375px;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .header {
+      padding: 24px 20px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(245, 245, 247, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .profile-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 18px;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .content-scroll {
+      flex: 1;
+      padding: 0 20px 100px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-main);
+    }
+
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .task-checkbox {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: 2px solid var(--text-muted);
+      appearance: none;
+      outline: none;
+      cursor: pointer;
+      flex-shrink: 0;
+      position: relative;
+      background: white;
+    }
+
+    .task-checkbox:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .task-checkbox:checked::after {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 3px;
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .task-content {
+      flex: 1;
+    }
+
+    .task-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .task-item.completed .task-title {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge.high { background: rgba(255, 59, 48, 0.1); color: var(--critical); }
+    .badge.normal { background: rgba(0, 102, 255, 0.1); color: var(--accent); }
+
+    .action-button {
+      width: 100%;
+      min-height: 44px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .action-button:active {
+      opacity: 0.8;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 102, 255, 0.2);
+    }
+
+    .btn-warning {
+      background: var(--warning);
+      color: white;
+      box-shadow: 0 4px 12px rgba(255, 149, 0, 0.2);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--text-muted);
+      color: var(--text-main);
+    }
+
+    /* Manager View specific styles */
+    .manager-view {
+      display: none;
+    }
+
+    .summary-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .tabs {
+      display: flex;
+      background: rgba(0,0,0,0.05);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header class="header">
+      <h1 id="page-title">My Shift</h1>
+      <div class="profile-icon">M</div>
+    </header>
+
+    <div class="tabs" id="role-tabs">
+      <div class="tab active" onclick="switchRole('staff')">Staff Tasks</div>
+      <div class="tab" onclick="switchRole('manager')">Manager View</div>
+    </div>
+
+    <main class="content-scroll">
+      <!-- STAFF VIEW -->
+      <div id="staff-view">
+
+        <section>
+          <h2 class="section-title">Current Tasks</h2>
+          <div class="glass-card">
+            <div class="task-list" id="task-list-container">
+              <div style="text-align: center; padding: 20px; color: #86868B; font-size: 14px;">Loading tasks...</div>
+            </div>
+          </div>
+        </section>
+
+        <section style="margin-top: 24px;">
+          <h2 class="section-title">Quick Actions</h2>
+          <div class="glass-card" style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="action-button btn-warning" id="escalate-supplies-btn" onclick="escalateLowSupplies()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Flag Low Supplies (Cups)
+            </button>
+            <button class="action-button btn-outline">
+              Clock Out
+            </button>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- MANAGER VIEW -->
+      <div id="manager-view" class="manager-view">
+        <section>
+          <h2 class="section-title">Shift Performance</h2>
+          <div class="glass-card" style="margin-bottom: 16px;">
+            <h3 style="font-size: 15px; margin-bottom: 8px;">Owner-Ready Summary</h3>
+            <div id="shift-summary-content" class="summary-text">
+              Loading summary from Business Advisory Agent...
+            </div>
+          </div>
+
+          <h2 class="section-title">Escalations</h2>
+          <div class="glass-card">
+            <div class="task-list" id="escalations-container">
+               <div style="text-align: center; padding: 20px; color: #86868B; font-size: 14px;">No active escalations.</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // Test context
+    const tenantId = 'e2e-tenant';
+    const baseUrl = window.location.origin.includes('localhost') ? window.location.origin : 'http://localhost:18789';
+
+    function switchRole(role) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if (role === 'staff') {
+        document.getElementById('staff-view').style.display = 'block';
+        document.getElementById('manager-view').style.display = 'none';
+        fetchTasks();
+      } else {
+        document.getElementById('staff-view').style.display = 'none';
+        document.getElementById('manager-view').style.display = 'block';
+        fetchSummaries();
+      }
+    }
+
+    async function fetchTasks() {
+      try {
+        const response = await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks`);
+        if (!response.ok) throw new Error('Network error');
+        const tasks = await response.json();
+
+        const container = document.getElementById('task-list-container');
+        if (tasks.length === 0) {
+          container.innerHTML = '<div style="text-align: center; padding: 20px; color: #86868B; font-size: 14px;">No tasks assigned.</div>';
+          return;
+        }
+
+        container.innerHTML = tasks.map(task => `
+          <div class="task-item ${task.status === 'completed' ? 'completed' : ''}" data-testid="task-item-${task.id}">
+            <input type="checkbox" class="task-checkbox" data-testid="task-checkbox-${task.id}" ${task.status === 'completed' ? 'checked' : ''} onchange="toggleTask('${task.id}', this.checked)">
+            <div class="task-content">
+              <div class="task-title">${task.description}</div>
+              <span class="badge ${task.priority.toLowerCase()}">${task.priority}</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Failed to fetch tasks:', err);
+      }
+    }
+
+    async function toggleTask(id, isCompleted) {
+      const status = isCompleted ? 'completed' : 'pending';
+      try {
+        await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, is_offline_synced: false })
+        });
+        fetchTasks();
+      } catch (err) {
+        console.error('Failed to update task:', err);
+      }
+    }
+
+    async function escalateLowSupplies() {
+      const btn = document.getElementById('escalate-supplies-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Flagging...';
+      try {
+        await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks/escalate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item: 'Cups', location_id: 'store-1' })
+        });
+        btn.innerHTML = 'Flagged Successfully!';
+        btn.classList.remove('btn-warning');
+        btn.classList.add('btn-primary');
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.classList.remove('btn-primary');
+          btn.classList.add('btn-warning');
+        }, 3000);
+        fetchTasks();
+      } catch (err) {
+        console.error('Failed to escalate:', err);
+        btn.innerHTML = 'Error. Try again offline sync.';
+      }
+    }
+
+    async function fetchSummaries() {
+      try {
+        const response = await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/shift-summaries`);
+        if (!response.ok) throw new Error('Network error');
+        const summaries = await response.json();
+
+        const content = document.getElementById('shift-summary-content');
+        if (summaries.length === 0) {
+          content.innerHTML = 'No shift summaries available yet. The Business Advisory Agent generates this at shift close.';
+        } else {
+          content.innerHTML = summaries[0].summary_text;
+        }
+
+        // Also fetch high priority tasks to show in escalations
+        const taskResponse = await fetch(`${baseUrl}/api/v1/tenant/${tenantId}/staff-tasks`);
+        const tasks = await taskResponse.json();
+        const escalations = tasks.filter(t => t.priority === 'high' && t.status !== 'completed');
+
+        const escContainer = document.getElementById('escalations-container');
+        if (escalations.length === 0) {
+          escContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #86868B; font-size: 14px;">No active escalations.</div>';
+        } else {
+          escContainer.innerHTML = escalations.map(task => `
+            <div class="task-item">
+              <div class="task-content">
+                <div class="task-title" style="color: var(--critical)">${task.description}</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Pending Action</div>
+              </div>
+              <button class="action-button btn-primary" style="min-height: 32px; width: auto; padding: 0 12px; font-size: 13px;" onclick="toggleTask('${task.id}', true); setTimeout(fetchSummaries, 500);">Resolve</button>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Failed to fetch summaries:', err);
+      }
+    }
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchTasks();
+    });
+  </script>
+</body>
+</html>
