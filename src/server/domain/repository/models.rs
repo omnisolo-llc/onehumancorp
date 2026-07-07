@@ -448,3 +448,26 @@ pub struct SocialPostProposal {
     pub created_at_unix: i64,
     pub updated_at_unix: i64,
 }
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct StaffTask {
+    pub id: String,
+    pub tenant_id: String,
+    pub staff_id: String,
+    pub description: String,
+    pub status: String,
+    pub priority: String,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct ShiftSummary {
+    pub id: String,
+    pub tenant_id: String,
+    pub shift_date: chrono::NaiveDate,
+    pub summary_text: String,
+    pub metrics: Option<sqlx::types::Json<serde_json::Value>>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}
