@@ -29,6 +29,7 @@ impl Department for OperationsAgent {
             "inventory.sync.conflict".to_string(),
             "tenant.inventory.updated".to_string(),
             "pos_sales".to_string(),
+            "pos_transaction_completed".to_string(),
             "tenant.quote.requires_scheduling".to_string(),
             "tenant.omnichannel.message.received".to_string(),
             "agent:operations:approved".to_string(),
@@ -37,6 +38,24 @@ impl Department for OperationsAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "pos_transaction_completed" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let quantity = event.payload.get("quantity").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            let action_description = format!("Processed POS sale for product {} (qty: {})", product_id, quantity);
+
+            // Trigger UI update or low stock alert if needed
+            let _ = self.orchestrator.execute_action(
+                DepartmentType::Operations,
+                action_description,
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                event.payload.clone(),
+            ).await;
+
+            return Ok(());
+        }
+
         if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let cache = crate::builder::edge::get_edge_cache();
