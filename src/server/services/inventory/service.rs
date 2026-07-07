@@ -366,13 +366,36 @@ impl InventoryService {
         let pool = crate::db::get_pool();
         if let Ok(mut tx) = pool.begin().await {
             if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
-                let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
+                let current_version: Option<i32> = sqlx::query_scalar("SELECT version FROM products WHERE id = $1 AND tenant_id = $2")
+                    .bind(product_id)
+                    .bind(tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .unwrap_or(None);
+                let expected_version = current_version.unwrap_or(1);
+                let result = sqlx::query("UPDATE products SET version = version + 1, locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3 AND version = $4")
                     .bind(quantity)
                     .bind(product_id)
                     .bind(tenant_id)
+                    .bind(expected_version)
                     .execute(&mut *tx)
                     .await;
-                let _ = tx.commit().await;
+                if let Ok(res) = result {
+                    if res.rows_affected() == 0 {
+                        let _ = tx.rollback().await;
+                        return Ok(ReleaseResult {
+                            success: false,
+                            error_message: "Failed to release inventory due to version mismatch or not found.".to_string(),
+                        });
+                    }
+                    let _ = tx.commit().await;
+                } else {
+                    let _ = tx.rollback().await;
+                    return Ok(ReleaseResult {
+                        success: false,
+                        error_message: "Database error during release.".to_string(),
+                    });
+                }
             }
         }
 
@@ -453,27 +476,33 @@ impl InventoryService {
             .map_err(|e| e.to_string())?;
 
         // Enforce row-level locking for final commit
-        let _ = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
-            .bind(product_id)
-            .bind(tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
-            .bind(quantity)
+        let current_version: Option<i32> = sqlx::query_scalar("SELECT version FROM products WHERE id = $1 AND tenant_id = $2")
             .bind(product_id)
             .bind(tenant_id)
             .fetch_optional(&mut *tx)
             .await
-            .unwrap_or(None);
+            .map_err(|e| e.to_string())?;
 
-        let update_result = if update_result.is_none() {
-            // Fallback: If not enough locked quantity, deduct from available quantity directly (e.g. offline POS sync or direct commit without reserve)
-            sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND available_quantity >= $1 RETURNING inventory_count")
+        let expected_version = current_version.unwrap_or(1);
+
+        let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET version = version + 1, inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND version = $4 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
             .bind(quantity)
             .bind(product_id)
             .bind(tenant_id)
+            .bind(expected_version)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| {
+                e.to_string()
+            })?;
+
+        let update_result = if update_result.is_none() {
+            // Fallback: If not enough locked quantity, deduct from available quantity directly (e.g. offline POS sync or direct commit without reserve)
+            sqlx::query_scalar("UPDATE products SET version = version + 1, inventory_count = inventory_count - $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND version = $4 AND inventory_count >= $1 AND available_quantity >= $1 RETURNING inventory_count")
+            .bind(quantity)
+            .bind(product_id)
+            .bind(tenant_id)
+            .bind(expected_version)
             .fetch_optional(&mut *tx)
             .await
             .map_err(|e| e.to_string())?
