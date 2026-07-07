@@ -334,6 +334,19 @@ export default function POSTerminal() {
              </div>
            </div>
 
+         {/* Checkout Sticky Bottom Bar */}
+         {cart.length > 0 && !isCartOpen && !checkoutComplete && (
+           <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-[40px] saturate-[210%] border-t border-white/50 p-4 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:hidden">
+             <button
+               onClick={() => setIsCartOpen(true)}
+               className="w-full bg-[#007AFF] text-white rounded-xl py-3 px-4 font-semibold text-lg flex items-center justify-between min-h-[44px] touch-manipulation"
+             >
+               <span>{t('Charge')}</span>
+               <span>${cartTotal.toFixed(2)}</span>
+             </button>
+           </div>
+         )}
+
            {syncing && <div className="absolute bottom-4 left-4 text-xs text-blue-400">{t('Syncing...')}</div>}
         </div>
       </div>
@@ -547,9 +560,9 @@ export default function POSTerminal() {
         </div>
 
         {isOffline && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg text-gray-900 px-6 py-3 rounded-full font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
-            <svg className="w-5 h-5 text-[#FF9500]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-            <span>{t('Offline Mode')}{pendingSyncCount > 0 ? ` - ${pendingSyncCount} Pending` : ''}</span>
+          <div className="absolute top-4 right-4 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-[#FF9500]/40 shadow-lg text-gray-900 px-4 py-2 rounded-full font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+            <div className="w-2 h-2 rounded-full bg-[#FF9500]"></div>
+            <span className="text-sm">{t('Offline Mode - Safe to transact')}{pendingSyncCount > 0 ? ` (${pendingSyncCount} Pending)` : ''}</span>
           </div>
         )}
         {syncing && !isOffline && (

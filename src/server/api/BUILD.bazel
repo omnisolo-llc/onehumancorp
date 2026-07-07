@@ -38,6 +38,7 @@ exports_files(
         "oauth/proxy.rs",
         "mod.rs",
         "offline_sync.rs",
+        "offline_pos_queue.rs",
         "proposals.rs",
         "sync.rs",
         "staff_mesh.rs",

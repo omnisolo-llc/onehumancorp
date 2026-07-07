@@ -11,7 +11,7 @@ export async function POST(request: Request) {
        headers.set("x-spiffe-id", request.headers.get("x-spiffe-id") as string);
     }
 
-    const res = await fetch(`${backendUrl}/api/v1/sync/offline`, {
+    const res = await fetch(`${backendUrl}/api/v1/sync/pos_queue`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body)

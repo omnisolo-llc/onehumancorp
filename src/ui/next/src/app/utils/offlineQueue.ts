@@ -38,8 +38,9 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
   if (typeof window === "undefined") return;
   try {
     const db = await getPowerSyncDB();
+    // Using local_transaction_queue mimicking the backend LOCAL_TRANSACTION_QUEUE
     await db.execute(
-      'INSERT OR REPLACE INTO local_pending_actions (id, type, payload, timestamp) VALUES (?, ?, ?, ?)',
+      'INSERT OR REPLACE INTO local_transaction_queue (id, type, payload, timestamp) VALUES (?, ?, ?, ?)',
       [action.id, action.type, JSON.stringify(action.payload), action.timestamp]
     );
     return;
@@ -71,7 +72,7 @@ export async function getActions(): Promise<OfflineAction[]> {
   if (typeof window === "undefined") return [];
   try {
     const db = await getPowerSyncDB();
-    const result = await db.getAll('SELECT * FROM local_pending_actions ORDER BY timestamp ASC');
+    const result = await db.getAll('SELECT * FROM local_transaction_queue ORDER BY timestamp ASC');
     return result.map((row: any) => ({
       id: row.id,
       type: row.type,
@@ -108,7 +109,7 @@ export async function removeAction(id: string): Promise<void> {
   if (typeof window === "undefined") return;
   try {
     const db = await getPowerSyncDB();
-    await db.execute('DELETE FROM local_pending_actions WHERE id = ?', [id]);
+    await db.execute('DELETE FROM local_transaction_queue WHERE id = ?', [id]);
     return;
   } catch (err) {
      if (process.env.NODE_ENV !== 'test') {
