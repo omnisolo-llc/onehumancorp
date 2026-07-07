@@ -3,6 +3,7 @@ import { InstagramDMCard } from "../../app/dashboard/InstagramDMCard";
 import { AmbassadorReplyCard } from "../../app/dashboard/AmbassadorReplyCard";
 import { ReviewFeedCard } from "../../app/dashboard/ReviewFeedCard";
 import React from "react";
+import { useRouter } from "next/navigation";
 
 type AgentFeedItem = {
   id: string;
@@ -75,6 +76,51 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
     (approval.proposed_action || approval.context_payload)?.feature_type ===
     "shift_reassignment"
   ) {
+  let payloadObj: any = {};
+  try {
+    if (typeof approval.payload === "string") {
+      payloadObj = JSON.parse(approval.payload);
+    } else {
+      payloadObj = approval.payload || {};
+    }
+  } catch (e) {}
+
+  if (payloadObj.feature_type === "quote_draft" && payloadObj.project_scope_id) {
+    const proposalId = payloadObj.proposal_id || approval.id;
+    return (
+      <div className="glassmorphism p-4 rounded-xl space-y-3 relative group">
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-2 text-[#0066FF] font-medium text-[11px] uppercase tracking-wide">
+            Operations Agent
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <h4 className="text-[15px] font-semibold text-gray-900 dark:text-white leading-tight">
+            Proposal Drafted: {payloadObj.client_name || "New Lead"}
+          </h4>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">
+            {payloadObj.description || "All requirements gathered. Proposal drafted."}
+          </p>
+        </div>
+
+        {payloadObj.scope && (
+          <div className="p-2 bg-gray-50 dark:bg-gray-800/50 rounded text-[12px] text-gray-600 dark:text-gray-300">
+            <span className="font-medium text-gray-900 dark:text-gray-100">Scope:</span> {payloadObj.scope}
+          </div>
+        )}
+
+        <div className="pt-2 flex gap-2">
+          <button
+            onClick={() => router.push(`/proposals/${proposalId}`)}
+            className="flex-1 min-h-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white text-[13px] font-medium rounded-lg transition-colors flex items-center justify-center gap-1"
+          >
+            Review & Approve
+          </button>
+        </div>
+      </div>
+    );
+  }
     return (
       <ShiftReassignmentCard
         approval={approval}
@@ -84,6 +130,51 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
     );
   }
 
+  let payloadObj: any = {};
+  try {
+    if (typeof approval.payload === "string") {
+      payloadObj = JSON.parse(approval.payload);
+    } else {
+      payloadObj = approval.payload || {};
+    }
+  } catch (e) {}
+
+  if (payloadObj.feature_type === "quote_draft" && payloadObj.project_scope_id) {
+    const proposalId = payloadObj.proposal_id || approval.id;
+    return (
+      <div className="glassmorphism p-4 rounded-xl space-y-3 relative group">
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-2 text-[#0066FF] font-medium text-[11px] uppercase tracking-wide">
+            Operations Agent
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <h4 className="text-[15px] font-semibold text-gray-900 dark:text-white leading-tight">
+            Proposal Drafted: {payloadObj.client_name || "New Lead"}
+          </h4>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">
+            {payloadObj.description || "All requirements gathered. Proposal drafted."}
+          </p>
+        </div>
+
+        {payloadObj.scope && (
+          <div className="p-2 bg-gray-50 dark:bg-gray-800/50 rounded text-[12px] text-gray-600 dark:text-gray-300">
+            <span className="font-medium text-gray-900 dark:text-gray-100">Scope:</span> {payloadObj.scope}
+          </div>
+        )}
+
+        <div className="pt-2 flex gap-2">
+          <button
+            onClick={() => router.push(`/proposals/${proposalId}`)}
+            className="flex-1 min-h-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white text-[13px] font-medium rounded-lg transition-colors flex items-center justify-center gap-1"
+          >
+            Review & Approve
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       key={approval.id}
@@ -521,6 +612,51 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                                   },
                                 )
                               : "14:00";
+  let payloadObj: any = {};
+  try {
+    if (typeof approval.payload === "string") {
+      payloadObj = JSON.parse(approval.payload);
+    } else {
+      payloadObj = approval.payload || {};
+    }
+  } catch (e) {}
+
+  if (payloadObj.feature_type === "quote_draft" && payloadObj.project_scope_id) {
+    const proposalId = payloadObj.proposal_id || approval.id;
+    return (
+      <div className="glassmorphism p-4 rounded-xl space-y-3 relative group">
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-2 text-[#0066FF] font-medium text-[11px] uppercase tracking-wide">
+            Operations Agent
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <h4 className="text-[15px] font-semibold text-gray-900 dark:text-white leading-tight">
+            Proposal Drafted: {payloadObj.client_name || "New Lead"}
+          </h4>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">
+            {payloadObj.description || "All requirements gathered. Proposal drafted."}
+          </p>
+        </div>
+
+        {payloadObj.scope && (
+          <div className="p-2 bg-gray-50 dark:bg-gray-800/50 rounded text-[12px] text-gray-600 dark:text-gray-300">
+            <span className="font-medium text-gray-900 dark:text-gray-100">Scope:</span> {payloadObj.scope}
+          </div>
+        )}
+
+        <div className="pt-2 flex gap-2">
+          <button
+            onClick={() => router.push(`/proposals/${proposalId}`)}
+            className="flex-1 min-h-[44px] bg-[#0066FF] hover:bg-[#0052CC] text-white text-[13px] font-medium rounded-lg transition-colors flex items-center justify-center gap-1"
+          >
+            Review & Approve
+          </button>
+        </div>
+      </div>
+    );
+  }
                             return (
                               <button
                                 key={idx}

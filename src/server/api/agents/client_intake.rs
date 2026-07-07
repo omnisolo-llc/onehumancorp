@@ -135,6 +135,25 @@ async fn handle_client_intake(
         }
     }
 
+    let intake_id = uuid::Uuid::new_v4();
+    let scope_id = uuid::Uuid::new_v4();
+
+    let db = state.orchestrator.db().pool.clone();
+    let _ = sqlx::query("INSERT INTO client_intakes (id, tenant_id, client_name, client_email, status) VALUES ($1, $2, $3, $4, 'Completed')")
+        .bind(intake_id)
+        .bind(&tenant_id)
+        .bind(&payload.name)
+        .bind(&payload.email)
+        .execute(&db).await;
+
+    let _ = sqlx::query("INSERT INTO project_scopes (id, tenant_id, intake_id, deliverables, budget_cents) VALUES ($1, $2, $3, $4, $5)")
+        .bind(scope_id)
+        .bind(&tenant_id)
+        .bind(intake_id)
+        .bind(serde_json::json!([service_name]))
+        .bind((suggested_price * 100.0) as i64)
+        .execute(&db).await;
+
     let action_payload = serde_json::json!({
         "feature_type": "quote_draft",
         "customer_inquiry": payload.details,
@@ -146,6 +165,8 @@ async fn handle_client_intake(
         "generated_response": drafted_message,
         "service": service_name,
         "price": suggested_price,
+        "client_intake_id": intake_id.to_string(),
+        "project_scope_id": scope_id.to_string(),
     });
 
     match state.orchestrator.execute_action(

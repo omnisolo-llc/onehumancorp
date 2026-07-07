@@ -1059,13 +1059,14 @@ pub async fn execute_action(
                                 .await;
 
                             // Insert quote/proposal
-                            let _ = sqlx::query("INSERT INTO interactive_proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, 'Sent', $4, $5, $6)")
+                            let _ = sqlx::query("INSERT INTO interactive_proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url, scope_id) VALUES ($1, $2, $3, 'Sent', $4, $5, $6, $7)")
                                 .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
                                 .bind(tenant_id)
                                 .bind(uuid::Uuid::parse_str(&customer_id).ok())
                                 .bind(total_amount_cents)
                                 .bind(deposit_amount)
                                 .bind(&stripe_link)
+                                .bind(payload.get("project_scope_id").and_then(|v| v.as_str()).and_then(|s| uuid::Uuid::parse_str(s).ok()))
                                 .execute(&self.db.pool)
                                 .await;
                         }
@@ -1113,13 +1114,14 @@ pub async fn execute_action(
                                 .await;
 
                             // Insert quote/proposal
-                            let _ = sqlx::query("INSERT INTO interactive_proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url) VALUES ($1, $2, $3, 'Sent', $4, $5, $6)")
+                            let _ = sqlx::query("INSERT INTO interactive_proposals (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, checkout_url, scope_id) VALUES ($1, $2, $3, 'Sent', $4, $5, $6, $7)")
                                 .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
                                 .bind(tenant_id)
                                 .bind(uuid::Uuid::parse_str(&customer_id).ok())
                                 .bind(total_amount_cents)
                                 .bind(deposit_amount)
                                 .bind(&stripe_link)
+                                .bind(payload.get("project_scope_id").and_then(|v| v.as_str()).and_then(|s| uuid::Uuid::parse_str(s).ok()))
                                 .execute(&self.db.pool)
                                 .await;
                         }
