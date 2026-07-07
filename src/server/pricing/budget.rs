@@ -58,6 +58,10 @@ impl BudgetManager {
                 amount_cents as u64,
                 &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
             );
+            store.mission_cost_cents.add(
+                amount_cents as u64,
+                &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
+            );
         }
 
         if final_current > self.total_limit_cents {

@@ -13,11 +13,11 @@ backend:
   replicas: 2
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 10m
+      memory: 64Mi
   service:
     port: 8080
   vpa:
@@ -39,11 +39,11 @@ chatwoot:
   replicas: 2
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 10m
+      memory: 64Mi
   service:
     port: 3000
   vpa:
@@ -62,11 +62,11 @@ fluentBit:
   logLevel: info
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
-    requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
 kube-prometheus-stack:
   enabled: true
   grafana:
@@ -93,11 +93,11 @@ multiTenant:
   maxOrgs: 5000
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
-    requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 256Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
 ohcCore:
   autoscaling:
     enabled: true
@@ -112,11 +112,11 @@ ohcCore:
   replicas: 2
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 10m
+      memory: 64Mi
   service:
     port: 18789
   vpa:
@@ -135,11 +135,11 @@ powersync:
   replicas: 2
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 10m
+      memory: 64Mi
   service:
     port: 8081
     targetPort: 8080
