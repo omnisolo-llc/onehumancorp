@@ -138,4 +138,36 @@ test.describe('Omni Inbox Triage Integration', () => {
     const itemCard6 = page.getByTestId('triage-card-omni-msg-6');
     await expect(itemCard6).not.toBeVisible({ timeout: 5000 });
   });
+
+  test('should provide a contextually aware drafted response using RAG for past orders', async ({ page, request }) => {
+    await request.post('/api/v1/builder/seeder/exec', {
+      data: {
+        sql: `
+          INSERT INTO tenants (id, name, tier) VALUES ('tenant-rag', 'Test', 'free') ON CONFLICT DO NOTHING;
+          INSERT INTO customers (id, tenant_id, name, email, phone) VALUES ('cust-rag', 'tenant-rag', 'RAG Customer', 'rag@example.com', '1234') ON CONFLICT DO NOTHING;
+          INSERT INTO purchase_orders (id, tenant_id, vendor_id, total_cost, status) VALUES ('po-rag', 'tenant-rag', 'cust-rag', 45.0, 'completed') ON CONFLICT DO NOTHING;
+        `
+      }
+    });
+
+    // Trigger webhook so it gets triaged
+    await request.post('/api/webhook/omnichannel', {
+      data: {
+        tenant_id: 'tenant-rag',
+        channel: 'Instagram DM',
+        sender_id: '1234',
+        message: 'Do you still have vegan options?'
+      }
+    });
+
+    // Wait for the worker to triage the message (it runs every 1 second)
+    await page.waitForTimeout(2000);
+
+    await page.goto(`/api/ui/triage.html?tenant_id=tenant-rag`);
+
+    // We can't know the exact omni-msg id since it's a uuid generated on webhook insert
+    // But we know there will be a card with the text "Do you still have vegan options?"
+    await expect(page.locator('text=vegan options').first()).toBeVisible({ timeout: 15000 });
+  });
+
 });
