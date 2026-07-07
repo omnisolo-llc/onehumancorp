@@ -1,6 +1,7 @@
-Fixed Tenant Leakage and Local Data Exposure Vulnerabilities
+🧹 Cleaner: Multi-Tenant Safety & TODO Cleanup
 
-* Fixed TOCTOU vulnerability in `src/server/db.rs` during SQLite database creation by enforcing `create_new(true)` and applying strict `0600` file permissions to the database and its auxiliary files (`-wal` and `-shm`).
-* Ensured strict Row-Level Security (RLS) enforcement in `src/server/db.rs`'s `search_workspace` function by explicitly validating `app.current_tenant` context within the database query, rather than relying solely on query bindings that could bypass the Postgres-level RLS config context.
-* Fixed similar missing explicit context validations in `src/server/auth/postgres_store.rs` by updating `update_user` and `get_by_*` methods to rely on PostgreSQL's global session state (`current_setting('app.current_tenant')::text`) enforcing strict multi-tenant boundaries.
-* Updated `DISCARD ALL` in `PgPoolOptions::after_release` to properly reset postgres tenant variables by utilizing `sqlx::Executor::execute(conn, ...)` directly.
+- Verified Multi-Tenant Safety across tables.
+- Addressed stale FIXME / TODO tags across codebase documents and patching files.
+- Completed thorough hygiene sweep to ensure `ENABLE ROW LEVEL SECURITY` remains present where necessary.
+- Evaluated `TODO` resolution per project rules (no bare unimplemented macros found).
+- Rebuilt Orders page UI components using modern macOS Translucent glass patterns.
