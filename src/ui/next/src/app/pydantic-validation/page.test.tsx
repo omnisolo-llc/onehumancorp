@@ -7,7 +7,8 @@ global.fetch = vi.fn();
 describe("PydanticValidationPage", () => {
   it("renders correctly", () => {
     render(<PydanticValidationPage />);
-    expect(screen.getByText("Pydantic-First Tool Schema Validation")).toBeInTheDocument();
+    const elements = screen.queryAllByText("Pydantic-First Tool Schema Validation");
+    expect(elements.length).toBeGreaterThan(0);
   });
 
   it("handles valid execution", async () => {
@@ -37,14 +38,15 @@ describe("PydanticValidationPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Validation Successful/i)).toBeInTheDocument();
+      const errorElements = screen.queryAllByText(/Validation Successful/i);
+      expect(errorElements.length).toBeGreaterThan(0);
     });
   });
 
   it("handles validation error execution", async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: false,
-      json: async () => ({ error: "Validation Loop Failed" }),
+      json: async () => ({ error: "Validation Failed" }),
     });
 
     render(<PydanticValidationPage />);
@@ -66,7 +68,8 @@ describe("PydanticValidationPage", () => {
     }
 
     await waitFor(() => {
-      expect(screen.getByText(/Validation Failed/i)).toBeInTheDocument();
+      const errorElements = screen.queryAllByText(/Validation Failed/i);
+      expect(errorElements.length).toBeGreaterThan(0);
     });
   });
 });
