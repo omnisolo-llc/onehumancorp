@@ -115,6 +115,13 @@ pub async fn report_cost_handler(
     if req.metric_name == "ohc_llm_cost_total_cents" {
         let agent_id = req.labels.get("agent_id").map(|s| s.as_str()).unwrap_or("unknown_agent");
         hub.get_cost_auditor().record_manual_cost(agent_id, &tenant_id, req.value);
+        if let Some(cache) = COST_DASHBOARD_CACHE.get() {
+            let cache_clone = cache.clone();
+            let tenant_id_clone = tenant_id.clone();
+            tokio::spawn(async move {
+                cache_clone.invalidate(&tenant_id_clone).await;
+            });
+        }
     }
 
     let pool = crate::db::get_pool();
