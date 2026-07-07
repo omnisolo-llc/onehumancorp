@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+      .glassmorphism {
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          border-radius: 16px;
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+      }
+      .old-glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      .glassmorphism-btn {
+        border-radius: 8px;
+      }
+      .glassmorphism-input {
+        border-radius: 8px;
+      }
+    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Request a Service</title>
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --text-main: #1d1d1f;
+      --text-sub: #86868b;
+      --border-color: rgba(255, 255, 255, 0.4);
+      --accent-color: #0066FF;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #000000;
+        --card-bg: rgba(28, 28, 30, 0.65);
+        --text-main: #f5f5f7;
+        --text-sub: #a1a1a6;
+        --border-color: rgba(255, 255, 255, 0.1);
+      }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mobile-container {
+      width: 100%;
+      max-width: 375px;
+      padding: 24px 16px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-color);
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+    }
+    p {
+      margin: 0;
+      color: var(--text-sub);
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.65);
+      font-family: inherit;
+      font-size: 15px;
+      color: var(--text-main);
+      box-sizing: border-box;
+      resize: none;
+      margin-top: 16px;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+    @media (prefers-color-scheme: dark) {
+      textarea {
+        background: rgba(0, 0, 0, 0.5);
+      }
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      margin-top: 12px;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn-primary {
+      background-color: var(--accent-color);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="mobile-container" id="request-view">
+    <div class="header">
+      <h1 id="business-name">Loading...</h1>
+      <p>Request a Service</p>
+    </div>
+
+    <div class="glass-card">
+      <h2 style="font-size: 16px; margin: 0;">How can we help you?</h2>
+      <p style="margin-top: 4px; font-size: 13px;">Select a service, pick a time, and describe what you need done.</p>
+
+      <form id="booking-form">
+        <select id="service-select" required style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.65); font-family: inherit; font-size: 15px; margin-top: 16px; margin-bottom: 8px;">
+          <option value="" disabled selected>Select a service</option>
+        </select>
+
+        <select id="slot-select" required style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.65); font-family: inherit; font-size: 15px; margin-bottom: 16px;">
+          <option value="" disabled selected>Select a time slot</option>
+        </select>
+
+        <textarea id="description" placeholder="e.g. I have a leaky faucet in the kitchen that needs fixing." required></textarea>
+        <button type="submit" class="btn btn-primary" id="btn-submit">Book Now</button>
+      </form>
+    </div>
+    <div style="text-align: center; margin-top: 12px; font-family: sans-serif; font-size: 12px;">
+      <a href="#" id="branding-link" target="_blank" style="color: #86868b; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+    </div>
+  </div>
+
+  <div class="mobile-container" id="success-view" style="display: none; align-items: center; justify-content: center; text-align: center;">
+    <div style="width: 60px; height: 60px; background-color: #34C759; color: white; border-radius: 30px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    </div>
+    <h1 style="margin-bottom: 8px;">Request Sent!</h1>
+    <p>We've received your inquiry. We'll review it and text you a custom quote shortly.</p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tenantId = urlParams.get('tenant') || 'demo-tenant';
+
+      const brandingLink = document.getElementById('branding-link');
+      if (brandingLink) {
+        brandingLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
+      }
+
+
+      // Fetch actual business profile
+      fetch(`/api/v1/builder/edge/${tenantId}/profile`)
+        .then(res => res.json())
+        .then(data => {
+            if(data && data.business_name) {
+                document.getElementById('business-name').innerText = data.business_name;
+            } else {
+                document.getElementById('business-name').innerText = "Business Services";
+            }
+        })
+        .catch(() => {
+            document.getElementById('business-name').innerText = "Business Services";
+        });
+
+
+      const serviceSelect = document.getElementById('service-select');
+      const slotSelect = document.getElementById('slot-select');
+      const urlService = urlParams.get('service_id') || 'test_service';
+
+      serviceSelect.innerHTML = `<option value="${urlService}">Selected Service</option>`;
+
+      fetch(`/api/v1/booking/available_slots/${urlService}`, { headers: { 'x-tenant-id': tenantId }})
+        .then(res => res.json())
+        .then(data => {
+            if (data.slots && data.slots.length > 0) {
+                slotSelect.innerHTML = '<option value="" disabled selected>Select a time slot</option>';
+                data.slots.forEach(slot => {
+                    const opt = document.createElement('option');
+                    opt.value = JSON.stringify({st: slot.start_time, et: slot.end_time});
+                    opt.innerText = new Date(slot.start_time).toLocaleString();
+                    slotSelect.appendChild(opt);
+                });
+            } else {
+                slotSelect.innerHTML = '<option value="" disabled selected>No slots available</option>';
+            }
+        });
+
+      document.getElementById('booking-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const description = document.getElementById('description').value;
+        const slotVal = document.getElementById('slot-select').value;
+        const serviceVal = document.getElementById('service-select').value;
+
+        if (!slotVal) { alert('Select a slot'); return; }
+        const { st, et } = JSON.parse(slotVal);
+
+        const btn = document.getElementById('btn-submit');
+
+        btn.innerText = 'Sending...';
+        btn.disabled = true;
+
+        try {
+          const res = await fetch('/api/v1/booking/reserve', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-tenant-id': tenantId
+            },
+            body: JSON.stringify({
+              service_id: serviceVal,
+              start_time: st,
+              end_time: et,
+              customer_id: null // optional
+            })
+          });
+
+          const data = await res.json();
+          if (data.checkout_url) {
+              window.location.href = data.checkout_url;
+              return;
+          }
+
+          setTimeout(() => {
+            document.getElementById('request-view').style.display = 'none';
+            document.getElementById('success-view').style.display = 'flex';
+          }, 800);
+
+        } catch (error) {
+          console.error(error);
+          btn.innerText = 'Book Now';
+          btn.disabled = false;
+          alert('Something went wrong. Please try again.');
+        }
+      });
+    });
+  </script>
+  </body>
+</html>
