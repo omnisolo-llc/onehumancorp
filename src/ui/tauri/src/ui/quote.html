@@ -465,9 +465,10 @@
 
       // Format currency
       const formatCurrency = (cents) => {
-        return new Intl.NumberFormat('en-US', {
+        const currencyCode = quoteData.currency || localStorage.getItem('tenant_currency') || 'USD';
+        return new Intl.NumberFormat(navigator.language || 'en-US', {
           style: 'currency',
-          currency: 'USD',
+          currency: currencyCode,
         }).format(cents / 100);
       };
 

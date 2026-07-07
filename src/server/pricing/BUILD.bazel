@@ -11,6 +11,7 @@ rust_library(
         "compression.rs",
         "dynamic.rs",
         "engine.rs",
+        "currency.rs",
         "mod.rs",
         "prompt_caching.rs",
         "deduplication.rs",

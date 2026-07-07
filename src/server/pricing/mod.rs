@@ -6,6 +6,7 @@ pub mod calculator;
 pub mod compression;
 pub mod dynamic;
 pub mod engine;
+pub mod currency;
 pub mod prompt_caching;
 pub mod deduplication;
 pub mod rate_limit;
