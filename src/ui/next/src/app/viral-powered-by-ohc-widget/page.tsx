@@ -1,14 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function ViralPoweredByOHCWidgetPage() {
-  const router = useRouter();
   const [tenant, setTenant] = useState('my-business');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [title, setTitle] = useState('Viral Widget');
-  const [copied, setCopied] = useState(false);
+    const [copied, setCopied] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -20,7 +16,9 @@ export default function ViralPoweredByOHCWidgetPage() {
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
-    document.title = "Viral Widget | OHC";
+    if (typeof document !== 'undefined') {
+      document.title = "Viral Widget | OHC";
+    }
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,8 +28,19 @@ export default function ViralPoweredByOHCWidgetPage() {
     }
   };
 
-  const embedUrl = `https://ohc.app/api/v1/growth/viral-widget/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&branding=${!hasPro}`;
-  const embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
+  const referralLink = `https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
+
+  const embedCode = !hasPro ? `<!-- OHC Referral Footer Badge -->
+<script>
+  (function() {
+    var b = document.createElement('a');
+    b.href = '${referralLink}';
+    b.target = '_blank';
+    b.style.cssText = 'position:fixed;bottom:16px;right:16px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,0,0,0.8);color:#fff;border-radius:100px;font-family:sans-serif;font-size:13px;font-weight:500;text-decoration:none;z-index:9999;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.1);';
+    b.innerHTML = '<svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OHC';
+    document.body.appendChild(b);
+  })();
+</script>` : '<!-- Badge removed on Pro Plan -->';
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -39,25 +48,16 @@ export default function ViralPoweredByOHCWidgetPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!isClient) return null;
+  if (!isClient) return <div className="min-h-screen bg-indigo-50" />;
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
       <div className="w-full max-w-4xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-8">
         <div className="flex-1 p-8">
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Viral Widget Builder</h1>
+          <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Footer Badge Generator</h1>
+          <p className="text-gray-600 mb-8 text-sm">Add a "Powered by OHC" badge to your website. If a visitor clicks it and signs up, you get a referral credit.</p>
           <div className="space-y-4">
-             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Widget Title</label>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-             </div>
-             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
-                <select value={theme} onChange={(e) => setTheme(e.target.value as any)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-             </div>
+
              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
                 <input
                     type="checkbox"
@@ -87,7 +87,13 @@ export default function ViralPoweredByOHCWidgetPage() {
         <div className="flex-1 flex flex-col p-8">
            <h2 className="text-xl font-semibold font-outfit text-gray-900 mb-4">Live Preview</h2>
            <div className="flex-1 bg-gray-100 rounded-2xl shadow-inner border-2 border-dashed border-gray-300 relative overflow-hidden flex items-center justify-center p-6 min-h-[400px]">
-              <iframe src={`/api/v1/growth/viral-widget/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&branding=${!hasPro}`} className="w-full h-full border-none rounded-xl" />
+              {!hasPro ? (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'rgba(0,0,0,0.8)', color: '#fff', borderRadius: '100px', fontFamily: 'sans-serif', fontSize: '13px', fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                      <svg style={{ width: '14px', height: '14px', fill: 'currentColor' }} viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OHC
+                  </div>
+              ) : (
+                  <div className="text-gray-500 font-medium text-sm">Badge removed.</div>
+              )}
            </div>
         </div>
       </div>
