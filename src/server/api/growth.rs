@@ -2251,7 +2251,18 @@ async fn handle_check_milestones(
         types
     };
 
-    let milestones = vec![
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(tenant_id)
+        .fetch_one(&state.pool)
+        .await;
+
+    let mut conversions: i64 = 0;
+    if let Ok(r) = row {
+        use sqlx::Row;
+        conversions = r.get(0);
+    }
+
+    let mut milestones = vec![
         Milestone {
             id: "first_sale".to_string(),
             title: "🎉 Milestone: First Sale!".to_string(),
@@ -2311,6 +2322,24 @@ async fn handle_check_milestones(
             title: "🌟 Six-Figure Club".to_string(),
             description: "Your business has surpassed $100,000 in total revenue!".to_string(),
             reached: reached_types.contains(&"revenue_100k".to_string()),
+        },
+        Milestone {
+            id: "referral_platinum".to_string(),
+            title: "Platinum Referral Tier".to_string(),
+            description: "You've reached the highest referral tier with 50+ successful referrals!".to_string(),
+            reached: conversions >= 50,
+        },
+        Milestone {
+            id: "referral_gold".to_string(),
+            title: "Gold Referral Tier".to_string(),
+            description: "You've reached the Gold referral tier with 20+ successful referrals!".to_string(),
+            reached: conversions >= 20 && conversions < 50,
+        },
+        Milestone {
+            id: "referral_silver".to_string(),
+            title: "Silver Referral Tier".to_string(),
+            description: "You've reached the Silver referral tier with 5+ successful referrals!".to_string(),
+            reached: conversions >= 5 && conversions < 20,
         },
     ];
     Json(MilestonesResponse { milestones })

@@ -1380,11 +1380,14 @@ describe("OnboardingWizard", () => {
 
     await renderOnboardingWizard();
 
-    // Intro screen
-    const startBtn = screen.getByRole("button", { name: "Start My Business" });
-    await user.click(startBtn);
+    // Wait for the error banner to appear after starting zero click
+    await waitFor(() => {
+      const startBtn = screen.queryByRole("button", { name: "Start My Business" });
+      if (startBtn) {
+         user.click(startBtn);
+      }
+    });
 
-    // Wait for the skip button on step 1
     const skipBtns = await screen.findAllByRole("button", {
       name: /Skip setup/i,
     });

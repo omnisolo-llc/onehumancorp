@@ -754,3 +754,48 @@ ON CONFLICT DO NOTHING;
 INSERT INTO subscribers (id, tenant_id, customer_id, subscription_plan_id, status, health_score, last_engagement_at)
 VALUES ('sub_churn_1', 'e2e-tenant', 'c_churn_1', 'plan_churn_1', 'ACTIVE', 30, NOW() - INTERVAL '31 days')
 ON CONFLICT DO NOTHING;
+
+-- Add E2E user with 5 referrals to hit Silver Referral Tier milestone
+INSERT INTO tenants (id, name, industry, status, skip_onboarding, default_currency)
+VALUES
+  ('e2e-referral-milestone-tenant', 'OHC E2E Referral Milestone', 'Retail', 'active', true, 'USD')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
+VALUES
+  (
+    'e2e-referral-milestone-user',
+    'referral-milestone@example.com',
+    'referral-milestone@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    TRUE,
+    'e2e-referral-milestone-tenant',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+
+-- Add E2E user with 5 referrals to hit Silver Referral Tier milestone
+INSERT INTO tenants (id, name, industry, status, skip_onboarding, default_currency)
+VALUES
+  ('e2e-referral-milestone-tenant', 'OHC E2E Referral Milestone', 'Retail', 'active', true, 'USD')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
+VALUES
+  (
+    'e2e-referral-milestone-user',
+    'referral-milestone@example.com',
+    'referral-milestone@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    TRUE,
+    'e2e-referral-milestone-tenant',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  )
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO referrals (id, tenant_id, clicks, conversions)
+VALUES
+  ('ref-milestone-1', 'e2e-referral-milestone-tenant', 10, 5)
+ON CONFLICT (id) DO NOTHING;
