@@ -562,7 +562,7 @@ pub async fn cost_dashboard_handler(
 
     let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future);
 
-    let storage_bytes = storage_res.unwrap_or(0);
+    let _storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_cents, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
     let llm_cost_f64 = llm_cost_cents as f64 / 100.0;
     let trend = trend_res.unwrap_or_else(|_| vec![]);
