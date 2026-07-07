@@ -91,6 +91,7 @@ pub async fn get_tooltips(headers: axum::http::HeaderMap) -> Result<Json<std::co
         tooltips.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
         tooltips.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
         tooltips.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
+        tooltips.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
         tooltips.insert("generate-link-btn".to_string(), "Click here to share access with a team member.".to_string());
         tooltips.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
         tooltips.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
