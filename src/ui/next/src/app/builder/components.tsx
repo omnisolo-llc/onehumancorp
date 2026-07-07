@@ -57,7 +57,7 @@ export function DraggableBlock({
   return (
     <div
       draggable
-      className={`relative group transition-all duration-200 cursor-move ${isSelected ? 'ring-2 ring-[#0066FF] z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
+      className={`builder-block relative group transition-all duration-200 cursor-move ${isSelected ? 'ring-2 ring-[#0066FF] z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
       onDragStart={onDragStart as (e: React.DragEvent) => void}
       onDragOver={(e) => {
         e.preventDefault();

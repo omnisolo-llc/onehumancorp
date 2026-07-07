@@ -1284,14 +1284,14 @@ function OperationsPanel() {
       <SectionHeader title="AI Departments" detail="Operational agents stay visible for backwards-compatible business management." />
       <div className="grid gap-3 md:grid-cols-2">
         {departments.map((department) => (
-          <div key={department.id} className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5">
+          <button key={department.id} className="text-left rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5">
             <div className="flex items-center justify-between gap-3 mb-2">
               <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{department.name}</h3>
               <StatusPill>{department.status}</StatusPill>
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-455 mb-2">{department.role}</p>
             <p className="text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed">{department.description}</p>
-          </div>
+          </button>
         ))}
       </div>
     </section>
