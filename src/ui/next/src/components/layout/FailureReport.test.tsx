@@ -42,4 +42,16 @@ describe('FailureReport', () => {
     expect(screen.getByText('0-100ms')).toBeInTheDocument();
     expect(screen.getByText('100-200ms')).toBeInTheDocument();
   });
+
+  it('contains proper translucent classes', () => {
+    const { container } = render(<FailureReport message="Check styles" />);
+    const divElement = container.firstChild as HTMLElement;
+    expect(divElement).toHaveClass('backdrop-blur-[30px]');
+    expect(divElement).toHaveClass('backdrop-saturate-[210%]');
+    expect(divElement).toHaveClass('bg-[rgba(255,255,255,0.65)]');
+    expect(divElement).toHaveClass('dark:bg-[rgba(22,22,26,0.7)]');
+    expect(divElement).toHaveClass('border');
+    expect(divElement).toHaveClass('border-[rgba(255,255,255,0.4)]');
+    expect(divElement).toHaveClass('dark:border-[rgba(255,255,255,0.1)]');
+  });
 });
