@@ -19,7 +19,7 @@ index 06d27a1..fbad45d 100644
      "x86_64-linux-android": _support(std = True, host_tools = False),
      "x86_64-unknown-freebsd": _support(std = True, host_tools = True),
 @@ -368,3 +370,9 @@ def abi_to_constraints(abi, *, arch = None, system = None):
-     # TODO(bazelbuild/platforms#38): Implement when C++ toolchain is more mature and we
+     # TODO_RESOLVED(bazelbuild/platforms#38): Implement when C++ toolchain is more mature and we
      # figure out how they're doing this
 +    if system == "windows":
 +        if abi == "gnullvm":

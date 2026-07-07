@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import DOMPurify from "dompurify";
+import { marked } from "marked";
 import { WalkthroughTarget } from "./Walkthrough";
 
 type Message = {
@@ -255,10 +256,19 @@ export function HelpChat() {
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-sm saturate-[210%] ${
                     msg.sender === "user"
                       ? "bg-blue-600/80 backdrop-blur-xl text-white rounded-br-sm border border-white/20"
-                      : "bg-white/80 dark:bg-black/50 backdrop-blur-md border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm"
+                      : "bg-white/80 dark:bg-black/50 backdrop-blur-md border border-white/50 dark:border-white/20 text-gray-900 dark:text-gray-100 rounded-bl-sm prose prose-sm prose-blue dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5"
                   }`}
                   dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(msg.text),
+                    __html: DOMPurify.sanitize(
+                      msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                             .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                             .replace(/\n\n/g, '</p><p>')
+                             .replace(/^(.+)$/gm, '<p>$1</p>')
+                             .replace(/<p><p>/g, '<p>')
+                             .replace(/<\/p><\/p>/g, '</p>')
+                             .replace(/\- (.*?)<\/p>/g, '<li>$1</li>')
+                             .replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>')
+                    ),
                   }}
                 />
                 {msg.link && (
