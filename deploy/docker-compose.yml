@@ -365,7 +365,7 @@ services:
           memory: 256M
 
   edge-cache:
-    image: nginx:alpine
+    image: openresty/openresty:alpine
     ports:
       - "80:80"
     volumes:

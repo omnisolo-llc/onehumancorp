@@ -59,6 +59,7 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                 let mut tenant_id_str = None;
                 let mut product_id_str = None;
 
+                let client = reqwest::Client::new();
                 for tag in &event.tags {
                     info!("Invalidating cache for tag: {}", tag);
                     if tag.starts_with("tenant-id:") {
@@ -69,6 +70,17 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                     edge_cache.invalidate_by_tag(tag).await;
                     let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
                     cdn_cache.invalidate_by_tag(tag).await;
+
+                    // Send purge request to NGINX Edge Cache
+                    if let Err(e) = client.post("http://edge-cache/purge")
+                        .body(tag.clone())
+                        .send()
+                        .await
+                    {
+                        warn!("Failed to send purge request to NGINX for tag {}: {}", tag, e);
+                    } else {
+                        info!("Successfully sent purge request to NGINX for tag {}", tag);
+                    }
                 }
 
                 if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str) {

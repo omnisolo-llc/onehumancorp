@@ -107,8 +107,20 @@ async fn invalidate_cache_webhook(
     let tags_to_invalidate = payload.tags;
     tokio::spawn(async move {
         let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+        let client = reqwest::Client::new();
         for tag in tags_to_invalidate {
             cdn.invalidate_by_tag(&tag).await;
+
+            // Send purge request to NGINX Edge Cache
+            if let Err(e) = client.post("http://edge-cache/purge")
+                .body(tag.clone())
+                .send()
+                .await
+            {
+                tracing::warn!("Failed to send purge request to NGINX for tag {}: {}", tag, e);
+            } else {
+                tracing::info!("Successfully sent purge request to NGINX for tag {}", tag);
+            }
         }
     });
 
@@ -201,18 +213,19 @@ fn set_storefront_headers(response: &mut axum::response::Response, html: &str, t
     let result = hasher.finalize();
     let etag = format!("\"{:x}\"", result);
 
-    let mut cache_tag = format!("tenant-id:{}", tenant_id);
-    if let Some(tags) = custom_tags {
-        if !tags.is_empty() {
-            cache_tag = tags.join(", ");
-        }
+    let mut tags = vec![format!("tenant-id:{}", tenant_id)];
+    if let Some(mut ct) = custom_tags {
+        tags.append(&mut ct);
     }
 
-    if let Ok(val) = cache_tag.parse() {
+    let cache_tag_comma = tags.join(", ");
+    let surrogate_key_space = tags.join(" ");
+
+    if let Ok(val) = cache_tag_comma.parse() {
         response.headers_mut().insert("Cache-Tag", val);
     }
 
-    if let Ok(val) = cache_tag.parse() {
+    if let Ok(val) = surrogate_key_space.parse() {
         response.headers_mut().insert("Surrogate-Key", val);
     }
 
