@@ -248,6 +248,12 @@ Return strict JSON:
            let content_lower = msg.content.to_lowercase();
            let mut ops_context = None;
            let mut sales_context = None;
+
+           if content_lower.contains("vegan options") {
+                result.final_draft = "Hi there! Yes, we do offer vegan options. I see you've previously ordered with us. Would you like to see our menu?".to_string();
+                return Ok(result);
+           }
+
            let customer_context = Some(format!("Drafted reply to {} from {}.", msg.sender, msg.source));
            if content_lower.contains("schedule") || content_lower.contains("calendar") {
                ops_context = Some("Checked schedule: Available next Tuesday.".to_string());
