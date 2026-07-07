@@ -772,6 +772,11 @@ impl DB {
                 Ok(Ok(val)) => return Ok(val),
                 Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
+
+                    if err_str.contains("syntax error") || err_str.contains("42601") {
+                        return Err(err);
+                    }
+
                     let is_sqlite_lock = self.is_sqlite()
                         && (err_str.contains("database is locked")
                             || err_str.contains("sqlite_busy"));
