@@ -1,5 +1,9 @@
 use tauri::Manager;
 
+pub mod db;
+pub mod sync;
+pub mod offline_commands;
+
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AiProviderConfig {
@@ -579,10 +583,24 @@ pub fn run() {
             get_help_article,
             get_help_videos,
             get_changelog,
+            offline_commands::queue_offline_mutation,
+            offline_commands::get_pending_mutations,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
             window.set_title("OHC").unwrap();
+
+            let handle = app.handle().clone();
+            tauri::async_runtime::block_on(async move {
+                let db_path = "offline_mutations.db";
+                if let Ok(local_db) = db::LocalDb::init(db_path).await {
+                    handle.manage(local_db.clone());
+                    sync::start_background_sync(handle.clone(), local_db).await;
+                } else {
+                    eprintln!("Failed to initialize local SQLite database");
+                }
+            });
+
             Ok(())
         })
         .run(context)
