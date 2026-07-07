@@ -3544,28 +3544,28 @@
         btn.addEventListener("click", async (e) => {
           e.preventDefault();
           const originalText = btn.innerText;
-          btn.innerText = "Saving...";
-          btn.disabled = true;
+          e.target.innerText = "Saving...";
+          e.target.disabled = true;
 
           // Add a small delay to allow browser to render "Saving..."
 
 
           saveCurrentState();
 
-          btn.innerText = "Draft Saved!";
-          btn.style.backgroundColor = "#34C759";
-          btn.style.color = "white";
-          btn.style.borderColor = "#34C759";
+          e.target.innerText = "Draft Saved!";
+          e.target.style.backgroundColor = "#34C759";
+          e.target.style.color = "white";
+          e.target.style.borderColor = "#34C759";
 
           const msg = document.getElementById("draft-saved-msg");
           if (msg) msg.style.display = "block";
 
           setTimeout(() => {
-            btn.innerText = originalText;
-            btn.disabled = false;
-            btn.style.backgroundColor = "";
-            btn.style.color = "";
-            btn.style.borderColor = "";
+            e.target.innerText = originalText;
+            e.target.disabled = false;
+            e.target.style.backgroundColor = "";
+            e.target.style.color = "";
+            e.target.style.borderColor = "";
             if (msg) msg.style.display = "none";
           }, 2000);
         });
