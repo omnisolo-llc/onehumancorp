@@ -1723,7 +1723,6 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
-
                     CREATE TABLE IF NOT EXISTS assistant_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
@@ -1764,7 +1763,6 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
-
                     CREATE TABLE IF NOT EXISTS assistant_workspaces (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
