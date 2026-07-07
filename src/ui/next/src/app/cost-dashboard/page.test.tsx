@@ -397,6 +397,8 @@ describe('CostDashboardPage', () => {
       return Promise.reject(new Error('not found'));
     }) as any;
 
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     render(<CostDashboardPage />);
 
     await waitFor(() => {
@@ -414,6 +416,8 @@ describe('CostDashboardPage', () => {
       consoleErrorSpy.mockRestore();
 
     });
+
+    consoleSpy.mockRestore();
   });
 
   test('handles cancel subscription correctly', async () => {
