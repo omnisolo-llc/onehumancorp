@@ -1,64 +1,175 @@
-"use client";
+'use client';
+import { useState, useEffect } from 'react';
 
-import React, { useState, useEffect } from 'react';
-import { AppShell } from '@/app/components/AppShell';
+type StaffTask = {
+    id: string;
+    description: string;
+    priority: string;
+    status: string;
+};
+
+type ShiftSummary = {
+    id: string;
+    shift_date: string;
+    summary_text: string;
+};
 
 export default function StaffPage() {
-  const [shifts, setShifts] = useState([]);
-  const [tasks, setTasks] = useState([]);
+    const [tasks, setTasks] = useState<StaffTask[]>([]);
+    const [summaries, setSummaries] = useState<ShiftSummary[]>([]);
+    const [activeTab, setActiveTab] = useState<'tasks' | 'summaries'>('tasks');
+    const [escalationText, setEscalationText] = useState('');
+    const [escalations, setEscalations] = useState<{id: string, text: string, status: string}[]>([]);
 
-  useEffect(() => {
-    // In a real implementation, we would fetch the staff member's shifts and tasks
-    setShifts([
-      { id: '1', role: 'Baker', startTime: new Date().toISOString(), endTime: new Date(Date.now() + 8*3600000).toISOString(), status: 'Scheduled' }
-    ]);
-    setTasks([
-      { id: '1', description: 'Fulfill 5 cake orders', status: 'Pending' }
-    ]);
-  }, []);
+    useEffect(() => {
+        if (activeTab === 'tasks') {
+            fetch('/api/staff/tasks')
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.tasks) {
+                        setTasks(data.tasks);
+                    }
+                })
+                .catch(console.error);
+        } else {
+            fetch('/api/staff/summaries')
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.summaries) {
+                        setSummaries(data.summaries);
+                    }
+                })
+                .catch(console.error);
+        }
+    }, [activeTab]);
 
-  return (
-    <AppShell title="My Shifts & Tasks">
-      <div className="max-w-[375px] mx-auto min-h-screen bg-gray-50 pb-20">
-        <header className="px-4 py-6 bg-white border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">My Shifts & Tasks</h1>
-        </header>
+    const markTaskComplete = async (taskId: string) => {
+        // Optimistic update
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
 
-        <main className="p-4 space-y-6">
-          <section>
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">Upcoming Shifts</h2>
-            <div className="space-y-3">
-              {shifts.map((shift: any) => (
-                <div key={shift.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-medium text-gray-900">{shift.role}</span>
-                    <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full">{shift.status}</span>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {new Date(shift.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} -
-                    {new Date(shift.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                  </div>
-                  <button className="mt-3 w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 min-h-[44px]">
-                    Request Swap
-                  </button>
-                </div>
-              ))}
+        try {
+            await fetch(`/api/staff/tasks/${taskId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: 'completed',
+                    offline_timestamp: new Date().toISOString()
+                })
+            });
+        } catch (error) {
+            console.error('Failed to sync task completion. Will retry when online.');
+        }
+    };
+
+    const handleEscalationSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!escalationText.trim()) return;
+
+        // Optimistic update
+        const tempId = `temp_${Date.now()}`;
+        setEscalations(prev => [{ id: tempId, text: escalationText, status: 'pending' }, ...prev]);
+        const text = escalationText;
+        setEscalationText('');
+
+        try {
+            await fetch('/api/staff/escalations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    escalation_text: text,
+                    staff_id: 'staff_1'
+                })
+            });
+        } catch (error) {
+            console.error('Failed to send escalation.');
+        }
+    };
+
+    return (
+        <div className="p-4 bg-gray-50 min-h-screen">
+            <h1 className="text-2xl font-bold mb-4">Staff Mesh</h1>
+
+            <div className="flex gap-4 mb-4">
+                <button
+                    onClick={() => setActiveTab('tasks')}
+                    data-testid="view-tasks-tab"
+                    className={`px-4 py-2 rounded ${activeTab === 'tasks' ? 'bg-blue-600 text-white' : 'bg-white'}`}
+                >
+                    Tasks
+                </button>
+                <button
+                    onClick={() => setActiveTab('summaries')}
+                    data-testid="view-summaries-tab"
+                    className={`px-4 py-2 rounded ${activeTab === 'summaries' ? 'bg-blue-600 text-white' : 'bg-white'}`}
+                >
+                    Summaries
+                </button>
             </div>
-          </section>
 
-          <section>
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">My Tasks</h2>
-            <div className="space-y-3">
-              {tasks.map((task: any) => (
-                <div key={task.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                  <span className="text-gray-800">{task.description}</span>
-                  <input type="checkbox" className="h-6 w-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+            {activeTab === 'tasks' && (
+                <div className="space-y-4">
+                    {/* Escalation Form */}
+                    <div className="bg-white/65 p-4 rounded-xl border border-white/40 shadow-sm mb-4">
+                        <form onSubmit={handleEscalationSubmit} className="flex gap-2">
+                            <input
+                                type="text"
+                                data-testid="escalation-input"
+                                placeholder="Report an issue..."
+                                className="flex-1 p-2 border rounded"
+                                value={escalationText}
+                                onChange={(e) => setEscalationText(e.target.value)}
+                            />
+                            <button
+                                type="submit"
+                                data-testid="submit-escalation-btn"
+                                className="bg-red-500 text-white px-4 py-2 rounded"
+                            >
+                                Escalate
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Pending Escalations */}
+                    {escalations.map(esc => (
+                        <div key={esc.id} data-testid="escalation-card" className="bg-red-100 p-3 rounded">
+                            <p className="font-bold">Escalation: {esc.text} ({esc.status})</p>
+                        </div>
+                    ))}
+
+                    {/* Task List */}
+                    {tasks.map(task => (
+                        <div key={task.id} data-testid="staff-task-card" className="bg-white/65 p-4 rounded-xl border border-white/40 shadow-sm flex justify-between items-center">
+                            <div>
+                                <h3 className="font-bold">{task.description}</h3>
+                                <p className="text-sm text-gray-500">Priority: {task.priority}</p>
+                                <p className="text-sm">Status: {task.status}</p>
+                            </div>
+                            {task.status !== 'completed' && (
+                                <button
+                                    onClick={() => markTaskComplete(task.id)}
+                                    data-testid="mark-complete-btn"
+                                    className="bg-green-500 text-white px-3 py-1 rounded"
+                                >
+                                    Complete
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                    {tasks.length === 0 && <p>No tasks at the moment.</p>}
                 </div>
-              ))}
-            </div>
-          </section>
-        </main>
-      </div>
-    </AppShell>
-  );
+            )}
+
+            {activeTab === 'summaries' && (
+                <div className="space-y-4">
+                    {summaries.map(summary => (
+                        <div key={summary.id} data-testid="shift-summary-card" className="bg-white/65 p-4 rounded-xl border border-white/40 shadow-sm">
+                            <h3 className="font-bold">{summary.shift_date}</h3>
+                            <p>{summary.summary_text}</p>
+                        </div>
+                    ))}
+                    {summaries.length === 0 && <p>No summaries available.</p>}
+                </div>
+            )}
+        </div>
+    );
 }
