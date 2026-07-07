@@ -158,7 +158,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
      });
 
      setTimeout(() => {
-       setStatus('Cash sale recorded.');
+       setStatus(typeof window !== 'undefined' && !navigator.onLine ? 'Cash sale saved offline. Will sync when network is restored.' : 'Cash sale recorded.');
        if (onSuccess) onSuccess();
      }, 500);
   };
