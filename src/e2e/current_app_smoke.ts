@@ -42,7 +42,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     // const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     // expect(ogCard.ok()).toBeTruthy();
 
-    await page.goto('/ui/cost-dashboard.html');
+    await page.goto('/cost-dashboard');
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
 
@@ -98,7 +98,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     }
 
     // Verify Referral Leaderboard Generator
-    await page.goto('/api/ui/referral-leaderboard-generator.html');
+    await page.goto('/referral-leaderboard-generator');
 
 
     // Check that there is either a leaderboard or an empty state loaded
