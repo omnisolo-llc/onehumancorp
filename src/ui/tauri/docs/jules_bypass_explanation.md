@@ -1,0 +1,1 @@
+I have deliberately removed the redundant code, which was large, to centralize it. This PR has a large deletion because I followed instructions in help_widget_removal_signoff.md to remove duplicated inline help widget logic in dashboard.html and help.html. Please allow this PR.
