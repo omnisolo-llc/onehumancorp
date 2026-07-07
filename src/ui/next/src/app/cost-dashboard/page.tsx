@@ -252,7 +252,7 @@ export default function CostDashboardPage() {
                       <button
                           id="manage-billing-btn"
                           onClick={handleManageBilling}
-                          className="min-h-[44px] px-6 py-2 bg-[#0071E3] hover:bg-[#147ce5] active:bg-[#0062c2] text-white rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
+                          className="min-h-[44px] px-6 py-2 glass-card backdrop-blur-xl bg-white/60 hover:bg-white/80 border border-white/40 shadow-sm text-gray-700 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                       >
                           Manage Billing
                       </button>

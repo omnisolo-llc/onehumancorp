@@ -33,6 +33,9 @@ test.describe('Cost Dashboard Loop', () => {
     const manageBillingBtn = page.locator('button', { hasText: 'Manage Billing' });
     await expect(manageBillingBtn).toBeVisible({ timeout: 15000 });
     await expect(manageBillingBtn).toBeEnabled();
+
+    await manageBillingBtn.click();
+    await expect(page).toHaveURL(/.*\/pricing/);
   });
 
   test('Cost dashboard back to plan navigation works successfully', async ({ page }) => {

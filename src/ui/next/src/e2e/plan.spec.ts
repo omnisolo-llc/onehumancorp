@@ -22,6 +22,12 @@ test.describe('My Plan Page Loop', () => {
   test('My Plan page Upgrade button navigates to pricing', async ({ page }) => {
     await page.goto('/plan');
     await page.locator('button', { hasText: 'Upgrade' }).click();
-    await expect(page).toHaveURL('/pricing');
+    await expect(page).toHaveURL(/.*\/pricing/);
+  });
+
+  test('My Plan page Manage Billing button navigates correctly', async ({ page }) => {
+    await page.goto('/plan');
+    await page.locator('button', { hasText: 'Manage Billing' }).click();
+    await expect(page).toHaveURL(/.*\/pricing/);
   });
 });
