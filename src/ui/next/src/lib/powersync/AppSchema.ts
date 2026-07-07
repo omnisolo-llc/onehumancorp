@@ -63,10 +63,33 @@ const serviceRoutes = new Table({
   updated_at: column.text
 });
 
+const staffTasks = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  staff_id: column.text,
+  description: column.text,
+  priority: column.integer,
+  status: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const shiftSummaries = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  shift_id: column.text,
+  staff_id: column.text,
+  summary_text: column.text,
+  metrics: column.text,
+  created_at: column.text
+});
+
 export const AppSchema = new Schema({
   appointments: appointments,
   service_routes: serviceRoutes,
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages,
-  pending_actions: pendingActions
+  pending_actions: pendingActions,
+  staff_tasks: staffTasks,
+  shift_summaries: shiftSummaries
 });

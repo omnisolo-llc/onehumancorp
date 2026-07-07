@@ -162,6 +162,38 @@ impl DailyOpsRoutineWorker {
                              .bind(&updated_at)
                              .execute(&mut *conn)
                              .await;
+
+                             let task_id = Uuid::new_v4().to_string();
+                             let _ = sqlx::query(
+                                 r#"
+                                 INSERT INTO staff_tasks (id, tenant_id, description, priority, status)
+                                 VALUES ($1, $2, $3, $4, $5)
+                                 "#
+                             )
+                             .bind(&task_id)
+                             .bind(&tenant_id)
+                             .bind("Review Daily Prep Checklist")
+                             .bind(1)
+                             .bind("pending")
+                             .execute(&mut *conn)
+                             .await;
+
+                             let summary_id = Uuid::new_v4().to_string();
+                             let metrics_json = sqlx::types::Json(json!({"completed_tasks": 0, "prep_status": "started"}));
+                             let _ = sqlx::query(
+                                 r#"
+                                 INSERT INTO shift_summaries (id, tenant_id, shift_id, staff_id, summary_text, metrics)
+                                 VALUES ($1, $2, $3, $4, $5, $6)
+                                 "#
+                             )
+                             .bind(&summary_id)
+                             .bind(&tenant_id)
+                             .bind("shift-initial")
+                             .bind("system")
+                             .bind("Daily prep shift started.")
+                             .bind(&metrics_json)
+                             .execute(&mut *conn)
+                             .await;
                         }
                     }
                 }

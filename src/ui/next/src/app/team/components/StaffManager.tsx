@@ -12,6 +12,7 @@ type StaffMember = {
 
 export default function StaffManager() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [summaries, setSummaries] = useState<any[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -25,15 +26,21 @@ export default function StaffManager() {
     fetchStaff();
   }, []);
 
-  const fetchStaff = async () => {
+const fetchStaff = async () => {
     try {
       const response = await fetch('/api/staff');
       if (response.ok) {
         const data = await response.json();
         setStaff(data.staff || []);
       }
+
+      const summariesRes = await fetch('/api/staff/summaries');
+      if (summariesRes.ok) {
+        const data = await summariesRes.json();
+        setSummaries(data.summaries || []);
+      }
     } catch (e) {
-      console.error("Failed to fetch staff", e);
+      console.error("Failed to fetch data", e);
     } finally {
       setLoading(false);
     }
@@ -86,6 +93,33 @@ export default function StaffManager() {
                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                </div>
+             </div>
+           ))}
+         </div>
+       )}
+
+
+       <div className="flex justify-between items-center mb-4 mt-8">
+         <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">Owner-Ready Shift Summaries</h2>
+       </div>
+
+       {loading ? (
+          <div className="flex justify-center py-4">
+             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+          </div>
+       ) : summaries.length === 0 ? (
+          <div className="text-center py-4 text-gray-500 text-sm">No recent shift summaries.</div>
+       ) : (
+         <div className="space-y-3">
+           {summaries.map((summary: any) => (
+             <div key={summary.id} className="bg-white/65 backdrop-blur-[30px] p-4 rounded-xl shadow-sm border border-white/40">
+               <p className="font-semibold text-gray-900 font-outfit text-sm">{new Date(summary.created_at).toLocaleDateString()}</p>
+               <p className="text-sm text-gray-700 mt-2">{summary.summary_text}</p>
+               {summary.metrics && summary.metrics.completed_tasks && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Tasks Completed: {summary.metrics.completed_tasks}
+                  </div>
+               )}
              </div>
            ))}
          </div>
