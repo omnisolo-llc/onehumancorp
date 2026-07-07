@@ -4,34 +4,30 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test('Persona: Boutique Operator records offline cash sale and syncs it', async ({ page, context, request }) => {
-    // 1. Get token
-    const response = await request.post('/api/v1/auth/login', {
-        data: {
-            email: 'admin@ohc.local',
-            password: 'admin'
-        }
-    });
-    const { token } = await response.json();
-
     const tenantId = `tenant-offline-sync-${Date.now()}`;
     const productId = `prod-offline-sync-${Date.now()}`;
 
-    // 2. Create the limited stock product via API
-    await request.post('/api/v1/catalog/products', {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'x-tenant-id': tenantId
-        },
-        data: {
-            id: productId,
-            title: 'Offline Sync Mobile POS Item',
-            inventory_count: 5,
-            price_cents: 2500
-        }
+    // 1. Seed the database with a user, tenant, and product
+    await request.post('/api/v1/builder/seeder/exec', {
+      data: {
+        sql: `
+          INSERT INTO users (id, email, full_name, is_superadmin)
+          VALUES ('pos_user_offline_id', 'pos_offline@example.com', 'POS Offline User', false)
+          ON CONFLICT DO NOTHING;
+
+          INSERT INTO tenants (id, name, owner_email)
+          VALUES ('${tenantId}', 'POS Offline Store', 'pos_offline@example.com')
+          ON CONFLICT DO NOTHING;
+
+          INSERT INTO products (id, tenant_id, title, description, price_cents, inventory_count, available_quantity)
+          VALUES ('${productId}', '${tenantId}', 'Offline Sync Mobile POS Item', 'Offline Item', 2500, 5, 5)
+          ON CONFLICT DO NOTHING;
+        `
+      }
     });
 
     // We also need to seed staff for this tenant so the POS terminal allows login
-    await page.goto('/login');
+    await page.goto(`/login?test_email=pos_offline@example.com`);
     await page.evaluate((tenant) => {
         localStorage.setItem('tenant_id', tenant);
         localStorage.setItem('ohc_offline_staff', JSON.stringify([{
