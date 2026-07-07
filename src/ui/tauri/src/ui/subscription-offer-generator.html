@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Subscription Offer</title>
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            --text-color: #fff;
+            --primary-blue: #0A84FF;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #1e1e1e, #2d2d2d);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 375px; /* Mobile first */
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--glass-shadow);
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        p {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 16px;
+            box-sizing: border-box;
+            resize: none;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn {
+            width: 100%;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #result {
+            display: none;
+            margin-top: 24px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .result-label {
+            opacity: 0.7;
+        }
+
+        .result-value {
+            font-weight: 600;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="glass-card">
+            <h1>Recurring Membership</h1>
+            <p>Describe your subscription offer in plain English, and our AI will build the plan and entitlements automatically.</p>
+
+            <div class="input-group">
+                <textarea id="offerDescription" placeholder="e.g., 4 guitar lessons a month for $200"></textarea>
+            </div>
+
+            <button class="btn" id="generateBtn" onclick="generateOffer()">
+                <span class="btn-text">Generate Offer</span>
+                <span class="spinner" id="spinner"></span>
+            </button>
+
+            <div id="result">
+                <div style="text-align: center; margin-bottom: 16px; font-weight: 600; color: #32d74b;">Plan Created!</div>
+                <div class="result-item">
+                    <span class="result-label">Plan Name</span>
+                    <span class="result-value" id="resName"></span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Price</span>
+                    <span class="result-value" id="resPrice"></span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Interval</span>
+                    <span class="result-value" id="resInterval"></span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Entitlement</span>
+                    <span class="result-value" id="resFeature"></span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Usage Limit</span>
+                    <span class="result-value" id="resUses"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function generateOffer() {
+            const desc = document.getElementById('offerDescription').value;
+            if (!desc.trim()) return;
+
+            const btn = document.getElementById('generateBtn');
+            const btnText = document.querySelector('.btn-text');
+            const spinner = document.getElementById('spinner');
+            const resultDiv = document.getElementById('result');
+
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'inline-block';
+            resultDiv.style.display = 'none';
+
+            try {
+                // Determine base URL dynamically based on environment
+                const isTauri = window.__TAURI__ !== undefined;
+                const baseUrl = isTauri ? 'http://127.0.0.1:18789' : window.location.origin;
+
+                const response = await fetch(`${baseUrl}/api/v1/subscription/parse`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ description: desc })
+                });
+
+                if (!response.ok) throw new Error('Failed to generate offer');
+
+                const data = await response.json();
+
+                // Format price
+                const priceFormatted = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: data.currency || 'USD'
+                }).format(data.amount / 100);
+
+                document.getElementById('resName').textContent = data.plan_name;
+                document.getElementById('resPrice').textContent = priceFormatted;
+                document.getElementById('resInterval').textContent = data.interval;
+                document.getElementById('resFeature').textContent = data.feature_name;
+                document.getElementById('resUses').textContent = data.max_uses + ' uses / ' + data.interval;
+
+                resultDiv.style.display = 'block';
+            } catch (err) {
+                alert('Error generating offer. Please try again.');
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btnText.style.display = 'inline';
+                spinner.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -56,3 +56,34 @@ pub struct FulfillmentSchedule {
     pub label_url: Option<String>,
     pub created_at: i64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Subscription {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub plan_id: String,
+    pub status: String,
+    pub current_period_start: i64,
+    pub current_period_end: i64,
+    pub cancel_at_period_end: bool,
+    pub canceled_at: Option<i64>,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Entitlement {
+    pub id: String,
+    pub tenant_id: String,
+    pub subscription_id: String,
+    pub customer_id: String,
+    pub product_id: String,
+    pub feature_name: String,
+    pub max_uses: i64,
+    pub current_uses: i64,
+    pub interval: String,
+    pub expires_at: Option<i64>,
+    pub created_at: i64,
+    pub updated_at: i64,
+}

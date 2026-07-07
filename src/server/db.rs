@@ -1608,6 +1608,21 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS entitlements (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        subscription_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        feature_name TEXT NOT NULL,
+                        max_uses INTEGER NOT NULL,
+                        current_uses INTEGER NOT NULL DEFAULT 0,
+                        interval TEXT NOT NULL,
+                        expires_at TIMESTAMP,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS affiliate_links (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
