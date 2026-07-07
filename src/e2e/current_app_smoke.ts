@@ -24,23 +24,28 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(card).toHaveCSS('backdrop-filter', /blur\(30px\) saturate\(210%\)|blur\(30px\)|none/);
     await expect(card).toHaveCSS('border-radius', /16px|8px/);
 
-    // await page.goto('/agents');
-    // await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
+    await page.goto('/agents');
+    await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /The Ambassador/ }).first()).toBeVisible({ timeout: 5000 });
 
-    // await page.goto('/website-builder');
-    // await expect(page.getByRole('heading', { name: 'Setup Assistant' }).first()).toBeVisible({ timeout: 5000 });
+    await page.goto('/website-builder');
+    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'Connect Custom Software' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'Social Media Accounts' })).toBeVisible({ timeout: 5000 });
 
     await page.goto('/customer-referral-program');
     await expect(page.getByRole('heading', { name: 'Customer Referral Program' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/storefront-builder');
     await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.builder-block').first()).toBeVisible({ timeout: 5000 });
 
-    // const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
-    // expect(ogCard.ok()).toBeTruthy();
+    const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
+    expect(ogCard.ok()).toBeTruthy();
+    expect(ogCard.headers()['content-type']).toContain('image/svg+xml');
 
     await page.goto('/cost-dashboard');
     await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
