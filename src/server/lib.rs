@@ -6575,6 +6575,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())).layer(axum::middleware::from_fn(crate::auth::guest_auth_middleware)))
         .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))
         .nest("/api/staff", api::staff_mesh::router(db.clone()))
+        .nest("/api/staff/tasks", api::staff_tasks::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))

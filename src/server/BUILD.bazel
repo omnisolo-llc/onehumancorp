@@ -77,6 +77,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:sync.rs",
         "//src/server/api:pos.rs",
     "//src/server/api:staff_mesh.rs",
+    "//src/server/api:staff_tasks.rs",
     "//src/server/api:integrations_settings.rs",
     "//src/server/api:subscription.rs",
     "//src/server/api:telemetry.rs",

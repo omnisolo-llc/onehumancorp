@@ -9,6 +9,7 @@ pub mod autodream;
 pub mod terminal_api;
 pub mod pos;
 pub mod staff_mesh;
+pub mod staff_tasks;
 
 pub mod billing_webhook;
 pub mod billing_api;
