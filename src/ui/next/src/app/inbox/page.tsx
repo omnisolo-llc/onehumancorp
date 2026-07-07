@@ -470,7 +470,7 @@ function ApiInboxFallback() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`/api/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId())}`);
+        const res = await fetch(`/api/ui/omni_inbox?tenant_id=${encodeURIComponent(tenantId())}`);
         if (!res.ok) throw new Error("Failed to load inbox messages");
         const data = await res.json();
         setMessages(Array.isArray(data) ? data : []);
