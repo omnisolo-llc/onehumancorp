@@ -51,13 +51,43 @@ async fn post_orders_handler(
         if let Some(p) = payload.get("payload") {
             let order_id = p.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
             let status = p.get("status").and_then(|v| v.as_str()).unwrap_or("");
+            let client_mutation_id = payload.get("id").and_then(|v| v.as_str()).unwrap_or("");
+
             if !order_id.is_empty() && !status.is_empty() {
-                let _ = sqlx::query("UPDATE orders SET status = $1 WHERE id = $2 AND tenant_id = $3")
-                    .bind(status)
-                    .bind(order_id)
-                    .bind(tenant_id)
-                    .execute(&pool)
-                    .await;
+                if let Ok(mut tx) = pool.begin().await {
+                    if !client_mutation_id.is_empty() {
+                        let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+                            .bind(client_mutation_id)
+                            .bind(tenant_id)
+                            .fetch_one(&mut *tx)
+                            .await
+                            .unwrap_or((0,));
+
+                        if exists.0 > 0 {
+                            let _ = tx.rollback().await;
+                            continue; // Idempotency check hit, skip duplicate
+                        }
+
+                        let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+                            .bind(client_mutation_id)
+                            .bind(tenant_id)
+                            .execute(&mut *tx)
+                            .await;
+                    }
+
+                    let update_res = sqlx::query("UPDATE orders SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(status)
+                        .bind(order_id)
+                        .bind(tenant_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    if update_res.is_ok() {
+                        let _ = tx.commit().await;
+                    } else {
+                        let _ = tx.rollback().await;
+                    }
+                }
             }
         }
     }
@@ -81,39 +111,69 @@ async fn post_inventory_handler(
         if let Some(p) = payload.get("payload") {
             let item_id = p.get("item_id").and_then(|v| v.as_str()).unwrap_or("");
             let is_sold_out = p.get("is_sold_out").and_then(|v| v.as_bool()).unwrap_or(false);
-            if !item_id.is_empty() {
-                let _ = sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")
-                    .bind(is_sold_out)
-                    .bind(item_id)
-                    .bind(tenant_id)
-                    .execute(&pool)
-                    .await;
+            let client_mutation_id = payload.get("id").and_then(|v| v.as_str()).unwrap_or("");
 
-                if let Some(client) = crate::get_redis_client() {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let invalidation_topic = "cache_invalidation_events";
-                        let invalidation_payload = serde_json::json!({
-                            "event": "product.updated",
-                            "tags": [
-                                format!("tenant-id:{}", tenant_id),
-                                format!("entity:product:{}", item_id)
-                            ]
-                        }).to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+            if !item_id.is_empty() {
+                if let Ok(mut tx) = pool.begin().await {
+                    if !client_mutation_id.is_empty() {
+                        let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+                            .bind(client_mutation_id)
+                            .bind(tenant_id)
+                            .fetch_one(&mut *tx)
+                            .await
+                            .unwrap_or((0,));
+
+                        if exists.0 > 0 {
+                            let _ = tx.rollback().await;
+                            continue; // Idempotency check hit, skip duplicate
+                        }
+
+                        let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+                            .bind(client_mutation_id)
+                            .bind(tenant_id)
+                            .execute(&mut *tx)
+                            .await;
+                    }
+
+                    let update_res = sqlx::query("UPDATE products SET is_sold_out = $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(is_sold_out)
+                        .bind(item_id)
+                        .bind(tenant_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                    if update_res.is_ok() {
+                        let _ = tx.commit().await;
+
+                        if let Some(client) = crate::get_redis_client() {
+                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                let invalidation_topic = "cache_invalidation_events";
+                                let invalidation_payload = serde_json::json!({
+                                    "event": "product.updated",
+                                    "tags": [
+                                        format!("tenant-id:{}", tenant_id),
+                                        format!("entity:product:{}", item_id)
+                                    ]
+                                }).to_string();
+                                let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                            }
+                        }
+
+                        let edge_cache = crate::builder::edge::get_edge_cache();
+                        edge_cache.invalidate_by_tag(&format!("entity:product:{}", item_id)).await;
+                        edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+                        let item_id_owned = item_id.to_string();
+                        let tenant_id_owned = tenant_id.to_string();
+                        tokio::spawn(async move {
+                            let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+                            cdn.invalidate_by_tag(&format!("entity:product:{}", item_id_owned)).await;
+                            cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_owned)).await;
+                        });
+                    } else {
+                        let _ = tx.rollback().await;
                     }
                 }
-
-                let edge_cache = crate::builder::edge::get_edge_cache();
-                edge_cache.invalidate_by_tag(&format!("entity:product:{}", item_id)).await;
-                edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
-
-                let item_id_owned = item_id.to_string();
-                let tenant_id_owned = tenant_id.to_string();
-                tokio::spawn(async move {
-                    let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-                    cdn.invalidate_by_tag(&format!("entity:product:{}", item_id_owned)).await;
-                    cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_owned)).await;
-                });
             }
         }
     }
