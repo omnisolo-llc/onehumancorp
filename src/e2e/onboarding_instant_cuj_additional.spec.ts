@@ -1,29 +1,48 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Instant Build - Additional Details', () => {
+  test.beforeEach(async ({ page }) => {
+    // Clear local storage to ensure fresh state
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+    });
+
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
+        : process.cwd();
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await page.addInitScript(() => {
+      window.__TAURI__ = {
+        core: {
+          invoke: async () => null
+        }
+      };
+    });
+
+    // Clear local storage to ensure fresh state
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+    });
+  });
 
   test('Instant Build UI loads correctly', async ({ page }) => {
-    await page.goto('/onboarding');
-
-
-
-
+    await page.goto('/setup.html');
   });
 
   test('Instant bio view renders', async ({ page }) => {
-    await page.goto('/onboarding');
-
-
-
-
+    await page.goto('/setup.html');
     // Verify navigating to bio view
     await expect(page.locator('#instant-bio')).toBeVisible();
   });
 
   test('Submitting an empty bio disables the Generate Storefront button', async ({ page }) => {
-    await page.goto('/onboarding');
-
-
+    await page.goto('/setup.html');
 
     const generateButton = page.locator('#generate-storefront-btn');
     await expect(generateButton).toBeVisible();
@@ -35,9 +54,7 @@ test.describe('Onboarding Instant Build - Additional Details', () => {
   });
 
   test('Filling a bio enables the Generate Storefront button', async ({ page }) => {
-    await page.goto('/onboarding');
-
-
+    await page.goto('/setup.html');
 
     const generateButton = page.locator('#generate-storefront-btn');
     const bioInput = page.locator('#instant-bio');
@@ -48,9 +65,7 @@ test.describe('Onboarding Instant Build - Additional Details', () => {
   });
 
   test('Filling a bio and image URL enables the Generate Storefront button', async ({ page }) => {
-    await page.goto('/onboarding');
-
-
+    await page.goto('/setup.html');
 
     const generateButton = page.locator('#generate-storefront-btn');
     const bioInput = page.locator('#instant-bio');
@@ -61,5 +76,4 @@ test.describe('Onboarding Instant Build - Additional Details', () => {
 
     await expect(generateButton).not.toBeDisabled();
   });
-
 });

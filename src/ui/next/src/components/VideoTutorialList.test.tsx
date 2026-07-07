@@ -19,11 +19,20 @@ describe('VideoTutorialList', () => {
   });
 
   it('renders videos correctly', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve([
-        { id: 1, title: "Test Video 1", duration: "1:23" },
-        { id: 2, title: "Test Video 2", duration: "4:56" }
-      ])
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/tooltips') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({})
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([
+          { id: 1, title: "Test Video 1", duration: "1:23" },
+          { id: 2, title: "Test Video 2", duration: "4:56" }
+        ])
+      });
     });
 
     render(<VideoTutorialList />);
@@ -38,6 +47,7 @@ describe('VideoTutorialList', () => {
 
   it('renders empty state when no videos are returned', async () => {
     global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve([])
     });
 
@@ -50,6 +60,7 @@ describe('VideoTutorialList', () => {
 
   it('filters videos correctly based on search query', async () => {
     global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve([
         { id: 1, title: "How to setup your store", duration: "1:23" },
         { id: 2, title: "Adding new products", duration: "4:56" }
@@ -74,6 +85,7 @@ describe('VideoTutorialList', () => {
 
   it('renders empty search state when no videos match query', async () => {
     global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
       json: () => Promise.resolve([
         { id: 1, title: "Test Video 1", duration: "1:23" }
       ])
@@ -93,7 +105,6 @@ describe('VideoTutorialList', () => {
       expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
     });
   });
-});
 
   it('handles fetch failure gracefully', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -123,10 +134,10 @@ describe('VideoTutorialList', () => {
   it('opens and closes the video modal', async () => {
     global.fetch = vi.fn().mockImplementation((url) => {
       if (url === '/api/tooltips') {
-         return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({})
-         });
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({})
+        });
       }
       return Promise.resolve({
         ok: true,
@@ -161,3 +172,4 @@ describe('VideoTutorialList', () => {
       expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
     });
   });
+});

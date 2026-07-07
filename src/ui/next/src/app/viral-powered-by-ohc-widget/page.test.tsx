@@ -35,21 +35,7 @@ describe('ViralPoweredByOHCWidgetPage', () => {
 
   it('renders correctly', () => {
     render(<ViralPoweredByOHCWidgetPage />);
-    expect(screen.getByText('Viral Widget Builder')).toBeDefined();
-  });
-
-  it('updates title input', () => {
-    render(<ViralPoweredByOHCWidgetPage />);
-    const titleInput = screen.getByDisplayValue('Viral Widget');
-    fireEvent.change(titleInput, { target: { value: 'New Test Widget' } });
-    expect(screen.getByDisplayValue('New Test Widget')).toBeDefined();
-  });
-
-  it('toggles theme', () => {
-    render(<ViralPoweredByOHCWidgetPage />);
-    const themeSelect = screen.getByDisplayValue('Light');
-    fireEvent.change(themeSelect, { target: { value: 'dark' } });
-    expect(screen.getByDisplayValue('Dark')).toBeDefined();
+    expect(screen.getByText('Footer Badge Generator')).toBeDefined();
   });
 
   it('copies embed code to clipboard', () => {

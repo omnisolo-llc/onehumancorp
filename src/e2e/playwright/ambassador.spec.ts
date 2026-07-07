@@ -48,7 +48,7 @@ test.describe('Ambassador Agent Workflow', () => {
 
     // 5. Click 'Approve & Send Draft'
     const approveBtn = feedCard.getByTestId('feed-approve-btn');
-    await expect(approveBtn).toContainText('Send Draft');
+    await expect(approveBtn).toContainText('✨ Approve & Send Draft');
     await approveBtn.click();
 
   });

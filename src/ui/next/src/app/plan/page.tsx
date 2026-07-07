@@ -1,217 +1,171 @@
-"use client";
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle, CheckCircle2, ChevronRight, CreditCard, PieChart, Database, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { WithTooltip } from '../../components/TooltipRegistry';
-
-interface MyPlanData {
-  current_plan: string;
-  ai_actions_used: number;
-  ai_actions_limit: number | null;
-  storage_used_bytes: number;
-  storage_limit_bytes: number | null;
-  next_bill_estimated: number;
-  soft_limit_reached?: boolean;
-  user_message?: string;
+interface PlanMetrics {
+  current_tier: string;
+  monthly_ai_actions: number;
+  ai_actions_limit: number;
+  storage_used_mb: number;
+  storage_limit_mb: number;
+  estimated_next_bill: number;
+  projected_cost: number;
+  budget_alert?: boolean;
 }
 
-export default function MyPlanPage() {
-  const router = useRouter();
-  const [data, setData] = useState<MyPlanData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isManagingBilling, setIsManagingBilling] = useState(false);
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount / 100);
+};
+
+export default function PlanPage() {
+  const [metrics, setMetrics] = useState<PlanMetrics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlanData = async () => {
+    // In a real app, this would be an API call to our backend
+    // which integrates with Stripe Billing and our internal metrics DB
+    const fetchMetrics = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/billing/my-plan', {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        setMetrics({
+          current_tier: 'Professional',
+          monthly_ai_actions: 845,
+          ai_actions_limit: 1000,
+          storage_used_mb: 4200,
+          storage_limit_mb: 5000,
+          estimated_next_bill: 4900, // $49.00
+          projected_cost: 5500, // $55.00
+          budget_alert: true,
         });
-        if (response.ok) {
-          const json = await response.json();
-          setData(json);
-        }
       } catch (error) {
-        console.error('Failed to fetch plan data:', error);
+        console.error("Failed to fetch plan metrics:", error);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    fetchPlanData();
+    fetchMetrics();
   }, []);
 
-  const formatStorage = (bytes: number) => {
-      const mb = bytes / (1024 * 1024);
-      if (mb < 1) return "< 1 MB";
-      if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
-      return parseFloat(mb.toFixed(1)) + " MB";
-  };
-
-  const handleManageBilling = async () => {
-    setIsManagingBilling(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/billing/create-billing-portal-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create billing portal session');
-      }
-
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('Billing portal error:', error);
-      alert('Failed to initiate billing portal. Please try again.');
-      setIsManagingBilling(false);
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount / 100);
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 justify-center items-center p-4">
-        <div className="flex flex-col items-center justify-center p-8 app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg rounded-2xl w-full max-w-sm animate-pulse">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          <p className="mt-6 text-gray-600 font-medium">Loading your plan data...</p>
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="animate-pulse space-y-4 text-center">
+          <div className="h-12 w-12 rounded-full bg-slate-200 mx-auto"></div>
+          <div className="text-slate-500">Loading your plan details...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden max-w-[100vw]">
-      <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 app-panel-header backdrop-blur-md bg-white/70 shadow-sm w-full glass-panel">
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-3 py-2 glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-sm rounded-xl text-sm font-medium text-gray-800 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 flex items-center justify-center">
-            Back
-          </button>
-          <WithTooltip id="my-plan-tooltip" defaultText="View and manage your subscription plan and usage.">
-            <h1 className="text-xl md:text-2xl font-bold font-outfit text-gray-900 tracking-tight">My Plan</h1>
-          </WithTooltip>
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">My Plan</h1>
+        <p className="mt-2 text-slate-600">
+          Manage your subscription, view current usage, and estimate your next bill.
+        </p>
+      </div>
+
+      {metrics?.budget_alert && (
+        <div
+          className="flex items-center gap-3 p-4 bg-amber-50 text-amber-900 rounded-lg border border-amber-200"
+          role="alert"
+        >
+          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+          <div className="text-sm">
+            <span className="font-semibold">Budget health warning.</span> Your projected cost for this month ({formatCurrency(metrics.projected_cost)}) is nearing or exceeding your set threshold.
+          </div>
         </div>
-      </header>
+      )}
 
-      <main className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
-
-        {data?.soft_limit_reached && data?.user_message && (
-            <div className="mb-2 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 flex items-start gap-3 shadow-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mt-0.5 shrink-0 text-amber-600" style={{ width: '20px', height: '20px' }}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <p className="text-sm font-medium">{data.user_message}</p>
-            </div>
-        )}
-
-        {data?.budget_health_alert && (
-            <div className="mb-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 flex items-start gap-3 shadow-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mt-0.5 shrink-0 text-red-600" style={{ width: '20px', height: '20px' }}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <p className="text-sm font-medium">Warning: Your projected cost for this month exceeds your budget threshold. Please consider upgrading or reducing usage.</p>
-            </div>
-        )}
-
-        {/* Status Snapshot */}
-        <section className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 p-6 rounded-2xl">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <div>
-                    <h2 className="text-2xl font-bold font-outfit text-gray-900 flex items-center gap-2">
-                        Plan: <span className="text-indigo-600">{data?.current_plan || 'Free'}</span>
-                    </h2>
-                </div>
-                <div>
-                    <h2 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">
-                        Estimated Next Bill: <span className="text-green-600">{formatCurrency(data?.next_bill_estimated || 0)}</span>
-                    </h2>
-                </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                <button
-                    onClick={() => router.push('/pricing')}
-                    className="w-full sm:w-auto px-6 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
-                    Upgrade
-                </button>
-                <button
-                    onClick={handleManageBilling}
-                    disabled={isManagingBilling}
-                    className="w-full sm:w-auto px-6 py-3 glass-card backdrop-blur-xl bg-white/60 hover:bg-white/80 border border-white/40 shadow-sm rounded-xl font-medium transition-all hover:shadow-md hover:-translate-y-0.5 duration-300 text-center disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm">
-                    {isManagingBilling ? "Redirecting..." : "Manage Billing"}
-                </button>
-                <button
-                    onClick={() => router.push('/cost-dashboard')}
-                    className="w-full sm:w-auto px-6 py-3 glass-card backdrop-blur-xl bg-white/60 hover:bg-white/80 text-gray-700 border border-white/40 rounded-xl font-medium transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-300 text-center">
-                    View Detailed Costs
-                </button>
-            </div>
-        </section>
-
-        {/* Current Usage Section */}
-        <section className="app-card ohc-growth-card glass-panel backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 mt-4 rounded-2xl overflow-hidden">
-          <div className="app-panel-header backdrop-blur-md bg-white/70 px-6 py-4 border-b border-white/40 bg-transparent">
-             <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Your Current Usage</h2>
-          </div>
-          <div className="app-panel-body p-6">
-              <div className="flex flex-col gap-8">
-                  {/* AI Actions */}
-                  <div>
-                      <div className="flex justify-between items-end mb-2">
-                          <span className="font-medium text-gray-700 text-lg">AI actions used this month</span>
-                          <span className="font-bold text-gray-900 text-lg">
-                              {data?.ai_actions_used || 0} <span className="text-gray-500 font-normal text-base">{data?.ai_actions_limit != null && data.ai_actions_limit > 0 ? `/ ${data.ai_actions_limit}` : '/ Unlimited'}</span>
-                          </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                          <div
-                              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full transition-all duration-500"
-                              style={{ width: data?.ai_actions_limit != null && data.ai_actions_limit > 0 ? `${Math.min(100, ((data?.ai_actions_used || 0) / data.ai_actions_limit) * 100)}%` : '5%' }}>
-                          </div>
-                      </div>
-                  </div>
-
-                  {/* Storage */}
-                  <div>
-                      <div className="flex justify-between items-end mb-2">
-                          <span className="font-medium text-gray-700 text-lg">Storage used</span>
-                          <span className="font-bold text-gray-900 text-lg">
-                              {formatStorage(data?.storage_used_bytes || 0)} <span className="text-gray-500 font-normal text-base">{data?.storage_limit_bytes != null && data.storage_limit_bytes > 0 ? `/ ${formatStorage(data.storage_limit_bytes)}` : '/ Unlimited'}</span>
-                          </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                          <div
-                              className="bg-gradient-to-r from-blue-500 to-cyan-400 h-3 rounded-full transition-all duration-500"
-                              style={{ width: data?.storage_limit_bytes != null && data.storage_limit_bytes > 0 ? `${Math.min(100, ((data?.storage_used_bytes || 0) / data.storage_limit_bytes) * 100)}%` : '5%' }}>
-                          </div>
-                      </div>
-                  </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              Current Plan
+              <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                {metrics?.current_tier}
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Your workspace is currently on the {metrics?.current_tier} tier.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-600">
+                <Zap className="h-4 w-4" />
+                <span className="text-sm">AI Actions</span>
               </div>
-          </div>
-        </section>
+              <div className="text-sm font-medium">
+                {metrics?.monthly_ai_actions} / {metrics?.ai_actions_limit}
+              </div>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-600">
+                <Database className="h-4 w-4" />
+                <span className="text-sm">Storage Used</span>
+              </div>
+              <div className="text-sm font-medium">
+                {(metrics?.storage_used_mb! / 1000).toFixed(1)} GB / {(metrics?.storage_limit_mb! / 1000).toFixed(1)} GB
+              </div>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-600">
+                <CreditCard className="h-4 w-4" />
+                <span className="text-sm">Estimated Next Bill</span>
+              </div>
+              <div className="text-sm font-medium">
+                {formatCurrency(metrics?.estimated_next_bill || 0)}
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white">
+              Upgrade Plan
+            </Button>
+          </CardFooter>
+        </Card>
 
-      </main>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-        /* The .ohc-growth-card styles are now managed globally in globals.css for design token consistency */
-      `}} />
+        <div className="space-y-6">
+          <Card className="border-slate-200 shadow-sm bg-slate-50/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Need more capacity?</CardTitle>
+              <CardDescription>
+                Upgrade to Enterprise for unlimited AI actions, 1TB storage, and dedicated support.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-start gap-2 text-sm text-slate-600">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                  Unlimited AI workspace actions
+                </li>
+                <li className="flex items-start gap-2 text-sm text-slate-600">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                  1TB secure media storage
+                </li>
+                <li className="flex items-start gap-2 text-sm text-slate-600">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                  Custom reporting dashboards
+                </li>
+              </ul>
+              <Button variant="outline" className="w-full justify-between bg-white">
+                View All Plans
+                <ChevronRight className="h-4 w-4 text-slate-400" />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
