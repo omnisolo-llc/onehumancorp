@@ -41,8 +41,8 @@ describe('API Docs Spec Route', () => {
     const response = await GET(request);
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data).toEqual({});
+    expect(response.status).toBe(502);
+    expect(data.error).toBe("Backend unavailable");
   });
 
   it('handles fetch exceptions gracefully with empty object', async () => {
@@ -52,7 +52,7 @@ describe('API Docs Spec Route', () => {
     const response = await GET(request);
     const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data).toEqual({});
+    expect(response.status).toBe(502);
+    expect(data.error).toBe("Backend unavailable");
   });
 });
