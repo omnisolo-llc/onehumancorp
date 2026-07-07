@@ -1977,7 +1977,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 aria-label="Approve & Send Draft"
                 data-testid="approve-ambassador-reply"
               >
-                Send Draft
+                ✨ Approve & Send Draft
               </button>
               <button
                 onClick={() => {
