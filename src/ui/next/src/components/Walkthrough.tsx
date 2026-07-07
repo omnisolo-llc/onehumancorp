@@ -21,10 +21,6 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
-    const isE2E = process.env.NEXT_PUBLIC_E2E === 'true';
-    const forceWalkthrough = typeof window !== 'undefined' && (window.localStorage.getItem('TEST_WALKTHROUGH') === 'true' || window.location.search.includes('test_walkthrough=true'));
-    if (isE2E && !forceWalkthrough) return;
-
     if (!isOpen || steps.length === 0) return;
 
     const currentStep = steps[currentStepIndex];
@@ -63,6 +59,9 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
   }, [isOpen, currentStepIndex, steps]);
 
   if (!isOpen || steps.length === 0) return null;
+  const isE2E = process.env.NEXT_PUBLIC_E2E === 'true';
+  const forceWalkthrough = typeof window !== 'undefined' && (window.localStorage.getItem('TEST_WALKTHROUGH') === 'true' || window.location.search.includes('test_walkthrough=true'));
+  if (isE2E && !forceWalkthrough) return null;
 
   const currentStep = steps[currentStepIndex];
   const isLastStep = currentStepIndex === steps.length - 1;
