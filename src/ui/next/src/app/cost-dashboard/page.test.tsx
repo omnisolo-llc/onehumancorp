@@ -31,6 +31,7 @@ describe('CostDashboardPage', () => {
   });
 
   afterEach(() => {
+    vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
