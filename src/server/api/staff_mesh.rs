@@ -564,3 +564,119 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
     }
 }
+
+#[derive(Deserialize)]
+pub struct StaffEscalationRequest {
+    pub alert_id: Option<String>,
+    pub draft: String,
+}
+
+#[derive(Serialize)]
+pub struct StaffEscalationResponse {
+    pub success: bool,
+}
+
+pub async fn escalate_issue_handler(
+    headers: HeaderMap,
+    State(db): State<Arc<DB>>,
+    Json(payload): Json<StaffEscalationRequest>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    let triage_id = uuid::Uuid::new_v4().to_string();
+
+    let context_json = serde_json::json!({
+        "message": payload.draft,
+        "alert_id": payload.alert_id,
+        "source": "Staff Escalation"
+    }).to_string();
+
+    let pool = crate::db::get_pool();
+    if let Err(e) = sqlx::query(
+        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'staff_escalation', $3, $4, 'PENDING_APPROVAL', NOW(), NOW())"
+    )
+    .bind(&triage_id)
+    .bind(&tenant_id)
+    .bind(&context_json)
+    .bind(serde_json::json!({ "action_type": "Review Escalation" }).to_string())
+    .execute(&pool)
+    .await {
+        tracing::error!("Failed to insert triage item for staff escalation: {}", e);
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "db_error"})),
+        ).into_response();
+    }
+
+    (axum::http::StatusCode::OK, Json(StaffEscalationResponse { success: true })).into_response()
+}
+
+pub async fn get_staff_tasks_handler(
+    headers: HeaderMap,
+    State(_db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    let pool = crate::db::get_pool();
+    let rows = sqlx::query(
+        "SELECT id, tenant_id, staff_id, description, status, priority, created_at, updated_at FROM staff_tasks WHERE tenant_id = $1 ORDER BY created_at DESC"
+    )
+    .bind(&tenant_id)
+    .fetch_all(&pool)
+    .await;
+
+    let tasks = rows.map(|rows| rows.into_iter().map(|row| {
+        use sqlx::Row;
+        serde_json::json!({
+            "id": row.get::<String, _>("id"),
+            "tenant_id": row.get::<String, _>("tenant_id"),
+            "staff_id": row.get::<String, _>("staff_id"),
+            "description": row.get::<String, _>("description"),
+            "status": row.get::<String, _>("status"),
+            "priority": row.get::<String, _>("priority"),
+            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+            "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
+        })
+    }).collect::<Vec<_>>()).unwrap_or_default();
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({ "tasks": tasks }))).into_response()
+}
+
+pub async fn get_shift_summaries_handler(
+    headers: HeaderMap,
+    State(_db): State<Arc<DB>>,
+) -> impl IntoResponse {
+    let tenant_id = match get_tenant_id(&headers) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
+
+    let pool = crate::db::get_pool();
+    let rows = sqlx::query(
+        "SELECT id, tenant_id, shift_date, summary_text, metrics, created_at, updated_at FROM shift_summaries WHERE tenant_id = $1 ORDER BY shift_date DESC LIMIT 30"
+    )
+    .bind(&tenant_id)
+    .fetch_all(&pool)
+    .await;
+
+    let summaries = rows.map(|rows| rows.into_iter().map(|row| {
+        use sqlx::Row;
+        serde_json::json!({
+            "id": row.get::<String, _>("id"),
+            "tenant_id": row.get::<String, _>("tenant_id"),
+            "shift_date": row.get::<chrono::NaiveDate, _>("shift_date"),
+            "summary_text": row.get::<String, _>("summary_text"),
+            "metrics": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("metrics"),
+            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+            "updated_at": row.get::<chrono::DateTime<chrono::Utc>, _>("updated_at"),
+        })
+    }).collect::<Vec<_>>()).unwrap_or_default();
+
+    (axum::http::StatusCode::OK, Json(serde_json::json!({ "summaries": summaries }))).into_response()
+}
