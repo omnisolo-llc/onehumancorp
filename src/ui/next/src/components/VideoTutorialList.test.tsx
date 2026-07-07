@@ -89,7 +89,7 @@ describe('VideoTutorialList', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Test Video 1')).not.toBeInTheDocument();
-      expect(screen.getByText('No video tutorials match your search.')).toBeInTheDocument();
+      expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
     });
   });
 });

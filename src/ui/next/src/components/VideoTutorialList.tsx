@@ -71,12 +71,28 @@ export function VideoTutorialList({
       </div>
 
       {videos.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <p>No video tutorials available right now.</p>
+        <div className="flex flex-col items-center justify-center py-24 px-8 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl min-h-[400px] w-full mx-auto transition-all">
+          <svg className="w-20 h-20 max-w-[80px] max-h-[80px] text-gray-400 mb-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <p className="text-center text-gray-700 dark:text-gray-300 font-medium text-xl md:text-2xl mb-2">
+            No video tutorials available right now.
+          </p>
+          <p className="text-center text-gray-500 dark:text-gray-400 text-base md:text-lg mb-8 max-w-md">
+            Check back later for new guides and tutorials.
+          </p>
         </div>
       ) : filteredVideos.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <p>No video tutorials match your search.</p>
+        <div className="flex flex-col items-center justify-center py-24 px-8 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-3xl min-h-[400px] w-full mx-auto transition-all">
+          <svg className="w-20 h-20 max-w-[80px] max-h-[80px] text-gray-400 mb-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <p className="text-center text-gray-700 dark:text-gray-300 font-medium text-xl md:text-2xl mb-2">
+            No results found matching <span className="text-gray-900 dark:text-gray-100 font-semibold">"{searchQuery}"</span>
+          </p>
+          <p className="text-center text-gray-500 dark:text-gray-400 text-base md:text-lg mb-8 max-w-md">
+            Try adjusting your search terms to find what you're looking for.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
