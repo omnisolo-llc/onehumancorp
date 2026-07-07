@@ -46,7 +46,7 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
+        let _should_bypass = !is_multitenant;
 
         let query = r#"
         INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
@@ -74,13 +74,13 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
-        let query = if should_bypass {
+        let _should_bypass = !is_multitenant;
+        let query = if _should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
         } else {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = $2"
         };
-        let row_opt = if should_bypass {
+        let row_opt = if _should_bypass {
             sqlx::query(query).bind(id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
         } else {
             sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
@@ -111,13 +111,13 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
-        let query = if should_bypass {
+        let _should_bypass = !is_multitenant;
+        let query = if _should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
         } else {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = $2"
         };
-        let row_opt = if should_bypass {
+        let row_opt = if _should_bypass {
             sqlx::query(query).bind(username).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
         } else {
             sqlx::query(query).bind(username).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
@@ -148,13 +148,13 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
-        let query = if should_bypass {
+        let _should_bypass = !is_multitenant;
+        let query = if _should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
         } else {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = $2"
         };
-        let row_opt = if should_bypass {
+        let row_opt = if _should_bypass {
             sqlx::query(query).bind(email).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
         } else {
             sqlx::query(query).bind(email).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
@@ -185,13 +185,13 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
-        let query = if should_bypass {
+        let _should_bypass = !is_multitenant;
+        let query = if _should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
         } else {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2"
         };
-        let row_opt = if should_bypass {
+        let row_opt = if _should_bypass {
             sqlx::query(query).bind(sub).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
         } else {
             sqlx::query(query).bind(sub).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?
@@ -222,13 +222,13 @@ impl UserRepository for SqliteUserRepository {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
-        let query = if should_bypass {
+        let _should_bypass = !is_multitenant;
+        let query = if _should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = $1 ORDER BY created_at"
         };
-        let rows = if should_bypass {
+        let rows = if _should_bypass {
             sqlx::query(query).fetch_all(&self.pool).await.map_err(|e| e.to_string())?
         } else {
             sqlx::query(query).bind(org_id).fetch_all(&self.pool).await.map_err(|e| e.to_string())?
@@ -259,9 +259,9 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
+        let _should_bypass = !is_multitenant;
 
-        let query = if should_bypass {
+        let query = if _should_bypass {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=json($5), active=$6,
             oidc_subject=$7, updated_at=$8
@@ -275,7 +275,7 @@ impl UserRepository for SqliteUserRepository {
             "#
         };
 
-        let res = if should_bypass {
+        let res = if _should_bypass {
             sqlx::query(query)
                 .bind(&user.id)
                 .bind(&user.username)
@@ -314,13 +314,13 @@ impl UserRepository for SqliteUserRepository {
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
-        let query = if should_bypass {
+        let _should_bypass = !is_multitenant;
+        let query = if _should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
             "DELETE FROM users WHERE id = $1 AND tenant_id = $2 RETURNING id"
         };
-        let res = if should_bypass {
+        let res = if _should_bypass {
             sqlx::query(query).bind(id).fetch_optional(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?
         } else {
             sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?
@@ -362,9 +362,9 @@ impl UserRepository for SqliteUserRepository {
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
+        let _should_bypass = !is_multitenant;
 
-        let row = if should_bypass {
+        let row = if _should_bypass {
             sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2")
                 .bind(jti)
                 .bind(chrono::Utc::now())
@@ -512,8 +512,8 @@ mod tests {
         let repo = SqliteUserRepository::new(_pool.clone());
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
-            let org_id = "system"; let should_bypass = !is_multitenant;
-            assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
+            let org_id = "system"; let _should_bypass = !is_multitenant;
+            assert!(!_should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
             let res = repo.get_by_id("dummy_id", "system").await;
             assert!(res.is_err(), "Must reject system id in multitenant mode");
