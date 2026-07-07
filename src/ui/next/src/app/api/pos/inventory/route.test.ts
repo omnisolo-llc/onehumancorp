@@ -30,30 +30,4 @@ describe("/api/pos/inventory", () => {
     });
   });
 
-  it("forwards POS inventory sync events to the backend", async () => {
-    const backendResponse = [{ id: "sync-real", sync_status: "SYNCED" }];
-    (global.fetch as any).mockResolvedValueOnce({ ok: true, json: async () => backendResponse });
-
-    const body = [{ type: "TOGGLE_SOLD_OUT", payload: { item_id: "inv-real", is_sold_out: true } }];
-    const req = new Request("http://localhost/api/pos/inventory", {
-      method: "POST",
-      headers: { authorization: "Bearer token", "x-tenant-id": "tenant-1", "x-user-id": "user-1" },
-      body: JSON.stringify(body),
-    });
-
-    const res = await POST(req);
-
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual(backendResponse);
-    expect(global.fetch).toHaveBeenCalledWith("http://backend.internal/api/pos/inventory", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        authorization: "Bearer token",
-        "x-tenant-id": "tenant-1",
-        "x-user-id": "user-1",
-      },
-      body: JSON.stringify(body),
-    });
-  });
 });

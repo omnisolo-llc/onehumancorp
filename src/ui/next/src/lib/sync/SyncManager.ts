@@ -152,6 +152,45 @@ export class SyncManager {
 
       const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'cash_sale').map(m => this.mapGeneralMutation(m));
 
+      // Route POS offline mutations through SyncEvents standard sync_gateway
+      const posSyncEvents = queue
+        .filter(m => m.type === 'UPDATE_ORDER_STATUS' || m.type === 'TOGGLE_SOLD_OUT')
+        .map(m => {
+          if (m.type === 'UPDATE_ORDER_STATUS') {
+             return {
+                id: m.id,
+                entity_type: 'order',
+                entity_id: m.payload.order_id,
+                action_type: 'UpdateStatus',
+                payload: m.payload,
+                base_version: 1,
+                timestamp: new Date(m.timestamp || Date.now()).toISOString()
+             };
+          } else {
+             return {
+                id: m.id,
+                entity_type: 'product',
+                entity_id: m.payload.item_id,
+                action_type: 'ToggleSoldOut',
+                payload: m.payload,
+                base_version: 1,
+                timestamp: new Date(m.timestamp || Date.now()).toISOString()
+             };
+          }
+        });
+
+      if (posSyncEvents.length > 0) {
+        const resSyncEvents = await fetch('/api/v1/sync/events', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({ events: posSyncEvents })
+        });
+        this.checkRateLimit(resSyncEvents);
+      }
+
       const crdtDeltas = queue.filter(m => m.type === 'CRDT_MUTATION').map(m => {
          return {
             id: m.id,
@@ -345,27 +384,6 @@ export class SyncManager {
           console.error("Field Ops Status Sync error:", err);
           allOk = false;
         }
-      }
-
-      // Sync KDS mutations
-      const orderEvents = generalMutations.filter(m => m.type === 'UPDATE_ORDER_STATUS');
-      if (orderEvents.length > 0) {
-        const resOrder = await fetch('/api/pos/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderEvents)
-        });
-        this.checkRateLimit(resOrder);
-      }
-
-      const inventoryEvents = generalMutations.filter(m => m.type === 'TOGGLE_SOLD_OUT');
-      if (inventoryEvents.length > 0) {
-        const resInv = await fetch('/api/pos/inventory', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(inventoryEvents)
-        });
-        this.checkRateLimit(resInv);
       }
 
       if (allOk) {
