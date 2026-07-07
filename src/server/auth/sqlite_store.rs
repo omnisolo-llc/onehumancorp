@@ -46,7 +46,7 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let query = r#"
         INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
@@ -60,7 +60,7 @@ impl UserRepository for SqliteUserRepository {
         .bind(&user.password_hash)
         .bind(roles_json)
         .bind(user.active)
-        .bind(if should_bypass { "system" } else { org_id })
+        .bind(org_id)
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
@@ -74,7 +74,7 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
         } else {
@@ -111,7 +111,7 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
         } else {
@@ -148,7 +148,7 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
         } else {
@@ -185,7 +185,7 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
         } else {
@@ -222,7 +222,7 @@ impl UserRepository for SqliteUserRepository {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
@@ -259,7 +259,7 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             r#"
@@ -285,7 +285,6 @@ impl UserRepository for SqliteUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .bind(org_id)
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -314,7 +313,7 @@ impl UserRepository for SqliteUserRepository {
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
@@ -362,7 +361,7 @@ impl UserRepository for SqliteUserRepository {
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let row = if should_bypass {
             sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2")
@@ -512,7 +511,7 @@ mod tests {
         let repo = SqliteUserRepository::new(_pool.clone());
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
-            let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+            let org_id = "system"; let should_bypass = !is_multitenant;
             assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
             let res = repo.get_by_id("dummy_id", "system").await;

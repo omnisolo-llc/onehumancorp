@@ -30,13 +30,49 @@ export default function KDSPage() {
 
   // Initial Data Load
   useEffect(() => {
-    fetch('/api/pos/orders').then(res => res.json()).then(setOrders).catch(console.error);
-    fetch('/api/pos/inventory').then(res => res.json()).then(setInventory).catch(console.error);
+    const loadData = async () => {
+      try {
+        const ordersRes = await fetch('/api/pos/orders');
+        const ordersData = await ordersRes.json();
+        setOrders(ordersData);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('ohc_pos_kds_orders', JSON.stringify(ordersData));
+        }
+      } catch (err) {
+        console.error('Failed to fetch orders, trying cache', err);
+        if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem('ohc_pos_kds_orders');
+          if (cached) setOrders(JSON.parse(cached));
+        }
+      }
+
+      try {
+        const invRes = await fetch('/api/pos/inventory');
+        const invData = await invRes.json();
+        setInventory(invData);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('ohc_pos_kds_inventory', JSON.stringify(invData));
+        }
+      } catch (err) {
+        console.error('Failed to fetch inventory, trying cache', err);
+        if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem('ohc_pos_kds_inventory');
+          if (cached) setInventory(JSON.parse(cached));
+        }
+      }
+    };
+    loadData();
   }, []);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     // Optimistic UI Update
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    setOrders(prev => {
+       const next = prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
+       if (typeof window !== 'undefined') {
+          localStorage.setItem('ohc_pos_kds_orders', JSON.stringify(next));
+       }
+       return next;
+    });
 
     const event = {
       type: 'UPDATE_ORDER_STATUS',
@@ -49,7 +85,13 @@ export default function KDSPage() {
 
   const handleToggleSoldOut = async (itemId: string, isSoldOut: boolean) => {
     // Optimistic UI Update
-    setInventory(prev => prev.map(i => i.id === itemId ? { ...i, is_sold_out: isSoldOut } : i));
+    setInventory(prev => {
+       const next = prev.map(i => i.id === itemId ? { ...i, is_sold_out: isSoldOut } : i);
+       if (typeof window !== 'undefined') {
+          localStorage.setItem('ohc_pos_kds_inventory', JSON.stringify(next));
+       }
+       return next;
+    });
 
     const event = {
       type: 'TOGGLE_SOLD_OUT',

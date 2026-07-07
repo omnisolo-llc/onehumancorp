@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS ohc_staff_tasks (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    staff_id TEXT REFERENCES ohc_staff_member(id) ON DELETE SET NULL,
+    staff_id TEXT  ON DELETE SET NULL,
     shift_id TEXT REFERENCES shifts(id) ON DELETE SET NULL,
     title TEXT NOT NULL,
     description TEXT,
