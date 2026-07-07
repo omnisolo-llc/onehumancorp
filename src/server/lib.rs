@@ -3937,7 +3937,7 @@ pub async fn update_ui_triage_action_handler(
                         let customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok()).or_else(|| json_payload.get("customer_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
 
                         if let Some(cid) = customer_id {
-                            let product_id = json_payload.get("service_id").or_else(|| json_payload.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
+                            let service_id = json_payload.get("service_id").or_else(|| json_payload.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
 
                             let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
                             let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
@@ -3953,12 +3953,12 @@ pub async fn update_ui_triage_action_handler(
                             let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
 
                             if let Err(e) = sqlx::query(
-                                "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')"
+                                "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')"
                             )
                             .bind(&booking_id)
                             .bind(&tenant_id)
                             .bind(&cid)
-                            .bind(&product_id)
+                            .bind(&service_id)
                             .bind(start_time)
                             .bind(end_time)
                             .execute(&mut *tx)
@@ -4196,7 +4196,7 @@ pub async fn update_ui_triage_action_handler(
                         let customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok()).or_else(|| json_payload.get("customer_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
 
                         if let Some(cid) = customer_id {
-                            let product_id = json_payload.get("service_id").or_else(|| json_payload.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
+                            let service_id = json_payload.get("service_id").or_else(|| json_payload.get("product_id")).and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
 
                             let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
                             let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
@@ -4212,12 +4212,12 @@ pub async fn update_ui_triage_action_handler(
                             let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
 
                             if let Err(e) = sqlx::query(
-                                "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'scheduled', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'scheduled', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                             )
                             .bind(&booking_id)
                             .bind(&tenant_id)
                             .bind(&cid)
-                            .bind(&product_id)
+                            .bind(&service_id)
                             .bind(start_time.to_rfc3339())
                             .bind(end_time.to_rfc3339())
                             .execute(&mut *tx)
@@ -5645,12 +5645,12 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
             let query_str = if mobile_optimized {
                 "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
                  FROM bookings b \
-                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
             } else {
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = $1 ORDER BY b.start_time ASC LIMIT 50"
             };
             match sqlx::query(query_str)
@@ -5671,7 +5671,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
-                            "product_id": row.get::<String, _>("product_id"),
+                            "service_id": row.get::<String, _>("service_id"),
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
                             "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
@@ -5687,12 +5687,12 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
             let query_str = if mobile_optimized {
                 "SELECT b.id, COALESCE(p.title, '') as product_title, b.start_time, COALESCE(b.status, '') AS status \
                  FROM bookings b \
-                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
             } else {
-                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.product_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
+                "SELECT b.id, COALESCE(c.name, '') AS customer_name, b.service_id, COALESCE(p.title, '') as product_title, b.start_time, b.end_time, COALESCE(b.status, '') AS status \
                  FROM bookings b LEFT JOIN customers c ON c.id = b.customer_id AND c.tenant_id = b.tenant_id \
-                 LEFT JOIN products p ON p.id = b.product_id AND p.tenant_id = b.tenant_id \
+                 LEFT JOIN services p ON p.id = b.service_id AND p.tenant_id = b.tenant_id \
                  WHERE b.tenant_id = ? ORDER BY b.start_time ASC LIMIT 50"
             };
             match sqlx::query(query_str)
@@ -5713,7 +5713,7 @@ async fn load_ui_bookings_from_db(db: &crate::db::DB, tenant_id: &str, mobile_op
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
-                            "product_id": row.get::<String, _>("product_id"),
+                            "service_id": row.get::<String, _>("service_id"),
                             "product_title": row.get::<String, _>("product_title"),
                             "start_time": row.try_get::<String, _>("start_time").unwrap_or_default(),
                             "end_time": row.try_get::<String, _>("end_time").unwrap_or_default(),
