@@ -405,8 +405,9 @@ export default function Integrations() {
             </div>
           )}
 
-          {/* Integration Grid */}
+                    {/* Integration Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <h2 className="text-xl font-bold mb-4 col-span-full">Connect Custom Software</h2>
             {filteredIntegrations.map(integration => (
               <div key={integration.id}
                    className="p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md glassmorphism border border-white/40 dark:border-white/10"
@@ -436,6 +437,14 @@ export default function Integrations() {
                 </button>
               </div>
             ))}
+          </div>
+          <h2 className="text-xl font-bold mb-4 mt-12 col-span-full">Social Media Accounts</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md glassmorphism border border-white/40 dark:border-white/10" style={{ background: 'rgba(255, 255, 255, 0.65)' }}>
+              <h3 className="font-bold font-outfit text-gray-900 dark:text-white text-lg mb-2">Social Channels</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 flex-1">Connect Instagram, Facebook, and Twitter</p>
+              <button className="text-white shadow-sm bg-[#0f766e] hover:bg-[#0d645d] min-h-[44px] w-full py-3 font-semibold text-sm rounded-lg">Connect</button>
+            </div>
           </div>
         </main>
       </div>
