@@ -111,6 +111,7 @@ impl Department for FinanceAgent {
 
             let original_message = event.payload.get("original_message").and_then(|v| v.as_str()).unwrap_or(&default_original);
             let generated_response = event.payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or(&default_generated);
+            let suggested_channel = event.payload.get("suggested_channel").and_then(|v| v.as_str()).unwrap_or("email");
 
             payload = serde_json::json!({
                 "feature_type": "invoice_followup",
@@ -119,6 +120,7 @@ impl Department for FinanceAgent {
                 "generated_response": generated_response,
                 "operational_action": "Draft personalized reminder",
                 "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""),
+                "suggested_channel": suggested_channel,
             });
         } else if event.event_type == "project_milestone_completed" {
             let project_name = event.payload.get("project_name").and_then(|v| v.as_str()).unwrap_or("Unknown Project");
