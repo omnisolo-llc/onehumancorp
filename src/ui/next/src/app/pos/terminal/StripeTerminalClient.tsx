@@ -274,11 +274,13 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
                  setStatus('Recording...');
                  setReserving(true);
                  try {
-                   await fetch('/api/v1/checkout/session', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
-                   });
+                   if (typeof window !== 'undefined' && navigator.onLine) {
+                     await fetch('/api/v1/checkout/session', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
+                     });
+                   }
                    await processCashSale();
                  } catch(e: any) {
                    setStatus('Error: ' + e.message);

@@ -39,10 +39,10 @@ export function NetworkStatusIndicator() {
       className="fixed top-2 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center pointer-events-none"
     >
       <WithTooltip id="network-status-tooltip" defaultText={isOffline ? "You are currently disconnected. Changes will be saved locally." : "Your changes are syncing to the cloud."}>
-        <div className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] px-4 py-1.5 rounded-full shadow border border-white/40 dark:border-white/10 flex items-center gap-2 pointer-events-auto">
-          <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-orange-500' : 'bg-blue-500 animate-pulse'}`}></div>
+        <div className={`bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] px-4 py-1.5 rounded-full shadow border border-white/40 dark:border-white/10 flex items-center gap-2 pointer-events-auto animate-in slide-in-from-top duration-300`}>
+          <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-amber-500' : 'bg-blue-500 animate-pulse'}`}></div>
           <span className="text-sm font-semibold text-gray-800">
-            {isOffline ? 'Working offline. Changes saved.' : `Syncing ${syncQueueLength} action${syncQueueLength !== 1 ? 's' : ''}...`}
+            {isOffline ? 'Offline Mode' : `Syncing ${syncQueueLength} action${syncQueueLength !== 1 ? 's' : ''}...`}
           </span>
         </div>
       </WithTooltip>
