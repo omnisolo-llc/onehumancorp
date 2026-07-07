@@ -121,10 +121,19 @@ describe('VideoTutorialList', () => {
   });
 
   it('opens and closes the video modal', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve([
-        { id: 1, title: "Modal Video", duration: "1:23", video_url: "http://example.com/vid.mp4" }
-      ])
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/tooltips') {
+         return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({})
+         });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([
+          { id: 1, title: "Modal Video", duration: "1:23", video_url: "http://example.com/vid.mp4" }
+        ])
+      });
     });
 
     render(

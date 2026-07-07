@@ -90,6 +90,30 @@ describe('MyPlanPage', () => {
     expect(screen.getByText("You've reached your Starter tier limit of 1000 AI actions. Upgrade to unlock more power!")).toBeDefined();
   });
 
+  it('renders budget health alert message', async () => {
+    (global.fetch as any).mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+            current_plan: 'Free',
+            ai_actions_used: 120,
+            ai_actions_limit: 100,
+            storage_used_bytes: 1024,
+            storage_limit_bytes: 5 * 1024 * 1024 * 1024, // 5GB
+            next_bill_estimated: 0,
+            soft_limit_reached: true,
+            user_message: "Test message",
+            budget_health_alert: true,
+        }),
+      })
+    );
+
+    render(<MyPlanPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Warning: Your projected cost for this month exceeds your budget threshold. Please consider upgrading or reducing usage.')).toBeInTheDocument();
+    });
+  });
+
   it('navigates to pricing on upgrade click', async () => {
     await act(async () => {
       render(<MyPlanPage />);

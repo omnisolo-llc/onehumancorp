@@ -118,6 +118,15 @@ export default function MyPlanPage() {
             </div>
         )}
 
+        {data?.budget_health_alert && (
+            <div className="mb-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 flex items-start gap-3 shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mt-0.5 shrink-0 text-red-600" style={{ width: '20px', height: '20px' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-sm font-medium">Warning: Your projected cost for this month exceeds your budget threshold. Please consider upgrading or reducing usage.</p>
+            </div>
+        )}
+
         {/* Status Snapshot */}
         <section className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 p-6 rounded-2xl">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
