@@ -66,10 +66,10 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         });
 
 
-        let res = handle.await.expect("Expected string in test");
+        let res = handle.await.unwrap();
 
         assert!(res.is_ok());
-        assert_eq!(res.expect("Expected string in test"), "success");
+        assert_eq!(res.unwrap(), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
 
@@ -96,7 +96,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
 
         assert!(res.is_ok());
-        assert_eq!(res.expect("Expected string in test"), "success");
+        assert_eq!(res.unwrap(), "success");
         // The loop returns immediately, so no backoff occurs and count is exactly 1
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
     }
@@ -126,10 +126,10 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         });
 
 
-        let res = handle.await.expect("Expected string in test");
+        let res = handle.await.unwrap();
 
         assert!(res.is_ok());
-        assert_eq!(res.expect("Expected string in test"), "success");
+        assert_eq!(res.unwrap(), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 2 failures + 1 success = 3 calls
     }
 
@@ -158,7 +158,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         });
 
 
-        let res = handle.await.expect("Expected string in test");
+        let res = handle.await.unwrap();
 
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -433,7 +433,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         });
 
 
-        let res = handle.await.expect("Expected string in test");
+        let res = handle.await.unwrap();
 
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
@@ -497,10 +497,10 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         });
 
 
-        let res = handle.await.expect("Expected string in test");
+        let res = handle.await.unwrap();
 
         assert!(res.is_ok());
-        assert_eq!(res.expect("Expected string in test"), "success");
+        assert_eq!(res.unwrap(), "success");
         // Loop should run twice: first is error, second is success.
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
@@ -528,9 +528,9 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         let handle = tokio::spawn(async move {
             ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
         });
-        let res = handle.await.expect("Expected string in test");
+        let res = handle.await.unwrap();
         assert!(res.is_ok());
-        assert_eq!(res.expect("Expected string in test"), "success");
+        assert_eq!(res.unwrap(), "success");
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
 }
