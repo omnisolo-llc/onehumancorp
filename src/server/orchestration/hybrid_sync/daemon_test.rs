@@ -662,11 +662,11 @@ async fn test_hybrid_sync_pos_offline_transactions() {
         let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
         daemon.prune_stuck_sub_agent_queue().await.unwrap();
 
-        // Verify SQLite queue is failed (deleted)
+        // Verify SQLite queue is deleted
         let row_queue_sqlite = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_queued_sqlite\'").fetch_optional(&sqlite_pool).await.unwrap();
         assert!(row_queue_sqlite.is_none());
 
-        // Verify PG queue is failed (deleted)
+        // Verify PG queue is deleted
         let row_queue = sqlx::query("SELECT status FROM sub_agent_queue WHERE id = \'stuck_queued_pg\'").fetch_optional(&pg_pool).await.unwrap();
         assert!(row_queue.is_none());
 
