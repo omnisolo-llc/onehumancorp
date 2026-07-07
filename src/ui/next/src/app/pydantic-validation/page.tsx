@@ -57,7 +57,7 @@ export default function PydanticValidationPage() {
         Test how the system validates tool payloads and generates recoverable errors.
       </p>
 
-      <div className="space-y-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] p-6 shadow-sm border border-white/40 border border-gray-200">
+      <div className="space-y-6 bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/40 rounded-2xl">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Tool Name
@@ -80,7 +80,7 @@ export default function PydanticValidationPage() {
             JSON Payload
           </label>
           <textarea
-            className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-all font-mono text-sm bg-gray-50"
+            className="w-full p-4 border border-gray-300 rounded-xl shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] transition-all font-mono text-sm bg-white/50"
             rows={8}
             value={payload}
             onChange={(e) => setPayload(e.target.value)}
@@ -91,7 +91,7 @@ export default function PydanticValidationPage() {
         <button
           onClick={handleValidate}
           disabled={loading || !toolName || !payload.trim()}
-          className="w-full py-3 bg-[#0071E3] text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors shadow-sm"
+          className="w-full py-3 bg-gradient-to-b from-[#0071E3] to-[#005bb5] text-white rounded-xl hover:from-[#005bb5] hover:to-[#004488] disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors shadow-[0_2px_8px_rgba(0,113,227,0.3)]"
         >
           {loading ? 'Validating schema...' : 'Validate Tool Payload'}
         </button>
