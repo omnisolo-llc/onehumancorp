@@ -6,6 +6,7 @@ import { TooltipProvider } from '../components/TooltipRegistry';
 
 import { HelpChat } from "../components/HelpChat";
 import { VoiceAssistant } from "../components/VoiceAssistant";
+import { VoiceIntakeFab } from "../components/ui/VoiceIntakeFab";
 import { NetworkStatusIndicator } from "../components/NetworkStatusIndicator";
 import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
@@ -41,6 +42,7 @@ export default function RootLayout({
               <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
               <HelpChat />
               <VoiceAssistant />
+              <VoiceIntakeFab />
               <NetworkStatusIndicator />
               <SyncManagerInitializer />
             </WalkthroughProvider>

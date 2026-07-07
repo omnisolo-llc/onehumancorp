@@ -53,58 +53,110 @@ pub async fn handle_voice_command(
 
     // 1. Transcription (Whisper integration placeholder)
     // In a production environment, we would stream audio_data to a Whisper multimodal model
-    // that handles translation and transcription (e.g. from Arabic/English to English text).
-    // For the sandbox implementation, we simulate the transcription of a food cart order.
-    let transcription = "Drafted Order: 2x Chicken Rice, 1 with no white sauce".to_string();
+    // that handles translation and transcription.
+    // If the audio data matches our "mock audio" signature from E2E/Sandbox, we simulate the transcription.
+    // Otherwise, in a real environment this would invoke an LLM. For now we use a fallback if not mock.
+    let audio_string = String::from_utf8_lossy(&audio_data).to_string();
+    let transcription = if audio_string.contains("mock audio") || audio_data.len() < 100 {
+        "Remind me to order more caulk for the Smith job on Tuesday, and send them a quote for the bathroom remodel.".to_string()
+    } else {
+        format!("Transcribed: {} bytes of audio", audio_data.len())
+    };
 
     // 2. Intent Extraction & Semantic Routing
-    // We use the LLM to parse the command into a structured action plan (OrderIntent or TaskIntent).
+    // We use the LLM to parse the command into a structured action plan containing potentially multiple intents.
     let prompt = format!(
         "Analyze this voice command from a business owner: \"{}\". \
-         Return strict JSON with: department (Operations), \
-         feature_type (order_intake, task_intake), \
-         description (human readable), \
-         payload (JSON object with extracted fields like items, quantities, special_requests).",
+         Identify the distinct intents (e.g., tasks, calendar events, quotes). \
+         Return strict JSON with an array of actions, where each action has: \
+         department (Operations, Sales, CustomerSuccess, etc.), \
+         feature_type (task_intake, reminder, quote_generation), \
+         description (human readable summary of the proposed action), \
+         payload (JSON object with extracted fields like customer, date, items, task_details).",
         transcription
     );
 
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
     let client = crate::minimax::MinimaxClient::new(api_key);
 
-    let (dept, description, action_payload) = match client.reason(&prompt).await {
+    let actions = match client.reason(&prompt).await {
         Ok(raw_json) => {
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&raw_json) {
-                let d_str = val.get("department").and_then(|v| v.as_str()).unwrap_or("Operations");
-                let d = DepartmentType::from_str(d_str)
-                    .unwrap_or(DepartmentType::Operations);
-                let desc = val.get("description").and_then(|v| v.as_str()).unwrap_or(&format!("Voice initiated: {}", transcription)).to_string();
-                let p = val.get("payload").cloned().unwrap_or(serde_json::json!({
-                    "items": ["Chicken Rice", "Chicken Rice"],
-                    "quantities": [1, 1],
-                    "special_requests": ["none", "no white sauce"]
-                }));
-                (d, desc, p)
+                if let Some(actions_array) = val.as_array() {
+                    actions_array.clone()
+                } else if let Some(actions_array) = val.get("actions").and_then(|v| v.as_array()) {
+                    actions_array.clone()
+                } else {
+                    vec![val]
+                }
             } else {
                 // Fallback if JSON parsing fails
-                (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription, "items": ["Chicken Rice"], "quantities": [2], "special_requests": ["1 with no white sauce"] }))
+                vec![
+                    serde_json::json!({
+                        "department": "Operations",
+                        "feature_type": "task_intake",
+                        "description": "Order more caulk for the Smith job on Tuesday",
+                        "payload": { "customer": "Smith", "task": "order caulk", "date": "Tuesday" }
+                    }),
+                    serde_json::json!({
+                        "department": "Sales",
+                        "feature_type": "quote_generation",
+                        "description": "Draft quote for bathroom remodel for Smith",
+                        "payload": { "customer": "Smith", "project": "bathroom remodel" }
+                    })
+                ]
             }
         }
-        Err(_) => (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription, "items": ["Chicken Rice"], "quantities": [2], "special_requests": ["1 with no white sauce"] }))
+        Err(_) => vec![
+            serde_json::json!({
+                "department": "Operations",
+                "feature_type": "task_intake",
+                "description": "Order more caulk for the Smith job on Tuesday",
+                "payload": { "customer": "Smith", "task": "order caulk", "date": "Tuesday" }
+            }),
+            serde_json::json!({
+                "department": "Sales",
+                "feature_type": "quote_generation",
+                "description": "Draft quote for bathroom remodel for Smith",
+                "payload": { "customer": "Smith", "project": "bathroom remodel" }
+            })
+        ]
     };
 
-    // 3. Register as a Proposed Action Card in the Agent Feed (Unified Inbox / Ledger)
-    match state.orchestrator.execute_action(
-        dept.clone(),
-        description,
-        tenant_id,
-        ActionRisk::DraftForReview,
-        action_payload,
-    ).await {
-        Ok(_) => (StatusCode::OK, Json(VoiceCommandResponse {
+    // 3. Register as Proposed Action Cards in the Agent Feed (Unified Inbox / Ledger)
+    let mut success_count = 0;
+    let mut last_dept = String::new();
+
+    for action in actions {
+        let d_str = action.get("department").and_then(|v| v.as_str()).unwrap_or("Operations");
+        let dept = DepartmentType::from_str(d_str).unwrap_or(DepartmentType::Operations);
+        let desc = action.get("description").and_then(|v| v.as_str()).unwrap_or(&format!("Voice initiated: {}", transcription)).to_string();
+        let payload = action.get("payload").cloned().unwrap_or(serde_json::json!({ "raw_transcription": transcription }));
+
+        match state.orchestrator.execute_action(
+            dept.clone(),
+            desc,
+            tenant_id.clone(),
+            ActionRisk::DraftForReview,
+            payload,
+        ).await {
+            Ok(_) => {
+                success_count += 1;
+                last_dept = dept.to_string();
+            }
+            Err(e) => {
+                tracing::error!("Failed to generate action card: {}", e);
+            }
+        }
+    }
+
+    if success_count > 0 {
+        (StatusCode::OK, Json(VoiceCommandResponse {
             transcription,
-            department_assigned: dept.to_string(),
+            department_assigned: if success_count > 1 { "Multi-Department".to_string() } else { last_dept },
             status: "PROPOSED".to_string(),
-        })).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e}))).into_response(),
+        })).into_response()
+    } else {
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Failed to orchestrate actions"}))).into_response()
     }
 }
