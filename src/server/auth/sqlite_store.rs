@@ -46,7 +46,7 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = !is_multitenant;
+        let _should_bypass = !is_multitenant;
 
         let query = r#"
         INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
@@ -511,7 +511,7 @@ mod tests {
         let repo = SqliteUserRepository::new(_pool.clone());
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
-            let org_id = "system"; let should_bypass = !is_multitenant;
+            let _org_id = "system"; let should_bypass = !is_multitenant;
             assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
             let res = repo.get_by_id("dummy_id", "system").await;
