@@ -13,7 +13,7 @@ test.describe('Tauri Billing & Pricing UI', () => {
       localStorage.setItem('token', 'e2e-dummy-token');
     });
 
-    await page.goto(`/ui/cost-dashboard.html`);
+    await page.goto(`/cost-dashboard`);
 
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 10000 });
     await expect(page.locator('h2', { hasText: 'Your Current Usage' })).toBeVisible();
