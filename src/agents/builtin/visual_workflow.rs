@@ -74,7 +74,6 @@ pub struct WorkflowExecutor {
     pub sub_agents: HashMap<String, Arc<Agent>>,
     pub config: AgentRunConfig,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
-
 }
 
 fn evaluate_condition(expr: &str) -> bool {
@@ -133,7 +132,6 @@ impl WorkflowExecutor {
         sub_agents: HashMap<String, Arc<Agent>>,
         config: AgentRunConfig,
         checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
-
     ) -> Self {
         Self {
             graph,
@@ -142,7 +140,6 @@ impl WorkflowExecutor {
             sub_agents,
             config,
             checkpointer,
-
         }
     }
 
@@ -220,7 +217,14 @@ impl WorkflowExecutor {
                 if let Some(cp) = &self.checkpointer {
                     let state_json = serde_json::to_value(&state).unwrap_or_default();
                     // We ignore errors in checkpointing so the workflow can continue
-                    let _ = cp.put_checkpoint(crate::checkpointer::Checkpoint { thread_id: "visual-workflow".to_string(), checkpoint_id: current_node_id.clone(), data: state_json, parent_id: None, created_at: chrono::Utc::now(), metadata: serde_json::Value::Null });
+                    let _ = cp.put_checkpoint(crate::checkpointer::Checkpoint {
+                        thread_id: "visual-workflow".to_string(),
+                        checkpoint_id: current_node_id.clone(),
+                        data: state_json,
+                        parent_id: None,
+                        created_at: chrono::Utc::now(),
+                        metadata: serde_json::Value::Null,
+                    });
                 }
 
                 *count += 1;
@@ -240,13 +244,27 @@ impl WorkflowExecutor {
                         if !current_just_finished_fork {
                             return Ok((state, Some(current_node_id)));
                         } else {
-                            let mut merged_data = Vec::new();
+                            let mut merged_data: Vec<serde_json::Value> = Vec::new();
                             for key in state_keys {
                                 if let Some(val) = state.get(key) {
-                                    merged_data.push(val.clone());
+                                    if let Ok(serde_json::Value::Array(arr)) =
+                                        serde_json::from_str(val)
+                                    {
+                                        for item in arr {
+                                            merged_data.push(item);
+                                        }
+                                    } else if let Ok(v) = serde_json::from_str(val) {
+                                        merged_data.push(v);
+                                    } else {
+                                        merged_data.push(serde_json::Value::String(val.clone()));
+                                    }
                                 }
                             }
-                            merged_data.sort();
+                            merged_data.sort_by(|a, b| {
+                                let a_str = serde_json::to_string(a).unwrap_or_default();
+                                let b_str = serde_json::to_string(b).unwrap_or_default();
+                                a_str.cmp(&b_str)
+                            });
                             let merged_string = serde_json::to_string(&merged_data)
                                 .unwrap_or_else(|_| "[]".to_string());
                             state.insert(output_key.clone(), merged_string);
@@ -368,13 +386,26 @@ impl WorkflowExecutor {
                         state_keys,
                         output_key,
                     } => {
-                        let mut merged_data = Vec::new();
+                        let mut merged_data: Vec<serde_json::Value> = Vec::new();
                         for key in state_keys {
                             if let Some(val) = state.get(key) {
-                                merged_data.push(val.clone());
+                                if let Ok(serde_json::Value::Array(arr)) = serde_json::from_str(val)
+                                {
+                                    for item in arr {
+                                        merged_data.push(item);
+                                    }
+                                } else if let Ok(v) = serde_json::from_str(val) {
+                                    merged_data.push(v);
+                                } else {
+                                    merged_data.push(serde_json::Value::String(val.clone()));
+                                }
                             }
                         }
-                        merged_data.sort();
+                        merged_data.sort_by(|a, b| {
+                            let a_str = serde_json::to_string(a).unwrap_or_default();
+                            let b_str = serde_json::to_string(b).unwrap_or_default();
+                            a_str.cmp(&b_str)
+                        });
                         let merged_string = serde_json::to_string(&merged_data)
                             .unwrap_or_else(|_| "[]".to_string());
                         state.insert(output_key.clone(), merged_string);
@@ -398,7 +429,7 @@ impl WorkflowExecutor {
                                     tools_clone,
                                     sub_agents_clone,
                                     config_clone,
-                      None,
+                                    None,
                                 );
                                 sub_executor
                                     .execute_from_node(target_clone, state_clone)
@@ -1093,7 +1124,8 @@ mod tests {
         let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
+        let executor =
+            WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in1".to_string(), "val1".to_string());
@@ -1176,7 +1208,8 @@ mod tests {
         let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
+        let executor =
+            WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "init_data".to_string());
@@ -1304,7 +1337,8 @@ mod tests {
         let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
+        let executor =
+            WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "root_data".to_string());
