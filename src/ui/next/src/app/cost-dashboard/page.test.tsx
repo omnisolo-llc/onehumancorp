@@ -396,6 +396,8 @@ describe('CostDashboardPage', () => {
       return Promise.reject(new Error('not found'));
     }) as any;
 
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     render(<CostDashboardPage />);
 
     await waitFor(() => {
@@ -410,6 +412,8 @@ describe('CostDashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Failed to initiate billing portal. Please try again.')).toBeDefined();
     });
+
+    consoleSpy.mockRestore();
   });
 
   test('handles cancel subscription correctly', async () => {
