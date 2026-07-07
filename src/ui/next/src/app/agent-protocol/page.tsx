@@ -8,6 +8,7 @@ export default function AgentProtocolPage() {
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [stepInput, setStepInput] = useState('');
   const [steps, setSteps] = useState<any[]>([]);
+  const [checkpoints, setCheckpoints] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +53,40 @@ export default function AgentProtocolPage() {
     }
   };
 
+
+  const fetchCheckpoints = async (taskId: string) => {
+    try {
+      const res = await fetch(`/api/agents/protocol?method=ap_list_checkpoints&task_id=${taskId}`);
+      if (!res.ok) throw new Error('Failed to fetch checkpoints');
+      const data = await res.json();
+      setCheckpoints(data.checkpoints || []);
+    } catch (e: any) {
+      console.error(e);
+      setCheckpoints([]);
+    }
+  };
+
+  const restoreCheckpoint = async (taskId: string, checkpointId: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/agents/protocol', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          method: 'ap_restore_checkpoint',
+          params: { task_id: taskId, checkpoint_id: checkpointId }
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to restore checkpoint');
+      await fetchSteps(taskId);
+      await fetchCheckpoints(taskId);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const executeStep = async () => {
     if (!selectedTaskId) return;
     setLoading(true);
@@ -81,8 +116,10 @@ export default function AgentProtocolPage() {
   useEffect(() => {
     if (selectedTaskId) {
       fetchSteps(selectedTaskId);
+      fetchCheckpoints(selectedTaskId);
     } else {
       setSteps([]);
+      setCheckpoints([]);
     }
   }, [selectedTaskId]);
 
@@ -176,6 +213,31 @@ export default function AgentProtocolPage() {
                 ))}
                 {steps.length === 0 && <div className="text-gray-500 text-sm italic">No steps executed yet.</div>}
               </ul>
+
+              <div className="mt-8">
+                <h3 className="text-lg font-bold mb-4">State Checkpoints</h3>
+                <ul className="space-y-4">
+                  {checkpoints.map((cp, idx) => (
+                    <li key={cp.checkpoint_id} className="p-4 border rounded-xl border-gray-200 shadow-sm bg-white/80 backdrop-blur-[30px] saturate-[210%]">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <span className="font-bold text-sm">Checkpoint: </span>
+                          <span className="text-xs text-gray-500 font-mono">{cp.checkpoint_id}</span>
+                        </div>
+                        <button
+                          onClick={() => restoreCheckpoint(selectedTaskId, cp.checkpoint_id)}
+                          disabled={loading}
+                          className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1 rounded text-sm font-medium transition shadow-sm disabled:opacity-50"
+                        >
+                          Restore Checkpoint
+                        </button>
+                      </div>
+                      <div className="text-xs text-gray-400">Created: {cp.created_at}</div>
+                    </li>
+                  ))}
+                  {checkpoints.length === 0 && <div className="text-gray-500 text-sm italic">No checkpoints saved.</div>}
+                </ul>
+              </div>
             </>
           )}
         </div>

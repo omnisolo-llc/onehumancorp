@@ -386,6 +386,40 @@ impl AppServer {
                 },
             };
             return serde_json::to_string(&resp).unwrap_or_default();
+
+        } else if req.method == "ap_list_checkpoints" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let task_id = req
+                .params
+                .get("task_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let result = server.list_checkpoints(task_id).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id.clone(),
+                result: Some(result),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_restore_checkpoint" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let task_id = req
+                .params
+                .get("task_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let req_json = serde_json::to_string(&req.params).unwrap_or_default();
+            let result = server.restore_checkpoint(task_id, &req_json).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id.clone(),
+                result: Some(result),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "ap_execute_step" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let task_id = req

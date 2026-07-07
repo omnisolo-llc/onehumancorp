@@ -28,6 +28,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/kitchen-offline.spec.ts",
     "//src/ui/next:src/e2e/digital_business_card.spec.ts",
     "//src/ui/next:src/e2e/test_observation_masking.spec.ts",
+    "//src/ui/next:src/e2e/test_git_checkpointing.spec.ts",
     "//src/ui/next:src/e2e/walkthrough.spec.ts",
     "//src/ui/next:src/e2e/translucent_glass_ui.spec.ts",
     "//src/ui/next:src/e2e/ai-usage-limit-widget.spec.ts",
