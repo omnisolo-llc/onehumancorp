@@ -32,7 +32,6 @@ const pendingActions = new Table({
   timestamp: column.integer
 });
 
-
 const appointments = new Table({
   id: column.text,
   tenant_id: column.text,
@@ -63,10 +62,45 @@ const serviceRoutes = new Table({
   updated_at: column.text
 });
 
+const tasks = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  title: column.text,
+  description: column.text,
+  status: column.text,
+  due_date: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const orders = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  customer_id: column.text,
+  status: column.text,
+  total_amount_cents: column.integer,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const customers = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  name: column.text,
+  email: column.text,
+  phone: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+
 export const AppSchema = new Schema({
   appointments: appointments,
   service_routes: serviceRoutes,
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages,
-  pending_actions: pendingActions
+  pending_actions: pendingActions,
+  tasks: tasks,
+  orders: orders,
+  customers: customers
 });

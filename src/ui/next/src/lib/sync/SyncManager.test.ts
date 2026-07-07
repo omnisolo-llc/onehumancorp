@@ -1,5 +1,39 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SyncManager } from './SyncManager';
+import { MutationService } from './MutationService';
+import * as offlineQueue from '../../app/utils/offlineQueue';
+
+vi.mock('../../app/utils/offlineQueue', () => ({
+  enqueueAction: vi.fn(),
+  getActions: vi.fn(),
+  removeAction: vi.fn()
+}));
+
+vi.mock('uuid', () => ({
+  v4: () => 'fake-uuid'
+}));
+
+// Mock fetch
+const originalFetch = global.fetch;
+beforeEach(() => {
+  vi.resetAllMocks();
+  (offlineQueue.enqueueAction as any).mockResolvedValue();
+  (offlineQueue.getActions as any).mockResolvedValue([]);
+  (offlineQueue.removeAction as any).mockResolvedValue();
+
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({})
+  });
+
+  // mock navigator online
+  Object.defineProperty(navigator, 'onLine', {
+     value: true,
+     configurable: true
+  });
+});
+
 
 describe('SyncManager', () => {
   beforeEach(() => {
@@ -51,5 +85,59 @@ describe('SyncManager', () => {
     };
     const mappedKeep = instance.mapGeneralMutation(keepAction);
     expect(mappedKeep).toBe(keepAction); // returns the same object
+  });
+});
+
+describe('Offline-First MutationService and SyncManager', () => {
+  it('queues a mutation when offline and syncs when online', async () => {
+    // 1. Simulate offline
+    Object.defineProperty(navigator, 'onLine', {
+       value: false,
+       configurable: true
+    });
+
+    let optimisticCalled = false;
+    let rollbackCalled = false;
+    const optFn = () => { optimisticCalled = true; };
+    const rollFn = () => { rollbackCalled = true; };
+
+    const service = MutationService.getInstance();
+
+    await service.executeMutation(
+      'UPDATE_ORDER_STATUS',
+      { order_id: '123', status: 'completed' },
+      optFn,
+      rollFn
+    );
+
+    expect(optimisticCalled).toBe(true);
+    expect(rollbackCalled).toBe(false);
+    expect(offlineQueue.enqueueAction).toHaveBeenCalledOnce();
+
+    const queuedIntent = vi.mocked(offlineQueue.enqueueAction).mock.calls[0][0];
+    expect(queuedIntent.type).toBe('UPDATE_ORDER_STATUS');
+    expect(queuedIntent.payload.order_id).toBe('123');
+
+    // fetch should not be called since we are offline
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    // 2. Simulate coming back online
+    Object.defineProperty(navigator, 'onLine', {
+       value: true,
+       configurable: true
+    });
+
+    const syncManager = SyncManager.getInstance();
+
+    // Fake queue having the item
+    (offlineQueue.getActions as any).mockResolvedValue([queuedIntent]);
+
+    await syncManager.sync();
+
+    // Expect fetch to have been called to flush the queue
+    expect(global.fetch).toHaveBeenCalled();
+
+    // Expect queue item to be removed after successful sync
+    expect(offlineQueue.removeAction).toHaveBeenCalledWith(queuedIntent.id);
   });
 });

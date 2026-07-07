@@ -1,6 +1,14 @@
 import { SyncManager } from './SyncManager';
 import { enqueueAction, OfflineAction as OperationIntent } from '../../app/utils/offlineQueue';
-import { v4 as uuidv4 } from 'uuid';
+
+// Avoid importing uuid module which causes vite build issues.
+// We can use crypto.randomUUID() if available or a simple fallback.
+function generateId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'uuid-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+}
 
 export class MutationService {
   private static instance: MutationService;
@@ -28,7 +36,7 @@ export class MutationService {
     rollback: () => void
   ): Promise<void> {
     const intent: OperationIntent = {
-      id: uuidv4(),
+      id: generateId(),
       type: actionType,
       payload,
       timestamp: Date.now()
