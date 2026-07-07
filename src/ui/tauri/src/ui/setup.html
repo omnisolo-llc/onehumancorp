@@ -1899,7 +1899,7 @@
         <p>We'll use this to set up your workspace.</p>
         <input
           type="text"
-          id="business-name" required
+          id="business-name" required autocomplete="organization" enterkeyhint="next"
           data-testid="business-name"
           class="glass-control glassmorphism"
           placeholder="e.g. Maya's Custom Cakes"
@@ -2092,7 +2092,7 @@
 
         <input
           type="text"
-          id="admin-name"
+          id="admin-name" autocomplete="name" enterkeyhint="next"
           data-testid="admin-name"
           class="glass-control glassmorphism"
           placeholder="Your Name (e.g. Maya)"
@@ -2107,7 +2107,7 @@
 
         <input
           type="email"
-          id="admin-email"
+          id="admin-email" inputmode="email" autocomplete="email" enterkeyhint="next"
           data-testid="admin-email"
           class="glass-control glassmorphism"
           placeholder="admin@mybusiness.com"
@@ -2131,7 +2131,7 @@
         >
           <input
             type="password"
-            id="admin-password"
+            id="admin-password" autocomplete="new-password" enterkeyhint="next"
             data-testid="admin-password"
             class="glass-control glassmorphism"
             placeholder="Password (min 8 chars)"
@@ -2432,7 +2432,7 @@
           class="glass-control glassmorphism"
           placeholder="e.g. Portland, OR"
           inputmode="text"
-          autocomplete="off"
+          autocomplete="address-level2"
            enterkeyhint="next" />
         <div id="location-error" class="error-msg" aria-live="polite">
           Please tell us your location.
@@ -2527,6 +2527,7 @@
             placeholder="e.g. my-business"
             inputmode="url"
             autocomplete="off"
+            enterkeyhint="next"
             autocapitalize="none"
             autocorrect="off"
             style="flex: 1; border: none; background: transparent; outline: none; margin-bottom: 0; padding: 0; font-size: 16px; font-family: inherit; color: inherit; text-align: right; min-width: 0; appearance: none; box-shadow: none;"
@@ -2703,9 +2704,18 @@
       };
 
       Object.values(inputs).forEach(inputEl => {
-        if (inputEl && inputEl.addEventListener) {
-          inputEl.addEventListener("change", () => saveCurrentState());
-          inputEl.addEventListener("blur", () => saveCurrentState());
+        if (inputEl) {
+          // If inputEl is a NodeList (like radio buttons)
+          if (inputEl.length !== undefined && !inputEl.tagName) {
+            inputEl.forEach(radio => {
+              radio.addEventListener("change", () => saveCurrentState());
+              radio.addEventListener("blur", () => saveCurrentState());
+            });
+          } else if (inputEl.addEventListener) {
+            inputEl.addEventListener("input", () => debouncedAutoSave());
+            inputEl.addEventListener("change", () => saveCurrentState());
+            inputEl.addEventListener("blur", () => saveCurrentState());
+          }
         }
       });
 
