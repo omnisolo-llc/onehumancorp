@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Unified Agent Feed - OHC</title>
+  <style>
+    :root {
+      --bg-color: #F5F5F7;
+      --text-primary: #1D1D1F;
+      --text-secondary: #86868B;
+      --card-bg: rgba(255, 255, 255, 0.7);
+      --card-border: rgba(255, 255, 255, 0.5);
+      --glass-blur: blur(20px) saturate(180%);
+      --accent-blue: #0066FF;
+      --accent-orange: #F56A00;
+      --accent-green: #34C759;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #000000;
+        --text-primary: #F5F5F7;
+        --text-secondary: #A1A1A6;
+        --card-bg: rgba(28, 28, 30, 0.7);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --glass-blur: blur(20px) saturate(180%);
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      /* Enforce 375px mobile view */
+      overflow-x: hidden;
+      width: 100vw;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 375px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 16px 20px;
+      background: var(--card-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    main {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Agent Card Styles */
+    .agent-card {
+      background: var(--card-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.2s, opacity 0.3s;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .agent-badge {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-ops {
+      background-color: rgba(52, 199, 89, 0.15);
+      color: var(--accent-green);
+    }
+
+    .badge-marketing {
+      background-color: rgba(245, 106, 0, 0.15);
+      color: var(--accent-orange);
+    }
+
+    .badge-cs {
+      background-color: rgba(0, 102, 255, 0.15);
+      color: var(--accent-blue);
+    }
+
+    .time-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .card-body {
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .card-proposal {
+      background: rgba(0, 0, 0, 0.03);
+      padding: 12px;
+      border-radius: 12px;
+      border-left: 3px solid var(--accent-blue);
+      font-size: 14px;
+      font-style: italic;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .card-proposal {
+        background: rgba(255, 255, 255, 0.05);
+      }
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    /* Buttons */
+    button {
+      flex: 1;
+      min-height: 44px; /* Minimum touch target size */
+      min-width: 44px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    .btn-primary {
+      background-color: var(--accent-blue);
+      color: white;
+    }
+
+    .btn-primary-ops {
+      background-color: var(--accent-green);
+      color: white;
+    }
+
+    .btn-secondary {
+      background-color: rgba(134, 134, 139, 0.15);
+      color: var(--text-primary);
+    }
+
+    .empty-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60vh;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .empty-state h2 {
+      font-size: 20px;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    /* Animation states */
+    .processing {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .processing .btn-primary::after {
+      content: "...";
+    }
+
+    .success-out {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+
+    .dismiss-out {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>Unified Feed</h1>
+      <div style="width: 32px; height: 32px; border-radius: 16px; background: rgba(134, 134, 139, 0.2); display: flex; align-items: center; justify-content: center; font-size: 12px;">👤</div>
+    </header>
+
+    <main id="feed-container">
+      <!-- Operations Card -->
+      <div class="agent-card" id="card-ops" data-testid="agent-feed-card">
+        <div class="card-header">
+          <span class="agent-badge badge-ops">📦 Operations Agent</span>
+          <span class="time-label">Just now</span>
+        </div>
+        <div class="card-body">
+          Low stock alert: You have only 2 "Vegan Chocolate Cakes" left. Based on past weekend demand, you will run out by Saturday morning.
+        </div>
+        <div class="card-proposal" style="border-left-color: var(--accent-green)">
+          Proposed action: Draft a restock order for 10 units and temporarily mark as "Limited Supply" on storefront.
+        </div>
+        <div class="card-actions">
+          <button class="btn-secondary" onclick="handleAction('card-ops', 'dismiss')" data-testid="unified-feed-reject-btn">Dismiss</button>
+          <button class="btn-primary-ops" onclick="handleAction('card-ops', 'approve')" data-testid="feed-approve-btn">Approve Restock</button>
+        </div>
+      </div>
+
+      <!-- Customer Success Card -->
+      <div class="agent-card" id="card-cs" data-testid="agent-feed-card">
+        <div class="card-header">
+          <span class="agent-badge badge-cs">💬 Ambassador (CS)</span>
+          <span class="time-label">5m ago</span>
+        </div>
+        <div class="card-body">
+          <strong>@sarah_bakes</strong> asked via Instagram DM: "Do you offer gluten-free options for wedding cakes?"
+        </div>
+        <div class="card-proposal">
+          "Hi Sarah! Yes, we absolutely do. Our gluten-free wedding tier starts at $150. Would you like me to send over our GF flavor menu?"
+        </div>
+        <div class="card-actions">
+          <button class="btn-secondary" onclick="handleAction('card-cs', 'dismiss')" data-testid="unified-feed-reject-btn">Edit</button>
+          <button class="btn-primary" onclick="handleAction('card-cs', 'approve')" data-testid="feed-approve-btn">Approve & Send</button>
+        </div>
+      </div>
+
+      <!-- Marketing Card -->
+      <div class="agent-card" id="card-marketing" data-testid="agent-feed-card">
+        <div class="card-header">
+          <span class="agent-badge badge-marketing">📣 Marketing Agent</span>
+          <span class="time-label">2h ago</span>
+        </div>
+        <div class="card-body">
+          It's been 14 days since your last promotion. 12 customers recently abandoned their carts containing the "Summer Lemon Tart".
+        </div>
+        <div class="card-proposal" style="border-left-color: var(--accent-orange)">
+          Proposed action: Send a targeted 10% discount email to these 12 customers to recover carts.
+        </div>
+        <div class="card-actions">
+          <button class="btn-secondary" onclick="handleAction('card-marketing', 'dismiss')" data-testid="unified-feed-reject-btn">Skip</button>
+          <button class="btn-primary" style="background-color: var(--accent-orange)" onclick="handleAction('card-marketing', 'approve')" data-testid="feed-approve-btn">Send Campaign</button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" id="empty-state" data-testid="triage-feed-empty">
+        <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
+        <h2>All caught up!</h2>
+        <p>Your agents are monitoring the business.</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let activeCards = 3;
+
+    function handleAction(cardId, actionType) {
+      const card = document.getElementById(cardId);
+      if (!card) return;
+
+      // Set processing state
+      card.classList.add('processing');
+      const primaryBtn = card.querySelector('.btn-primary, .btn-primary-ops');
+      const originalText = primaryBtn.innerText;
+      primaryBtn.innerText = 'Processing';
+
+      // Simulate API call delay
+      setTimeout(() => {
+        if (actionType === 'approve') {
+          card.classList.add('success-out');
+        } else {
+          card.classList.add('dismiss-out');
+        }
+
+        // Remove card after animation
+        setTimeout(() => {
+          card.remove();
+          activeCards--;
+
+          if (activeCards === 0) {
+            document.getElementById('empty-state').style.display = 'flex';
+          }
+        }, 300);
+      }, 600);
+    }
+  </script>
+</body>
+</html>
