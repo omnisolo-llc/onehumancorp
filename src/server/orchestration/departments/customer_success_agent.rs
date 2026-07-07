@@ -116,6 +116,53 @@ impl Department for CustomerSuccessAgent {
             let original = payload.get("original_payload");
 
             if let Some(orig) = original {
+
+                // --- BEGIN: Conversational Quoting Engine ---
+                if orig.get("action_type").and_then(|v| v.as_str()) == Some("Draft Custom Quote") {
+                    let sender_id = orig.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+                    let suggested_price = orig.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                    let message = orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
+
+                    tracing::info!("EXECUTING APPROVED DRAFT: Sending custom quote to sender {}: {}", sender_id, message);
+
+                    // We can insert the final quote in the DB and update the intake session status
+                    let pool = crate::db::get_pool();
+                    let session_id = uuid::Uuid::new_v4();
+
+                    let _ = sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents) VALUES ($1, $2, $3, 'SENT', $4, $5)")
+                        .bind(session_id)
+                        .bind(&event.tenant_id)
+                        .bind(uuid::Uuid::nil()) // Fallback customer_id
+                        .bind((suggested_price * 100.0) as i64)
+                        .bind((suggested_price * 50.0) as i64) // 50% deposit
+                        .execute(&pool)
+                        .await;
+
+                    let _ = sqlx::query("INSERT INTO conversational_intake_sessions (id, tenant_id, inbox_thread_id, status, quote_id) VALUES ($1, $2, $3, 'QUOTE_SENT', $1)")
+                        .bind(session_id)
+                        .bind(&event.tenant_id)
+                        .bind(sender_id)
+                        .execute(&pool)
+                        .await;
+
+                    return Ok(());
+                }
+
+                if orig.get("action_type").and_then(|v| v.as_str()) == Some("Draft Message") {
+                    let sender_id = orig.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+                    let message = orig.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
+                    tracing::info!("EXECUTING APPROVED DRAFT: Sending follow-up message to sender {}: {}", sender_id, message);
+
+                    let pool = crate::db::get_pool();
+                    let session_id = uuid::Uuid::new_v4();
+                    let _ = sqlx::query("INSERT INTO conversational_intake_sessions (id, tenant_id, inbox_thread_id, status) VALUES ($1, $2, $3, 'GATHERING_INFO')")
+                        .bind(session_id)
+                        .bind(&event.tenant_id)
+                        .bind(sender_id)
+                        .execute(&pool)
+                        .await;
+                }
+                // --- END: Conversational Quoting Engine ---
                 if orig.get("action_type").and_then(|v| v.as_str()) == Some("Execute Subscription Update") {
                     let customer_id = orig.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
                     let action = orig.get("action").and_then(|v| v.as_str()).unwrap_or("");
@@ -430,6 +477,54 @@ impl Department for CustomerSuccessAgent {
             }
             let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
             let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            // --- BEGIN: Conversational Quoting Engine ---
+            if msg_lower.contains("quote") || msg_lower.contains("custom") || msg_lower.contains("can i get") || msg_lower.contains("need a") {
+                tracing::info!("Ambassador parsed potential custom quote intent from message: {}", message);
+
+                let mut missing_fields = vec![];
+                if !msg_lower.contains("date") && !msg_lower.contains("when") && !msg_lower.contains("saturday") && !msg_lower.contains("weekend") {
+                    missing_fields.push("date/timeline");
+                }
+
+                if missing_fields.is_empty() {
+                    let proposed_action = serde_json::json!({
+                        "action_type": "Draft Custom Quote",
+                        "sender_id": sender_id,
+                        "message": message,
+                        "suggested_price": 50.00,
+                        "deposit_required": 25.00,
+                        "generated_response": "I can definitely help with that! I've drafted a quote for you. Once approved by the owner, I'll send it right over with a deposit link."
+                    });
+
+                    self.orchestrator.execute_action(
+                        DepartmentType::CustomerSuccess,
+                        "Draft Custom Quote".to_string(),
+                        event.tenant_id.clone(),
+                        ActionRisk::DraftForReview,
+                        proposed_action,
+                    ).await.map_err(|e| e.to_string())?;
+                    return Ok(());
+                } else {
+                    let proposed_action = serde_json::json!({
+                        "action_type": "Draft Message",
+                        "sender_id": sender_id,
+                        "source": source,
+                        "generated_response": format!("I'd love to help with that! Could you tell me more about the {}?", missing_fields.join(", "))
+                    });
+
+                    self.orchestrator.execute_action(
+                        DepartmentType::CustomerSuccess,
+                        "Draft Follow-up Question".to_string(),
+                        event.tenant_id.clone(),
+                        ActionRisk::DraftForReview,
+                        proposed_action,
+                    ).await.map_err(|e| e.to_string())?;
+                    return Ok(());
+                }
+            }
+            // --- END: Conversational Quoting Engine ---
+
             let payload_customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
 
             // Identity Resolution: Use IdentityResolver to get unified customer graph identity
