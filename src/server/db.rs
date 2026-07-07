@@ -1154,6 +1154,9 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         offline_changes_count INTEGER DEFAULT 0,
+                        sync_status TEXT DEFAULT 'SYNCED',
+                        pending_reconciliation JSONB DEFAULT '[]'::jsonb,
+                        last_conflict_resolved_at TIMESTAMP,
                         UNIQUE(tenant_id, device_id)
                     );
 
