@@ -12,7 +12,8 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
     ];
 
     for dir in dirs {
-        fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+        fs::create_dir_all(&dir).map_err(|e| format!("Failed to create directory {}: {}", dir, e))?;
+        tracing::debug!("Successfully created directory: {}", dir);
     }
 
     global::meter("ohc.onboarding")
@@ -34,6 +35,7 @@ pub fn check_environment(is_cloud: bool) -> Result<(), String> {
 
     for dir in dirs {
         if !Path::new(&dir).exists() {
+            tracing::debug!("Environment check failed: directory {} does not exist", dir);
             return Err(format!("directory {} does not exist", dir));
         }
     }

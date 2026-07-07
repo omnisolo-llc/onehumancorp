@@ -384,26 +384,26 @@ impl DB {
                         }
                     }
                 }
+                #[cfg(unix)]
+                {
+                    if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        let mut file_opts = std::fs::OpenOptions::new();
+                        file_opts.write(true).create(true).mode(0o600);
+                        #[cfg(target_os = "linux")]
+                        file_opts.custom_flags(0x00020000);
+                        #[cfg(target_os = "macos")]
+                        file_opts.custom_flags(0x0100);
+                        let _ = file_opts.open(&db_path);
+                    }
+                }
                 #[cfg(not(unix))]
                 {
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::fs::OpenOptionsExt;
-                            let mut file_opts = std::fs::OpenOptions::new();
-                            file_opts.write(true).create(true).mode(0o600);
-                            #[cfg(target_os = "linux")]
-                            file_opts.custom_flags(0x00020000);
-                            #[cfg(target_os = "macos")]
-                            file_opts.custom_flags(0x0100);
-                            let _ = file_opts.open(&db_path);
-                        }
-                        #[cfg(not(unix))]
-                        {
-                            let _ = std::fs::File::create(&db_path);
-                        }
+                        let _ = std::fs::File::create(&db_path);
                     }
                 }
+
             }
 
             // sqlite-vec is optional at runtime. The memory repository probes for
@@ -772,6 +772,11 @@ impl DB {
                 Ok(Ok(val)) => return Ok(val),
                 Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
+
+                    if err_str.contains("syntax error") || err_str.contains("42601") {
+                        return Err(err);
+                    }
+
                     let is_sqlite_lock = self.is_sqlite()
                         && (err_str.contains("database is locked")
                             || err_str.contains("sqlite_busy"));

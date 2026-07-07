@@ -13,6 +13,9 @@ test.describe('Onboarding Wizard Optimization', () => {
   });
 
   test('validates domain name correctly', async ({ page }) => {
+    // Wait for the scripts to load
+    await page.waitForFunction(() => window.goToStep !== undefined);
+
     await page.evaluate(() => { window.goToStep('step-domain'); });
     const domainInput = page.locator('#domain-name');
 
@@ -25,9 +28,65 @@ test.describe('Onboarding Wizard Optimization', () => {
     await expect(page.locator('#domain-error')).toBeVisible();
     await expect(page.locator('#domain-error')).toContainText('contain only lowercase letters');
 
+    await domainInput.fill('-invalid-leading-hyphen');
+    await page.locator('#step-domain .next-step-btn').click();
+    await expect(page.locator('#domain-error')).toBeVisible();
+    await expect(page.locator('#domain-error')).toContainText('cannot start or end with a hyphen');
+
+    await domainInput.fill('invalid-trailing-hyphen-');
+    await page.locator('#step-domain .next-step-btn').click();
+    await expect(page.locator('#domain-error')).toBeVisible();
+    await expect(page.locator('#domain-error')).toContainText('cannot start or end with a hyphen');
+
     await domainInput.fill('valid-domain-123');
     await page.locator('#step-domain .next-step-btn').click();
 
     await expect(page.locator('#step-template')).toHaveClass(/step active/);
+  });
+
+  test('validates domain name visual structure properly', async ({ page }) => {
+    await page.waitForFunction(() => window.goToStep !== undefined);
+    await page.evaluate(() => { window.goToStep('step-domain'); });
+    const domainInputContainer = page.locator('#step-domain .glass-control.glassmorphism').first();
+    const spanSuffix = domainInputContainer.locator('span');
+
+    await expect(spanSuffix).toBeVisible();
+    await expect(spanSuffix).toHaveText('.ohc.app');
+  });
+
+  test('validates domain name min length correctly', async ({ page }) => {
+    await page.waitForFunction(() => window.goToStep !== undefined);
+    await page.evaluate(() => { window.goToStep('step-domain'); });
+    const domainInput = page.locator('#domain-name');
+
+    await domainInput.fill('ab');
+    await page.locator('#step-domain .next-step-btn').click();
+
+    await expect(page.locator('#domain-error')).toBeVisible();
+  });
+
+  test('validates domain error goes away', async ({ page }) => {
+    await page.waitForFunction(() => window.goToStep !== undefined);
+    await page.evaluate(() => { window.goToStep('step-domain'); });
+    const domainInput = page.locator('#domain-name');
+
+    await domainInput.fill('ab');
+    await page.locator('#step-domain .next-step-btn').click();
+    await expect(page.locator('#domain-error')).toBeVisible();
+
+    await domainInput.fill('valid-domain');
+    await page.locator('#step-domain .next-step-btn').click();
+    await expect(page.locator('#domain-error')).toBeHidden();
+  });
+
+  test('validates domain name does not accept special chars', async ({ page }) => {
+    await page.waitForFunction(() => window.goToStep !== undefined);
+    await page.evaluate(() => { window.goToStep('step-domain'); });
+    const domainInput = page.locator('#domain-name');
+
+    await domainInput.fill('test domain');
+    await page.locator('#step-domain .next-step-btn').click();
+
+    await expect(page.locator('#domain-error')).toBeVisible();
   });
 });

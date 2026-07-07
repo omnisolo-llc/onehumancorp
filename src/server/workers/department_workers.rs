@@ -233,20 +233,19 @@ impl OperationsWorker {
                                     .execute(&db.pool)
                                     .await;
 
-                                let cache = crate::builder::edge::get_edge_cache();
-                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                                cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
-
-                                let pool_clone = db.pool.clone();
-                                let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
-                                tokio::spawn(async move {
-                                    if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
-                                        for site in sites {
-                                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id_clone, site.id).await;
-
-                                        }
+                                if let Some(client) = crate::get_redis_client() {
+                                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                        let invalidation_topic = "cache_invalidation_events";
+                                        let invalidation_payload = serde_json::json!({
+                                            "event": "inventory.updated",
+                                            "tags": [
+                                                format!("tenant-id:{}", tenant_id),
+                                                format!("entity:product:{}", product_id)
+                                            ]
+                                        }).to_string();
+                                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                                     }
-                                });
+                                }
 
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (tenant_id = $2 OR tenant_id = $2)")
                                     .bind(product_id)
@@ -274,20 +273,19 @@ impl OperationsWorker {
                                     .execute(pool)
                                     .await;
 
-                                let cache = crate::builder::edge::get_edge_cache();
-                                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                                cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
-
-                                let pool_clone = db.pool.clone();
-                                let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
-                                tokio::spawn(async move {
-                                    if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
-                                        for site in sites {
-                                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id_clone, site.id).await;
-
-                                        }
+                                if let Some(client) = crate::get_redis_client() {
+                                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                        let invalidation_topic = "cache_invalidation_events";
+                                        let invalidation_payload = serde_json::json!({
+                                            "event": "inventory.updated",
+                                            "tags": [
+                                                format!("tenant-id:{}", tenant_id),
+                                                format!("entity:product:{}", product_id)
+                                            ]
+                                        }).to_string();
+                                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                                     }
-                                });
+                                }
 
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (tenant_id = ? OR tenant_id = ?)")
                                     .bind(product_id)
@@ -966,20 +964,19 @@ let db_for_products = self.db.clone();
                             let mut product_name = String::new();
                             if let Some(pid) = payload_json.get("product_id").and_then(|p| p.as_str()) {
                                 product_id = pid.to_string();
-                                let cache = crate::builder::edge::get_edge_cache();
-                                cache.invalidate_by_tag(&format!("entity:product:{}", pid)).await;
-                                cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
-
-                                let pool_clone = db_for_products.pool.clone();
-                                let tenant_id_clone = uuid::Uuid::parse_str(&org_id).unwrap_or_default();
-                                tokio::spawn(async move {
-                                    if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
-                                        for site in sites {
-                                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id_clone, site.id).await;
-
-                                        }
+                                if let Some(client) = crate::get_redis_client() {
+                                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                        let invalidation_topic = "cache_invalidation_events";
+                                        let invalidation_payload = serde_json::json!({
+                                            "event": "inventory.updated",
+                                            "tags": [
+                                                format!("tenant-id:{}", org_id),
+                                                format!("entity:product:{}", pid)
+                                            ]
+                                        }).to_string();
+                                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                                     }
-                                });
+                                }
                             }
                             if let Some(name) = payload_json.get("name").and_then(|p| p.as_str()) {
                                 product_name = name.to_string();
