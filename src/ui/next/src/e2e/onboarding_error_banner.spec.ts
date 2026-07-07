@@ -5,6 +5,20 @@ test.describe('Onboarding Error Banner UI', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the onboarding flow where the error banner would be tested
     await page.goto('/onboarding');
+
+    await page.route('**/api/onboarding/intake', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          business_type: 'Test',
+          business_name: 'Test',
+          categories: ['physical'],
+          initial_products: [{ name: 'Test Product', price: '10' }]
+        })
+      });
+    });
+
     await page.addInitScript(() => {
       window.localStorage.clear();
     });
