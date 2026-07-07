@@ -179,6 +179,9 @@ export class SyncManager {
           }
         });
 
+      const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+      const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+
       if (posSyncEvents.length > 0) {
         const resSyncEvents = await fetch('/api/v1/sync/events', {
           method: 'POST',
@@ -200,8 +203,7 @@ export class SyncManager {
          };
       });
 
-      const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
-      const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+
 
       let allOk = true;
 
