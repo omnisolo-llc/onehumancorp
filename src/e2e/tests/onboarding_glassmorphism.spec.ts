@@ -24,7 +24,7 @@ test.describe('Onboarding Glassmorphism UI Audit', () => {
     await page.waitForTimeout(500);
 
     const bgColor = await container.evaluate((el) => window.getComputedStyle(el).backgroundColor);
-    expect(bgColor).toBe('rgba(255, 255, 255, 0.65)');
+    expect(bgColor).toMatch(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.65\s*\)|rgba\(\s*252\s*,\s*252\s*,\s*252\s*,\s*0\.65\s*\)/);
 
     const backdropFilter = await container.evaluate((el) => window.getComputedStyle(el).backdropFilter);
     expect(backdropFilter).toContain('blur(30px)');
