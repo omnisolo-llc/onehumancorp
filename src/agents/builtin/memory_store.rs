@@ -497,14 +497,14 @@ impl VectorRepository {
     pub async fn prune_stale(&self, older_than: DateTime<Utc>) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5")
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
                     .bind(older_than)
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                sqlx::query("DELETE FROM consolidated_memory WHERE last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5")
+                sqlx::query("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = FALSE AND reference_count < 5 AND source_type = 'TASK_SUMMARY') OR (reliability_score < 20 AND owner_override = FALSE)")
                     .bind(older_than)
                     .execute(pool)
                     .await
@@ -1928,7 +1928,7 @@ mod get_conflicts_tests {
         let query = "SELECT id FROM consolidated_memory";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
-        assert_eq!(rows.len(), 2, "Two records should remain");
+        assert_eq!(rows.len(), 3, "Three records should remain");
 
         let mut remaining_ids: Vec<String> = rows
             .into_iter()
@@ -1938,7 +1938,7 @@ mod get_conflicts_tests {
 
         assert_eq!(
             remaining_ids,
-            vec!["rec2", "rec3"],
+            vec!["rec2", "rec3", "rec4"],
             "The correct records should remain"
         );
     }
@@ -2097,7 +2097,8 @@ mod get_conflicts_tests {
         let query = "SELECT id FROM consolidated_memory";
         let rows = sqlx::query(query).fetch_all(&pool).await.unwrap();
 
-        assert_eq!(rows.len(), 0, "No records should remain");
+        assert_eq!(rows.len(), 1, "One record should remain");
+        assert_eq!(rows[0].try_get::<String, _>("id").unwrap(), "rec1");
 
         // get_conflicting_pairs test
         let conflicts = repo.get_conflicting_pairs().await.unwrap();
@@ -4026,8 +4027,8 @@ mod get_and_delete_tests {
             "Should have pruned stale task summary"
         );
         assert!(
-            repo.get_by_id("prune_unreliable").await.unwrap().is_some(),
-            "Should NOT have pruned unreliable record anymore"
+            repo.get_by_id("prune_unreliable").await.unwrap().is_none(),
+            "Should have pruned unreliable record"
         );
 
         assert!(

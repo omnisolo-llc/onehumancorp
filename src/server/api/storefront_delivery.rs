@@ -11,7 +11,7 @@ use uuid::Uuid;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use crate::utils::cache::HybridCache;
-use crate::builder::edge::{get_edge_cache, get_ongoing_generation, inject_dynamic_inventory};
+use crate::builder::edge::{get_edge_cache, regenerate_cache, get_ongoing_generation, inject_dynamic_inventory};
 
 #[derive(Clone)]
 pub struct DeliveryState {
@@ -22,8 +22,58 @@ pub fn router() -> Router<DeliveryState> {
     Router::new()
         .route("/{tenant_id}/{product_id}", get(get_storefront_product).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)))
         .route("/webhook/invalidate", post(invalidate_cache_webhook))
+        .route("/resolve_domain", get(resolve_domain).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)))
 }
 
+async fn resolve_domain(
+    axum::extract::State(state): axum::extract::State<DeliveryState>,
+    req: axum::extract::Request,
+) -> Result<impl IntoResponse, StatusCode> {
+    let host = req.headers().get("X-Forwarded-Host")
+        .or_else(|| req.headers().get("Host"))
+        .and_then(|h| h.to_str().ok())
+        .ok_or(StatusCode::BAD_REQUEST)?;
+
+    // Remove port if present
+    let domain = host.split(':').next().unwrap_or(host).to_string();
+
+    let (site_id, tenant_id) = match sqlx::query_as::<_, (Uuid, Uuid)>(
+        "SELECT id, tenant_id FROM builder_sites WHERE domain = $1"
+    )
+    .bind(&domain)
+    .fetch_optional(&state.pool)
+    .await {
+        Ok(Some(res)) => res,
+        _ => return Err(StatusCode::NOT_FOUND),
+    };
+
+    let cache = get_edge_cache();
+    let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, "en-US");
+
+    if let Some((cached_html, is_stale)) = cache.get_with_swr(&cache_key).await {
+        let mut response = Html(cached_html.clone()).into_response();
+        set_storefront_headers(&mut response, &cached_html, tenant_id, None);
+        if !is_stale {
+            return Ok(response);
+        } else {
+            let pool_clone = state.pool.clone();
+            let cache_key_clone = cache_key.clone();
+            let cache_clone = cache.clone();
+            tokio::spawn(async move {
+                let _ = regenerate_cache(pool_clone, tenant_id, site_id, cache_key_clone, cache_clone).await;
+            });
+            return Ok(response);
+        }
+    }
+
+    if let Ok((html, tags)) = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
+        let mut response = Html(html.clone()).into_response();
+        set_storefront_headers(&mut response, &html, tenant_id, Some(tags));
+        return Ok(response);
+    }
+
+    Err(StatusCode::NOT_FOUND)
+}
 
 pub struct CacheInvalidationService {
     cache: Arc<HybridCache<String>>,

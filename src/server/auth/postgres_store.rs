@@ -49,7 +49,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
@@ -103,7 +103,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
@@ -149,7 +149,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
@@ -194,7 +194,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
@@ -239,7 +239,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
@@ -283,7 +283,7 @@ impl UserRepository for PgUserRepository {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
@@ -327,7 +327,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             r#"
@@ -339,7 +339,7 @@ impl UserRepository for PgUserRepository {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5::jsonb, active=$6,
             oidc_subject=$7, updated_at=$8
-            WHERE id=$1 AND tenant_id = $9 RETURNING id
+            WHERE id=$1 AND tenant_id = current_setting('app.current_tenant')::text RETURNING id
             "#
         };
 
@@ -369,7 +369,6 @@ impl UserRepository for PgUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .bind(org_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?
@@ -387,7 +386,7 @@ impl UserRepository for PgUserRepository {
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
@@ -433,7 +432,7 @@ impl UserRepository for PgUserRepository {
 
 
         let now = chrono::Utc::now();
-        sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = current_setting('app.current_tenant')::text").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+        sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = current_setting('app.current_tenant')::text").bind(now).execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
@@ -443,7 +442,7 @@ impl UserRepository for PgUserRepository {
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         validate_org_id!(org_id);
         let is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let should_bypass = !is_multitenant;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
@@ -459,7 +458,6 @@ impl UserRepository for PgUserRepository {
             sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2 AND tenant_id = current_setting('app.current_tenant')::text")
                 .bind(jti)
                 .bind(chrono::Utc::now())
-                .bind(org_id)
                 .fetch_one(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?
@@ -571,7 +569,7 @@ mod security_tests {
 
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
-            let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+            let _org_id = "system"; let should_bypass = !is_multitenant;
             assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
             let res = repo.get_by_id("dummy_id", "system").await;

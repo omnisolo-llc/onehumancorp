@@ -373,6 +373,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const manageButton = screen.getByText('Manage Billing');
     await act(async () => {
       fireEvent.click(manageButton);
@@ -396,12 +397,15 @@ describe('CostDashboardPage', () => {
       return Promise.reject(new Error('not found'));
     }) as any;
 
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     render(<CostDashboardPage />);
 
     await waitFor(() => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const manageButton = screen.getByText('Manage Billing');
     await act(async () => {
       fireEvent.click(manageButton);
@@ -409,7 +413,11 @@ describe('CostDashboardPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Failed to initiate billing portal. Please try again.')).toBeDefined();
+      consoleErrorSpy.mockRestore();
+
     });
+
+    consoleSpy.mockRestore();
   });
 
   test('handles cancel subscription correctly', async () => {
@@ -557,6 +565,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const invoiceButton = screen.getByText('Download Invoice');
     await act(async () => {
       fireEvent.click(invoiceButton);
@@ -589,6 +598,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const invoiceButton = screen.getByText('Download Invoice');
     await act(async () => {
       fireEvent.click(invoiceButton);
@@ -596,12 +606,14 @@ describe('CostDashboardPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Failed to download invoice.')).toBeDefined();
+      consoleErrorSpy.mockRestore();
     });
   });
 
   test('handles download invoice catch error', async () => {
     const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
     const mockPlanData = { current_plan: 'Starter' };
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
@@ -651,6 +663,7 @@ describe('CostDashboardPage', () => {
 
     const mockCostData = { cost_per_1k_tokens: 0, trend: [] };
     const mockPlanData = { current_plan: 'Starter' };
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
       if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });

@@ -2519,36 +2519,20 @@
       <div class="step" id="step-domain">
         <h1>Where will your business live?</h1>
         <p>Choose your workspace domain</p>
-        <div
-          style="
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-          "
-        >
+        <div class="glass-control glassmorphism" style="display: flex; align-items: center; padding: 0 16px; margin-bottom: 0; width: 100%; box-sizing: border-box; min-height: 44px;">
           <input
             type="text"
             id="domain-name"
             data-testid="domain-name"
-            class="glass-control glassmorphism"
             placeholder="e.g. my-business"
             inputmode="url"
             autocomplete="off"
             autocapitalize="none"
             autocorrect="off"
-
-            style="margin-bottom: 0; text-align: right; padding-right: 4px"
-           enterkeyhint="next" />
-          <span
-            style="
-              font-size: 18px;
-              font-weight: 500;
-              color: #1d1d1f;
-              opacity: 0.8;
-            "
-            >.ohc.app</span
-          >
+            style="flex: 1; border: none; background: transparent; outline: none; margin-bottom: 0; padding: 0; font-size: 16px; font-family: inherit; color: inherit; text-align: right; min-width: 0; appearance: none; box-shadow: none;"
+            enterkeyhint="next"
+          />
+          <span style="font-size: 16px; font-weight: 500; color: #1d1d1f; opacity: 0.8; padding-left: 4px; white-space: nowrap; flex-shrink: 0;">.ohc.app</span>
         </div>
         <div
           id="domain-error"
@@ -4137,7 +4121,7 @@
             window.__TAURI__.core
               .invoke("save_onboarding_state", { state, tenantId, userId })
               .then(() => {
-                e.target.innerText = "Saved!";
+                e.target.innerText = "Draft Saved!";
                 setTimeout(() => {
                   e.target.innerText = originalText;
                   e.target.disabled = false;
@@ -4163,7 +4147,7 @@
             })
               .then((res) => {
                 if (res.ok) {
-                  e.target.innerText = "Saved!";
+                  e.target.innerText = "Draft Saved!";
                   setTimeout(() => {
                     e.target.innerText = originalText;
                     e.target.disabled = false;
