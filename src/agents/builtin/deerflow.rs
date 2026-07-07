@@ -139,11 +139,9 @@ impl DeerFlowOrchestrator {
 
         let results = join_all(futures).await;
         let mut combined_results = String::new();
-        for res in results {
-            if let Ok(content) = res {
-                combined_results.push_str(&content);
-                combined_results.push_str("\n\n---\n\n");
-            }
+        for content in results.into_iter().flatten() {
+            combined_results.push_str(&content);
+            combined_results.push_str("\n\n---\n\n");
         }
 
         // Step 3: Synthesize results

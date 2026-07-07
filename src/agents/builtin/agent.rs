@@ -680,11 +680,10 @@ impl Agent {
                         for subsequent_tc in
                             mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                         {
-                            let sub_idx = msg
+                            let sub_idx = if let Some(idx) = msg
                                 .tool_calls
                                 .iter()
-                                .position(|t| t.id == subsequent_tc.id)
-                                .unwrap();
+                                .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -710,11 +709,10 @@ impl Agent {
                         for subsequent_tc in
                             mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                         {
-                            let sub_idx = msg
+                            let sub_idx = if let Some(idx) = msg
                                 .tool_calls
                                 .iter()
-                                .position(|t| t.id == subsequent_tc.id)
-                                .unwrap();
+                                .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -786,11 +784,10 @@ impl Agent {
                         for subsequent_tc in
                             mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                         {
-                            let sub_idx = msg
+                            let sub_idx = if let Some(idx) = msg
                                 .tool_calls
                                 .iter()
-                                .position(|t| t.id == subsequent_tc.id)
-                                .unwrap();
+                                .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -816,11 +813,10 @@ impl Agent {
                         for subsequent_tc in
                             mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                         {
-                            let sub_idx = msg
+                            let sub_idx = if let Some(idx) = msg
                                 .tool_calls
                                 .iter()
-                                .position(|t| t.id == subsequent_tc.id)
-                                .unwrap();
+                                .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -2055,7 +2051,7 @@ impl Agent {
                                 tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id.clone(), &tc.name, &err_msg);
 
                                 for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != id).skip(1) {
-                                    let sub_idx = tool_calls.iter().position(|t| t.id == subsequent_tc.id).unwrap();
+                                    let sub_idx = if let Some(idx) = tool_calls.iter().position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
                                     tool_results[sub_idx] = crate::types::ToolResult {
                                         tool_call_id: subsequent_tc.id.clone(),
                                         content: String::new(),
@@ -2103,7 +2099,7 @@ impl Agent {
                         };
 
                         for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != id).skip(1) {
-                            let sub_idx = tool_calls.iter().position(|t| t.id == subsequent_tc.id).unwrap();
+                            let sub_idx = if let Some(idx) = tool_calls.iter().position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),
@@ -4659,10 +4655,9 @@ impl Agent {
                 if !error.is_empty() {
                     for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != tc.id).skip(1)
                     {
-                        let sub_idx = tool_calls
+                        let sub_idx = if let Some(idx) = tool_calls
                             .iter()
-                            .position(|t| t.id == subsequent_tc.id)
-                            .unwrap();
+                            .position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
                         tool_results[sub_idx] = ToolResult {
                             tool_call_id: subsequent_tc.id.clone(),
                             content: String::new(),

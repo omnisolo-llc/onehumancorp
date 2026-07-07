@@ -89,7 +89,7 @@ impl DurableExecutionEngine {
             }
 
             let mut all_completed = true;
-            for (_, status) in &state.steps {
+            for status in state.steps.values() {
                 match status {
                     StepStatus::Failed(msg) => return Some(WorkflowStatus::Failed(msg.clone())),
                     StepStatus::Completed(_) => continue,
