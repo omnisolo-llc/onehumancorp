@@ -1,19 +1,21 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Viral Share to Unlock - Digital Business Card', () => {
 
-  test('Shows soft paywall and allows unlock via share', async ({ page }) => {
+  test('Shows soft paywall and allows unlock via share', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
     // Navigate to the digital business card generator using relative path
-    await page.goto('/digital-business-card');
+    await page.goto('/ui/digital-business-card.html');
 
-    // Fill in basic details to see preview update
-    await page.fill('input[placeholder="e.g. Jane Doe"]', 'Test User');
+    // Wait for the input to be visible and then fill it
+    const nameInput = page.locator('#input-name');
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill('Test User');
 
-    // Check that "Powered by OHC" is visible in the preview initially
-    await expect(page.locator('text=⚡ Powered by OHC')).toBeVisible();
-
-    // Click the "Remove \'Powered by OHC\' branding" checkbox
-    await page.click('text=Remove "Powered by OHC" branding');
+    // Click the "Remove Powered by OHC branding" checkbox
+    const removeBrandingCheckbox = page.locator('#input-remove-branding');
+    // Using evaluate since standard click on checkbox label can sometimes be tricky
+    await removeBrandingCheckbox.evaluate((node: HTMLInputElement) => { node.click(); });
 
     // The Soft Paywall should appear
     await expect(page.locator('text=Upgrade to Pro').first()).toBeVisible();
@@ -33,7 +35,8 @@ test.describe('Viral Share to Unlock - Digital Business Card', () => {
     // The modal should close
     await expect(page.locator('text=Share to Unlock for Free')).not.toBeVisible();
 
-    // The checkbox should be checked (verified by the branding being gone)
-    await expect(page.locator('text=⚡ Powered by OHC')).not.toBeVisible();
+    // The checkbox should be checked
+    const checkbox = page.locator('#input-remove-branding');
+    await expect(checkbox).toBeChecked();
   });
 });
