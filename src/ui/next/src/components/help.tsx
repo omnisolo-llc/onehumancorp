@@ -417,13 +417,15 @@ export function HelpWidget() {
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-10 flex justify-between items-start pt-6">
               <h3 className="text-white font-bold font-outfit text-base pr-4 line-clamp-2 drop-shadow-md leading-tight">{activeVideo.title}</h3>
-              <button
-                onClick={() => setActiveVideo(null)}
-                className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-3xl saturate-[210%] border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0"
-                aria-label="Close video"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
+              <WithTooltip id="video-close-btn-tooltip" defaultText="Close video player">
+                <button
+                  onClick={() => setActiveVideo(null)}
+                  className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-3xl saturate-[210%] border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0"
+                  aria-label="Close video"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </WithTooltip>
             </div>
 
             {/* Real Video Player area */}
