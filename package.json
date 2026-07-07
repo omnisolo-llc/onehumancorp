@@ -17,6 +17,7 @@
     "framer-motion": "^12.40.0",
     "glob": "^13.0.6",
     "google-protobuf": "^3.21.4",
+    "marked": "^18.0.5",
     "next": "^16.2.7",
     "pg": "8.21.0",
     "react": "^19.2.5",
