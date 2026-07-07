@@ -569,7 +569,7 @@ mod security_tests {
 
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
-            let org_id = "system"; let should_bypass = !is_multitenant;
+            let _org_id = "system"; let should_bypass = !is_multitenant;
             assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
             let res = repo.get_by_id("dummy_id", "system").await;
