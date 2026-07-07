@@ -1114,6 +1114,17 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create interactive discount wheels to capture emails.</p>
             </Link>
             </WithTooltip>
+
+            <WithTooltip id="interactive-poll-tooltip" defaultText="Create engaging polls to capture leads and customer preferences.">
+            <Link href="/interactive-poll-generator" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📊</div>
+                <div className="text-teal-600 dark:text-teal-400 font-semibold text-sm bg-teal-50 dark:bg-teal-900/30 px-3 py-1 rounded-full">Engagement</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Interactive Poll Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Create engaging polls to capture leads and customer preferences.</p>
+            </Link>
+            </WithTooltip>
             <WithTooltip id="trial-extension-tooltip" defaultText="Share your setup on X to instantly unlock 7 extra days of Pro.">
             <Link href="/trial-extension" className="block glassmorphism p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
