@@ -115,7 +115,6 @@ async fn invalidate_cache_webhook(
     StatusCode::OK
 }
 
-
 async fn get_storefront_product(
     State(state): State<DeliveryState>,
     Path((tenant_id_str, product_id_str)): Path<(String, String)>,
@@ -193,8 +192,6 @@ async fn get_storefront_product(
     Ok(response)
 }
 
-
-
 fn set_storefront_headers(response: &mut axum::response::Response, html: &str, tenant_id: Uuid, custom_tags: Option<Vec<String>>) {
     let mut hasher = Sha256::new();
     hasher.update(html.as_bytes());
@@ -209,15 +206,13 @@ fn set_storefront_headers(response: &mut axum::response::Response, html: &str, t
     }
 
     if let Ok(val) = cache_tag.parse() {
-        response.headers_mut().insert("Cache-Tag", val);
-    }
-
-    if let Ok(val) = cache_tag.parse() {
-        response.headers_mut().insert("Surrogate-Key", val);
+        response.headers_mut().insert("cache-tag", val.clone());
+        response.headers_mut().insert("surrogate-key", val.clone());
+        response.headers_mut().insert("x-cache-tags", val);
     }
 
     if let Ok(val) = etag.parse() {
-        response.headers_mut().insert("ETag", val);
+        response.headers_mut().insert("etag", val);
     }
 
     response.headers_mut().insert(
@@ -227,9 +222,7 @@ fn set_storefront_headers(response: &mut axum::response::Response, html: &str, t
 }
 
 #[cfg(test)]
-
 mod tests {
-
     #[test]
     fn test_storefront_headers_dummy() {
         assert!(true);

@@ -48,7 +48,7 @@ pub async fn edge_caching_middleware(
                     response.headers_mut().insert(hk, hv);
                 }
             }
-            response.headers_mut().insert("X-Cache", "HIT".parse().unwrap());
+            response.headers_mut().insert("x-cache", "HIT".parse().unwrap());
             return Ok(response.into_response());
         }
     }
@@ -58,12 +58,12 @@ pub async fn edge_caching_middleware(
     let (mut parts, body) = response.into_parts();
 
     // Set Surrogate-Key from Cache-Tag if present
-    if let Some(cache_tag) = parts.headers.get("Cache-Tag") {
+    if let Some(cache_tag) = parts.headers.get("cache-tag") {
         if let Ok(tag_str) = cache_tag.to_str() {
             // Fastly uses space-separated keys, replace ", " with " "
             let surrogate_val = tag_str.replace(", ", " ");
             if let Ok(val) = surrogate_val.parse() {
-                parts.headers.insert("Surrogate-Key", val);
+                parts.headers.insert("surrogate-key", val);
             }
         }
     }
@@ -89,11 +89,11 @@ pub async fn edge_caching_middleware(
         }
     }
 
-    parts.headers.insert("X-Cache", "MISS".parse().unwrap());
+    parts.headers.insert("x-cache", "MISS".parse().unwrap());
 
     if is_get && parts.status.is_success() {
         let mut tags_vec = Vec::new();
-        if let Some(surrogate) = parts.headers.get("Surrogate-Key") {
+        if let Some(surrogate) = parts.headers.get("surrogate-key") {
             if let Ok(s) = surrogate.to_str() {
                 for t in s.split(' ') {
                     if !t.is_empty() {

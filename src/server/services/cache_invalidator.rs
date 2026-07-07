@@ -43,6 +43,9 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
     let mut stream = pubsub_conn.on_message();
 
     let edge_cache = crate::builder::edge::get_edge_cache();
+    let http_client = reqwest::Client::new();
+    // Default to edge-cache:80 which is our docker-compose service name.
+    let edge_cache_url = std::env::var("OHC_EDGE_CACHE_URL").unwrap_or_else(|_| "http://edge-cache:80/purge".to_string());
 
     while let Some(msg) = stream.next().await {
         let payload: String = match msg.get_payload() {
@@ -69,6 +72,25 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                     edge_cache.invalidate_by_tag(tag).await;
                     let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
                     cdn_cache.invalidate_by_tag(tag).await;
+
+                    // Send HTTP PURGE request to NGINX edge cache
+                    let res = http_client.request(reqwest::Method::from_bytes(b"PURGE").unwrap_or(reqwest::Method::POST), &edge_cache_url)
+                        .header("X-Cache-Tag", tag)
+                        .send()
+                        .await;
+
+                    match res {
+                        Ok(response) => {
+                            if !response.status().is_success() {
+                                warn!("Failed to purge edge cache for tag {}: status {}", tag, response.status());
+                            } else {
+                                info!("Successfully purged edge cache for tag {}", tag);
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Failed to send purge request to edge cache for tag {}: {}", tag, e);
+                        }
+                    }
                 }
 
                 if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str) {
