@@ -262,6 +262,7 @@ describe('Walkthrough Component', () => {
     const originalEnv = process.env.NEXT_PUBLIC_E2E;
     process.env.NEXT_PUBLIC_E2E = 'true';
 
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const steps = [
       { targetId: 'step1', title: 'Step 1', content: 'Content 1' }
     ];
@@ -269,6 +270,7 @@ describe('Walkthrough Component', () => {
       <InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />
     );
     expect(container.firstChild).toBeNull();
+    consoleWarnSpy.mockRestore();
 
     process.env.NEXT_PUBLIC_E2E = originalEnv;
   });
