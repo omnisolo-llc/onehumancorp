@@ -53,6 +53,7 @@
       <h2>Upgrade to Pro</h2>
       <p>Make the Digital Business Card 100% white-labeled by upgrading to Pro.</p>
       <button id="btn-upgrade">Upgrade to Pro</button>
+      <button id="btn-share-to-unlock" style="background-color: #1DA1F2; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 500; cursor: pointer;">Share to Unlock for Free</button>
       <button class="btn-secondary" id="btn-keep-watermark">Keep Watermark</button>
     </div>
   </div>
@@ -60,8 +61,11 @@
   <script>
     document.getElementById('input-remove-branding').addEventListener('change', (e) => {
       if (e.target.checked) {
-        document.getElementById('paywall-modal').style.display = 'flex';
-        e.target.checked = false; // Revert immediately, require pro
+        // Only show if not already unlocked
+        if (localStorage.getItem('ohc_dbc_shared') !== 'true') {
+          document.getElementById('paywall-modal').style.display = 'flex';
+          e.target.checked = false; // Revert immediately, require pro
+        }
       }
     });
 
@@ -72,6 +76,18 @@
 
     document.getElementById('btn-upgrade').addEventListener('click', () => {
       window.location.href = '/pricing.html';
+    });
+
+    document.getElementById('btn-share-to-unlock').addEventListener('click', () => {
+      const shareText = "I just created my free Digital Business Card using OHC! Build yours here:";
+      const shareUrl = "https://ohc.app";
+      const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+      window.open(intentUrl, '_blank');
+
+      // Set unlock state
+      localStorage.setItem('ohc_dbc_shared', 'true');
+      document.getElementById('input-remove-branding').checked = true;
+      document.getElementById('paywall-modal').style.display = 'none';
     });
 
     document.getElementById('btn-generate').addEventListener('click', () => {
