@@ -1318,7 +1318,7 @@ describe("OnboardingWizard", () => {
     await user.click(continueButton);
 
     await waitFor(() => {
-      screen.getByText(/Please tell us what you sell/i);
+      screen.getByText("Please tell us what you sell.");
     });
   });
 

@@ -45,7 +45,7 @@ export const AgentFeed: React.FC = () => {
 
     const handleEdit = (id: string) => {
         // Implement edit logic, maybe a modal or inline editing
-        console.log("Edit draft", id);
+        console.info("Edit draft", id);
     };
 
     if (loading) return <div className="p-4 text-center">Loading feed...</div>;
