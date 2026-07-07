@@ -353,6 +353,7 @@ where
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/spin-to-win/embed", get(handle_spin_to_win_embed))
+        .route("/interactive-poll/embed", get(handle_interactive_poll_embed))
         .route("/milestone", get(handle_get_milestone))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/promoter/generate", post(handle_promoter_generate))
@@ -4153,6 +4154,106 @@ pub async fn handle_zero_click_generate(
     }))
 }
 
+#[derive(Deserialize)]
+pub struct InteractivePollQuery {
+    pub tenant: Option<String>,
+    pub q: Option<String>,
+    pub opts: Option<String>,
+    pub theme: Option<String>,
+    pub email: Option<bool>,
+    #[serde(rename = "hideBranding")]
+    pub hide_branding: Option<bool>,
+}
+
+async fn handle_interactive_poll_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<InteractivePollQuery>,
+) -> impl IntoResponse {
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("\'", "&#x27;")
+    };
+
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let question = escape_html(query.q.as_deref().unwrap_or("Ask a question"));
+    let raw_opts = query.opts.clone().unwrap_or_else(|| "Option 1,Option 2".to_string());
+    let opts: Vec<String> = raw_opts.split(',').map(|s| escape_html(s.trim())).collect();
+
+    let is_dark = query.theme.as_deref() == Some("dark");
+    let bg_class = if is_dark { "bg-gray-900 text-white" } else { "bg-white text-gray-900" };
+    let border_class = if is_dark { "border-gray-800" } else { "border-gray-200" };
+    let btn_bg_class = if is_dark { "bg-gray-800 hover:bg-gray-700 border-gray-700" } else { "bg-gray-50 hover:bg-gray-100 border-gray-200" };
+
+    let require_email = query.email.unwrap_or(false);
+    let hide_branding = query.hide_branding.unwrap_or(false);
+
+    let mut options_html = String::new();
+    for opt in opts {
+        options_html.push_str(&format!(
+            r#"<button class="w-full text-left px-4 py-3 rounded-xl border {} transition-colors flex items-center justify-between mb-2">
+                <span class="font-medium">{}</span>
+                <div class="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+            </button>"#,
+            btn_bg_class, opt
+        ));
+    }
+
+    let mut html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/api/v1/growth/embed.css" rel="stylesheet" />
+    <style>
+        body {{ margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }}
+    </style>
+</head>
+<body class="p-2 bg-transparent">
+    <div class="w-full max-w-sm mx-auto rounded-2xl shadow-sm border {} {} overflow-hidden transition-colors duration-300 p-6">
+        <h3 class="text-xl font-bold mb-4 text-center">{}</h3>
+        <div class="space-y-3 mb-6">
+            {}
+        </div>
+"#,
+        border_class, bg_class, question, options_html
+    );
+
+    if require_email {
+        html.push_str(&format!(
+            r#"<div class="mb-4">
+                <input type="email" placeholder="Enter your email to vote" class="w-full px-4 py-2.5 rounded-xl border {} outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-transparent" />
+            </div>"#,
+            border_class
+        ));
+    }
+
+    html.push_str(
+        r#"<button class="w-full bg-[#0071E3] hover:bg-[#0077ED] text-white font-medium py-2.5 rounded-xl transition-colors text-sm">
+            Vote Now
+        </button>
+    </div>
+"#
+    );
+
+    if !hide_branding {
+        let origin = std::env::var("FRONTEND_URL").unwrap_or_else(|_| "https://ohc.app".to_string());
+        html.push_str(&format!(
+            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;">
+                <a href="{}/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+            </div>"#,
+            origin, tenant
+        ));
+    }
+
+    html.push_str("</body>\n</html>");
+
+    ([(axum::http::header::CONTENT_TYPE, "text/html")], html)
+}
+
 async fn handle_spin_to_win_embed(
     Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<SpinToWinQuery>,
@@ -4297,6 +4398,10 @@ async fn handle_spin_to_win_embed(
 
     axum::response::Html(html)
 }
+
+
+
+
 
 pub async fn handle_viral_widget_embed(
     Extension(_state): Extension<GrowthState>,

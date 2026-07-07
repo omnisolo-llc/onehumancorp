@@ -302,6 +302,49 @@ impl AgentProtocolServer {
     }
 
     /// GET /ap/v1/agent/tasks/{task_id}/artifacts/{artifact_id}/content
+
+    pub async fn list_checkpoints(&self, task_id: &str) -> serde_json::Value {
+        if let Some(cp) = &self.runner.core.agent.checkpointer {
+            match cp.list_checkpoints(task_id).await {
+                Ok(checkpoints) => {
+                    let mut cp_values = Vec::new();
+                    for c in checkpoints {
+                        cp_values.push(serde_json::json!({
+                            "checkpoint_id": c.checkpoint_id,
+                            "parent_id": c.parent_id,
+                            "created_at": c.created_at.to_rfc3339()
+                        }));
+                    }
+                    serde_json::json!({ "checkpoints": cp_values })
+                }
+                Err(e) => serde_json::json!({ "error": format!("Failed to list checkpoints: {}", e) }),
+            }
+        } else {
+            serde_json::json!({ "error": "Checkpointer not configured" })
+        }
+    }
+
+    pub async fn restore_checkpoint(&self, _task_id: &str, req_json: &str) -> serde_json::Value {
+        let req: serde_json::Value = match serde_json::from_str(req_json) {
+            Ok(r) => r,
+            Err(_) => return serde_json::json!({ "error": "Invalid request" }),
+        };
+
+        let checkpoint_id = match req.get("checkpoint_id").and_then(|v| v.as_str()) {
+            Some(id) => id,
+            None => return serde_json::json!({ "error": "checkpoint_id is required" }),
+        };
+
+        if let Some(cp) = &self.runner.core.agent.checkpointer {
+            match cp.restore_checkpoint(checkpoint_id).await {
+                Ok(_) => serde_json::json!({ "success": true, "message": format!("Restored to checkpoint {}", checkpoint_id) }),
+                Err(e) => serde_json::json!({ "error": format!("Failed to restore checkpoint: {}", e) }),
+            }
+        } else {
+            serde_json::json!({ "error": "Checkpointer not configured" })
+        }
+    }
+
     pub async fn download_artifact(
         &self,
         task_id: &str,
