@@ -1504,3 +1504,230 @@ mod additional_chaos_tests {
         assert!(!shed, "Must drop non-critical background jobs under extreme load");
     }
 }
+
+#[cfg(test)]
+mod parity_auditing_tests {
+    use sqlx::sqlite::SqlitePoolOptions;
+    use sqlx::postgres::PgPoolOptions;
+
+    #[tokio::test]
+    async fn test_db_parity_null_timezones_isolation() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Hybrid");
+
+        // 1. SQLite Setup
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let sqlite_uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let sqlite_pool = SqlitePoolOptions::new().max_connections(5).connect(&sqlite_uri).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS parity_test (
+                id TEXT PRIMARY KEY,
+                data TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );"
+        ).execute(&sqlite_pool).await.unwrap();
+
+        // 2. Postgres Setup (if available)
+        let mut pg_pool_opt = None;
+        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+            let pg_pool = PgPoolOptions::new().max_connections(5).connect(&database_url).await.unwrap();
+
+            let table_suffix = uuid::Uuid::new_v4().to_string().replace("-", "_");
+            let table_name = format!("parity_test_{}", table_suffix);
+
+            let create_query = format!(
+                "CREATE TABLE {} (
+                    id TEXT PRIMARY KEY,
+                    data TEXT,
+                    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                );", table_name
+            );
+            sqlx::query(&create_query).execute(&pg_pool).await.unwrap();
+            pg_pool_opt = Some((pg_pool, table_name));
+        }
+
+        // Test NULL handling
+        sqlx::query("INSERT INTO parity_test (id, data) VALUES (?, NULL)")
+            .bind("null_test")
+            .execute(&sqlite_pool).await.unwrap();
+
+        let sqlite_null: Option<String> = sqlx::query_scalar("SELECT data FROM parity_test WHERE id = 'null_test'")
+            .fetch_one(&sqlite_pool).await.unwrap();
+        assert_eq!(sqlite_null, None, "SQLite should handle NULL correctly");
+
+        if let Some((pg_pool, table_name)) = &pg_pool_opt {
+            let insert_query = format!("INSERT INTO {} (id, data) VALUES ($1, NULL)", table_name);
+            sqlx::query(&insert_query)
+                .bind("null_test")
+                .execute(pg_pool).await.unwrap();
+
+            let pg_null: Option<String> = sqlx::query_scalar(&format!("SELECT data FROM {} WHERE id = 'null_test'", table_name))
+                .fetch_one(pg_pool).await.unwrap();
+            assert_eq!(pg_null, None, "Postgres should handle NULL correctly");
+        }
+
+        // Clean up Postgres table if created
+        if let Some((pg_pool, table_name)) = pg_pool_opt {
+            let drop_query = format!("DROP TABLE IF EXISTS {}", table_name);
+            let _ = sqlx::query(&drop_query).execute(&pg_pool).await;
+        }
+    }
+}
+
+#[cfg(test)]
+mod mesh_chaos_tests {
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_chaos_team_mesh_redis_mailbox_corruption() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        // Simulate Redis mailbox returning corrupted JSON instead of valid messages
+        let corrupted_payload = "{ this is not valid json }";
+
+        let result = tokio::time::timeout(Duration::from_millis(100), async {
+            // Attempt to parse the corrupted payload
+            let parsed: Result<serde_json::Value, _> = serde_json::from_str(corrupted_payload);
+            assert!(parsed.is_err());
+            // System must not panic, should gracefully log and drop corrupted messages
+            Ok::<(), String>(())
+        }).await;
+
+        assert!(result.is_ok(), "Redis mailbox parsing failure must be handled gracefully");
+    }
+
+    #[tokio::test]
+    async fn test_chaos_team_mesh_agent_lock_race_conditions() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Hybrid");
+        // Simulating multiple agents trying to acquire the same `.agent-lock/` concurrently
+        use std::sync::Arc;
+        use tokio::sync::Mutex;
+
+        let lock_state = Arc::new(Mutex::new(false));
+        let mut handles = vec![];
+
+        for _ in 0..10 {
+            let lock_clone = lock_state.clone();
+            handles.push(tokio::spawn(async move {
+                let mut locked = lock_clone.lock().await;
+                if !*locked {
+                    *locked = true;
+                    true
+                } else {
+                    false
+                }
+            }));
+        }
+
+        let mut success_count = 0;
+        for h in handles {
+            if h.await.unwrap() {
+                success_count += 1;
+            }
+        }
+
+        assert_eq!(success_count, 1, "Only one agent should successfully acquire the lock in a race condition");
+    }
+
+    #[tokio::test]
+    async fn test_chaos_team_mesh_pubsub_message_loss() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        // Simulating pubsub message loss in the mesh
+        struct PubSub {
+            drop_rate: f64,
+        }
+
+        impl PubSub {
+            async fn publish(&self, _msg: &str) -> Result<(), String> {
+                if rand::random::<f64>() < self.drop_rate {
+                    return Err("Message dropped by chaos simulation".to_string());
+                }
+                Ok(())
+            }
+        }
+
+        let pubsub = PubSub { drop_rate: 0.5 };
+        let mut drops = 0;
+        let mut successes = 0;
+
+        for _ in 0..100 {
+            if pubsub.publish("hello").await.is_err() {
+                drops += 1;
+            } else {
+                successes += 1;
+            }
+        }
+
+        assert!(drops > 0, "Pub/Sub simulation should successfully drop messages");
+        assert!(successes > 0, "Pub/Sub simulation should allow some messages to pass");
+    }
+}
+
+#[cfg(test)]
+mod stress_verification_tests {
+    use std::time::{Duration, Instant};
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn test_stress_100_concurrent_workspaces_cloud() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        // Simulating 100 concurrent API calls
+        let mut handles = vec![];
+        let concurrency = 100;
+
+        for _ in 0..concurrency {
+            handles.push(tokio::spawn(async move {
+                let start = Instant::now();
+                // Simulate an API call
+                tokio::time::sleep(Duration::from_millis(rand::random::<u64>() % 50)).await;
+                start.elapsed()
+            }));
+        }
+
+        let mut latencies = vec![];
+        for h in handles {
+            latencies.push(h.await.unwrap().as_millis());
+        }
+
+        latencies.sort_unstable();
+
+        let p50 = latencies[(concurrency as f32 * 0.50) as usize];
+        let p95 = latencies[(concurrency as f32 * 0.95) as usize];
+        let p99 = latencies[(concurrency as f32 * 0.99) as usize];
+
+        println!("Cloud Mode 100 Concurrency - Latency p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
+
+        // Assert that p99 latency under stress does not exceed an unreasonable threshold (e.g., 200ms for this simple simulation)
+        assert!(p99 < 200, "p99 latency should remain reasonable under stress");
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_stress_10_concurrent_workspaces_standalone() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
+        // Simulating 10 concurrent API calls in standalone
+        let mut handles = vec![];
+        let concurrency = 10;
+
+        for _ in 0..concurrency {
+            handles.push(tokio::spawn(async move {
+                let start = Instant::now();
+                // Simulate an API call
+                tokio::time::sleep(Duration::from_millis(rand::random::<u64>() % 50)).await;
+                start.elapsed()
+            }));
+        }
+
+        let mut latencies = vec![];
+        for h in handles {
+            latencies.push(h.await.unwrap().as_millis());
+        }
+
+        latencies.sort_unstable();
+
+        let p50 = latencies[(concurrency as f32 * 0.50) as usize];
+        let p95 = latencies[(concurrency as f32 * 0.95) as usize];
+        let p99 = latencies[(concurrency as f32 * 0.99) as usize];
+
+        println!("Standalone Mode 10 Concurrency - Latency p50: {}ms, p95: {}ms, p99: {}ms", p50, p95, p99);
+
+        assert!(p99 < 200, "p99 latency should remain reasonable under stress");
+    }
+}

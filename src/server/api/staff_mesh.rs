@@ -845,7 +845,7 @@ pub struct StaffEscalationResponse {
 
 pub async fn escalate_issue_handler(
     headers: HeaderMap,
-    State(db): State<Arc<DB>>,
+    State(_db): State<Arc<DB>>,
     Json(payload): Json<StaffEscalationRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match get_tenant_id(&headers) {
