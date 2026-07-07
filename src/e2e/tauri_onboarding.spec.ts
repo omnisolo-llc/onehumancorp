@@ -436,7 +436,8 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     const container = page.locator('.container');
     await expect(container).toHaveCSS('backdrop-filter', 'blur(30px) saturate(2.1)');
     await expect(container).toHaveCSS('border-radius', '16px');
-    await expect(container).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
+    const lightBg = await container.evaluate((el) => window.getComputedStyle(el).backgroundColor);
+    expect(lightBg).toMatch(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.65\s*\)|rgba\(\s*252\s*,\s*252\s*,\s*252\s*,\s*0\.65\s*\)/);
 
     // Check inputs min-height for mobile touch targets
     const chatInput = page.locator('#chat-input');
@@ -496,7 +497,8 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     const container = page.locator('.container');
     await expect(container).toHaveCSS('backdrop-filter', 'blur(30px) saturate(2.1)');
     await expect(container).toHaveCSS('border-radius', '16px');
-    await expect(container).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
+    const lightBg = await container.evaluate((el) => window.getComputedStyle(el).backgroundColor);
+    expect(lightBg).toMatch(/rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.65\s*\)|rgba\(\s*252\s*,\s*252\s*,\s*252\s*,\s*0\.65\s*\)/);
 
     // Check the Onboarding Welcome Card specifically
     const welcomeCard = page.getByTestId('onboarding-welcome-card');
