@@ -2703,9 +2703,18 @@
       };
 
       Object.values(inputs).forEach(inputEl => {
-        if (inputEl && inputEl.addEventListener) {
-          inputEl.addEventListener("change", () => saveCurrentState());
-          inputEl.addEventListener("blur", () => saveCurrentState());
+        if (inputEl) {
+          // If inputEl is a NodeList (like radio buttons)
+          if (inputEl.length !== undefined && !inputEl.tagName) {
+            inputEl.forEach(radio => {
+              radio.addEventListener("change", () => saveCurrentState());
+              radio.addEventListener("blur", () => saveCurrentState());
+            });
+          } else if (inputEl.addEventListener) {
+            inputEl.addEventListener("input", () => debouncedAutoSave());
+            inputEl.addEventListener("change", () => saveCurrentState());
+            inputEl.addEventListener("blur", () => saveCurrentState());
+          }
         }
       });
 
