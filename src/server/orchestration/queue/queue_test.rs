@@ -180,6 +180,18 @@ async fn test_sqlite_fail_max_retries_dead_letter() {
         )"
     ).execute(&pool).await.unwrap();
 
+    sqlx::query(
+        "CREATE TABLE agents (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            role TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'ACTIVE'
+        )"
+    ).execute(&pool).await.unwrap();
+
+    sqlx::query("INSERT INTO agents (id, tenant_id, name, role, status) VALUES ('agent-1', 'test_org', 'test', 'test', 'ACTIVE')").execute(&pool).await.unwrap();
+
     let queue = super::SQLiteTaskQueue::new(std::sync::Arc::new(pool.clone()));
 
     let job = super::Job {

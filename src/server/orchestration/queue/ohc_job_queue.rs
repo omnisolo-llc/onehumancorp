@@ -215,6 +215,12 @@ impl OHCJobQueue {
                 .execute(&mut *tx)
                 .await;
 
+                sqlx::query("UPDATE agents SET status = 'PAUSED' WHERE tenant_id = $1 AND status != 'PAUSED'")
+                    .bind(&tenant_id)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+
                 sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', retry_count = $1, failed_reason = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                     .bind(next_retry)
                     .bind(reason)
